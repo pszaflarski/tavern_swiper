@@ -72,29 +72,38 @@ Each service exposes interactive Swagger UI at `/docs`.
 
 ---
 
-## Key Flows
+## 5. Starting the Frontend
 
-### Swipe → Match → Message
-1. `POST /swipes/` — record a right swipe
-2. If the other profile already swiped right → a Match is created automatically
-3. `POST /messages/` — send a message (403 if no match exists)
+The frontend is a React Native (Expo) app. To run it:
 
-### Profile with Image
-1. `POST /profiles/` — create profile
-2. `POST /profiles/{id}/image` — upload to GCS, URL saved to Firestore
+```bash
+cd frontend
+npm install
+npx expo start
+```
+
+### Connecting to the Backend
+
+The app uses **Axios** (configured in `frontend/lib/api.ts`) to talk to the services. 
+
+- **Local Emulator**: A `.env` file has been **pre-configured** for you in the `frontend/` directory with localhost URLs. It works out of the box.
+- **Physical Device**: If testing on a real phone (Expo Go), you must update the `frontend/.env` variables to your machine's **LAN IP** (e.g., `http://192.168.1.XX:8001`). 
+
+Your `frontend/.env` is currently set to:
+```env
+EXPO_PUBLIC_AUTH_URL=http://localhost:8001
+EXPO_PUBLIC_PROFILES_URL=http://localhost:8002
+EXPO_PUBLIC_DISCOVERY_URL=http://localhost:8003
+EXPO_PUBLIC_SWIPES_URL=http://localhost:8004
+EXPO_PUBLIC_MESSAGES_URL=http://localhost:8005
+```
 
 ---
 
-## Deploying a Single Service
+## 6. Enabling Live Data
 
-Each service can be built and deployed independently:
+The app currently uses **demo data** in `app/(tabs)/index.tsx` to ensure it renders immediately. To switch to the real backend:
 
-```bash
-cd services/profiles
-docker build -t trystr-profiles .
-docker run -p 8002:8002 \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/creds/sa.json \
-  -e GCS_BUCKET_NAME=my-bucket \
-  -v /path/to/sa.json:/creds/sa.json \
-  trystr-profiles
-```
+1. Open `frontend/app/(tabs)/index.tsx`.
+2. Uncomment the `useDiscovery` and `useSwipe` hooks.
+3. Replace the `profiles` state with the data from the hooks.

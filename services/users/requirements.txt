@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+google-cloud-firestore
+firebase-admin
+httpx
+pydantic[email]

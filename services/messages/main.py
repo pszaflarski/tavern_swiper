@@ -3,10 +3,11 @@ import uuid
 import firebase_admin
 from firebase_admin import credentials
 from google.cloud import firestore
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from datetime import datetime, timezone
 import httpx
 from models import MessageCreate, MessageOut
+from auth_utils import get_current_user
 
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
@@ -20,6 +21,7 @@ else:
 
 db = firestore.Client()
 SWIPES_SERVICE_URL = os.getenv("SWIPES_SERVICE_URL", "http://swipes:8004")
+PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 
 app = FastAPI(title="Trystr — Messages Service", version="1.0.0")
 COLLECTION = "messages"
@@ -29,23 +31,32 @@ def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-async def _verify_match(match_id: str) -> None:
-    """Raise 403 if match_id does not exist in the Swipes service."""
+async def _verify_match_access(match_id: str, uid: str) -> None:
+    """Verify match exists AND the authenticated uid owns one of the profiles in it."""
     async with httpx.AsyncClient(timeout=5.0) as client:
+        # 1. Get match details
         try:
-            resp = await client.get(
-                f"{SWIPES_SERVICE_URL}/swipes/matches/{match_id}/exists"
-            )
-            resp.raise_for_status()
-            if not resp.json().get("exists", False):
-                raise HTTPException(
-                    status_code=403,
-                    detail="No valid match exists between these profiles",
-                )
-        except httpx.HTTPError as e:
-            raise HTTPException(
-                status_code=502, detail=f"Swipes service unavailable: {e}"
-            )
+            resp = await client.get(f"{SWIPES_SERVICE_URL}/swipes/matches/{match_id}")
+            if resp.status_code != 200:
+                raise HTTPException(status_code=403, detail="Not an active match")
+            match_data = resp.json()
+        except httpx.HTTPError:
+            raise HTTPException(status_code=502, detail="Swipes service unavailable")
+
+        # 2. Check if UID owns either profile_id_a or profile_id_b
+        p_ids = [match_data["profile_id_a"], match_data["profile_id_b"]]
+        owned = False
+        for pid in p_ids:
+            try:
+                p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{pid}")
+                if p_resp.status_code == 200 and p_resp.json().get("user_id") == uid:
+                    owned = True
+                    break
+            except httpx.HTTPError:
+                continue
+        
+        if not owned:
+            raise HTTPException(status_code=403, detail="Not authorized for this match")
 
 
 @app.get("/messages/health")
@@ -54,9 +65,9 @@ async def health():
 
 
 @app.post("/messages/", response_model=MessageOut, status_code=201)
-async def send_message(body: MessageCreate):
-    """Send a message. Enforces that a valid Match record exists first."""
-    await _verify_match(body.match_id)
+async def send_message(body: MessageCreate, uid: str = Depends(get_current_user)):
+    """Send a message. Enforces match ownership."""
+    await _verify_match_access(body.match_id, uid)
 
     message_id = str(uuid.uuid4())
     now = _now()
@@ -71,9 +82,9 @@ async def send_message(body: MessageCreate):
 
 
 @app.get("/messages/{match_id}", response_model=list[MessageOut])
-async def get_messages(match_id: str):
+async def get_messages(match_id: str, uid: str = Depends(get_current_user)):
     """Fetch message history for a match, ordered by time."""
-    await _verify_match(match_id)
+    await _verify_match_access(match_id, uid)
     docs = (
         db.collection(COLLECTION)
         .where("match_id", "==", match_id)

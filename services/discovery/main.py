@@ -2,9 +2,10 @@ import os
 import firebase_admin
 from firebase_admin import credentials
 from google.cloud import firestore
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 import httpx
 from models import FeedResponse, DiscoveryProfile
+from auth_utils import get_current_user
 
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
@@ -30,16 +31,28 @@ async def health():
 
 
 @app.get("/discovery/feed/{profile_id}", response_model=FeedResponse)
-async def get_feed(profile_id: str):
+async def get_feed(profile_id: str, uid: str = Depends(get_current_user)):
     """Fetch a deck of candidate profiles to swipe on.
-
+    
     Strategy:
+    0. Verify profile_id belongs to the authenticated UID.
     1. Ask the Swipes service which profile_ids this user has already swiped.
     2. Ask the Profiles service for all profiles.
     3. Exclude already-swiped profiles and the requesting profile itself.
     4. Return up to FEED_LIMIT candidates.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
+        # 0. Verify ownership
+        try:
+            p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{profile_id}")
+            if p_resp.status_code == 404:
+                raise HTTPException(status_code=404, detail="Profile not found")
+            p_data = p_resp.json()
+            if p_data.get("user_id") != uid:
+                raise HTTPException(status_code=403, detail="Not authorized for this profile")
+        except httpx.HTTPError as e:
+             raise HTTPException(status_code=502, detail=f"Profiles service unavailable: {e}")
+
         # 1. Already-swiped IDs
         try:
             swipes_resp = await client.get(

@@ -3,9 +3,11 @@ import uuid
 import firebase_admin
 from firebase_admin import credentials
 from google.cloud import firestore
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from datetime import datetime, timezone
+import httpx
 from models import SwipeCreate, SwipeOut, MatchOut
+from auth_utils import get_current_user
 
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
@@ -18,6 +20,7 @@ else:
     firebase_admin.initialize_app()
 
 db = firestore.Client()
+PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 
 app = FastAPI(title="Trystr — Swipes Service", version="1.0.0")
 SWIPES_COLLECTION = "swipes"
@@ -34,8 +37,19 @@ async def health():
 
 
 @app.post("/swipes/", response_model=SwipeOut, status_code=201)
-async def record_swipe(body: SwipeCreate):
+async def record_swipe(body: SwipeCreate, uid: str = Depends(get_current_user)):
     """Record a swipe and create a Match if both profiles swiped right."""
+    # Verify ownership of the swiper profile
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{body.swiper_profile_id}")
+            if p_resp.status_code == 404:
+                 raise HTTPException(status_code=404, detail="Swiper profile not found")
+            if p_resp.json().get("user_id") != uid:
+                 raise HTTPException(status_code=403, detail="Not authorized for this profile")
+        except httpx.HTTPError as e:
+             raise HTTPException(status_code=502, detail=f"Profiles service unavailable: {e}")
+
     swipe_id = str(uuid.uuid4())
     now = _now()
     swipe_data = {
@@ -76,8 +90,19 @@ async def record_swipe(body: SwipeCreate):
 
 
 @app.get("/swipes/matches/{profile_id}", response_model=list[MatchOut])
-async def list_matches(profile_id: str):
+async def list_matches(profile_id: str, uid: str = Depends(get_current_user)):
     """List all matches for a given profile (queried from both sides)."""
+    # Verify ownership
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{profile_id}")
+            if p_resp.status_code == 404:
+                 raise HTTPException(status_code=404, detail="Profile not found")
+            if p_resp.json().get("user_id") != uid:
+                 raise HTTPException(status_code=403, detail="Not authorized for this profile")
+        except httpx.HTTPError as e:
+             raise HTTPException(status_code=502, detail=f"Profiles service unavailable: {e}")
+
     results = []
     for field in ("profile_id_a", "profile_id_b"):
         docs = (
@@ -98,11 +123,21 @@ async def list_matches(profile_id: str):
     return results
 
 
-@app.get("/swipes/matches/{match_id}/exists")
-async def match_exists(match_id: str):
-    """Internal endpoint: check if a match_id is valid. Used by Messages."""
+@app.get("/swipes/matches/{match_id}", response_model=MatchOut)
+async def get_match_details(match_id: str):
+    """Internal endpoint: get details of a specific match."""
     doc = db.collection(MATCHES_COLLECTION).document(match_id).get()
-    return {"exists": doc.exists}
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Match not found")
+    d = doc.to_dict()
+    return MatchOut(
+        match_id=doc.id,
+        profile_id_a=d["profile_id_a"],
+        profile_id_b=d["profile_id_b"],
+        created_at=d["created_at"]
+    )
+
+@app.get("/swipes/matches/{match_id}/exists")
 
 
 @app.get("/swipes/swiped-by/{profile_id}")

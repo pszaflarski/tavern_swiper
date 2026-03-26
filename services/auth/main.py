@@ -37,7 +37,5 @@ async def verify_token(body: TokenRequest):
         raise HTTPException(status_code=503, detail=f"Auth unavailable: {e}")
 
     return TokenResponse(
-        uid=decoded["uid"],
-        email=decoded.get("email"),
-        email_verified=decoded.get("email_verified", False),
+        uid=decoded["uid"]
     )

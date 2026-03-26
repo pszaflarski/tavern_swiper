@@ -9,7 +9,6 @@ class CoreAttributes(BaseModel):
 
 
 class ProfileCreate(BaseModel):
-    user_id: str
     display_name: str
     tagline: Optional[str] = None
     bio: Optional[str] = None

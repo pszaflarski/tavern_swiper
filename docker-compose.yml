@@ -11,7 +11,7 @@ services:
     networks:
       - tavern-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/auth/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/auth/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -29,7 +29,7 @@ services:
     networks:
       - tavern-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/profiles/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/profiles/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -54,7 +54,7 @@ services:
       swipes:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/discovery/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/discovery/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -71,7 +71,7 @@ services:
     networks:
       - tavern-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8004/swipes/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/swipes/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -92,7 +92,25 @@ services:
       swipes:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8005/messages/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/messages/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  users:
+    build: ./services/users
+    ports:
+      - "8006:8006"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json
+      - GCS_BUCKET_NAME=tavern-swiper-dev-media
+      - AUTH_SERVICE_URL=http://auth:8001
+    volumes:
+      - ./credentials/service-account.json:/app/credentials/service-account.json:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/users/health')"]
       interval: 10s
       timeout: 5s
       retries: 3

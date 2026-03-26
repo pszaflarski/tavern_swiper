@@ -3,8 +3,9 @@ import uuid
 import firebase_admin
 from firebase_admin import credentials
 from google.cloud import firestore, storage
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from models import ProfileCreate, ProfileUpdate, ProfileOut, CoreAttributes
+from auth_utils import get_current_user
 
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
@@ -46,9 +47,10 @@ async def health():
 
 
 @app.post("/profiles/", response_model=ProfileOut, status_code=201)
-async def create_profile(body: ProfileCreate):
+async def create_profile(body: ProfileCreate, uid: str = Depends(get_current_user)):
     profile_id = str(uuid.uuid4())
     data = body.model_dump()
+    data["user_id"] = uid  # Enforce authenticated UID
     data["attributes"] = body.attributes.model_dump()
     db.collection(COLLECTION).document(profile_id).set(data)
     doc = db.collection(COLLECTION).document(profile_id).get()
@@ -70,10 +72,15 @@ async def list_profiles_for_user(user_id: str):
 
 
 @app.put("/profiles/{profile_id}", response_model=ProfileOut)
-async def update_profile(profile_id: str, body: ProfileUpdate):
+async def update_profile(profile_id: str, body: ProfileUpdate, uid: str = Depends(get_current_user)):
     ref = db.collection(COLLECTION).document(profile_id)
-    if not ref.get().exists:
+    doc = ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
+    
+    if doc.to_dict().get("user_id") != uid:
+        raise HTTPException(status_code=403, detail="Not authorized to update this profile")
+
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
     if "attributes" in updates and updates["attributes"]:
         updates["attributes"] = body.attributes.model_dump()
@@ -89,10 +96,15 @@ async def list_all_profiles():
 
 
 @app.delete("/profiles/{profile_id}", status_code=204)
-async def delete_profile(profile_id: str):
+async def delete_profile(profile_id: str, uid: str = Depends(get_current_user)):
     ref = db.collection(COLLECTION).document(profile_id)
-    if not ref.get().exists:
+    doc = ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
+    
+    if doc.to_dict().get("user_id") != uid:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this profile")
+        
     ref.delete()
 
 
