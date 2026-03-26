@@ -1,0 +1,89 @@
+
+> frontend@1.0.0 test
+> jest --forceExit
+
+PASS lib/api.test.ts
+PASS hooks/useUser.test.tsx
+FAIL hooks/useMessages.test.tsx
+  ● Test suite failed to run
+
+    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
+
+      20 |
+      21 | export const auth = getAuth(app);
+    > 22 | export const db = getFirestore(app);
+         |                               ^
+      23 | export default app;
+      24 |
+
+      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
+      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
+      at Object.<anonymous> (lib/firebase.ts:22:31)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/useMessages.ts:2:1)
+      at Object.require (hooks/useMessages.test.tsx:2:1)
+
+FAIL hooks/useProfiles.test.tsx
+  ● Test suite failed to run
+
+    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
+
+      20 |
+      21 | export const auth = getAuth(app);
+    > 22 | export const db = getFirestore(app);
+         |                               ^
+      23 | export default app;
+      24 |
+
+      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
+      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
+      at Object.<anonymous> (lib/firebase.ts:22:31)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/useProfiles.ts:2:1)
+      at Object.require (hooks/useProfiles.test.tsx:2:1)
+
+FAIL hooks/useDiscovery.test.tsx
+  ● Test suite failed to run
+
+    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
+
+      20 |
+      21 | export const auth = getAuth(app);
+    > 22 | export const db = getFirestore(app);
+         |                               ^
+      23 | export default app;
+      24 |
+
+      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
+      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
+      at Object.<anonymous> (lib/firebase.ts:22:31)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/useDiscovery.ts:2:1)
+      at Object.require (hooks/useDiscovery.test.tsx:2:1)
+
+FAIL hooks/useSwipe.test.tsx
+  ● Test suite failed to run
+
+    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
+
+      20 |
+      21 | export const auth = getAuth(app);
+    > 22 | export const db = getFirestore(app);
+         |                               ^
+      23 | export default app;
+      24 |
+
+      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
+      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
+      at Object.<anonymous> (lib/firebase.ts:22:31)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/useSwipe.ts:2:1)
+      at Object.require (hooks/useSwipe.test.tsx:2:1)
+
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+Test Suites: 4 failed, 2 passed, 6 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        3.733 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
