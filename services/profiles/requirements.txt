@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+firebase-admin
+google-cloud-firestore
+google-cloud-storage
+python-multipart
+python-dotenv

@@ -1,0 +1,102 @@
+services:
+  auth:
+    build:
+      context: ./services/auth
+    ports:
+      - "8001:8001"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/auth/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  profiles:
+    build:
+      context: ./services/profiles
+    ports:
+      - "8002:8002"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME:-}
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/profiles/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  discovery:
+    build:
+      context: ./services/discovery
+    ports:
+      - "8003:8003"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+      - PROFILES_SERVICE_URL=http://profiles:8002
+      - SWIPES_SERVICE_URL=http://swipes:8004
+      - FEED_LIMIT=20
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    depends_on:
+      profiles:
+        condition: service_healthy
+      swipes:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/discovery/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  swipes:
+    build:
+      context: ./services/swipes
+    ports:
+      - "8004:8004"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/swipes/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  messages:
+    build:
+      context: ./services/messages
+    ports:
+      - "8005:8005"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+      - SWIPES_SERVICE_URL=http://swipes:8004
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    depends_on:
+      swipes:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/messages/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  tavern-net:
+    driver: bridge

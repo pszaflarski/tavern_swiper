@@ -1,0 +1,21 @@
+# Firebase / GCP credentials — NEVER COMMIT
+credentials/
+*.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+
+# Node / Expo
+frontend/node_modules/
+frontend/.expo/
+
+# macOS
+.DS_Store
