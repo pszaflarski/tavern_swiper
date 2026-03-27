@@ -6,3 +6,11 @@ class TokenRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     uid: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AuthResponse(BaseModel):
+    id_token: str
+    uid: str

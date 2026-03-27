@@ -3,7 +3,10 @@ import firebase_admin
 from firebase_admin import credentials
 from google.cloud import firestore
 from fastapi import FastAPI, HTTPException, Depends
+from dotenv import load_dotenv
 import httpx
+
+load_dotenv()
 from models import FeedResponse, DiscoveryProfile
 from auth_utils import get_current_user
 
@@ -17,12 +20,22 @@ if _cred_path:
 else:
     firebase_admin.initialize_app()
 
-db = firestore.Client()
+db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
 PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 SWIPES_SERVICE_URL = os.getenv("SWIPES_SERVICE_URL", "http://swipes:8004")
 FEED_LIMIT = int(os.getenv("FEED_LIMIT", "20"))
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Trystr — Discovery Service", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/discovery/health")

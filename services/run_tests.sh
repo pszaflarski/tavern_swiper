@@ -6,14 +6,19 @@
 set -e
 
 SERVICES=("auth" "profiles" "discovery" "swipes" "messages" "users")
-BASE_DIR=$(pwd)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 echo "🛡️ Starting Trystr Microservices Test Suite..."
 echo "-------------------------------------------"
 
+# Bypass Firestore credential checks during unit testing
+export GOOGLE_APPLICATION_CREDENTIALS=""
+export FIRESTORE_EMULATOR_HOST="localhost:8080"
+export GCLOUD_PROJECT="dummy-project"
+
 for SERVICE in "${SERVICES[@]}"; do
     echo "🧪 Testing service: $SERVICE"
-    cd "$BASE_DIR/$SERVICE"
+    cd "$SCRIPT_DIR/$SERVICE"
     
     # Check if tests directory exists
     if [ -d "tests" ]; then

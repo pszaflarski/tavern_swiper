@@ -3,3 +3,4 @@ uvicorn[standard]
 firebase-admin
 google-cloud-firestore
 python-dotenv
+python-dotenv

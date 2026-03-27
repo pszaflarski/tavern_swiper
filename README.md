@@ -2,29 +2,32 @@
 
 > *"Every interaction should feel like a discovery."*
 
-A fantasy-themed dating app with a fully-isolated microservice backend and a React Native (Expo) frontend.
+A fantasy-themed dating app with a **strictly isolated, zero-trust microservice backend** and a React Native (Expo) frontend.
 
 ---
 
 ## Architecture
+
+This project follows a "Shared Nothing" microservice architecture. Each service is a completely self-contained unit with its own logic, dependencies, and **dedicated Firestore database instance**.
 
 ```
 tavern_swiper/
 ├── docker-compose.yml
 ├── credentials/              ← place service-account.json here (git-ignored)
 ├── services/
-│   ├── auth/                 (port 8001)  Firebase JWT verification
-│   ├── profiles/             (port 8002)  Character profile CRUD + GCS image upload
-│   ├── discovery/            (port 8003)  Swipe feed (calls profiles + swipes)
-│   ├── swipes/               (port 8004)  Swipe recording + match creation
-│   └── messages/             (port 8005)  Messaging (enforces match-gate)
-└── frontend/                 React Native (Expo)
+│   ├── auth/                 (port 8001)  Identity Verification & Login REST API
+│   ├── profiles/             (port 8002)  Character profile CRUD + GCS uploads
+│   ├── discovery/            (port 8003)  The Swipe Feed (orchestrator)
+│   ├── swipes/               (port 8004)  Matching & Swipe recording
+│   ├── messages/             (port 8005)  Match-gated Messaging
+│   └── users/                (port 8006)  User metadata & management
+└── frontend/                 React Native (Expo) + Stitch Design System
 ```
 
-Each service is **completely isolated**:
-- Its own `models.py`, `requirements.txt`, `Dockerfile`
-- Its own Firestore collection(s)
-- Deployable independently with `docker build`
+### Core Constraints
+1. **Strict Database Isolation**: Every service points to its own unique Firestore database (e.g., `profiles`, `swipes`, `users`). 
+2. **Local Configuration**: Services load their own environment from local `.env` files within their respective `services/X/` directories.
+3. **Internal Auth**: No service trusts a request unless the `auth` microservice verifies the Firebase ID token.
 
 ---
 
@@ -32,49 +35,55 @@ Each service is **completely isolated**:
 
 ### 1. Prerequisites
 - Docker & Docker Compose v2
-- A Firebase project with Firestore enabled
-- A Firebase service account JSON
+- A Google Cloud Project with Billing enabled
+- **6 Native Firestore Databases** named: `auth`, `profiles`, `discovery`, `swipes`, `messages`, `users`
+- A Firebase Web API Key (found in Firebase Console Settings)
 
-### 2. Add credentials
+### 2. Environment Configuration
+Each microservice in `services/` contains its own `.env` file. You must ensure `GOOGLE_APPLICATION_CREDENTIALS` points to your service account path inside the container.
 
-```bash
-mkdir -p credentials
-cp /path/to/your/service-account.json credentials/service-account.json
+In `services/auth/.env`:
+```env
+FIREBASE_WEB_API_KEY=your_key_here
+FIRESTORE_DATABASE_ID=auth
+GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
 ```
 
-> ⚠️  `credentials/` is git-ignored. Never commit your service account.
-
-### 3. (Optional) Set GCS bucket for image uploads
-
-```bash
-echo "GCS_BUCKET_NAME=your-gcs-bucket-name" > .env
-```
-
-### 4. Start all services
-
+### 3. Start the Backend
+From the root directory:
 ```bash
 docker compose up --build
 ```
 
-Services will start with health checks. Discovery and Messages wait for their upstream dependencies before starting.
-
-### 5. Service URLs
-
-| Service    | URL                                |
-|------------|------------------------------------|
-| Auth       | http://localhost:8001/docs         |
-| Profiles   | http://localhost:8002/docs         |
-| Discovery  | http://localhost:8003/docs         |
-| Swipes     | http://localhost:8004/docs         |
-| Messages   | http://localhost:8005/docs         |
-
-Each service exposes interactive Swagger UI at `/docs`.
+### 4. Running Backend Tests
+We provide a unified test runner that executes the isolated test suites for all 6 services:
+```bash
+bash services/run_tests.sh
+```
 
 ---
 
-## 5. Starting the Frontend
+## Service URLs (Swagger Docs)
 
-The frontend is a React Native (Expo) app. To run it:
+| Service    | URL                                | Function                           |
+|------------|------------------------------------|------------------------------------|
+| **Auth**   | http://localhost:8001/docs         | Login/Register/Verify              |
+| **Profiles**| http://localhost:8002/docs         | Character Management               |
+| **Discovery**| http://localhost:8003/docs        | Swipe Feed Generation              |
+| **Swipes**  | http://localhost:8004/docs         | Recording Matches                  |
+| **Messages**| http://localhost:8005/docs         | Chat & Match Validation            |
+| **Users**   | http://localhost:8006/docs         | Account Metadata                   |
+
+### Special Endpoints
+The `auth` service provides programmatic login for testing:
+*   `POST /auth/login`: Exchanges email/password for a real Firebase ID token.
+*   `POST /auth/register`: Exchanges email/password for a new user and returns a token.
+
+---
+
+## 5. Starting the Frontend (React Native)
+
+The frontend uses **Expo** and the **Stitch Design System**.
 
 ```bash
 cd frontend
@@ -82,28 +91,15 @@ npm install
 npx expo start
 ```
 
-### Connecting to the Backend
-
-The app uses **Axios** (configured in `frontend/lib/api.ts`) to talk to the services. 
-
-- **Local Emulator**: A `.env` file has been **pre-configured** for you in the `frontend/` directory with localhost URLs. It works out of the box.
-- **Physical Device**: If testing on a real phone (Expo Go), you must update the `frontend/.env` variables to your machine's **LAN IP** (e.g., `http://192.168.1.XX:8001`). 
-
-Your `frontend/.env` is currently set to:
-```env
-EXPO_PUBLIC_AUTH_URL=http://localhost:8001
-EXPO_PUBLIC_PROFILES_URL=http://localhost:8002
-EXPO_PUBLIC_DISCOVERY_URL=http://localhost:8003
-EXPO_PUBLIC_SWIPES_URL=http://localhost:8004
-EXPO_PUBLIC_MESSAGES_URL=http://localhost:8005
-```
+### Frontend Configuration
+The frontend uses a centralized `.env` file in the `frontend/` directory to map localhost ports to the microservice fleet. Ensure `EXPO_PUBLIC_FIREBASE_API_KEY` is set to your Firebase Web API Key.
 
 ---
 
-## 6. Enabling Live Data
-
-The app currently uses **demo data** in `app/(tabs)/index.tsx` to ensure it renders immediately. To switch to the real backend:
-
-1. Open `frontend/app/(tabs)/index.tsx`.
-2. Uncomment the `useDiscovery` and `useSwipe` hooks.
-3. Replace the `profiles` state with the data from the hooks.
+## 6. Development Workflow
+1. **UI Components**: Check `frontend/components/` for Stitch-based UI (e.g., `SwipeDeck`, `CharacterProfile`).
+2. **Hooks**: Data fetching is handled by custom hooks in `frontend/hooks/` which utilize the token-injected Axios client in `lib/api.ts`.
+3. **Adding a Feature**:
+   - Update the specific microservice's `main.py` and `models.py`.
+   - Update its local `.env` if new variables are needed.
+   - Run `services/run_tests.sh` to ensure no zero-trust boundaries were broken.

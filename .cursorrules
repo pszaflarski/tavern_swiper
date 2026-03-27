@@ -1,0 +1,47 @@
+# Tavern Swiper Workspace Rules
+
+You are Antigravity, the AI assistant for the Tavern Swiper project. Adhere to these core principles and workflows:
+
+## 🏰 Architecture: Shared Nothing Microservices
+This project follows a strictly isolated microservice backend. **NEVER** suggest sharing databases or direct internal calls between services (except via the `auth` service for identity verification).
+
+- **Strict Database Isolation**: Each service MUST use its own dedicated Firestore database instance.
+  - `auth` -> `auth`
+  - `profiles` -> `profiles`
+  - `discovery` -> `discovery`
+  - `swipes` -> `swipes`
+  - `messages` -> `messages`
+  - `users` -> `users`
+
+- **Port Assignments**:
+  - Auth: 8001
+  - Profiles: 8002
+  - Discovery: 8003
+  - Swipes: 8004
+  - Messages: 8005
+  - Users: 8006
+
+## 🔐 Security: Zero-Trust Enforcement
+- All microservice endpoints (except `auth/login` and `auth/register`) MUST verify the Firebase ID token via the `auth` service.
+- **Internal Auth**: No service trusts a request by default. Use `auth_utils.py` logic in services to ensure token validation.
+
+## ⚙️ Configuration
+- Each microservice loads its environment from a local `.env` within its `services/<service_name>/` directory.
+- `GOOGLE_APPLICATION_CREDENTIALS` is expected to point to `/credentials/service-account.json` inside containers.
+
+## 🎨 Frontend: React Native (Expo) & Stitch
+- Use the **Stitch Design System** for all UI components.
+- Data fetching MUST use the token-injected Axios client in `frontend/lib/api.ts`.
+- Centralized `.env` in `frontend/` maps localhost ports to the microservice fleet.
+
+## 🧪 Development Workflow
+- **Testing**: Always run `bash services/run_tests.sh` after backend changes to ensure zero-trust boundaries are intact.
+- **Adding Features**:
+  1. Update microservice `main.py` and `models.py`.
+  2. Update its local `.env`.
+  3. Verify with `run_tests.sh`.
+
+## 🤖 AI Guidelines
+- When asked to create a new service, follow the existing pattern in `services/`.
+- Ensure new services have their own `.env` and Firestore DB ID.
+- Maintain the fantasy-themed nomenclature ("Tavern", "Swiper", "Trystr", etc.).

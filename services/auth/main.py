@@ -2,21 +2,35 @@ import os
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 from fastapi import FastAPI, HTTPException
-from models import TokenRequest, TokenResponse
+from dotenv import load_dotenv
+from google.cloud import firestore
+import httpx
+from models import TokenRequest, TokenResponse, LoginRequest, AuthResponse
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
-# Firebase initialisation — uses GOOGLE_APPLICATION_CREDENTIALS env var
+# Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
+db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
 _cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if _cred_path:
     cred = credentials.Certificate(_cred_path)
     firebase_admin.initialize_app(cred)
 else:
-    # When credentials are not present (e.g., CI / first run) initialise with
-    # default so the app still starts; /auth/verify will return 503.
     firebase_admin.initialize_app()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Trystr — Auth Service", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/auth/health")
@@ -39,3 +53,53 @@ async def verify_token(body: TokenRequest):
     return TokenResponse(
         uid=decoded["uid"]
     )
+
+FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY", "")
+
+@app.post("/auth/register", response_model=AuthResponse)
+async def register_user(body: LoginRequest):
+    """Registers a new user using Firebase Authentication REST API and returns an ID token."""
+    if not FIREBASE_WEB_API_KEY:
+        raise HTTPException(status_code=503, detail="FIREBASE_WEB_API_KEY is not configured")
+        
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_WEB_API_KEY}"
+    payload = {
+        "email": body.email,
+        "password": body.password,
+        "returnSecureToken": True
+    }
+    
+    import httpx
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
+        
+    if response.status_code != 200:
+        error_msg = response.json().get("error", {}).get("message", "Registration failed")
+        raise HTTPException(status_code=400, detail=error_msg)
+        
+    data = response.json()
+    return AuthResponse(id_token=data["idToken"], uid=data["localId"])
+
+@app.post("/auth/login", response_model=AuthResponse)
+async def login_user(body: LoginRequest):
+    """Logs in an existing user using Firebase Authentication REST API and returns an ID token."""
+    if not FIREBASE_WEB_API_KEY:
+        raise HTTPException(status_code=503, detail="FIREBASE_WEB_API_KEY is not configured")
+        
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
+    payload = {
+        "email": body.email,
+        "password": body.password,
+        "returnSecureToken": True
+    }
+    
+    import httpx
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
+        
+    if response.status_code != 200:
+        error_msg = response.json().get("error", {}).get("message", "Authentication failed")
+        raise HTTPException(status_code=401, detail=error_msg)
+        
+    data = response.json()
+    return AuthResponse(id_token=data["idToken"], uid=data["localId"])

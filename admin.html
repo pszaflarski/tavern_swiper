@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trystr — Admin Nexus</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --error: #ef4444;
+            --success: #22c55e;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 1.125rem;
+        }
+
+        .auth-card {
+            max-width: 450px;
+            margin: 100px auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--error);
+            color: white;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+        }
+
+        .btn-ghost:hover {
+            color: white;
+        }
+
+        #dashboard { display: none; }
+        #auth-section { display: none; }
+        #init-section { display: none; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .badge {
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-root { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .badge-admin { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .badge-user { background: rgba(107, 114, 128, 0.1); color: #9ca3af; }
+
+        .hidden { display: none !important; }
+
+        #message {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+
+        .error { background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .success { background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.2); }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Initialization Section (Only if no root admin exists) -->
+        <div id="init-section" class="auth-card card">
+            <h1>Initialize Nexus</h1>
+            <p class="subtitle">Welcome, Architect. Claim the root throne.</p>
+            <form id="initForm">
+                <div class="form-group"><label>Email</label><input type="email" id="initEmail" required></div>
+                <div class="form-group"><label>Password</label><input type="password" id="initPassword" required minlength="6"></div>
+                <div class="form-group"><label>Full Name</label><input type="text" id="initName" required></div>
+                <button type="submit" class="btn-primary" style="width:100%">Claim the Root</button>
+            </form>
+        </div>
+
+        <!-- Auth Section (Login) -->
+        <div id="auth-section" class="auth-card card">
+            <h1>Admin Login</h1>
+            <p class="subtitle">Access restricted to established oversight.</p>
+            <form id="loginForm">
+                <div class="form-group"><label>Email</label><input type="email" id="loginEmail" required></div>
+                <div class="form-group"><label>Password</label><input type="password" id="loginPassword" required></div>
+                <button type="submit" class="btn-primary" style="width:100%">Authorize Access</button>
+            </form>
+        </div>
+
+        <!-- Dashboard -->
+            <div class="nav">
+                <h1>Nexus Dashboard</h1>
+                <div>
+                    <button id="purgeBtn" onclick="purgeAll()" class="btn-danger hidden">Nuke All Entities</button>
+                    <button onclick="logout()" class="btn-ghost">Logout</button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                <h2>Create New Intelligence</h2>
+                <form id="createForm" style="display: grid; grid-template-columns: 2fr 2fr 1.5fr 1fr; gap: 1rem; align-items: end;">
+                    <div class="form-group"><label>Email</label><input type="email" id="newEmail" required></div>
+                    <div class="form-group"><label>Full Name</label><input type="text" id="newName" required></div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select id="newRole">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                            <option value="root_admin">Root Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Provision</button>
+                </form>
+                <div class="form-group" style="margin-top: 0.5rem;"><input type="password" id="newPassword" placeholder="Password (min 6 chars)" required minlength="6"></div>
+            </div>
+
+            <div class="card">
+                <h2>Identified Entities</h2>
+                <table id="userTable">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const API_ROOT = 'http://localhost:8006/users';
+        const AUTH_ROOT = 'http://localhost:8001/auth';
+        
+        let idToken = localStorage.getItem('nexus_token');
+        let currentUid = localStorage.getItem('nexus_uid');
+
+        async function init() {
+            try {
+                const res = await fetch(`${API_ROOT}/root-admin-exists`);
+                const { exists } = await res.json();
+                
+                if (!exists) {
+                    showSection('init-section');
+                } else if (!idToken) {
+                    showSection('auth-section');
+                } else {
+                    loadDashboard();
+                }
+            } catch (err) {
+                showMessage('Nexus Offline. Ensure microservices are running.', 'error');
+            }
+        }
+
+        function showSection(id) {
+            ['init-section', 'auth-section', 'dashboard'].forEach(s => {
+                document.getElementById(s).style.display = (s === id ? 'block' : 'none');
+            });
+        }
+
+        // --- Auth Logic ---
+
+        document.getElementById('initForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('initEmail').value;
+            const password = document.getElementById('initPassword').value;
+            const fullName = document.getElementById('initName').value;
+
+            try {
+                // 1. Register
+                const authRes = await apiCall(`${AUTH_ROOT}/register`, 'POST', { email, password });
+                // 2. Consolidated User Creation
+                await apiCall(`${API_ROOT}/`, 'POST', { email, full_name: fullName, user_type: 'root_admin' }, authRes.id_token);
+                
+                showMessage('Root Throne Claimed. Please login.', 'success');
+                showSection('auth-section');
+            } catch (err) {
+                showMessage(err.message, 'error');
+            }
+        };
+
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const res = await apiCall(`${AUTH_ROOT}/login`, 'POST', { email, password });
+                idToken = res.id_token;
+                currentUid = res.uid;
+                localStorage.setItem('nexus_token', idToken);
+                localStorage.setItem('nexus_uid', currentUid);
+                loadDashboard();
+            } catch (err) {
+                showMessage('Unauthorized. ' + err.message, 'error');
+            }
+        };
+
+        function logout() {
+            localStorage.clear();
+            idToken = null;
+            location.reload();
+        }
+
+        // --- Dashboard Logic ---
+
+        async function loadDashboard() {
+            showSection('dashboard');
+            try {
+                const me = await apiCall(`${API_ROOT}/me`, 'GET', null, idToken);
+                if (me.user_type === 'root_admin') {
+                    document.getElementById('purgeBtn').classList.remove('hidden');
+                }
+            } catch (err) { console.error('Failed to get user role', err); }
+            refreshUsers();
+        }
+
+        async function purgeAll() {
+            const code = prompt('WARNING: This will hard-delete ALL users and reset the system. Type "TERMINATE" to confirm:');
+            if (code !== 'TERMINATE') return;
+
+            try {
+                await apiCall(`${API_ROOT}/`, 'DELETE', null, idToken);
+                showMessage('System Purged. Re-initializing...', 'success');
+                setTimeout(() => logout(), 2000);
+            } catch (err) {
+                showMessage('Purge Failed: ' + err.message, 'error');
+            }
+        }
+
+        async function refreshUsers() {
+            try {
+                const users = await apiCall(`${API_ROOT}/`, 'GET', null, idToken);
+                const list = document.getElementById('userList');
+                list.innerHTML = users.map(u => `
+                    <tr>
+                        <td>
+                            <div style="font-weight:600">${u.full_name || 'N/A'}</div>
+                            <div style="font-size:0.875rem; color:var(--text-muted)">${u.email}</div>
+                        </td>
+                        <td><span class="badge badge-${u.user_type === 'root_admin' ? 'root' : u.user_type}">${u.user_type}</span></td>
+                        <td style="font-size:0.875rem; color:var(--text-muted)">${new Date(u.created_at).toLocaleDateString()}</td>
+                        <td>
+                            ${u.uid === currentUid ? '<span style="font-size:0.75rem; color:var(--text-muted)">Current</span>' : 
+                            `<button onclick="deleteUser('${u.uid}')" class="btn-danger">Delete</button>`}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                showMessage('Failed to load users: ' + err.message, 'error');
+                if (err.message.includes('403') || err.message.includes('401')) logout();
+            }
+        }
+
+        document.getElementById('createForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('newEmail').value;
+            const password = document.getElementById('newPassword').value;
+            const fullName = document.getElementById('newName').value;
+            const userType = document.getElementById('newRole').value;
+
+            try {
+                // 1. Create account in Auth service
+                const authRes = await apiCall(`${AUTH_ROOT}/register`, 'POST', { email, password });
+                
+                // 2. Consolidated User Creation (Administrative)
+                await apiCall(`${API_ROOT}/`, 'POST', { 
+                    email, 
+                    full_name: fullName, 
+                    user_type: userType,
+                    uid: authRes.uid
+                }, idToken);
+
+                showMessage('Intelligence Provisioned: ' + email, 'success');
+                e.target.reset();
+                document.getElementById('newPassword').value = '';
+                refreshUsers();
+            } catch (err) {
+                showMessage('Provisioning Failed: ' + err.message, 'error');
+            }
+        };
+
+        async function deleteUser(uid) {
+            if (!confirm('Are you certain? This action cannot be undone.')) return;
+            try {
+                await apiCall(`${API_ROOT}/${uid}`, 'DELETE', null, idToken);
+                showMessage('Entity Purged.', 'success');
+                refreshUsers();
+            } catch (err) {
+                showMessage('Purge Failed: ' + err.message, 'error');
+            }
+        }
+
+        // --- Helper ---
+
+        async function apiCall(url, method, body, token) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            
+            const res = await fetch(url, {
+                method,
+                headers,
+                body: body ? JSON.stringify(body) : null
+            });
+
+            if (res.status === 204) return null;
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Request failed');
+            return data;
+        }
+
+        function showMessage(text, type) {
+            const m = document.getElementById('message');
+            m.textContent = text;
+            m.className = type;
+            m.style.display = 'block';
+            setTimeout(() => { m.style.display = 'none'; }, 5000);
+        }
+
+        init();
+    </script>
+</body>
+</html>

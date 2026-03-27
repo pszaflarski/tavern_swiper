@@ -4,8 +4,7 @@ services:
       context: ./services/auth
     ports:
       - "8001:8001"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    # Environment variables loaded from services/auth/.env
     volumes:
       - ./credentials:/credentials:ro
     networks:
@@ -21,9 +20,7 @@ services:
       context: ./services/profiles
     ports:
       - "8002:8002"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
-      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME:-}
+    # Environment variables loaded from services/profiles/.env
     volumes:
       - ./credentials:/credentials:ro
     networks:
@@ -39,11 +36,7 @@ services:
       context: ./services/discovery
     ports:
       - "8003:8003"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
-      - PROFILES_SERVICE_URL=http://profiles:8002
-      - SWIPES_SERVICE_URL=http://swipes:8004
-      - FEED_LIMIT=20
+    # Environment variables loaded from services/discovery/.env
     volumes:
       - ./credentials:/credentials:ro
     networks:
@@ -64,8 +57,7 @@ services:
       context: ./services/swipes
     ports:
       - "8004:8004"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    # Environment variables loaded from services/swipes/.env
     volumes:
       - ./credentials:/credentials:ro
     networks:
@@ -81,9 +73,7 @@ services:
       context: ./services/messages
     ports:
       - "8005:8005"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
-      - SWIPES_SERVICE_URL=http://swipes:8004
+    # Environment variables loaded from services/messages/.env
     volumes:
       - ./credentials:/credentials:ro
     networks:
@@ -101,10 +91,8 @@ services:
     build: ./services/users
     ports:
       - "8006:8006"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json
-      - GCS_BUCKET_NAME=tavern-swiper-dev-media
-      - AUTH_SERVICE_URL=http://auth:8001
+    # Environment variables loaded from services/users/.env
+    # Note: GCS_BUCKET_NAME and AUTH_SERVICE_URL are now moved to local .env
     volumes:
       - ./credentials/service-account.json:/app/credentials/service-account.json:ro
     networks:
