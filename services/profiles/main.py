@@ -59,6 +59,13 @@ async def health():
     return {"service": "profiles", "status": "ok"}
 
 
+@app.get("/profiles/all", response_model=list[ProfileOut])
+async def list_all_profiles():
+    """Internal endpoint used by the Discovery service to build feed candidates."""
+    docs = db.collection(COLLECTION).stream()
+    return [_doc_to_profile(doc) for doc in docs]
+
+
 @app.post("/profiles/", response_model=ProfileOut, status_code=201)
 async def create_profile(body: ProfileCreate, uid: str = Depends(get_current_user)):
     profile_id = str(uuid.uuid4())
@@ -99,13 +106,6 @@ async def update_profile(profile_id: str, body: ProfileUpdate, uid: str = Depend
         updates["attributes"] = body.attributes.model_dump()
     ref.update(updates)
     return _doc_to_profile(ref.get())
-
-
-@app.get("/profiles/all", response_model=list[ProfileOut])
-async def list_all_profiles():
-    """Internal endpoint used by the Discovery service to build feed candidates."""
-    docs = db.collection(COLLECTION).stream()
-    return [_doc_to_profile(doc) for doc in docs]
 
 
 @app.delete("/profiles/{profile_id}", status_code=204)

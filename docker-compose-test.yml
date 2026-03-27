@@ -1,0 +1,117 @@
+services:
+  auth:
+    build:
+      context: ./services/auth
+    ports:
+      - "8001:8001"
+    environment:
+      - FIRESTORE_DATABASE_ID=auth-test
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/auth/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  profiles:
+    build:
+      context: ./services/profiles
+    ports:
+      - "8002:8002"
+    environment:
+      - FIRESTORE_DATABASE_ID=profiles-test
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/profiles/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  discovery:
+    build:
+      context: ./services/discovery
+    ports:
+      - "8003:8003"
+    environment:
+      - FIRESTORE_DATABASE_ID=discovery-test
+      - PROFILES_SERVICE_URL=http://profiles:8002
+      - SWIPES_SERVICE_URL=http://swipes:8004
+      - AUTH_SERVICE_URL=http://auth:8001
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    depends_on:
+      profiles:
+        condition: service_healthy
+      swipes:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/discovery/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  swipes:
+    build:
+      context: ./services/swipes
+    ports:
+      - "8004:8004"
+    environment:
+      - FIRESTORE_DATABASE_ID=swipes-test
+      - PROFILES_SERVICE_URL=http://profiles:8002
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/swipes/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  messages:
+    build:
+      context: ./services/messages
+    ports:
+      - "8005:8005"
+    environment:
+      - FIRESTORE_DATABASE_ID=messages-test
+    volumes:
+      - ./credentials:/credentials:ro
+    networks:
+      - tavern-net
+    depends_on:
+      swipes:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/messages/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  users:
+    build: ./services/users
+    ports:
+      - "8006:8006"
+    environment:
+      - FIRESTORE_DATABASE_ID=users-test
+    volumes:
+      - ./credentials/service-account.json:/app/credentials/service-account.json:ro
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/users/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  tavern-net:
+    driver: bridge

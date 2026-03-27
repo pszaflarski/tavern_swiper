@@ -1,6 +1,4 @@
 import os
-import firebase_admin
-from firebase_admin import credentials
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 from fastapi import FastAPI, HTTPException, Depends
@@ -8,23 +6,19 @@ from dotenv import load_dotenv
 from datetime import datetime, timezone
 
 load_dotenv()
+import httpx
 from models import UserCreate, UserUpdate, UserOut, UserType
 from auth_utils import get_current_user
 
-# ---------------------------------------------------------------------------
-# Firebase / Firestore initialisation
-# ---------------------------------------------------------------------------
-_cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if _cred_path:
-    cred = credentials.Certificate(_cred_path)
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(cred)
-else:
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app()
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 
+# ---------------------------------------------------------------------------
+# Firestore initialisation
+# ---------------------------------------------------------------------------
 db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
 COLLECTION = "users"
+
+# ...
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -73,21 +67,64 @@ async def check_root_admin():
     return {"exists": exists}
 
 @app.get("/users/", response_model=list[UserOut])
-async def list_users(_: str = Depends(get_admin)):
+async def list_users(include_deleted: bool = False, _: str = Depends(get_admin)):
     """List all users. Admin only."""
-    docs = db.collection(COLLECTION).stream()
-    return [UserOut(uid=doc.id, **doc.to_dict()) for doc in docs]
+    query = db.collection(COLLECTION)
+    docs = query.stream()
+    users = []
+    for doc in docs:
+        data = doc.to_dict()
+        # Filter out soft-deleted users unless explicitly requested
+        if not include_deleted and data.get("is_deleted") is True:
+            continue
+        users.append(UserOut(uid=doc.id, **data))
+    return users
+
+@app.get("/users/me", response_model=UserOut)
+async def get_me(uid: str = Depends(get_current_user)):
+    """Fetch current user's account info."""
+    doc = db.collection(COLLECTION).document(uid).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    data = doc.to_dict()
+    return UserOut(uid=uid, **data)
+
+@app.put("/users/me", response_model=UserOut)
+async def update_me(body: UserUpdate, uid: str = Depends(get_current_user)):
+    """Update user metadata."""
+    ref = db.collection(COLLECTION).document(uid)
+    if not ref.get().exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    ref.update(updates)
+    
+    doc = ref.get().to_dict()
+    return UserOut(uid=uid, **doc)
 
 @app.delete("/users/", status_code=204)
 async def purge_all_users(_: str = Depends(get_root_admin)):
-    """Hard delete all user records from Firestore. Root Admin only."""
-    docs = db.collection(COLLECTION).stream()
+    """Hard delete all user records from Firestore and Firebase Auth. Root Admin only."""
+    # 1. Get all UIDs
+    docs = list(db.collection(COLLECTION).stream())
+    uids = [doc.id for doc in docs]
+    
+    # 2. Call Auth service to bulk delete from Firebase Auth
+    if uids:
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.request("DELETE", f"{AUTH_SERVICE_URL}/auth/users/", json={"uids": uids})
+        except Exception as e:
+            print(f"Failed to call auth service for bulk delete: {e}")
+
+    # 3. Clear Firestore
     batch = db.batch()
     count = 0
     for doc in docs:
         batch.delete(doc.reference)
         count += 1
-        if count >= 500: # Firestore batch limit
+        if count >= 500:
             batch.commit()
             batch = db.batch()
             count = 0
@@ -96,8 +133,8 @@ async def purge_all_users(_: str = Depends(get_root_admin)):
     return None
 
 @app.delete("/users/{target_uid}", status_code=204)
-async def delete_user(target_uid: str, current_uid: str = Depends(get_admin)):
-    """Delete a user. Admin only."""
+async def delete_user(target_uid: str, hard: bool = False, current_uid: str = Depends(get_admin)):
+    """Delete a user. Admin only. 'hard=True' deletes from Auth too."""
     ref = db.collection(COLLECTION).document(target_uid)
     doc = ref.get()
     if not doc.exists:
@@ -107,12 +144,36 @@ async def delete_user(target_uid: str, current_uid: str = Depends(get_admin)):
     if data.get("user_type") == UserType.ROOT_ADMIN:
         # Check if this is the last root admin
         query = db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).stream()
-        roots = list(query)
+        roots = [r for r in query if not r.to_dict().get("is_deleted")]
         if len(roots) <= 1:
-            raise HTTPException(status_code=400, detail="Cannot delete the last root admin.")
+            raise HTTPException(status_code=400, detail="Cannot delete the last active root admin.")
 
-    ref.delete()
+    if hard:
+        # 1. Delete from Auth service
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.delete(f"{AUTH_SERVICE_URL}/auth/users/{target_uid}")
+        except Exception as e:
+            print(f"Failed to call auth service for hard delete: {e}")
+        # 2. Hard delete from Firestore
+        ref.delete()
+    else:
+        # Soft delete
+        ref.update({"is_deleted": True})
+    
     return None
+
+@app.patch("/users/{target_uid}/restore", response_model=UserOut)
+async def restore_user(target_uid: str, _: str = Depends(get_admin)):
+    """Restore a soft-deleted user record."""
+    ref = db.collection(COLLECTION).document(target_uid)
+    doc = ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    ref.update({"is_deleted": False})
+    updated_doc = ref.get().to_dict()
+    return UserOut(uid=target_uid, **updated_doc)
 
 @app.post("/users/", response_model=UserOut, status_code=201)
 async def create_user(body: UserCreate, caller_uid: str = Depends(get_current_user)):
@@ -164,25 +225,3 @@ async def create_user(body: UserCreate, caller_uid: str = Depends(get_current_us
     
     return UserOut(uid=target_uid, **data)
 
-@app.get("/users/me", response_model=UserOut)
-async def get_me(uid: str = Depends(get_current_user)):
-    """Fetch current user's account info."""
-    doc = db.collection(COLLECTION).document(uid).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    data = doc.to_dict()
-    return UserOut(uid=uid, **data)
-
-@app.put("/users/me", response_model=UserOut)
-async def update_me(body: UserUpdate, uid: str = Depends(get_current_user)):
-    """Update user metadata."""
-    ref = db.collection(COLLECTION).document(uid)
-    if not ref.get().exists:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    updates = {k: v for k, v in body.model_dump().items() if v is not None}
-    ref.update(updates)
-    
-    doc = ref.get().to_dict()
-    return UserOut(uid=uid, **doc)

@@ -14,3 +14,6 @@ class LoginRequest(BaseModel):
 class AuthResponse(BaseModel):
     id_token: str
     uid: str
+
+class BulkDeleteRequest(BaseModel):
+    uids: list[str]

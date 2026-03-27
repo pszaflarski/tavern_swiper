@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from google.cloud import firestore
 import httpx
-from models import TokenRequest, TokenResponse, LoginRequest, AuthResponse
+from models import TokenRequest, TokenResponse, LoginRequest, AuthResponse, BulkDeleteRequest
 
 load_dotenv()
 
@@ -22,6 +22,12 @@ else:
 
 from fastapi.middleware.cors import CORSMiddleware
 
+# ---------------------------------------------------------------------------
+# Identity Provider Service
+# This service is the "Source of Truth" for credentials and authentication
+# tokens. It manages Firebase Auth users and provides an internal API for
+# profile services (like the Users service) to verify and manage identities.
+# ---------------------------------------------------------------------------
 app = FastAPI(title="Trystr — Auth Service", version="1.0.0")
 
 app.add_middleware(
@@ -103,3 +109,28 @@ async def login_user(body: LoginRequest):
         
     data = response.json()
     return AuthResponse(id_token=data["idToken"], uid=data["localId"])
+
+@app.delete("/auth/users/{uid}", status_code=204)
+async def delete_auth_user(uid: str):
+    """Delete a specific user from Firebase Authentication."""
+    try:
+        firebase_auth.delete_user(uid)
+    except firebase_admin.auth.UserNotFoundError:
+        # If user not in Auth, consider it a success
+        pass
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete auth user: {e}")
+
+@app.delete("/auth/users/", status_code=204)
+async def delete_auth_users_bulk(body: BulkDeleteRequest):
+    """Bulk delete users from Firebase Authentication."""
+    try:
+        if not body.uids:
+            return
+        # Firebase Admin SDK supports bulk deletion
+        result = firebase_auth.delete_users(body.uids)
+        if result.errors:
+            # Optionally log errors but continue
+            print(f"Auth bulk delete errors: {len(result.errors)} failed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed bulk auth delete: {e}")

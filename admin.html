@@ -194,6 +194,20 @@
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        .deleted-row { 
+            opacity: 0.6; 
+            background: rgba(239, 68, 68, 0.05);
+        }
+        .badge-deleted {
+            background: #ef4444;
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.625rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -208,6 +222,9 @@
                 <div class="form-group"><label>Full Name</label><input type="text" id="initName" required></div>
                 <button type="submit" class="btn-primary" style="width:100%">Claim the Root</button>
             </form>
+            <p id="file-warning" style="margin-top: 1rem; font-size: 0.75rem; color: #f59e0b; display: none;">
+                ⚠️ <b>Warning:</b> You are running via <code>file://</code>. Browsers block many features in this mode. Serve this file via <code>npx serve .</code> or similar.
+            </p>
         </div>
 
         <!-- Auth Section (Login) -->
@@ -222,6 +239,7 @@
         </div>
 
         <!-- Dashboard -->
+        <div id="dashboard" style="display:none">
             <div class="nav">
                 <h1>Nexus Dashboard</h1>
                 <div>
@@ -233,8 +251,8 @@
             <div class="card" style="margin-bottom: 2rem;">
                 <h2>Create New Intelligence</h2>
                 <form id="createForm" style="display: grid; grid-template-columns: 2fr 2fr 1.5fr 1fr; gap: 1rem; align-items: end;">
-                    <div class="form-group"><label>Email</label><input type="email" id="newEmail" required></div>
-                    <div class="form-group"><label>Full Name</label><input type="text" id="newName" required></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="newEmail" required placeholder="email@example.com"></div>
+                    <div class="form-group"><label>Full Name</label><input type="text" id="newName" required placeholder="User Name"></div>
                     <div class="form-group">
                         <label>Role</label>
                         <select id="newRole">
@@ -249,7 +267,13 @@
             </div>
 
             <div class="card">
-                <h2>Identified Entities</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Identified Entities</h2>
+                    <label style="font-size: 0.875rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="showDeleted" onchange="refreshUsers()"> 
+                        Show Soft Deleted Intelligence
+                    </label>
+                </div>
                 <table id="userTable">
                     <thead>
                         <tr>
@@ -289,6 +313,9 @@
             } catch (err) {
                 showMessage('Nexus Offline. Ensure microservices are running.', 'error');
             }
+            if (window.location.protocol === 'file:') {
+                document.getElementById('file-warning').style.display = 'block';
+            }
         }
 
         function showSection(id) {
@@ -306,15 +333,27 @@
             const fullName = document.getElementById('initName').value;
 
             try {
-                // 1. Register
-                const authRes = await apiCall(`${AUTH_ROOT}/register`, 'POST', { email, password });
+                // 1. Register (Attempt)
+                let authRes;
+                try {
+                    authRes = await apiCall(`${AUTH_ROOT}/register`, 'POST', { email, password });
+                } catch (registerErr) {
+                    if (registerErr.message === 'EMAIL_EXISTS') {
+                        // If user already exists in Auth, try logging them in to claim the root in Firestore
+                        console.log('User exists in Auth. Attempting login to claim root...');
+                        authRes = await apiCall(`${AUTH_ROOT}/login`, 'POST', { email, password });
+                    } else {
+                        throw registerErr;
+                    }
+                }
+
                 // 2. Consolidated User Creation
                 await apiCall(`${API_ROOT}/`, 'POST', { email, full_name: fullName, user_type: 'root_admin' }, authRes.id_token);
                 
                 showMessage('Root Throne Claimed. Please login.', 'success');
                 showSection('auth-section');
             } catch (err) {
-                showMessage(err.message, 'error');
+                showMessage(err.message === 'EMAIL_EXISTS' ? 'Account exists. Ensure password matches or use a new email.' : err.message, 'error');
             }
         };
 
@@ -355,33 +394,67 @@
         }
 
         async function purgeAll() {
-            const code = prompt('WARNING: This will hard-delete ALL users and reset the system. Type "TERMINATE" to confirm:');
+            const code = prompt('CRITICAL WARNING: This will PERMANENTLY EXTERMINATE ALL records from both Firestore AND Firebase Auth. This cannot be undone. Type "TERMINATE" to confirm:');
             if (code !== 'TERMINATE') return;
 
             try {
                 await apiCall(`${API_ROOT}/`, 'DELETE', null, idToken);
-                showMessage('System Purged. Re-initializing...', 'success');
+                showMessage('The Universe has been Cleaned. Re-initializing...', 'success');
                 setTimeout(() => logout(), 2000);
             } catch (err) {
                 showMessage('Purge Failed: ' + err.message, 'error');
             }
         }
 
+        async function restoreUser(uid) {
+            try {
+                await apiCall(`${API_ROOT}/${uid}/restore`, 'PATCH', null, idToken);
+                showMessage('Intelligence Restored.', 'success');
+                refreshUsers();
+            } catch (err) {
+                showMessage('Restore Failed: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteUser(uid, hard = false) {
+            const type = hard ? 'PERMANENTLY NUKE' : 'soft-delete';
+            if (!confirm(`Are you sure you want to ${type} this intelligence?`)) return;
+
+            try {
+                const url = hard ? `${API_ROOT}/${uid}?hard=true` : `${API_ROOT}/${uid}`;
+                await apiCall(url, 'DELETE', null, idToken);
+                showMessage(hard ? 'Intelligence Nuked.' : 'Intelligence Soft-Deleted.', 'success');
+                refreshUsers();
+            } catch (err) {
+                showMessage('Operation Failed: ' + err.message, 'error');
+            }
+        }
+
         async function refreshUsers() {
             try {
-                const users = await apiCall(`${API_ROOT}/`, 'GET', null, idToken);
+                const includeDeleted = document.getElementById('showDeleted').checked;
+                const users = await apiCall(`${API_ROOT}/?include_deleted=${includeDeleted}`, 'GET', null, idToken);
                 const list = document.getElementById('userList');
                 list.innerHTML = users.map(u => `
-                    <tr>
+                    <tr class="${u.is_deleted ? 'deleted-row' : ''}">
                         <td>
                             <div style="font-weight:600">${u.full_name || 'N/A'}</div>
                             <div style="font-size:0.875rem; color:var(--text-muted)">${u.email}</div>
                         </td>
-                        <td><span class="badge badge-${u.user_type === 'root_admin' ? 'root' : u.user_type}">${u.user_type}</span></td>
+                        <td>
+                            <span class="badge badge-${u.user_type === 'root_admin' ? 'root' : u.user_type}">${u.user_type}</span>
+                            ${u.is_deleted ? '<span class="badge-deleted">Deleted</span>' : ''}
+                        </td>
                         <td style="font-size:0.875rem; color:var(--text-muted)">${new Date(u.created_at).toLocaleDateString()}</td>
                         <td>
                             ${u.uid === currentUid ? '<span style="font-size:0.75rem; color:var(--text-muted)">Current</span>' : 
-                            `<button onclick="deleteUser('${u.uid}')" class="btn-danger">Delete</button>`}
+                            u.is_deleted ? `
+                                <button onclick="restoreUser('${u.uid}')" style="background:#10b981; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer">Restore</button>
+                                <button onclick="deleteUser('${u.uid}', true)" class="btn-danger" style="padding:4px 8px; font-size:0.75rem">Nuke</button>
+                            ` : `
+                                <button onclick="deleteUser('${u.uid}')" style="background:var(--text-muted); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer">Delete</button>
+                                <button onclick="deleteUser('${u.uid}', true)" class="btn-danger" style="padding:4px 8px; font-size:0.75rem">Nuke</button>
+                            `}
                         </td>
                     </tr>
                 `).join('');
@@ -418,17 +491,6 @@
                 showMessage('Provisioning Failed: ' + err.message, 'error');
             }
         };
-
-        async function deleteUser(uid) {
-            if (!confirm('Are you certain? This action cannot be undone.')) return;
-            try {
-                await apiCall(`${API_ROOT}/${uid}`, 'DELETE', null, idToken);
-                showMessage('Entity Purged.', 'success');
-                refreshUsers();
-            } catch (err) {
-                showMessage('Purge Failed: ' + err.message, 'error');
-            }
-        }
 
         // --- Helper ---
 

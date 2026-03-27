@@ -13,6 +13,7 @@ class UserBase(BaseModel):
     full_name: Optional[str] = None
     is_premium: bool = False
     user_type: UserType = UserType.USER
+    is_deleted: bool = False
 
 class UserCreate(UserBase):
     uid: Optional[str] = None

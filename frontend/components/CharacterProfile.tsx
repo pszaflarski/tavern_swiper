@@ -56,6 +56,7 @@ interface CharacterProfileProps {
   profile: CharacterProfileData;
   onSendQuest?: () => void;  // CTA button
   onEdit?: () => void;
+  onLogout?: () => void;
   isOwnProfile?: boolean;
 }
 
@@ -63,6 +64,7 @@ export default function CharacterProfile({
   profile,
   onSendQuest,
   onEdit,
+  onLogout,
   isOwnProfile = false,
 }: CharacterProfileProps) {
   return (
@@ -153,6 +155,16 @@ export default function CharacterProfile({
         ) : (
           <TouchableOpacity style={styles.primaryButton} onPress={onSendQuest} activeOpacity={0.85}>
             <Text style={styles.primaryButtonText}>Send a Quest</Text>
+          </TouchableOpacity>
+        )}
+
+        {isOwnProfile && onLogout && (
+          <TouchableOpacity 
+            style={[styles.primaryButton, { marginTop: Spacing[4], backgroundColor: Colors.surfaceContainerHighest, borderWidth: 1, borderColor: Colors.outlineVariant }]} 
+            onPress={onLogout} 
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.primaryButtonText, { color: Colors.error }]}>Exit Tavern</Text>
           </TouchableOpacity>
         )}
       </View>

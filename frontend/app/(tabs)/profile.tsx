@@ -1,13 +1,20 @@
-import React from 'react';
 import CharacterProfile from '../../components/CharacterProfile';
+import { auth } from '../../lib/firebase';
+import { useUser } from '../../hooks/useUser';
 
 export default function ProfileScreen() {
+  const { user } = useUser();
+
+  const handleLogout = () => {
+    auth.signOut();
+  };
+
   return (
     <CharacterProfile
       profile={{
         profile_id: 'me',
-        user_id: 'user-1',
-        display_name: 'Your Hero',
+        user_id: user?.uid || 'user-1',
+        display_name: user?.full_name || 'Your Hero',
         tagline: 'Ready for the next quest.',
         character_class: 'Adventurer',
         realm: 'Fort Tavern',
@@ -17,6 +24,7 @@ export default function ProfileScreen() {
       }}
       isOwnProfile
       onEdit={() => console.log('Edit pressed')}
+      onLogout={handleLogout}
     />
   );
 }
