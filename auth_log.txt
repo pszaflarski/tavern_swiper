@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/home/peter/Documents/tavern_swiper/services/auth/main.py", line 15, in <module>
+    db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/google/cloud/firestore_v1/client.py", line 91, in __init__
+    super(Client, self).__init__(
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/google/cloud/firestore_v1/base_client.py", line 141, in __init__
+    super(BaseClient, self).__init__(
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 339, in __init__
+    _ClientProjectMixin.__init__(self, project=project, credentials=credentials)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 287, in __init__
+    project = self._determine_default(project)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 306, in _determine_default
+    return _determine_default_project(project)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/google/cloud/_helpers/__init__.py", line 152, in _determine_default_project
+    _, project = google.auth.default()
+                 ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/google/auth/_default.py", line 752, in default
+    raise exceptions.DefaultCredentialsError(_CLOUD_SDK_MISSING_CREDENTIALS)
+google.auth.exceptions.DefaultCredentialsError: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.

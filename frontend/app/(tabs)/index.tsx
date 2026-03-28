@@ -46,7 +46,7 @@ export default function TavernScreen() {
           <Text style={styles.headerTitle}>Trystr</Text>
           <Text style={styles.headerSub}>The Hero's Quest</Text>
         </View>
-        <View style={[styles.centered, { padding: Spacing[10] }]}>
+        <View style={[styles.centered, { padding: Spacing[10] }]} testID="tavern-empty-state">
           <Text style={styles.emptyIcon}>🪑</Text>
           <Text style={styles.emptyTitle}>The Tavern is Empty</Text>
           <Text style={styles.emptyDesc}>
@@ -56,6 +56,7 @@ export default function TavernScreen() {
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => router.push('/profiles')}
+            testID="forge-identity-button"
           >
             <Text style={styles.actionButtonText}>Forge Your Identity</Text>
           </TouchableOpacity>

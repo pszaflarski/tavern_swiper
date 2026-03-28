@@ -13,13 +13,10 @@ from auth_utils import get_current_user
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
-_cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if _cred_path:
-    cred = credentials.Certificate(_cred_path)
-    firebase_admin.initialize_app(cred)
-else:
-    firebase_admin.initialize_app()
-
+# ---------------------------------------------------------------------------
+# Firebase / Firestore initialisation
+# ---------------------------------------------------------------------------
+firebase_admin.initialize_app()
 db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
 GCS_BUCKET = os.getenv("GCS_BUCKET_NAME", "")
 

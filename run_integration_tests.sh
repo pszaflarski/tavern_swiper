@@ -48,7 +48,7 @@ else
 fi
 
 # Ensure credentials are pointed to for the cleanup fixture
-export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/credentials/service-account.json"
+# Note: GOOGLE_APPLICATION_CREDENTIALS is now handled via host-mounted ADC in docker-compose-test.yml
 
 # Ensure dependencies are installed
 $PYTHON -m pip install -r tests/requirements.txt -q

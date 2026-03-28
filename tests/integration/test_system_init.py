@@ -4,12 +4,14 @@ import uuid
 import asyncio
 
 # --- Configuration ---
-# Assuming services are running via docker-compose-test.yml on these ports
-AUTH_URL = "http://localhost:8001"
-PROFILES_URL = "http://localhost:8002"
-DISCOVERY_URL = "http://localhost:8003"
-SWIPES_URL = "http://localhost:8004"
-USERS_URL = "http://localhost:8006"
+import os
+# --- Configuration ---
+# Fallback to local docker-compose-test.yml if env vars are not set
+AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
+PROFILES_URL = os.getenv("PROFILES_URL", "http://localhost:8002")
+DISCOVERY_URL = os.getenv("DISCOVERY_URL", "http://localhost:8003")
+SWIPES_URL = os.getenv("SWIPES_URL", "http://localhost:8004")
+USERS_URL = os.getenv("USERS_URL", "http://localhost:8006")
 
 TEST_EMAIL = f"root-test-{uuid.uuid4().hex[:8]}@example.com"
 TEST_PASSWORD = "TestPassword123!"

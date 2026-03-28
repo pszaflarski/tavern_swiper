@@ -1,0 +1,56 @@
+appId: com.peter.trystr
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Begin Your Quest"
+- tapOn: "New to the realm? Sign up instead"
+- tapOn:
+    id: "auth-name-input"
+- inputText: "Maestro Explorer"
+- tapOn:
+    id: "auth-email-input"
+- inputText: "maestro_${UUID}@tavern.com"
+- tapOn:
+    id: "auth-password-input"
+- inputText: "Password123!"
+- tapOn:
+    id: "auth-submit-button"
+
+# Wait for redirect to Tavern
+- waitForAnimationToEnd
+- assertVisible: "The Tavern is Empty"
+
+# Forge Identity from Tavern
+- tapOn:
+    id: "forge-identity-button"
+- waitForAnimationToEnd
+
+# Click Forge New Identity on the Profiles List screen
+- tapOn:
+    id: "forge-new-identity-button"
+- waitForAnimationToEnd
+- assertVisible: "New Hero"
+
+# Fill Profile
+- tapOn:
+    id: "identity-name-input"
+- inputText: "Sir Maestro"
+- tapOn:
+    id: "identity-bio-input"
+- inputText: "A traveler from the lands of Automation."
+- tapOn:
+    id: "identity-gender-input"
+- inputText: "Synthetic"
+
+# Use the Mock Image button to skip the native picker
+- tapOn:
+    id: "identity-mock-image-button"
+
+# Save
+- tapOn:
+    id: "identity-save-button"
+
+# Verify back in Tavern with active profile
+- waitForAnimationToEnd
+- assertVisible: "ADVENTURING AS: Sir Maestro"
+- assertVisible: "Scrying the realm..."

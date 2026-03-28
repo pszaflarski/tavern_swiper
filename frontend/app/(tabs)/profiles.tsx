@@ -178,7 +178,7 @@ export default function ProfilesScreen() {
         />
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.createButton} onPress={handleStartCreate}>
+          <TouchableOpacity style={styles.createButton} onPress={handleStartCreate} testID="forge-new-identity-button">
             <Text style={styles.createButtonText}>Forge New Identity</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -209,6 +209,7 @@ export default function ProfilesScreen() {
           onChangeText={(text) => setFormData({ ...formData, display_name: text })}
           placeholder="e.g. Valerius the Bold"
           placeholderTextColor={Colors.outline}
+          testID="identity-name-input"
         />
 
         <Text style={styles.label}>Hero's Lore (Bio)</Text>
@@ -220,6 +221,7 @@ export default function ProfilesScreen() {
           placeholderTextColor={Colors.outline}
           multiline
           numberOfLines={4}
+          testID="identity-bio-input"
         />
 
         <Text style={styles.label}>Gender / Essence</Text>
@@ -229,6 +231,7 @@ export default function ProfilesScreen() {
           onChangeText={(text) => setFormData({ ...formData, gender: text })}
           placeholder="e.g. Masculine, Feminine, Celestial..."
           placeholderTextColor={Colors.outline}
+          testID="identity-gender-input"
         />
 
         <View style={styles.inputContainer}>
@@ -243,17 +246,30 @@ export default function ProfilesScreen() {
           <TouchableOpacity
             style={[styles.pickerButton, { backgroundColor: Colors.surfaceContainerHigh }]}
             onPress={pickImage}
+            testID="identity-picker-button"
           >
             <Text style={[styles.pickerButtonText, { color: Colors.primary }]}>
               {formData.image_url ? 'Change Portrait' : 'Select Portrait'}
             </Text>
           </TouchableOpacity>
+          {__DEV__ && (
+            <TouchableOpacity
+              style={[styles.pickerButton, { backgroundColor: Colors.tertiaryContainer, marginTop: Spacing[2] }]}
+              onPress={() => setFormData({ ...formData, image_url: 'https://placehold.co/600x400/3e2723/ffffff?text=Maestro+Hero' })}
+              testID="identity-mock-image-button"
+            >
+              <Text style={[styles.pickerButtonText, { color: Colors.onTertiaryContainer }]}>
+                (DEV) Use Mock Image
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity
           style={[styles.saveButton, isSaving && { opacity: 0.7 }]}
           onPress={handleSave}
           disabled={isSaving}
+          testID="identity-save-button"
         >
           {isSaving ? (
             <ActivityIndicator color={Colors.onSecondary} />

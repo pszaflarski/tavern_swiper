@@ -69,6 +69,7 @@ export default function AuthScreen() {
               placeholderTextColor={Colors.outlineVariant}
               value={fullName}
               onChangeText={setFullName}
+              testID="auth-name-input"
             />
           </View>
         )}
@@ -83,6 +84,7 @@ export default function AuthScreen() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            testID="auth-email-input"
           />
         </View>
 
@@ -95,6 +97,7 @@ export default function AuthScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            testID="auth-password-input"
           />
         </View>
 
@@ -102,6 +105,7 @@ export default function AuthScreen() {
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleAuth}
           disabled={loading}
+          testID="auth-submit-button"
         >
           {loading ? (
             <ActivityIndicator color={Colors.onPrimary} />
@@ -114,6 +118,7 @@ export default function AuthScreen() {
           style={styles.toggle}
           onPress={() => setIsLogin(!isLogin)}
           disabled={loading}
+          testID="auth-toggle-link"
         >
           <Text style={styles.toggleText}>
             {isLogin
