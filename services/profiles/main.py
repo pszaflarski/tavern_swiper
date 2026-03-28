@@ -51,6 +51,7 @@ def _doc_to_profile(doc) -> ProfileOut:
         talents=d.get("talents", []),
         attributes=CoreAttributes(**attrs),
         image_url=d.get("image_url"),
+        gender=d.get("gender"),
     )
 
 

@@ -17,6 +17,7 @@ class ProfileCreate(BaseModel):
     talents: List[str] = []                 # Hobbies / Affinity Sigils
     attributes: CoreAttributes = CoreAttributes()
     image_url: Optional[str] = None
+    gender: Optional[str] = None
 
 
 class ProfileUpdate(BaseModel):
@@ -28,6 +29,7 @@ class ProfileUpdate(BaseModel):
     talents: Optional[List[str]] = None
     attributes: Optional[CoreAttributes] = None
     image_url: Optional[str] = None
+    gender: Optional[str] = None
 
 
 class ProfileOut(BaseModel):
@@ -41,3 +43,4 @@ class ProfileOut(BaseModel):
     talents: List[str] = []
     attributes: CoreAttributes
     image_url: Optional[str] = None
+    gender: Optional[str] = None

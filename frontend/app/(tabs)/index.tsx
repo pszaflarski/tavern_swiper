@@ -1,73 +1,94 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import SwipeDeck, { SwipeProfile } from '../../components/SwipeDeck';
-import { Colors, Fonts, Spacing } from '../../theme';
+import { Colors, Fonts, Spacing, Radius } from '../../theme';
 import { useDiscovery } from '../../hooks/useDiscovery';
 import { useSwipe } from '../../hooks/useSwipe';
-
-const DEMO_PROFILES: SwipeProfile[] = [
-  {
-    profile_id: '1',
-    display_name: 'Lagra the Valiant',
-    tagline: 'Seeker of adventure and good ale.',
-    character_class: 'Ranger',
-    realm: 'Fort Tavern',
-    talents: ['Archery', 'Herbalism', 'Cartography', 'Brewing'],
-    image_url: undefined,
-  },
-  {
-    profile_id: '2',
-    display_name: 'Iryn the Arcane',
-    tagline: 'My love language is interesting curses.',
-    character_class: 'Mage',
-    realm: 'The Amber Spire',
-    talents: ['Alchemy', 'Stargazing', 'Ancient Lore', 'Chess'],
-    image_url: undefined,
-  },
-];
+import { useProfiles } from '../../hooks/useProfiles';
+import { useUser } from '../../hooks/useUser';
 
 export default function TavernScreen() {
-  const [useRealData, setUseRealData] = useState(false); // Toggle this to true once backend is live
-  const [demoProfiles, setDemoProfiles] = useState(DEMO_PROFILES);
-
-  // Backend integration
-  const myProfileId = 'my-profile-1'; // Replace with actual profile selection logic
-  const { data: feed, isLoading } = useDiscovery(myProfileId);
+  const { user } = useUser();
+  const { data: profiles, isLoading: isLoadingProfiles } = useProfiles(user?.uid);
+  const [useRealData, setUseRealData] = useState(true); // Default to true now
+  
+  // Use the first profile for discovery for now
+  const activeProfile = profiles?.[0];
+  const myProfileId = activeProfile?.profile_id;
+  
+  const { data: feed, isLoading: isLoadingFeed, refetch } = useDiscovery(myProfileId);
   const swipeMutation = useSwipe(myProfileId);
 
-  const activeProfiles = useRealData ? (feed as any as SwipeProfile[]) || [] : demoProfiles;
+  const activeProfiles = feed?.profiles || [];
 
   const handleSwipeLeft = (id: string) => {
-    if (useRealData) {
-      swipeMutation.mutate({ swipedProfileId: id, direction: 'left' });
-    } else {
-      setDemoProfiles((p) => p.filter((item) => item.profile_id !== id));
-    }
+    swipeMutation.mutate({ swipedProfileId: id, direction: 'left' });
   };
 
   const handleSwipeRight = (id: string) => {
-    if (useRealData) {
-      swipeMutation.mutate({ swipedProfileId: id, direction: 'right' });
-    } else {
-      setDemoProfiles((p) => p.filter((item) => item.profile_id !== id));
-    }
+    swipeMutation.mutate({ swipedProfileId: id, direction: 'right' });
   };
+
+  if (isLoadingProfiles) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.headerSub}>Summoning your presence...</Text>
+      </View>
+    );
+  }
+
+  // CRITICAL: No profiles = No entry to the Tavern
+  if (!profiles || profiles.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Trystr</Text>
+          <Text style={styles.headerSub}>The Hero's Quest</Text>
+        </View>
+        <View style={[styles.centered, { padding: Spacing[10] }]}>
+          <Text style={styles.emptyIcon}>🪑</Text>
+          <Text style={styles.emptyTitle}>The Tavern is Empty</Text>
+          <Text style={styles.emptyDesc}>
+            You cannot enter the Tavern without a Hero's identity. 
+            Create your first profile to start discovery.
+          </Text>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/profiles')}
+          >
+            <Text style={styles.actionButtonText}>Forge Your Identity</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Trystr</Text>
         <Text style={styles.headerSub}>The Hero's Quest</Text>
-        <Text 
-          style={{ fontSize: 10, color: Colors.outline, marginTop: 4, opacity: 0.6 }}
-          onPress={() => setUseRealData(!useRealData)}
-        >
-          {useRealData ? '🔮 SCRIBING LIVE REALM' : '📜 READING ANCIENT DEMO'} (Toggle)
-        </Text>
+        {activeProfile && (
+          <Text style={styles.activeProfileLabel}>
+            ADVENTURING AS: <Text style={{ color: Colors.tertiary }}>{activeProfile.display_name}</Text>
+          </Text>
+        )}
       </View>
       <View style={styles.deckWrapper}>
-        {isLoading && useRealData ? (
-          <View style={styles.centered}><Text style={styles.headerSub}>Scrying the realm...</Text></View>
+        {isLoadingFeed ? (
+          <View style={styles.centered}>
+            <Text style={styles.headerSub}>Scrying the realm...</Text>
+          </View>
+        ) : activeProfiles.length === 0 ? (
+          <View style={styles.centered}>
+             <Text style={styles.emptyIcon}>🌪️</Text>
+             <Text style={styles.emptyTitle}>No Heroes Found</Text>
+             <Text style={styles.emptyDesc}>The realm is quiet tonight. Try again later.</Text>
+             <TouchableOpacity onPress={() => refetch()} style={{ marginTop: Spacing[4] }}>
+                <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
+             </TouchableOpacity>
+          </View>
         ) : (
           <SwipeDeck
             profiles={activeProfiles}
@@ -106,6 +127,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
+  activeProfileLabel: {
+    fontFamily: Fonts.scribe,
+    fontSize: 10,
+    color: Colors.outline,
+    marginTop: Spacing[2],
+    opacity: 0.8,
+  },
   deckWrapper: {
     flex: 1,
   },
@@ -113,5 +141,36 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.surface,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: Spacing[4],
+  },
+  emptyTitle: {
+    fontFamily: Fonts.heroic,
+    fontSize: 24,
+    color: Colors.onSurface,
+    marginBottom: Spacing[2],
+  },
+  emptyDesc: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing[8],
+  },
+  actionButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[8],
+    borderRadius: Radius.full,
+  },
+  actionButtonText: {
+    color: Colors.onPrimary,
+    fontFamily: Fonts.heroic,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

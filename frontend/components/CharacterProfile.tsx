@@ -26,6 +26,7 @@ export interface CharacterProfileData {
   talents: string[];
   attributes: CoreAttributes;
   image_url?: string;
+  gender?: string;
 }
 
 interface AttributeBarProps {

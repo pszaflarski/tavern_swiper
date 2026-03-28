@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Fonts, Radius, Spacing, Shadow } from '../theme';
 
-export type TabName = 'tavern' | 'scrolls' | 'profile';
+export type TabName = 'index' | 'scrolls' | 'profiles';
 
 interface NavTab {
   name: TabName;
@@ -11,9 +11,9 @@ interface NavTab {
 }
 
 const TABS: NavTab[] = [
-  { name: 'tavern', label: 'Tavern', icon: '🏰' },
+  { name: 'index', label: 'Tavern', icon: '🏰' },
   { name: 'scrolls', label: 'Scrolls', icon: '📜' },
-  { name: 'profile', label: 'Profile', icon: '🛡️' },
+  { name: 'profiles', label: 'Profiles', icon: '🛡️' },
 ];
 
 interface BottomNavProps {
