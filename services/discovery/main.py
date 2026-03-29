@@ -87,7 +87,7 @@ async def get_feed(profile_id: str, uid: str = Depends(get_current_user)):
     candidates = [
         DiscoveryProfile(**p)
         for p in all_profiles
-        if p["user_id"] != uid and p["profile_id"] not in already_swiped
+        if p["profile_id"] != profile_id and p["profile_id"] not in already_swiped
     ][:FEED_LIMIT]
 
     return FeedResponse(profiles=candidates)

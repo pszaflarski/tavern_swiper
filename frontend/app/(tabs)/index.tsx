@@ -7,15 +7,17 @@ import { useDiscovery } from '../../hooks/useDiscovery';
 import { useSwipe } from '../../hooks/useSwipe';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
+import { useActiveProfile } from '../../lib/ActiveProfileContext';
 
 export default function TavernScreen() {
   const { user } = useUser();
   const { data: profiles, isLoading: isLoadingProfiles } = useProfiles(user?.uid);
   const [useRealData, setUseRealData] = useState(true); // Default to true now
+  const { activeProfileId } = useActiveProfile();
   
-  // Use the first profile for discovery for now
-  const activeProfile = profiles?.[0];
-  const myProfileId = activeProfile?.profile_id;
+  // Find the full profile object for the active ID
+  const activeProfile = profiles?.find(p => p.profile_id === activeProfileId);
+  const myProfileId = activeProfileId || undefined;
   
   const { data: feed, isLoading: isLoadingFeed, refetch } = useDiscovery(myProfileId);
   const swipeMutation = useSwipe(myProfileId);
@@ -59,6 +61,31 @@ export default function TavernScreen() {
             testID="forge-identity-button"
           >
             <Text style={styles.actionButtonText}>Forge Your Identity</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Handle case where profiles exist but none is active (e.g. storage empty)
+  if (!activeProfileId) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Trystr</Text>
+          <Text style={styles.headerSub}>The Hero's Quest</Text>
+        </View>
+        <View style={[styles.centered, { padding: Spacing[10] }]}>
+          <Text style={styles.emptyIcon}>👤</Text>
+          <Text style={styles.emptyTitle}>Identity Required</Text>
+          <Text style={styles.emptyDesc}>
+            You have identities forged, but you must choose which one to use in the Tavern.
+          </Text>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/profiles')}
+          >
+            <Text style={styles.actionButtonText}>Choose Identity</Text>
           </TouchableOpacity>
         </View>
       </View>

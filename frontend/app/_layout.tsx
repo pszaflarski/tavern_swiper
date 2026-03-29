@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Colors } from '../theme';
 import { useUser } from '../hooks/useUser';
 import AuthScreen from './auth';
+import { ActiveProfileProvider } from '../lib/ActiveProfileContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +46,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RootLayoutNav />
+      <ActiveProfileProvider>
+        <RootLayoutNav />
+      </ActiveProfileProvider>
     </QueryClientProvider>
   );
 }

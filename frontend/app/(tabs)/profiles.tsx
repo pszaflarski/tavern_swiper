@@ -16,6 +16,7 @@ import { useUser } from '../../hooks/useUser';
 import { useProfiles, useCreateProfile, useUpdateProfile, useUploadProfileImage, Profile } from '../../hooks/useProfiles';
 import CharacterProfile from '../../components/CharacterProfile';
 import { auth } from '../../lib/firebase';
+import { useActiveProfile } from '../../lib/ActiveProfileContext';
 
 type Mode = 'list' | 'create' | 'edit';
 
@@ -25,6 +26,7 @@ export default function ProfilesScreen() {
   const createProfile = useCreateProfile();
   const updateProfile = useUpdateProfile();
   const uploadProfileImage = useUploadProfileImage();
+  const { activeProfileId, setActiveProfileId } = useActiveProfile();
 
   const [mode, setMode] = useState<Mode>('list');
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -40,6 +42,13 @@ export default function ProfilesScreen() {
     character_class: 'Adventurer',
     realm: 'Fort Tavern',
   });
+
+  // Auto-select first profile if none is active
+  React.useEffect(() => {
+    if (!isLoading && !activeProfileId && profiles && profiles.length > 0) {
+      setActiveProfileId(profiles[0].profile_id);
+    }
+  }, [isLoading, activeProfileId, profiles, setActiveProfileId]);
 
   const handleStartCreate = () => {
     setFormData({
@@ -127,27 +136,49 @@ export default function ProfilesScreen() {
     }
   };
 
-  const renderProfileItem = ({ item }: { item: Profile }) => (
-    <TouchableOpacity
-      style={styles.profileCard}
-      onPress={() => handleStartEdit(item)}
-      activeOpacity={0.8}
-    >
-      <View style={styles.profileCardImageContainer}>
-        {item.image_url ? (
-          <Image source={{ uri: item.image_url }} style={styles.profileCardImage} />
-        ) : (
-          <Text style={{ fontSize: 24 }}>🛡️</Text>
+  const renderProfileItem = ({ item }: { item: Profile }) => {
+    const isActive = activeProfileId === item.profile_id;
+    
+    return (
+      <View style={styles.profileCardWrapper}>
+        <TouchableOpacity
+          style={[styles.profileCard, isActive && styles.profileCardActive]}
+          onPress={() => handleStartEdit(item)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.profileCardImageContainer}>
+            {item.image_url ? (
+              <Image source={{ uri: item.image_url }} style={styles.profileCardImage} />
+            ) : (
+              <Text style={{ fontSize: 24 }}>🛡️</Text>
+            )}
+          </View>
+          <View style={styles.profileCardContent}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing[2] }}>
+              <Text style={styles.profileCardName}>{item.display_name}</Text>
+              {isActive && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.profileCardClass}>{item.character_class}</Text>
+            {item.gender && <Text style={styles.profileCardGender}>{item.gender}</Text>}
+          </View>
+          <Text style={styles.editIcon}>🖊️</Text>
+        </TouchableOpacity>
+        
+        {!isActive && (
+          <TouchableOpacity 
+            style={styles.selectActiveButton}
+            onPress={() => setActiveProfileId(item.profile_id)}
+          >
+            <Text style={styles.selectActiveButtonText}>SWAP TO THIS IDENTITY</Text>
+          </TouchableOpacity>
         )}
       </View>
-      <View style={styles.profileCardContent}>
-        <Text style={styles.profileCardName}>{item.display_name}</Text>
-        <Text style={styles.profileCardClass}>{item.character_class}</Text>
-        {item.gender && <Text style={styles.profileCardGender}>{item.gender}</Text>}
-      </View>
-      <Text style={styles.editIcon}>🖊️</Text>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -321,6 +352,39 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing[4],
     ...Shadow.waxSeal,
+  },
+  profileCardWrapper: {
+    gap: Spacing[2],
+  },
+  profileCardActive: {
+    borderColor: Colors.tertiary,
+    borderWidth: 1,
+    backgroundColor: Colors.surfaceContainer,
+  },
+  activeBadge: {
+    backgroundColor: Colors.tertiary,
+    paddingHorizontal: Spacing[2],
+    paddingVertical: 2,
+    borderRadius: Radius.xs,
+  },
+  activeBadgeText: {
+    color: Colors.onTertiary,
+    fontFamily: Fonts.scribe,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  selectActiveButton: {
+    backgroundColor: Colors.surfaceContainerHighest,
+    paddingVertical: Spacing[2],
+    alignItems: 'center',
+    borderRadius: Radius.md,
+    opacity: 0.8,
+  },
+  selectActiveButtonText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 10,
+    color: Colors.primary,
+    letterSpacing: 1,
   },
   profileCardImageContainer: {
     width: 60,
