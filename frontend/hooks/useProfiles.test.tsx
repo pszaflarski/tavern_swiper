@@ -7,11 +7,7 @@ import MockAdapter from 'axios-mock-adapter';
 
 const mockProfilesApi = new MockAdapter(profilesApi);
 
-const queryClient = new QueryClient({
-  defaultOptions: { 
-    queries: { retry: false, gcTime: 0, staleTime: 0 } 
-  },
-});
+let queryClient: QueryClient;
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -19,11 +15,15 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe('useProfiles Hooks', () => {
   beforeEach(() => {
-    queryClient.clear();
+    queryClient = new QueryClient({
+      defaultOptions: { 
+        queries: { retry: false, gcTime: Infinity, staleTime: 0 } 
+      },
+    });
     mockProfilesApi.reset();
   });
 
-  afterAll(() => {
+  afterEach(() => {
     queryClient.clear();
   });
 

@@ -8,19 +8,24 @@ import React from 'react';
 // Create a mock adapter for the profilesApi axios instance
 const mock = new MockAdapter(profilesApi);
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
+let queryClient: QueryClient;
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 );
 
 describe('useProfiles Hook', () => {
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+          gcTime: Infinity,
+        },
+      },
+    });
+  });
+
   afterEach(() => {
     mock.reset();
     queryClient.clear();

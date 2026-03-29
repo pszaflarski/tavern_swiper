@@ -16,24 +16,33 @@ jest.mock('../lib/firebase', () => ({
   },
 }));
 
+jest.mock('firebase/app', () => ({
+  initializeApp: jest.fn(),
+  getApps: jest.fn(() => []),
+  getApp: jest.fn(),
+}));
+
 jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn(() => ({
+    currentUser: { 
+      uid: 'test-123', 
+      email: 'test@example.com',
+      getIdToken: jest.fn(() => Promise.resolve('test-token')),
+    },
+  })),
   onAuthStateChanged: jest.fn((authInstance, cb) => {
-    cb({ uid: 'test-123', email: 'test@example.com' });
+    cb({ 
+      uid: 'test-123', 
+      email: 'test@example.com',
+      getIdToken: jest.fn(() => Promise.resolve('test-token')),
+    });
     return () => {};
   }),
 }));
 
 const mockUsersApi = new MockAdapter(usersApi);
 
-const queryClient = new QueryClient({
-  defaultOptions: { 
-    queries: { 
-      retry: false,
-      gcTime: 0, 
-      staleTime: 0,
-    } 
-  },
-});
+let queryClient: QueryClient;
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -41,12 +50,20 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe('useUser Hook', () => {
   beforeEach(() => {
-    queryClient.clear();
+    queryClient = new QueryClient({
+      defaultOptions: { 
+        queries: { 
+          retry: false,
+          gcTime: Infinity, 
+          staleTime: 0,
+        } 
+      },
+    });
     mockUsersApi.reset();
     jest.clearAllMocks();
   });
 
-  afterAll(() => {
+  afterEach(() => {
     queryClient.clear();
   });
 

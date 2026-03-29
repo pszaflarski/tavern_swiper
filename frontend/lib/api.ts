@@ -18,10 +18,18 @@ const BASE_URLS = {
  * This is automatically injected into every request header.
  */
 async function getIdToken(): Promise<string | null> {
+  const fetchWithTimeout = async (promise: Promise<string>, timeout: number = 5000) => {
+    let timeoutHandle: any;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error('Token fetch timeout')), timeout);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutHandle));
+  };
+
   try {
     const user = auth.currentUser;
     if (!user) return null;
-    return await user.getIdToken();
+    return await fetchWithTimeout(user.getIdToken());
   } catch (error) {
     console.error('Error fetching ID token:', error);
     return null;

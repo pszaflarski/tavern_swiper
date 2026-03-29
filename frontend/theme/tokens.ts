@@ -5,59 +5,59 @@
  */
 
 export const Colors = {
-  // Primary — Dark Velvet Forest
-  primary: '#012d1d',
-  primaryContainer: '#1b4332',
-  primaryFixed: '#c1ecd4',
-  primaryFixedDim: '#a5d0b9',
+  // Primary — Midnight Forest Glow
+  primary: '#006d4e',
+  primaryContainer: '#004d33',
+  primaryFixed: '#88f8c8',
+  primaryFixedDim: '#6bdcad',
   onPrimary: '#ffffff',
-  onPrimaryContainer: '#86af99',
+  onPrimaryContainer: '#cce8e0',
 
-  // Secondary — Royal Magic
-  secondary: '#843ab4',
-  secondaryContainer: '#cc80fd',
-  secondaryFixed: '#f4d9ff',
+  // Secondary — Midnight Magic
+  secondary: '#823bc5',
+  secondaryContainer: '#4a0080',
+  secondaryFixed: '#f1dbff',
   onSecondary: '#ffffff',
-  onSecondaryContainer: '#580087',
+  onSecondaryContainer: '#f1dbff',
 
-  // Tertiary — Burnt Gold
-  tertiary: '#735c00',
-  tertiaryContainer: '#cba72f',
-  tertiaryFixed: '#ffe088',
-  tertiaryFixedDim: '#e9c349',
-  onTertiary: '#ffffff',
-  onTertiaryContainer: '#4e3d00',
+  // Tertiary — Glowing Gold
+  tertiary: '#d4af37',
+  tertiaryContainer: '#715a00',
+  tertiaryFixed: '#ffe08c',
+  tertiaryFixedDim: '#e3c46a',
+  onTertiary: '#3e2e00',
+  onTertiaryContainer: '#ffe08c',
 
-  // Surface — Parchment hierarchy
-  background: '#fff9ed',
-  surface: '#fff9ed',
-  surfaceBright: '#fff9ed',
-  surfaceContainer: '#f7eed2',
-  surfaceContainerHigh: '#f1e8cd',
-  surfaceContainerHighest: '#ebe2c8',
-  surfaceContainerLow: '#fcf3d8',
-  surfaceContainerLowest: '#ffffff',
-  surfaceDim: '#e2dabf',
-  surfaceTint: '#3f6653',
-  surfaceVariant: '#ebe2c8',
+  // Surface — Obsidian Grimoire hierarchy
+  background: '#001a11',
+  surface: '#001a11',
+  surfaceBright: '#343b38',
+  surfaceContainer: '#1a211e',
+  surfaceContainerHigh: '#242b28',
+  surfaceContainerHighest: '#2f3632',
+  surfaceContainerLow: '#161d1a',
+  surfaceContainerLowest: '#0d110f',
+  surfaceDim: '#0d110f',
+  surfaceTint: '#6bdcad',
+  surfaceVariant: '#3f4945',
 
-  // On-surface
-  onBackground: '#1f1c0b',
-  onSurface: '#1f1c0b',
-  onSurfaceVariant: '#414844',
+  // On-surface — Ivory/Ink contrast
+  onBackground: '#e4e1e9',
+  onSurface: '#e4e1e9',
+  onSurfaceVariant: '#bfc9c4',
 
   // Outline
-  outline: '#717973',
-  outlineVariant: '#c1c8c2',
+  outline: '#89938f',
+  outlineVariant: '#3f4945',
 
   // Error
-  error: '#ba1a1a',
-  onError: '#ffffff',
+  error: '#ffb4ab',
+  onError: '#690005',
 
   // Inverse
-  inverseSurface: '#35301e',
-  inverseOnSurface: '#faf0d5',
-  inversePrimary: '#a5d0b9',
+  inverseSurface: '#e4e1e9',
+  inverseOnSurface: '#001a11',
+  inversePrimary: '#006d4e',
 };
 
 export const Fonts = {
