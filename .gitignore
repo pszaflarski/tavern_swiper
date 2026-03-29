@@ -32,3 +32,9 @@ frontend/.expo/
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Maestro
+.maestro
+.android_sdk/

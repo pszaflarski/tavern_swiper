@@ -19,7 +19,7 @@ TEST_PASSWORD = "TestPassword123!"
 @pytest.fixture(scope="module")
 async def auth_token():
     """Fixture to register a new user and return their ID token."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Register via Auth Service
         register_resp = await client.post(
             f"{AUTH_URL}/auth/register",
@@ -44,7 +44,7 @@ async def test_root_initialization_flow(auth_token):
     uid = auth_token["uid"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         # --- Step 1: Initialize Root Admin ---
         user_resp = await client.post(
             f"{USERS_URL}/users/",
@@ -94,7 +94,7 @@ async def test_user_self_registration_flow():
     3. Create Profile
     """
     email = f"user-{uuid.uuid4().hex[:8]}@example.com"
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Auth Registration
         reg_resp = await client.post(
             f"{AUTH_URL}/auth/register",
@@ -140,7 +140,7 @@ async def test_multi_profile_discovery_and_matching():
     4. User B (B1) swipes RIGHT on A1
     5. Verify Match is created for both A1 and B1
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         # --- 1. Setup User A ---
         email_a = f"user-a-{uuid.uuid4().hex[:8]}@example.com"
         reg_a = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_a, "password": TEST_PASSWORD})
@@ -213,7 +213,7 @@ async def test_multi_profile_discovery_and_matching():
 async def test_root_singleton_enforcement(auth_token):
     """Verify that a second root admin cannot be created."""
     # Register another user
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         other_email = f"other-{uuid.uuid4().hex[:8]}@example.com"
         reg_resp = await client.post(
             f"{AUTH_URL}/auth/register",
