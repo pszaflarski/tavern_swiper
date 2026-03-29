@@ -16,7 +16,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
-} from 'firebase/auth';
+} from '@firebase/auth';
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);

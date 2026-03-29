@@ -1,0 +1,34 @@
+# Secrets and Credentials (Never let AI see these)
+credentials/
+.env*
+google-services.json
+auth_log.txt
+
+# Noise and Dependencies (Saves context window/tokens)
+node_modules/
+.expo/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.android_sdk/
+.maestro/
+
+# Binary Assets (Useless for text-based LLMs)
+'sample profiles'/*.jpg
+'sample profiles'/*.png
+
+# OS and Editor configs
+.DS_Store
+.vscode/
+.idea/
+
+# Build Artifacts
+build/
+dist/
+out/
+
+
+frontend/
+services/

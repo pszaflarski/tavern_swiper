@@ -195,7 +195,7 @@ def test_delete_user_admin(mock_firestore, mock_auth_service):
     response = client.delete("/users/user1", headers=headers)
     
     assert response.status_code == 204
-    mock_target_doc.delete.assert_called()
+    mock_target_doc.update.assert_called_with({"is_deleted": True})
 
 
 def test_purge_all_users_root(mock_firestore, mock_auth_service):

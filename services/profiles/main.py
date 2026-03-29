@@ -58,8 +58,8 @@ async def health():
 
 
 @app.get("/profiles/all", response_model=list[ProfileOut])
-async def list_all_profiles():
-    """Internal endpoint used by the Discovery service to build feed candidates."""
+async def list_all_profiles(_: str = Depends(get_current_user)):
+    """Internal endpoint used by the Discovery service. Now secured with Auth."""
     docs = db.collection(COLLECTION).stream()
     return [_doc_to_profile(doc) for doc in docs]
 
@@ -84,7 +84,10 @@ async def get_profile(profile_id: str):
 
 
 @app.get("/profiles/user/{user_id}", response_model=list[ProfileOut])
-async def list_profiles_for_user(user_id: str):
+async def list_profiles_for_user(user_id: str, uid: str = Depends(get_current_user)):
+    """List profiles for a user. Only allows viewing your own profiles."""
+    if user_id != uid:
+        raise HTTPException(status_code=403, detail="Not authorized to view another user's profiles")
     docs = db.collection(COLLECTION).where("user_id", "==", user_id).stream()
     return [_doc_to_profile(doc) for doc in docs]
 
@@ -120,13 +123,17 @@ async def delete_profile(profile_id: str, uid: str = Depends(get_current_user)):
 
 
 @app.post("/profiles/{profile_id}/image", response_model=ProfileOut)
-async def upload_profile_image(profile_id: str, file: UploadFile = File(...)):
-    """Upload profile image to GCS and save the public URL to Firestore."""
+async def upload_profile_image(profile_id: str, file: UploadFile = File(...), uid: str = Depends(get_current_user)):
+    """Upload profile image to GCS and save the public URL to Firestore. Only the owner can upload."""
     if not GCS_BUCKET:
         raise HTTPException(status_code=503, detail="GCS_BUCKET_NAME not configured")
     ref = db.collection(COLLECTION).document(profile_id)
-    if not ref.get().exists:
+    doc = ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
+    
+    if doc.to_dict().get("user_id") != uid:
+        raise HTTPException(status_code=403, detail="Not authorized to update this profile's image")
 
     client = storage.Client()
     bucket = client.bucket(GCS_BUCKET)

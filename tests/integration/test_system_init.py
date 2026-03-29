@@ -175,7 +175,7 @@ async def test_multi_profile_discovery_and_matching():
         profile_ids_in_feed = [p["profile_id"] for p in feed_a1.json()["profiles"]]
         assert p_b1_id in profile_ids_in_feed
         assert p_a1_id not in profile_ids_in_feed # Self-exclusion
-        assert p_a2_id not in profile_ids_in_feed # Same-account exclusion (Optional, verifies multi-profile discovery)
+        assert p_a2_id in profile_ids_in_feed # Multi-profile discovery (Should see other profiles on same account)
 
         # Swipe RIGHT
         swipe_a_resp = await client.post(

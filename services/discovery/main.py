@@ -41,7 +41,7 @@ async def health():
 
 
 @app.get("/discovery/feed/{profile_id}", response_model=FeedResponse)
-async def get_feed(profile_id: str, uid: str = Depends(get_current_user)):
+async def get_feed(profile_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
     """Fetch a deck of candidate profiles to swipe on.
     
     Strategy:
@@ -51,10 +51,13 @@ async def get_feed(profile_id: str, uid: str = Depends(get_current_user)):
     3. Exclude already-swiped profiles and the requesting profile itself.
     4. Return up to FEED_LIMIT candidates.
     """
+    uid, token = auth_data
+    headers = {"Authorization": f"Bearer {token}"}
+    
     async with httpx.AsyncClient(timeout=10.0) as client:
         # 0. Verify ownership
         try:
-            p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{profile_id}")
+            p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{profile_id}", headers=headers)
             if p_resp.status_code == 404:
                 raise HTTPException(status_code=404, detail="Profile not found")
             p_data = p_resp.json()
@@ -75,7 +78,7 @@ async def get_feed(profile_id: str, uid: str = Depends(get_current_user)):
 
         # 2. All profiles
         try:
-            profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/all")
+            profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/all", headers=headers)
             profiles_resp.raise_for_status()
             all_profiles = profiles_resp.json()
         except httpx.HTTPError as e:

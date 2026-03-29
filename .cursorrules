@@ -32,6 +32,7 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 ## 🎨 Frontend: React Native (Expo) & Stitch
 - Use the **Stitch Design System** for all UI components.
 - Data fetching MUST use the token-injected Axios client in `frontend/lib/api.ts`.
+- **NO DIRECT FIRESTORE ACCESS**: The frontend must never call Firestore directly. All data must be fetched through the microservice APIs.
 - Centralized `.env` in `frontend/` maps localhost ports to the microservice fleet.
 
 ## 🧪 Development Workflow

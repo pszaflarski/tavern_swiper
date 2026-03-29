@@ -16,13 +16,13 @@ jest.mock('../lib/firebase', () => ({
   },
 }));
 
-jest.mock('firebase/app', () => ({
+jest.mock('@firebase/app', () => ({
   initializeApp: jest.fn(),
   getApps: jest.fn(() => []),
   getApp: jest.fn(),
 }));
 
-jest.mock('firebase/auth', () => ({
+jest.mock('@firebase/auth', () => ({
   getAuth: jest.fn(() => ({
     currentUser: { 
       uid: 'test-123', 

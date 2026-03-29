@@ -104,6 +104,9 @@ npm install
 npx expo start
 ```
 
+### No Direct Firestore Access
+The frontend must never call Firestore directly. All data must be fetched through the microservice APIs. The client SDK is only authorized to use the Firebase Authentication module.
+
 ### Environment Switching
 Easily toggle the frontend between local, dev (cloud), and test (cloud) environments:
 ```bash

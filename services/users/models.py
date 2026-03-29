@@ -22,7 +22,9 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     is_premium: Optional[bool] = None
     user_type: Optional[UserType] = None
+    active_profile_id: Optional[str] = None
 
 class UserOut(UserBase):
     uid: str
     created_at: datetime
+    active_profile_id: Optional[str] = None

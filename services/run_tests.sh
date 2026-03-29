@@ -18,12 +18,18 @@ export GCLOUD_PROJECT="dummy-project"
 
 for SERVICE in "${SERVICES[@]}"; do
     echo "🧪 Testing service: $SERVICE"
+    # Use the root venv if it exists
+    if [ -f "$SCRIPT_DIR/../.venv/bin/python3" ]; then
+        PYTHON="$SCRIPT_DIR/../.venv/bin/python3"
+    else
+        PYTHON="python3"
+    fi
+    
     cd "$SCRIPT_DIR/$SERVICE"
     
     # Check if tests directory exists
     if [ -d "tests" ]; then
-        # Use python3 -m pytest for better compatibility
-        if python3 -m pytest tests/ -v; then
+        if $PYTHON -m pytest tests/ -v; then
             echo "✅ $SERVICE: Tests passed!"
         else
             echo "❌ $SERVICE: Tests failed!"
