@@ -1,0 +1,1754 @@
+🚀 Starting Tavern Swiper Dual-Environment Cloud Run Deployment (Keyless)...
+--------------------------------------------------------
+📦 Building: auth
+--------------------------------------------------------
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Creating temporary archive of 16 file(s) totalling 29.7 KiB before compression.
+Uploading tarball of [services/auth] to [gs://tavern-swiper-dev_cloudbuild/source/1774811853.843126-470c31cbf48d47e1a9d211a93229ee1f.tgz]
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Created [https://cloudbuild.googleapis.com/v1/projects/tavern-swiper-dev/locations/global/builds/b510ac44-a40c-473a-b75d-e79c32402243].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/b510ac44-a40c-473a-b75d-e79c32402243?project=374390417125 ].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Waiting for build to complete. Polling interval: 1 second(s).
+----------------- REMOTE BUILD OUTPUT ------------------
+starting build "b510ac44-a40c-473a-b75d-e79c32402243"
+
+FETCHSOURCE
+Fetching storage object: gs://tavern-swiper-dev_cloudbuild/source/1774811853.843126-470c31cbf48d47e1a9d211a93229ee1f.tgz#1774811854359770
+Copying gs://tavern-swiper-dev_cloudbuild/source/1774811853.843126-470c31cbf48d47e1a9d211a93229ee1f.tgz#1774811854359770...
+/ [0 files][    0.0 B/  9.3 KiB]                                                / [1 files][  9.3 KiB/  9.3 KiB]                                                
+Operation completed over 1 objects/9.3 KiB.                                      
+BUILD
+Already have image (with digest): gcr.io/cloud-builders/gcb-internal
+Sending build context to Docker daemon  48.64kB
+Step 1/6 : FROM python:3.12-slim
+3.12-slim: Pulling from library/python
+ec781dee3f47: Already exists
+b1a20e2fae4c: Pulling fs layer
+a6d1911b36ac: Pulling fs layer
+e3c59d77c03e: Pulling fs layer
+b1a20e2fae4c: Verifying Checksum
+b1a20e2fae4c: Download complete
+e3c59d77c03e: Verifying Checksum
+e3c59d77c03e: Download complete
+a6d1911b36ac: Verifying Checksum
+a6d1911b36ac: Download complete
+b1a20e2fae4c: Pull complete
+a6d1911b36ac: Pull complete
+e3c59d77c03e: Pull complete
+Digest: sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4
+Status: Downloaded newer image for python:3.12-slim
+ ---> fb1118f126b5
+Step 2/6 : WORKDIR /app
+ ---> Running in d007b054619d
+Removing intermediate container d007b054619d
+ ---> 2c2e3c89e6d6
+Step 3/6 : COPY requirements.txt .
+ ---> 6046b89b2621
+Step 4/6 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in c7b0157d525b
+Collecting fastapi (from -r requirements.txt (line 1))
+  Downloading fastapi-0.135.2-py3-none-any.whl.metadata (28 kB)
+Collecting firebase-admin (from -r requirements.txt (line 3))
+  Downloading firebase_admin-7.3.0-py3-none-any.whl.metadata (1.7 kB)
+Collecting python-dotenv (from -r requirements.txt (line 4))
+  Downloading python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+Collecting httpx>=0.27.0 (from -r requirements.txt (line 6))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting uvicorn[standard] (from -r requirements.txt (line 2))
+  Downloading uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting pydantic>=2.9.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting click>=7.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httptools>=0.6.3 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+Collecting pyyaml>=5.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting uvloop>=0.15.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.9 kB)
+Collecting watchfiles>=0.20 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting websockets>=10.4 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+Collecting cachecontrol>=0.14.3 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading cachecontrol-0.14.4-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-api-core<3.0.0dev,>=2.25.1 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-cloud-firestore>=2.21.0 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading google_cloud_firestore-2.26.0-py3-none-any.whl.metadata (10 kB)
+Collecting google-cloud-storage>=3.1.1 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading google_cloud_storage-3.10.1-py3-none-any.whl.metadata (15 kB)
+Collecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+Collecting anyio (from httpx>=0.27.0->-r requirements.txt (line 6))
+  Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting certifi (from httpx>=0.27.0->-r requirements.txt (line 6))
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx>=0.27.0->-r requirements.txt (line 6))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx>=0.27.0->-r requirements.txt (line 6))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting h2<5,>=3 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting requests>=2.16.0 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading requests-2.33.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting msgpack<2.0.0,>=0.5.2 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading googleapis_common_protos-1.73.1-py3-none-any.whl.metadata (9.2 kB)
+Collecting protobuf<7.0.0,>=4.25.8 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting proto-plus<2.0.0,>=1.22.3 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading proto_plus-1.27.2-py3-none-any.whl.metadata (2.2 kB)
+Collecting google-auth<3.0.0,>=2.14.1 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+Collecting grpcio<2.0.0,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading grpcio_status-1.78.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting google-cloud-core<3.0.0,>=1.4.1 (from google-cloud-firestore>=2.21.0->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting cryptography>=3.4.0 (from pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting cffi>=2.0.0 (from cryptography>=3.4.0->pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth<3.0.0,>=2.14.1->google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting hyperframe<7,>=6.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+Collecting hpack<5,>=4.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting charset_normalizer<4,>=2 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=3.4.0->pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth<3.0.0,>=2.14.1->google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Downloading fastapi-0.135.2-py3-none-any.whl (117 kB)
+Downloading firebase_admin-7.3.0-py3-none-any.whl (138 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading cachecontrol-0.14.4-py3-none-any.whl (22 kB)
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+Downloading google_cloud_firestore-2.26.0-py3-none-any.whl (416 kB)
+Downloading google_cloud_storage-3.10.1-py3-none-any.whl (324 kB)
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (517 kB)
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 202.5 MB/s eta 0:00:00
+Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 481.9 MB/s eta 0:00:00
+Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 220.5 MB/s eta 0:00:00
+Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+Downloading uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 186.3 MB/s eta 0:00:00
+Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+Downloading googleapis_common_protos-1.73.1-py3-none-any.whl (297 kB)
+Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 206.8 MB/s eta 0:00:00
+Downloading grpcio_status-1.78.0-py3-none-any.whl (14 kB)
+Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (427 kB)
+Downloading proto_plus-1.27.2-py3-none-any.whl (50 kB)
+Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Downloading requests-2.33.0-py3-none-any.whl (65 kB)
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (207 kB)
+Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: websockets, uvloop, urllib3, typing-extensions, pyyaml, python-dotenv, pyjwt, pycparser, pyasn1, protobuf, msgpack, idna, hyperframe, httptools, hpack, h11, google-crc32c, click, charset_normalizer, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, requests, pydantic-core, pyasn1-modules, proto-plus, httpcore, h2, grpcio, googleapis-common-protos, google-resumable-media, cffi, anyio, watchfiles, starlette, pydantic, httpx, grpcio-status, cryptography, cachecontrol, google-auth, fastapi, google-api-core, google-cloud-core, google-cloud-storage, google-cloud-firestore, firebase-admin
+Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 cachecontrol-0.14.4 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.6 click-8.3.1 cryptography-46.0.6 fastapi-0.135.2 firebase-admin-7.3.0 google-api-core-2.30.0 google-auth-2.49.1 google-cloud-core-2.5.0 google-cloud-firestore-2.26.0 google-cloud-storage-3.10.1 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.73.1 grpcio-1.78.0 grpcio-status-1.78.0 h11-0.16.0 h2-4.3.0 hpack-4.1.0 httpcore-1.0.9 httptools-0.7.1 httpx-0.28.1 hyperframe-6.1.0 idna-3.11 msgpack-1.1.2 proto-plus-1.27.2 protobuf-6.33.6 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pyjwt-2.12.1 python-dotenv-1.2.2 pyyaml-6.0.3 requests-2.33.0 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.6.3 uvicorn-0.42.0 uvloop-0.22.1 watchfiles-1.1.1 websockets-16.0
+[91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[0m[91m
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+[0mRemoving intermediate container c7b0157d525b
+ ---> a72108b15904
+Step 5/6 : COPY . .
+ ---> 850d61cd4605
+Step 6/6 : CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8001}"]
+ ---> Running in 29fa10640994
+Removing intermediate container 29fa10640994
+ ---> a13783a726fc
+Successfully built a13783a726fc
+Successfully tagged gcr.io/tavern-swiper-dev/auth:latest
+PUSH
+Pushing gcr.io/tavern-swiper-dev/auth
+The push refers to repository [gcr.io/tavern-swiper-dev/auth]
+b52b46071579: Preparing
+2864b6eb5cab: Preparing
+fdae9f2b1417: Preparing
+eabdb9518b13: Preparing
+addf8d91bd21: Preparing
+481070cf8ce5: Preparing
+1c107a897b02: Preparing
+188c9b34dfbe: Preparing
+481070cf8ce5: Layer already exists
+188c9b34dfbe: Layer already exists
+1c107a897b02: Layer already exists
+addf8d91bd21: Layer already exists
+fdae9f2b1417: Pushed
+b52b46071579: Pushed
+eabdb9518b13: Pushed
+2864b6eb5cab: Pushed
+latest: digest: sha256:20965510079fe81c70d973558faf570a7437090be84ff863d52bdef1717bcec8 size: 1993
+DONE
+-----------------------------------------------------
+ID                                    CREATE_TIME                DURATION  SOURCE                                                                                           IMAGES                                   STATUS
+b510ac44-a40c-473a-b75d-e79c32402243  2026-03-29T19:17:35+00:00  39S       gs://tavern-swiper-dev_cloudbuild/source/1774811853.843126-470c31cbf48d47e1a9d211a93229ee1f.tgz  gcr.io/tavern-swiper-dev/auth (+1 more)  SUCCESS
+🚀 Deploying auth to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mauth[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy...............done
+Creating Revision................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mauth[m] revision [[1mauth-00008-cjm[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://auth-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ auth deployed at: https://auth-hhqol7siba-uc.a.run.app
+🚀 Deploying auth-test to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mauth-test[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy............done
+Creating Revision........................................................................done
+Routing traffic.....done
+Done.
+Service [[1mauth-test[m] revision [[1mauth-test-00005-ph2[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://auth-test-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ auth-test deployed at: https://auth-test-hhqol7siba-uc.a.run.app
+--------------------------------------------------------
+📦 Building: users
+--------------------------------------------------------
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Creating temporary archive of 18 file(s) totalling 86.3 KiB before compression.
+Uploading tarball of [services/users] to [gs://tavern-swiper-dev_cloudbuild/source/1774811937.113773-727ae52f68024f6b81583da366e3cf99.tgz]
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Created [https://cloudbuild.googleapis.com/v1/projects/tavern-swiper-dev/locations/global/builds/baadf038-68fa-48d5-a93e-f4c966b6196e].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/baadf038-68fa-48d5-a93e-f4c966b6196e?project=374390417125 ].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Waiting for build to complete. Polling interval: 1 second(s).
+---------------- REMOTE BUILD OUTPUT ----------------
+starting build "baadf038-68fa-48d5-a93e-f4c966b6196e"
+
+FETCHSOURCE
+Fetching storage object: gs://tavern-swiper-dev_cloudbuild/source/1774811937.113773-727ae52f68024f6b81583da366e3cf99.tgz#1774811937607813
+Copying gs://tavern-swiper-dev_cloudbuild/source/1774811937.113773-727ae52f68024f6b81583da366e3cf99.tgz#1774811937607813...
+/ [0 files][    0.0 B/ 20.4 KiB]                                                / [1 files][ 20.4 KiB/ 20.4 KiB]                                                
+Operation completed over 1 objects/20.4 KiB.
+BUILD
+Already have image (with digest): gcr.io/cloud-builders/gcb-internal
+Sending build context to Docker daemon    107kB
+Step 1/6 : FROM python:3.12-slim
+3.12-slim: Pulling from library/python
+ec781dee3f47: Already exists
+b1a20e2fae4c: Pulling fs layer
+a6d1911b36ac: Pulling fs layer
+e3c59d77c03e: Pulling fs layer
+e3c59d77c03e: Verifying Checksum
+e3c59d77c03e: Download complete
+b1a20e2fae4c: Download complete
+a6d1911b36ac: Verifying Checksum
+a6d1911b36ac: Download complete
+b1a20e2fae4c: Pull complete
+a6d1911b36ac: Pull complete
+e3c59d77c03e: Pull complete
+Digest: sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4
+Status: Downloaded newer image for python:3.12-slim
+ ---> fb1118f126b5
+Step 2/6 : WORKDIR /app
+ ---> Running in f055d75bef53
+Removing intermediate container f055d75bef53
+ ---> 009803670bcb
+Step 3/6 : COPY requirements.txt .
+ ---> 7eb32b91aada
+Step 4/6 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in 94e459bbebf6
+Collecting fastapi (from -r requirements.txt (line 1))
+  Downloading fastapi-0.135.2-py3-none-any.whl.metadata (28 kB)
+Collecting uvicorn (from -r requirements.txt (line 2))
+  Downloading uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting google-cloud-firestore (from -r requirements.txt (line 3))
+  Downloading google_cloud_firestore-2.26.0-py3-none-any.whl.metadata (10 kB)
+Collecting firebase-admin (from -r requirements.txt (line 4))
+  Downloading firebase_admin-7.3.0-py3-none-any.whl.metadata (1.7 kB)
+Collecting httpx (from -r requirements.txt (line 5))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting python-dotenv (from -r requirements.txt (line 7))
+  Downloading python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+Collecting pydantic[email] (from -r requirements.txt (line 6))
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting click>=7.0 (from uvicorn->-r requirements.txt (line 2))
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn->-r requirements.txt (line 2))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting google-api-core!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1 (from google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+Collecting google-cloud-core<3.0.0,>=1.4.1 (from google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting grpcio<2.0.0,>=1.33.2 (from google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+Collecting proto-plus<2.0.0,>=1.22.3 (from google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading proto_plus-1.27.2-py3-none-any.whl.metadata (2.2 kB)
+Collecting protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<7.0.0,>=3.20.2 (from google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting cachecontrol>=0.14.3 (from firebase-admin->-r requirements.txt (line 4))
+  Downloading cachecontrol-0.14.4-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-cloud-storage>=3.1.1 (from firebase-admin->-r requirements.txt (line 4))
+  Downloading google_cloud_storage-3.10.1-py3-none-any.whl.metadata (15 kB)
+Collecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 4))
+  Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+Collecting anyio (from httpx->-r requirements.txt (line 5))
+  Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting certifi (from httpx->-r requirements.txt (line 5))
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx->-r requirements.txt (line 5))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx->-r requirements.txt (line 5))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting h2<5,>=3 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 4))
+  Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting annotated-types>=0.6.0 (from pydantic[email]->-r requirements.txt (line 6))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic[email]->-r requirements.txt (line 6))
+  Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting email-validator>=2.0.0 (from pydantic[email]->-r requirements.txt (line 6))
+  Downloading email_validator-2.3.0-py3-none-any.whl.metadata (26 kB)
+Collecting requests>=2.16.0 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 4))
+  Downloading requests-2.33.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting msgpack<2.0.0,>=0.5.2 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 4))
+  Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting dnspython>=2.0.0 (from email-validator>=2.0.0->pydantic[email]->-r requirements.txt (line 6))
+  Downloading dnspython-2.8.0-py3-none-any.whl.metadata (5.7 kB)
+Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading googleapis_common_protos-1.73.1-py3-none-any.whl.metadata (9.2 kB)
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading grpcio_status-1.78.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting cryptography>=38.0.3 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 4))
+  Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 4))
+  Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+Collecting cffi>=2.0.0 (from cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting hyperframe<7,>=6.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 4))
+  Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+Collecting hpack<5,>=4.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 4))
+  Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting charset_normalizer<4,>=2 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 4))
+  Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 4))
+  Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 3))
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Downloading fastapi-0.135.2-py3-none-any.whl (117 kB)
+Downloading uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Downloading google_cloud_firestore-2.26.0-py3-none-any.whl (416 kB)
+Downloading firebase_admin-7.3.0-py3-none-any.whl (138 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 172.1 MB/s eta 0:00:00
+Downloading python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading cachecontrol-0.14.4-py3-none-any.whl (22 kB)
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+Downloading email_validator-2.3.0-py3-none-any.whl (35 kB)
+Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+Downloading google_cloud_storage-3.10.1-py3-none-any.whl (324 kB)
+Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 253.9 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading proto_plus-1.27.2-py3-none-any.whl (50 kB)
+Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 367.4 MB/s eta 0:00:00
+Downloading dnspython-2.8.0-py3-none-any.whl (331 kB)
+Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+Downloading googleapis_common_protos-1.73.1-py3-none-any.whl (297 kB)
+Downloading grpcio_status-1.78.0-py3-none-any.whl (14 kB)
+Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (427 kB)
+Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading requests-2.33.0-py3-none-any.whl (65 kB)
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (207 kB)
+Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: urllib3, typing-extensions, python-dotenv, pyjwt, pycparser, pyasn1, protobuf, msgpack, idna, hyperframe, hpack, h11, google-crc32c, dnspython, click, charset_normalizer, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, requests, pydantic-core, pyasn1-modules, proto-plus, httpcore, h2, grpcio, googleapis-common-protos, google-resumable-media, email-validator, cffi, anyio, starlette, pydantic, httpx, grpcio-status, cryptography, cachecontrol, google-auth, fastapi, google-api-core, google-cloud-core, google-cloud-storage, google-cloud-firestore, firebase-admin
+Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 cachecontrol-0.14.4 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.6 click-8.3.1 cryptography-46.0.6 dnspython-2.8.0 email-validator-2.3.0 fastapi-0.135.2 firebase-admin-7.3.0 google-api-core-2.30.0 google-auth-2.49.1 google-cloud-core-2.5.0 google-cloud-firestore-2.26.0 google-cloud-storage-3.10.1 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.73.1 grpcio-1.78.0 grpcio-status-1.78.0 h11-0.16.0 h2-4.3.0 hpack-4.1.0 httpcore-1.0.9 httpx-0.28.1 hyperframe-6.1.0 idna-3.11 msgpack-1.1.2 proto-plus-1.27.2 protobuf-6.33.6 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pyjwt-2.12.1 python-dotenv-1.2.2 requests-2.33.0 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.6.3 uvicorn-0.42.0
+[91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[0m[91m
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+[0mRemoving intermediate container 94e459bbebf6
+ ---> 172a84896eba
+Step 5/6 : COPY . .
+ ---> 68d9388c8645
+Step 6/6 : CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8006}"]
+ ---> Running in 907440169f1e
+Removing intermediate container 907440169f1e
+ ---> b4fd86328520
+Successfully built b4fd86328520
+Successfully tagged gcr.io/tavern-swiper-dev/users:latest
+PUSH
+Pushing gcr.io/tavern-swiper-dev/users
+The push refers to repository [gcr.io/tavern-swiper-dev/users]
+d78c3a815b7a: Preparing
+67c9b343e25c: Preparing
+c8a89d1971bf: Preparing
+72538b8b08d6: Preparing
+addf8d91bd21: Preparing
+481070cf8ce5: Preparing
+1c107a897b02: Preparing
+188c9b34dfbe: Preparing
+188c9b34dfbe: Layer already exists
+481070cf8ce5: Layer already exists
+1c107a897b02: Layer already exists
+addf8d91bd21: Layer already exists
+c8a89d1971bf: Pushed
+72538b8b08d6: Pushed
+d78c3a815b7a: Pushed
+67c9b343e25c: Pushed
+latest: digest: sha256:22b4642ab5abf21af214bca5643bda4c844857391b3271a147119713c14f8f3f size: 1994
+DONE
+-----------------------------------------------------
+ID                                    CREATE_TIME                DURATION  SOURCE                                                                                           IMAGES                                    STATUS
+baadf038-68fa-48d5-a93e-f4c966b6196e  2026-03-29T19:18:58+00:00  39S       gs://tavern-swiper-dev_cloudbuild/source/1774811937.113773-727ae52f68024f6b81583da366e3cf99.tgz  gcr.io/tavern-swiper-dev/users (+1 more)  SUCCESS
+🚀 Deploying users to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1musers[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy............done
+Creating Revision................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1musers[m] revision [[1musers-00005-8vw[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://users-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ users deployed at: https://users-hhqol7siba-uc.a.run.app
+🚀 Deploying users-test to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1musers-test[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy............done
+Creating Revision...........................................................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1musers-test[m] revision [[1musers-test-00005-5kf[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://users-test-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ users-test deployed at: https://users-test-hhqol7siba-uc.a.run.app
+--------------------------------------------------------
+📦 Building: profiles
+--------------------------------------------------------
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Creating temporary archive of 18 file(s) totalling 48.9 KiB before compression.
+Uploading tarball of [services/profiles] to [gs://tavern-swiper-dev_cloudbuild/source/1774812031.853134-0bb1123f699a4a2397f43aaee4a77806.tgz]
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Created [https://cloudbuild.googleapis.com/v1/projects/tavern-swiper-dev/locations/global/builds/86db0ae4-84a6-467d-9344-e990494b264b].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/86db0ae4-84a6-467d-9344-e990494b264b?project=374390417125 ].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Waiting for build to complete. Polling interval: 1 second(s).
+---------------- REMOTE BUILD OUTPUT ----------------
+starting build "86db0ae4-84a6-467d-9344-e990494b264b"
+
+FETCHSOURCE
+Fetching storage object: gs://tavern-swiper-dev_cloudbuild/source/1774812031.853134-0bb1123f699a4a2397f43aaee4a77806.tgz#1774812032469482
+Copying gs://tavern-swiper-dev_cloudbuild/source/1774812031.853134-0bb1123f699a4a2397f43aaee4a77806.tgz#1774812032469482...
+/ [0 files][    0.0 B/ 15.3 KiB]                                                / [1 files][ 15.3 KiB/ 15.3 KiB]                                                
+Operation completed over 1 objects/15.3 KiB.
+BUILD
+Already have image (with digest): gcr.io/cloud-builders/gcb-internal
+Sending build context to Docker daemon  68.61kB
+Step 1/6 : FROM python:3.12-slim
+3.12-slim: Pulling from library/python
+ec781dee3f47: Already exists
+b1a20e2fae4c: Pulling fs layer
+a6d1911b36ac: Pulling fs layer
+e3c59d77c03e: Pulling fs layer
+e3c59d77c03e: Verifying Checksum
+e3c59d77c03e: Download complete
+b1a20e2fae4c: Verifying Checksum
+b1a20e2fae4c: Download complete
+a6d1911b36ac: Verifying Checksum
+a6d1911b36ac: Download complete
+b1a20e2fae4c: Pull complete
+a6d1911b36ac: Pull complete
+e3c59d77c03e: Pull complete
+Digest: sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4
+Status: Downloaded newer image for python:3.12-slim
+ ---> fb1118f126b5
+Step 2/6 : WORKDIR /app
+ ---> Running in 0b7267d3c0c4
+Removing intermediate container 0b7267d3c0c4
+ ---> 7f962a1f1fec
+Step 3/6 : COPY requirements.txt .
+ ---> dad4564fd339
+Step 4/6 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in 9f94807abb51
+Collecting fastapi (from -r requirements.txt (line 1))
+  Downloading fastapi-0.135.2-py3-none-any.whl.metadata (28 kB)
+Collecting firebase-admin (from -r requirements.txt (line 3))
+  Downloading firebase_admin-7.3.0-py3-none-any.whl.metadata (1.7 kB)
+Collecting google-cloud-firestore (from -r requirements.txt (line 4))
+  Downloading google_cloud_firestore-2.26.0-py3-none-any.whl.metadata (10 kB)
+Collecting google-cloud-storage (from -r requirements.txt (line 5))
+  Downloading google_cloud_storage-3.10.1-py3-none-any.whl.metadata (15 kB)
+Collecting python-multipart (from -r requirements.txt (line 6))
+  Downloading python_multipart-0.0.22-py3-none-any.whl.metadata (1.8 kB)
+Collecting python-dotenv (from -r requirements.txt (line 7))
+  Downloading python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+Collecting uvicorn[standard] (from -r requirements.txt (line 2))
+  Downloading uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting pydantic>=2.9.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting click>=7.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httptools>=0.6.3 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+Collecting pyyaml>=5.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting uvloop>=0.15.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.9 kB)
+Collecting watchfiles>=0.20 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting websockets>=10.4 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+Collecting cachecontrol>=0.14.3 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading cachecontrol-0.14.4-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-api-core<3.0.0dev,>=2.25.1 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+Collecting httpx==0.28.1 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting anyio (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting certifi (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting h2<5,>=3 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+Collecting google-cloud-core<3.0.0,>=1.4.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting grpcio<2.0.0,>=1.33.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+Collecting proto-plus<2.0.0,>=1.22.3 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading proto_plus-1.27.2-py3-none-any.whl.metadata (2.2 kB)
+Collecting protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<7.0.0,>=3.20.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage->-r requirements.txt (line 5))
+  Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting requests<3.0.0,>=2.22.0 (from google-cloud-storage->-r requirements.txt (line 5))
+  Downloading requests-2.33.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage->-r requirements.txt (line 5))
+  Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+Collecting msgpack<2.0.0,>=0.5.2 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading googleapis_common_protos-1.73.1-py3-none-any.whl.metadata (9.2 kB)
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading grpcio_status-1.78.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting cryptography>=38.0.3 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting charset_normalizer<4,>=2 (from requests<3.0.0,>=2.22.0->google-cloud-storage->-r requirements.txt (line 5))
+  Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting urllib3<3,>=1.26 (from requests<3.0.0,>=2.22.0->google-cloud-storage->-r requirements.txt (line 5))
+  Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Collecting cffi>=2.0.0 (from cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting hyperframe<7,>=6.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+Collecting hpack<5,>=4.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Downloading fastapi-0.135.2-py3-none-any.whl (117 kB)
+Downloading firebase_admin-7.3.0-py3-none-any.whl (138 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading google_cloud_firestore-2.26.0-py3-none-any.whl (416 kB)
+Downloading google_cloud_storage-3.10.1-py3-none-any.whl (324 kB)
+Downloading python_multipart-0.0.22-py3-none-any.whl (24 kB)
+Downloading python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading cachecontrol-0.14.4-py3-none-any.whl (22 kB)
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 262.9 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (517 kB)
+Downloading proto_plus-1.27.2-py3-none-any.whl (50 kB)
+Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 132.8 MB/s eta 0:00:00
+Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 8.8 MB/s eta 0:00:00
+Downloading requests-2.33.0-py3-none-any.whl (65 kB)
+Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 345.7 MB/s eta 0:00:00
+Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+Downloading uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (207 kB)
+Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 362.8 MB/s eta 0:00:00
+Downloading googleapis_common_protos-1.73.1-py3-none-any.whl (297 kB)
+Downloading grpcio_status-1.78.0-py3-none-any.whl (14 kB)
+Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (427 kB)
+Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: websockets, uvloop, urllib3, typing-extensions, pyyaml, python-multipart, python-dotenv, pyjwt, pycparser, pyasn1, protobuf, msgpack, idna, hyperframe, httptools, hpack, h11, google-crc32c, click, charset_normalizer, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, requests, pydantic-core, pyasn1-modules, proto-plus, httpcore, h2, grpcio, googleapis-common-protos, google-resumable-media, cffi, anyio, watchfiles, starlette, pydantic, httpx, grpcio-status, cryptography, cachecontrol, google-auth, fastapi, google-api-core, google-cloud-core, google-cloud-storage, google-cloud-firestore, firebase-admin
+Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 cachecontrol-0.14.4 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.6 click-8.3.1 cryptography-46.0.6 fastapi-0.135.2 firebase-admin-7.3.0 google-api-core-2.30.0 google-auth-2.49.1 google-cloud-core-2.5.0 google-cloud-firestore-2.26.0 google-cloud-storage-3.10.1 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.73.1 grpcio-1.78.0 grpcio-status-1.78.0 h11-0.16.0 h2-4.3.0 hpack-4.1.0 httpcore-1.0.9 httptools-0.7.1 httpx-0.28.1 hyperframe-6.1.0 idna-3.11 msgpack-1.1.2 proto-plus-1.27.2 protobuf-6.33.6 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pyjwt-2.12.1 python-dotenv-1.2.2 python-multipart-0.0.22 pyyaml-6.0.3 requests-2.33.0 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.6.3 uvicorn-0.42.0 uvloop-0.22.1 watchfiles-1.1.1 websockets-16.0
+[91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[0m[91m
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+[0mRemoving intermediate container 9f94807abb51
+ ---> 8f42ce766592
+Step 5/6 : COPY . .
+ ---> 8a55484f72fb
+Step 6/6 : CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8002}"]
+ ---> Running in 08af0d993659
+Removing intermediate container 08af0d993659
+ ---> ec166b52bb35
+Successfully built ec166b52bb35
+Successfully tagged gcr.io/tavern-swiper-dev/profiles:latest
+PUSH
+Pushing gcr.io/tavern-swiper-dev/profiles
+The push refers to repository [gcr.io/tavern-swiper-dev/profiles]
+cde79aa45e63: Preparing
+f734d38b59ea: Preparing
+1e55fb71ebbc: Preparing
+be91e0381071: Preparing
+addf8d91bd21: Preparing
+481070cf8ce5: Preparing
+1c107a897b02: Preparing
+188c9b34dfbe: Preparing
+1c107a897b02: Layer already exists
+188c9b34dfbe: Layer already exists
+addf8d91bd21: Layer already exists
+481070cf8ce5: Layer already exists
+cde79aa45e63: Pushed
+be91e0381071: Pushed
+1e55fb71ebbc: Pushed
+f734d38b59ea: Pushed
+latest: digest: sha256:aa1d8509ded57a079c9acf4295ede8a81082df907a2462381f06936f4680a352 size: 1994
+DONE
+-----------------------------------------------------
+ID                                    CREATE_TIME                DURATION  SOURCE                                                                                           IMAGES                                       STATUS
+86db0ae4-84a6-467d-9344-e990494b264b  2026-03-29T19:20:33+00:00  42S       gs://tavern-swiper-dev_cloudbuild/source/1774812031.853134-0bb1123f699a4a2397f43aaee4a77806.tgz  gcr.io/tavern-swiper-dev/profiles (+1 more)  SUCCESS
+🚀 Deploying profiles to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mprofiles[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy...........done
+Creating Revision..................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mprofiles[m] revision [[1mprofiles-00005-rdd[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://profiles-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ profiles deployed at: https://profiles-hhqol7siba-uc.a.run.app
+🚀 Deploying profiles-test to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mprofiles-test[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy..........done
+Creating Revision........................................................................done
+Routing traffic.....done
+Done.
+Service [[1mprofiles-test[m] revision [[1mprofiles-test-00005-6ht[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://profiles-test-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ profiles-test deployed at: https://profiles-test-hhqol7siba-uc.a.run.app
+--------------------------------------------------------
+📦 Building: discovery
+--------------------------------------------------------
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Creating temporary archive of 18 file(s) totalling 29.5 KiB before compression.
+Uploading tarball of [services/discovery] to [gs://tavern-swiper-dev_cloudbuild/source/1774812113.294953-afcea194b59a4bf281ae791b5400c683.tgz]
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Created [https://cloudbuild.googleapis.com/v1/projects/tavern-swiper-dev/locations/global/builds/42c0d89f-ac61-4da0-aced-78062a011c44].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/42c0d89f-ac61-4da0-aced-78062a011c44?project=374390417125 ].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Waiting for build to complete. Polling interval: 1 second(s).
+---------------- REMOTE BUILD OUTPUT ----------------
+starting build "42c0d89f-ac61-4da0-aced-78062a011c44"
+
+FETCHSOURCE
+Fetching storage object: gs://tavern-swiper-dev_cloudbuild/source/1774812113.294953-afcea194b59a4bf281ae791b5400c683.tgz#1774812113682559
+Copying gs://tavern-swiper-dev_cloudbuild/source/1774812113.294953-afcea194b59a4bf281ae791b5400c683.tgz#1774812113682559...
+/ [0 files][    0.0 B/ 10.6 KiB]                                                / [1 files][ 10.6 KiB/ 10.6 KiB]                                                
+Operation completed over 1 objects/10.6 KiB.
+BUILD
+Already have image (with digest): gcr.io/cloud-builders/gcb-internal
+Sending build context to Docker daemon  49.66kB
+Step 1/6 : FROM python:3.12-slim
+3.12-slim: Pulling from library/python
+ec781dee3f47: Already exists
+b1a20e2fae4c: Pulling fs layer
+a6d1911b36ac: Pulling fs layer
+e3c59d77c03e: Pulling fs layer
+e3c59d77c03e: Verifying Checksum
+e3c59d77c03e: Download complete
+b1a20e2fae4c: Download complete
+a6d1911b36ac: Verifying Checksum
+a6d1911b36ac: Download complete
+b1a20e2fae4c: Pull complete
+a6d1911b36ac: Pull complete
+e3c59d77c03e: Pull complete
+Digest: sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4
+Status: Downloaded newer image for python:3.12-slim
+ ---> fb1118f126b5
+Step 2/6 : WORKDIR /app
+ ---> Running in 3b2120b9dcc3
+Removing intermediate container 3b2120b9dcc3
+ ---> 0f89545b8c9a
+Step 3/6 : COPY requirements.txt .
+ ---> 7ebed6562b01
+Step 4/6 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in 1e85790c3f73
+Collecting fastapi (from -r requirements.txt (line 1))
+  Downloading fastapi-0.135.2-py3-none-any.whl.metadata (28 kB)
+Collecting firebase-admin (from -r requirements.txt (line 3))
+  Downloading firebase_admin-7.3.0-py3-none-any.whl.metadata (1.7 kB)
+Collecting google-cloud-firestore (from -r requirements.txt (line 4))
+  Downloading google_cloud_firestore-2.26.0-py3-none-any.whl.metadata (10 kB)
+Collecting httpx (from -r requirements.txt (line 5))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting python-dotenv (from -r requirements.txt (line 6))
+  Downloading python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+Collecting uvicorn[standard] (from -r requirements.txt (line 2))
+  Downloading uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting pydantic>=2.9.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting click>=7.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httptools>=0.6.3 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+Collecting pyyaml>=5.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting uvloop>=0.15.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.9 kB)
+Collecting watchfiles>=0.20 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting websockets>=10.4 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+Collecting cachecontrol>=0.14.3 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading cachecontrol-0.14.4-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-api-core<3.0.0dev,>=2.25.1 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-cloud-storage>=3.1.1 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading google_cloud_storage-3.10.1-py3-none-any.whl.metadata (15 kB)
+Collecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+Collecting anyio (from httpx->-r requirements.txt (line 5))
+  Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting certifi (from httpx->-r requirements.txt (line 5))
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx->-r requirements.txt (line 5))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx->-r requirements.txt (line 5))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting h2<5,>=3 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+Collecting google-cloud-core<3.0.0,>=1.4.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting grpcio<2.0.0,>=1.33.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+Collecting proto-plus<2.0.0,>=1.22.3 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading proto_plus-1.27.2-py3-none-any.whl.metadata (2.2 kB)
+Collecting protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<7.0.0,>=3.20.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting requests>=2.16.0 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading requests-2.33.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting msgpack<2.0.0,>=0.5.2 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading googleapis_common_protos-1.73.1-py3-none-any.whl.metadata (9.2 kB)
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading grpcio_status-1.78.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting cryptography>=38.0.3 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting cffi>=2.0.0 (from cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting hyperframe<7,>=6.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+Collecting hpack<5,>=4.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting charset_normalizer<4,>=2 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Downloading fastapi-0.135.2-py3-none-any.whl (117 kB)
+Downloading firebase_admin-7.3.0-py3-none-any.whl (138 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading google_cloud_firestore-2.26.0-py3-none-any.whl (416 kB)
+Downloading python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading cachecontrol-0.14.4-py3-none-any.whl (22 kB)
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+Downloading google_cloud_storage-3.10.1-py3-none-any.whl (324 kB)
+Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 406.5 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (517 kB)
+Downloading proto_plus-1.27.2-py3-none-any.whl (50 kB)
+Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 499.3 MB/s eta 0:00:00
+Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 550.8 MB/s eta 0:00:00
+Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 86.9 MB/s eta 0:00:00
+Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+Downloading uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 433.8 MB/s eta 0:00:00
+Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+Downloading googleapis_common_protos-1.73.1-py3-none-any.whl (297 kB)
+Downloading grpcio_status-1.78.0-py3-none-any.whl (14 kB)
+Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (427 kB)
+Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading requests-2.33.0-py3-none-any.whl (65 kB)
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (207 kB)
+Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: websockets, uvloop, urllib3, typing-extensions, pyyaml, python-dotenv, pyjwt, pycparser, pyasn1, protobuf, msgpack, idna, hyperframe, httptools, hpack, h11, google-crc32c, click, charset_normalizer, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, requests, pydantic-core, pyasn1-modules, proto-plus, httpcore, h2, grpcio, googleapis-common-protos, google-resumable-media, cffi, anyio, watchfiles, starlette, pydantic, httpx, grpcio-status, cryptography, cachecontrol, google-auth, fastapi, google-api-core, google-cloud-core, google-cloud-storage, google-cloud-firestore, firebase-admin
+Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 cachecontrol-0.14.4 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.6 click-8.3.1 cryptography-46.0.6 fastapi-0.135.2 firebase-admin-7.3.0 google-api-core-2.30.0 google-auth-2.49.1 google-cloud-core-2.5.0 google-cloud-firestore-2.26.0 google-cloud-storage-3.10.1 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.73.1 grpcio-1.78.0 grpcio-status-1.78.0 h11-0.16.0 h2-4.3.0 hpack-4.1.0 httpcore-1.0.9 httptools-0.7.1 httpx-0.28.1 hyperframe-6.1.0 idna-3.11 msgpack-1.1.2 proto-plus-1.27.2 protobuf-6.33.6 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pyjwt-2.12.1 python-dotenv-1.2.2 pyyaml-6.0.3 requests-2.33.0 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.6.3 uvicorn-0.42.0 uvloop-0.22.1 watchfiles-1.1.1 websockets-16.0
+[91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[0m[91m
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+[0mRemoving intermediate container 1e85790c3f73
+ ---> 7ec8dfdd245f
+Step 5/6 : COPY . .
+ ---> 05effc747f88
+Step 6/6 : CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8003}"]
+ ---> Running in f20849c4c175
+Removing intermediate container f20849c4c175
+ ---> 486b7eaa304e
+Successfully built 486b7eaa304e
+Successfully tagged gcr.io/tavern-swiper-dev/discovery:latest
+PUSH
+Pushing gcr.io/tavern-swiper-dev/discovery
+The push refers to repository [gcr.io/tavern-swiper-dev/discovery]
+547e446b38f1: Preparing
+cb3404f0adca: Preparing
+1d0a763525a6: Preparing
+77e1a60efac1: Preparing
+addf8d91bd21: Preparing
+481070cf8ce5: Preparing
+1c107a897b02: Preparing
+188c9b34dfbe: Preparing
+addf8d91bd21: Layer already exists
+188c9b34dfbe: Layer already exists
+1c107a897b02: Layer already exists
+481070cf8ce5: Layer already exists
+1d0a763525a6: Pushed
+547e446b38f1: Pushed
+77e1a60efac1: Pushed
+cb3404f0adca: Pushed
+latest: digest: sha256:7a5c50cd290cd22ad7985dd867f369244a72ff9edcdf54a6d02879f16c4fdc6c size: 1994
+DONE
+-----------------------------------------------------
+ID                                    CREATE_TIME                DURATION  SOURCE                                                                                           IMAGES                                        STATUS
+42c0d89f-ac61-4da0-aced-78062a011c44  2026-03-29T19:21:54+00:00  32S       gs://tavern-swiper-dev_cloudbuild/source/1774812113.294953-afcea194b59a4bf281ae791b5400c683.tgz  gcr.io/tavern-swiper-dev/discovery (+1 more)  SUCCESS
+🚀 Deploying discovery to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mdiscovery[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy............done
+Creating Revision............................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mdiscovery[m] revision [[1mdiscovery-00005-c52[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://discovery-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ discovery deployed at: https://discovery-hhqol7siba-uc.a.run.app
+🚀 Deploying discovery-test to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mdiscovery-test[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy...........done
+Creating Revision.......................................................................done
+Routing traffic.....done
+Done.
+Service [[1mdiscovery-test[m] revision [[1mdiscovery-test-00006-gnp[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://discovery-test-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ discovery-test deployed at: https://discovery-test-hhqol7siba-uc.a.run.app
+--------------------------------------------------------
+📦 Building: swipes
+--------------------------------------------------------
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Creating temporary archive of 17 file(s) totalling 37.7 KiB before compression.
+Uploading tarball of [services/swipes] to [gs://tavern-swiper-dev_cloudbuild/source/1774812184.653682-ed79a6b9d5554bbc8bf4f89b159dbe4a.tgz]
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Created [https://cloudbuild.googleapis.com/v1/projects/tavern-swiper-dev/locations/global/builds/8be6a7d6-4dca-4f2a-b926-94af9752bbe4].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/8be6a7d6-4dca-4f2a-b926-94af9752bbe4?project=374390417125 ].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Waiting for build to complete. Polling interval: 1 second(s).
+---------------- REMOTE BUILD OUTPUT ----------------
+starting build "8be6a7d6-4dca-4f2a-b926-94af9752bbe4"
+
+FETCHSOURCE
+Fetching storage object: gs://tavern-swiper-dev_cloudbuild/source/1774812184.653682-ed79a6b9d5554bbc8bf4f89b159dbe4a.tgz#1774812185003861
+Copying gs://tavern-swiper-dev_cloudbuild/source/1774812184.653682-ed79a6b9d5554bbc8bf4f89b159dbe4a.tgz#1774812185003861...
+/ [0 files][    0.0 B/ 12.2 KiB]                                                / [1 files][ 12.2 KiB/ 12.2 KiB]                                                
+Operation completed over 1 objects/12.2 KiB.
+BUILD
+Already have image (with digest): gcr.io/cloud-builders/gcb-internal
+Sending build context to Docker daemon  56.32kB
+Step 1/6 : FROM python:3.12-slim
+3.12-slim: Pulling from library/python
+ec781dee3f47: Already exists
+b1a20e2fae4c: Pulling fs layer
+a6d1911b36ac: Pulling fs layer
+e3c59d77c03e: Pulling fs layer
+b1a20e2fae4c: Verifying Checksum
+b1a20e2fae4c: Download complete
+e3c59d77c03e: Verifying Checksum
+e3c59d77c03e: Download complete
+a6d1911b36ac: Verifying Checksum
+a6d1911b36ac: Download complete
+b1a20e2fae4c: Pull complete
+a6d1911b36ac: Pull complete
+e3c59d77c03e: Pull complete
+Digest: sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4
+Status: Downloaded newer image for python:3.12-slim
+ ---> fb1118f126b5
+Step 2/6 : WORKDIR /app
+ ---> Running in acf08b32e06b
+Removing intermediate container acf08b32e06b
+ ---> 6fafefa479c2
+Step 3/6 : COPY requirements.txt .
+ ---> 82146e3c38d3
+Step 4/6 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in 1048d97049c0
+Collecting fastapi (from -r requirements.txt (line 1))
+  Downloading fastapi-0.135.2-py3-none-any.whl.metadata (28 kB)
+Collecting firebase-admin (from -r requirements.txt (line 3))
+  Downloading firebase_admin-7.3.0-py3-none-any.whl.metadata (1.7 kB)
+Collecting google-cloud-firestore (from -r requirements.txt (line 4))
+  Downloading google_cloud_firestore-2.26.0-py3-none-any.whl.metadata (10 kB)
+Collecting python-dotenv (from -r requirements.txt (line 5))
+  Downloading python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+Collecting uvicorn[standard] (from -r requirements.txt (line 2))
+  Downloading uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting pydantic>=2.9.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting click>=7.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httptools>=0.6.3 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+Collecting pyyaml>=5.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting uvloop>=0.15.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.9 kB)
+Collecting watchfiles>=0.20 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting websockets>=10.4 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+Collecting cachecontrol>=0.14.3 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading cachecontrol-0.14.4-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-api-core<3.0.0dev,>=2.25.1 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-cloud-storage>=3.1.1 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading google_cloud_storage-3.10.1-py3-none-any.whl.metadata (15 kB)
+Collecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+Collecting httpx==0.28.1 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting anyio (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting certifi (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx==0.28.1->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting h2<5,>=3 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+Collecting google-cloud-core<3.0.0,>=1.4.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting grpcio<2.0.0,>=1.33.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+Collecting proto-plus<2.0.0,>=1.22.3 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading proto_plus-1.27.2-py3-none-any.whl.metadata (2.2 kB)
+Collecting protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<7.0.0,>=3.20.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting requests>=2.16.0 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading requests-2.33.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting msgpack<2.0.0,>=0.5.2 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading googleapis_common_protos-1.73.1-py3-none-any.whl.metadata (9.2 kB)
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading grpcio_status-1.78.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting cryptography>=38.0.3 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting cffi>=2.0.0 (from cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting hyperframe<7,>=6.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+Collecting hpack<5,>=4.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting charset_normalizer<4,>=2 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Downloading fastapi-0.135.2-py3-none-any.whl (117 kB)
+Downloading firebase_admin-7.3.0-py3-none-any.whl (138 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading google_cloud_firestore-2.26.0-py3-none-any.whl (416 kB)
+Downloading python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading cachecontrol-0.14.4-py3-none-any.whl (22 kB)
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+Downloading google_cloud_storage-3.10.1-py3-none-any.whl (324 kB)
+Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 169.1 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (517 kB)
+Downloading proto_plus-1.27.2-py3-none-any.whl (50 kB)
+Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 77.8 MB/s eta 0:00:00
+Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 453.6 MB/s eta 0:00:00
+Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 281.0 MB/s eta 0:00:00
+Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+Downloading uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 287.4 MB/s eta 0:00:00
+Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+Downloading googleapis_common_protos-1.73.1-py3-none-any.whl (297 kB)
+Downloading grpcio_status-1.78.0-py3-none-any.whl (14 kB)
+Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (427 kB)
+Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading requests-2.33.0-py3-none-any.whl (65 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (207 kB)
+Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: websockets, uvloop, urllib3, typing-extensions, pyyaml, python-dotenv, pyjwt, pycparser, pyasn1, protobuf, msgpack, idna, hyperframe, httptools, hpack, h11, google-crc32c, click, charset_normalizer, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, requests, pydantic-core, pyasn1-modules, proto-plus, httpcore, h2, grpcio, googleapis-common-protos, google-resumable-media, cffi, anyio, watchfiles, starlette, pydantic, httpx, grpcio-status, cryptography, cachecontrol, google-auth, fastapi, google-api-core, google-cloud-core, google-cloud-storage, google-cloud-firestore, firebase-admin
+Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 cachecontrol-0.14.4 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.6 click-8.3.1 cryptography-46.0.6 fastapi-0.135.2 firebase-admin-7.3.0 google-api-core-2.30.0 google-auth-2.49.1 google-cloud-core-2.5.0 google-cloud-firestore-2.26.0 google-cloud-storage-3.10.1 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.73.1 grpcio-1.78.0 grpcio-status-1.78.0 h11-0.16.0 h2-4.3.0 hpack-4.1.0 httpcore-1.0.9 httptools-0.7.1 httpx-0.28.1 hyperframe-6.1.0 idna-3.11 msgpack-1.1.2 proto-plus-1.27.2 protobuf-6.33.6 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pyjwt-2.12.1 python-dotenv-1.2.2 pyyaml-6.0.3 requests-2.33.0 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.6.3 uvicorn-0.42.0 uvloop-0.22.1 watchfiles-1.1.1 websockets-16.0
+[91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[0m[91m
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+[0mRemoving intermediate container 1048d97049c0
+ ---> b91114831264
+Step 5/6 : COPY . .
+ ---> d0d94e575221
+Step 6/6 : CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8004}"]
+ ---> Running in 8c610a1d8654
+Removing intermediate container 8c610a1d8654
+ ---> 6a4c0bc0ef2f
+Successfully built 6a4c0bc0ef2f
+Successfully tagged gcr.io/tavern-swiper-dev/swipes:latest
+PUSH
+Pushing gcr.io/tavern-swiper-dev/swipes
+The push refers to repository [gcr.io/tavern-swiper-dev/swipes]
+937cc27bff5c: Preparing
+8f5d57330393: Preparing
+9403272bf83f: Preparing
+df5437bcd139: Preparing
+addf8d91bd21: Preparing
+481070cf8ce5: Preparing
+1c107a897b02: Preparing
+188c9b34dfbe: Preparing
+1c107a897b02: Layer already exists
+481070cf8ce5: Layer already exists
+addf8d91bd21: Layer already exists
+188c9b34dfbe: Layer already exists
+9403272bf83f: Pushed
+df5437bcd139: Pushed
+937cc27bff5c: Pushed
+8f5d57330393: Pushed
+latest: digest: sha256:804104881fdf9c61d12bb089d856e36f95d0bb2210ae3cdc40abb6b117dd7fab size: 1994
+DONE
+-----------------------------------------------------
+ID                                    CREATE_TIME                DURATION  SOURCE                                                                                           IMAGES                                     STATUS
+8be6a7d6-4dca-4f2a-b926-94af9752bbe4  2026-03-29T19:23:05+00:00  29S       gs://tavern-swiper-dev_cloudbuild/source/1774812184.653682-ed79a6b9d5554bbc8bf4f89b159dbe4a.tgz  gcr.io/tavern-swiper-dev/swipes (+1 more)  SUCCESS
+🚀 Deploying swipes to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mswipes[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy............done
+Creating Revision................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mswipes[m] revision [[1mswipes-00005-dft[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://swipes-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ swipes deployed at: https://swipes-hhqol7siba-uc.a.run.app
+🚀 Deploying swipes-test to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mswipes-test[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy.............done
+Creating Revision.................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mswipes-test[m] revision [[1mswipes-test-00005-kdd[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://swipes-test-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ swipes-test deployed at: https://swipes-test-hhqol7siba-uc.a.run.app
+--------------------------------------------------------
+📦 Building: messages
+--------------------------------------------------------
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Creating temporary archive of 17 file(s) totalling 28.5 KiB before compression.
+Uploading tarball of [services/messages] to [gs://tavern-swiper-dev_cloudbuild/source/1774812259.641958-268c915c9d9f4549a7aeca084f1cb0c8.tgz]
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Created [https://cloudbuild.googleapis.com/v1/projects/tavern-swiper-dev/locations/global/builds/29407c91-1ff9-42c8-9793-7a5c03a6b9c8].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/29407c91-1ff9-42c8-9793-7a5c03a6b9c8?project=374390417125 ].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Waiting for build to complete. Polling interval: 1 second(s).
+---------------- REMOTE BUILD OUTPUT ----------------
+starting build "29407c91-1ff9-42c8-9793-7a5c03a6b9c8"
+
+FETCHSOURCE
+Fetching storage object: gs://tavern-swiper-dev_cloudbuild/source/1774812259.641958-268c915c9d9f4549a7aeca084f1cb0c8.tgz#1774812260059041
+Copying gs://tavern-swiper-dev_cloudbuild/source/1774812259.641958-268c915c9d9f4549a7aeca084f1cb0c8.tgz#1774812260059041...
+/ [0 files][    0.0 B/ 10.5 KiB]                                                / [1 files][ 10.5 KiB/ 10.5 KiB]                                                
+Operation completed over 1 objects/10.5 KiB.
+BUILD
+Already have image (with digest): gcr.io/cloud-builders/gcb-internal
+Sending build context to Docker daemon   47.1kB
+Step 1/6 : FROM python:3.12-slim
+3.12-slim: Pulling from library/python
+ec781dee3f47: Already exists
+b1a20e2fae4c: Pulling fs layer
+a6d1911b36ac: Pulling fs layer
+e3c59d77c03e: Pulling fs layer
+b1a20e2fae4c: Verifying Checksum
+b1a20e2fae4c: Download complete
+e3c59d77c03e: Verifying Checksum
+e3c59d77c03e: Download complete
+a6d1911b36ac: Verifying Checksum
+a6d1911b36ac: Download complete
+b1a20e2fae4c: Pull complete
+a6d1911b36ac: Pull complete
+e3c59d77c03e: Pull complete
+Digest: sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4
+Status: Downloaded newer image for python:3.12-slim
+ ---> fb1118f126b5
+Step 2/6 : WORKDIR /app
+ ---> Running in 494e9cc8505f
+Removing intermediate container 494e9cc8505f
+ ---> f7b009dc6b18
+Step 3/6 : COPY requirements.txt .
+ ---> 21187f1d0fd5
+Step 4/6 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in 3520ee7135f0
+Collecting fastapi (from -r requirements.txt (line 1))
+  Downloading fastapi-0.135.2-py3-none-any.whl.metadata (28 kB)
+Collecting firebase-admin (from -r requirements.txt (line 3))
+  Downloading firebase_admin-7.3.0-py3-none-any.whl.metadata (1.7 kB)
+Collecting google-cloud-firestore (from -r requirements.txt (line 4))
+  Downloading google_cloud_firestore-2.26.0-py3-none-any.whl.metadata (10 kB)
+Collecting httpx (from -r requirements.txt (line 5))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting python-dotenv (from -r requirements.txt (line 6))
+  Downloading python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+Collecting uvicorn[standard] (from -r requirements.txt (line 2))
+  Downloading uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting pydantic>=2.9.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting click>=7.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httptools>=0.6.3 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+Collecting pyyaml>=5.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting uvloop>=0.15.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.9 kB)
+Collecting watchfiles>=0.20 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting websockets>=10.4 (from uvicorn[standard]->-r requirements.txt (line 2))
+  Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+Collecting cachecontrol>=0.14.3 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading cachecontrol-0.14.4-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-api-core<3.0.0dev,>=2.25.1 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting google-cloud-storage>=3.1.1 (from firebase-admin->-r requirements.txt (line 3))
+  Downloading google_cloud_storage-3.10.1-py3-none-any.whl.metadata (15 kB)
+Collecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+Collecting anyio (from httpx->-r requirements.txt (line 5))
+  Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting certifi (from httpx->-r requirements.txt (line 5))
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx->-r requirements.txt (line 5))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx->-r requirements.txt (line 5))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting h2<5,>=3 (from httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+Collecting google-cloud-core<3.0.0,>=1.4.1 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting grpcio<2.0.0,>=1.33.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+Collecting proto-plus<2.0.0,>=1.22.3 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading proto_plus-1.27.2-py3-none-any.whl.metadata (2.2 kB)
+Collecting protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<7.0.0,>=3.20.2 (from google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting requests>=2.16.0 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading requests-2.33.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting msgpack<2.0.0,>=0.5.2 (from cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core<3.0.0dev,>=2.25.1->google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading googleapis_common_protos-1.73.1-py3-none-any.whl.metadata (9.2 kB)
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=2.25.1; platform_python_implementation != "PyPy"->firebase-admin->-r requirements.txt (line 3))
+  Downloading grpcio_status-1.78.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting cryptography>=38.0.3 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage>=3.1.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+  Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting cffi>=2.0.0 (from cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting hyperframe<7,>=6.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+Collecting hpack<5,>=4.1 (from h2<5,>=3->httpx[http2]==0.28.1->firebase-admin->-r requirements.txt (line 3))
+  Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting charset_normalizer<4,>=2 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.16.0->cachecontrol>=0.14.3->firebase-admin->-r requirements.txt (line 3))
+  Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=38.0.3->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-firestore->-r requirements.txt (line 4))
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Downloading fastapi-0.135.2-py3-none-any.whl (117 kB)
+Downloading firebase_admin-7.3.0-py3-none-any.whl (138 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading google_cloud_firestore-2.26.0-py3-none-any.whl (416 kB)
+Downloading python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading cachecontrol-0.14.4-py3-none-any.whl (22 kB)
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+Downloading google_cloud_storage-3.10.1-py3-none-any.whl (324 kB)
+Downloading grpcio-1.78.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 167.3 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading httptools-0.7.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (517 kB)
+Downloading proto_plus-1.27.2-py3-none-any.whl (50 kB)
+Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 486.9 MB/s eta 0:00:00
+Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 484.4 MB/s eta 0:00:00
+Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 258.2 MB/s eta 0:00:00
+Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+Downloading uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading cryptography-46.0.6-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 397.9 MB/s eta 0:00:00
+Downloading google_crc32c-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+Downloading googleapis_common_protos-1.73.1-py3-none-any.whl (297 kB)
+Downloading grpcio_status-1.78.0-py3-none-any.whl (14 kB)
+Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+Downloading msgpack-1.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (427 kB)
+Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading requests-2.33.0-py3-none-any.whl (65 kB)
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+Downloading charset_normalizer-3.4.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (207 kB)
+Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: websockets, uvloop, urllib3, typing-extensions, pyyaml, python-dotenv, pyjwt, pycparser, pyasn1, protobuf, msgpack, idna, hyperframe, httptools, hpack, h11, google-crc32c, click, charset_normalizer, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, requests, pydantic-core, pyasn1-modules, proto-plus, httpcore, h2, grpcio, googleapis-common-protos, google-resumable-media, cffi, anyio, watchfiles, starlette, pydantic, httpx, grpcio-status, cryptography, cachecontrol, google-auth, fastapi, google-api-core, google-cloud-core, google-cloud-storage, google-cloud-firestore, firebase-admin
+Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 cachecontrol-0.14.4 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.6 click-8.3.1 cryptography-46.0.6 fastapi-0.135.2 firebase-admin-7.3.0 google-api-core-2.30.0 google-auth-2.49.1 google-cloud-core-2.5.0 google-cloud-firestore-2.26.0 google-cloud-storage-3.10.1 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.73.1 grpcio-1.78.0 grpcio-status-1.78.0 h11-0.16.0 h2-4.3.0 hpack-4.1.0 httpcore-1.0.9 httptools-0.7.1 httpx-0.28.1 hyperframe-6.1.0 idna-3.11 msgpack-1.1.2 proto-plus-1.27.2 protobuf-6.33.6 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pyjwt-2.12.1 python-dotenv-1.2.2 pyyaml-6.0.3 requests-2.33.0 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.6.3 uvicorn-0.42.0 uvloop-0.22.1 watchfiles-1.1.1 websockets-16.0
+[91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[0m[91m
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+[0mRemoving intermediate container 3520ee7135f0
+ ---> 6a2f420b5958
+Step 5/6 : COPY . .
+ ---> 95ef8ba73cbc
+Step 6/6 : CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8005}"]
+ ---> Running in db27f4fa3451
+Removing intermediate container db27f4fa3451
+ ---> 7e1953fcf539
+Successfully built 7e1953fcf539
+Successfully tagged gcr.io/tavern-swiper-dev/messages:latest
+PUSH
+Pushing gcr.io/tavern-swiper-dev/messages
+The push refers to repository [gcr.io/tavern-swiper-dev/messages]
+287373846466: Preparing
+73989cda4991: Preparing
+0d75cdb26c6e: Preparing
+3259ae05c481: Preparing
+addf8d91bd21: Preparing
+481070cf8ce5: Preparing
+1c107a897b02: Preparing
+188c9b34dfbe: Preparing
+188c9b34dfbe: Layer already exists
+addf8d91bd21: Layer already exists
+481070cf8ce5: Layer already exists
+1c107a897b02: Layer already exists
+287373846466: Pushed
+0d75cdb26c6e: Pushed
+3259ae05c481: Pushed
+73989cda4991: Pushed
+latest: digest: sha256:340e0a45d5e43f682e0eb733adefb50f6bef0ceeb8c021c977e4ae05ca267f3f size: 1994
+DONE
+-----------------------------------------------------
+ID                                    CREATE_TIME                DURATION  SOURCE                                                                                           IMAGES                                       STATUS
+29407c91-1ff9-42c8-9793-7a5c03a6b9c8  2026-03-29T19:24:20+00:00  42S       gs://tavern-swiper-dev_cloudbuild/source/1774812259.641958-268c915c9d9f4549a7aeca084f1cb0c8.tgz  gcr.io/tavern-swiper-dev/messages (+1 more)  SUCCESS
+🚀 Deploying messages to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mmessages[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy.............done
+Creating Revision....................................................................................................................................................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mmessages[m] revision [[1mmessages-00005-rck[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://messages-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ messages deployed at: https://messages-hhqol7siba-uc.a.run.app
+🚀 Deploying messages-test to Cloud Run...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying container to Cloud Run service [[1mmessages-test[m] in project [[1mtavern-swiper-dev[m] region [[1mus-central1[m]
+Deploying...
+Setting IAM Policy............done
+Creating Revision..............................................................................done
+Routing traffic.....done
+Done.
+Service [[1mmessages-test[m] revision [[1mmessages-test-00005-22h[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://messages-test-374390417125.us-central1.run.app[m
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+✅ messages-test deployed at: https://messages-test-hhqol7siba-uc.a.run.app
+
+🔗 PHASE 2: Updating Inter-Service URLs...
+--- Configuring dev Environment ---
+Updating auth dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision..............................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mauth[m] revision [[1mauth-00010-898[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://auth-374390417125.us-central1.run.app[m
+Updating users dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision.............................................................................................done
+Routing traffic.....done
+Done.
+Service [[1musers[m] revision [[1musers-00007-5dm[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://users-374390417125.us-central1.run.app[m
+Updating profiles dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision..................................................................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mprofiles[m] revision [[1mprofiles-00007-jb5[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://profiles-374390417125.us-central1.run.app[m
+Updating discovery dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision.................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mdiscovery[m] revision [[1mdiscovery-00007-s4j[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://discovery-374390417125.us-central1.run.app[m
+Updating swipes dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision............................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mswipes[m] revision [[1mswipes-00007-rf9[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://swipes-374390417125.us-central1.run.app[m
+Updating messages dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision..........................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mmessages[m] revision [[1mmessages-00006-wxr[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://messages-374390417125.us-central1.run.app[m
+--- Configuring test Environment ---
+Updating auth-test dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision.........................................................................................................................................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mauth-test[m] revision [[1mauth-test-00007-f4l[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://auth-test-374390417125.us-central1.run.app[m
+Updating users-test dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision.........................................................................................done
+Routing traffic.....done
+Done.
+Service [[1musers-test[m] revision [[1musers-test-00007-dh8[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://users-test-374390417125.us-central1.run.app[m
+Updating profiles-test dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision..............................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mprofiles-test[m] revision [[1mprofiles-test-00007-fgs[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://profiles-test-374390417125.us-central1.run.app[m
+Updating discovery-test dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mdiscovery-test[m] revision [[1mdiscovery-test-00008-whl[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://discovery-test-374390417125.us-central1.run.app[m
+Updating swipes-test dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision..........................................................................................................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mswipes-test[m] revision [[1mswipes-test-00007-4l5[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://swipes-test-374390417125.us-central1.run.app[m
+Updating messages-test dependencies...
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+WARNING: This command is using service account impersonation. All API calls will be executed as [tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com].
+Deploying...
+Creating Revision......................................................................................done
+Routing traffic.....done
+Done.
+Service [[1mmessages-test[m] revision [[1mmessages-test-00007-578[m] has been deployed and is serving [1m100[m percent of traffic.
+Service URL: [1mhttps://messages-test-374390417125.us-central1.run.app[m
+
+✨ Deployment Complete!
+Development URLs (dev):
+- auth: https://auth-hhqol7siba-uc.a.run.app
+- users: https://users-hhqol7siba-uc.a.run.app
+- profiles: https://profiles-hhqol7siba-uc.a.run.app
+- discovery: https://discovery-hhqol7siba-uc.a.run.app
+- swipes: https://swipes-hhqol7siba-uc.a.run.app
+- messages: https://messages-hhqol7siba-uc.a.run.app
+
+Test URLs:
+- auth-test: https://auth-test-hhqol7siba-uc.a.run.app
+- users-test: https://users-test-hhqol7siba-uc.a.run.app
+- profiles-test: https://profiles-test-hhqol7siba-uc.a.run.app
+- discovery-test: https://discovery-test-hhqol7siba-uc.a.run.app
+- swipes-test: https://swipes-test-hhqol7siba-uc.a.run.app
+- messages-test: https://messages-test-hhqol7siba-uc.a.run.app
+
+Next step: Use './scripts/switch_env.sh test' to point the frontend to the test cloud.
