@@ -7,6 +7,7 @@
 set -e
 
 echo "🏹 Starting Maestro Onboarding Quest..."
+cd "$(dirname "$0")/.."
 
 # 1. Check if Maestro is installed
 if ! command -v maestro &> /dev/null

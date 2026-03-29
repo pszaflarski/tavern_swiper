@@ -2,6 +2,7 @@
 set -e
 
 # Configuration
+cd "$(dirname "$0")/.."
 PROJECT_ID="tavern-swiper-dev"
 REGION="us-central1"
 

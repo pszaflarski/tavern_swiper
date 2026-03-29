@@ -71,17 +71,52 @@ Access the dashboard at `http://localhost:8000/admin.html`. It provides tools to
 
 ## Testing
 
-### Integration Testing (Local)
-Runs tests against your local Docker Compose environment:
-```bash
-bash run_integration_tests.sh
-```
+This project maintains a robust, multi-layered testing strategy to ensure the integrity of its zero-trust microservice architecture.
 
-### Integration Testing (Cloud)
-Runs tests against actual **Google Cloud Run** endpoints in the `test` environment:
-```bash
-bash scripts/run_cloud_integration_tests.sh
-```
+### 1. Frontend Unit & Hook Tests (Jest)
+Tests individual React hooks and logic in isolation using mocked API responses.
+- **What it does**: Validates UI state transitions, error handling, and business logic without a running backend.
+- **Run**:
+  ```bash
+  cd frontend
+  npm test
+  ```
+
+### 2. Frontend Web Integration (Playwright) — [RECOMMENDED]
+True end-to-end tests that run the frontend in a browser against local or cloud services.
+- **What it does**: 
+    - Performs an automated database wipe of `-test` databases via a cleanup script.
+    - Executes real user flows (Signup, Profile Forge) in the web browser.
+    - Captures the session token and **verifies results directly via backend REST APIs** to ensure frontend-backend synchronization.
+  ```bash
+  cd frontend
+  npm run test:e2e
+  ```
+
+### 3. System Integration Tests (Python/Pytest)
+Service-to-service integration tests targeting the backend REST APIs.
+- **What it does**: Validates complex backend workflows like mutual matching, discovery filtering, and cross-service data consistency.
+- **Run (Local)**:
+  ```bash
+  bash tests/run_integration_tests.sh
+  ```
+- **Run (Cloud)**:
+  ```bash
+  bash tests/run_cloud_integration_tests.sh
+  ```
+
+### 4. Mobile UI Integration (Maestro)
+Native mobile automation for React Native.
+- **What it does**: Simulates real touch interactions on an Android/iOS emulator and verifies UI elements.
+- **Status**: Currently legacy/fallback due to stability issues in some environments.
+- **Run (Local)**:
+  ```bash
+  bash tests/run_maestro_tests.sh
+  ```
+- **Run (Cloud)**:
+  ```bash
+  bash tests/run_cloud_maestro_tests.sh
+  ```
 
 ---
 

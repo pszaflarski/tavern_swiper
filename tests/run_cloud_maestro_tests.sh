@@ -9,6 +9,7 @@ export ANDROID_HOME="$SDK_ROOT"
 export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
 
 echo "🏹 Starting Maestro Cloud Quest..."
+cd "$(dirname "$0")/.."
 
 # 1. Switch frontend environment to TEST
 echo "🔄 Switching frontend to [test] environment..."

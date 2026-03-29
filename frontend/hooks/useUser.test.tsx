@@ -5,74 +5,61 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import MockAdapter from 'axios-mock-adapter';
 
-// Mock Firebase
+// Mock Firebase & Auth via a single source
 jest.mock('../lib/firebase', () => ({
   auth: {
-    currentUser: { 
-      uid: 'test-123', 
+    currentUser: {
+      uid: 'test-123',
       email: 'test@example.com',
       getIdToken: jest.fn(() => Promise.resolve('test-token')),
     },
   },
 }));
 
-jest.mock('@firebase/app', () => ({
-  initializeApp: jest.fn(),
-  getApps: jest.fn(() => []),
-  getApp: jest.fn(),
-}));
-
 jest.mock('@firebase/auth', () => ({
-  getAuth: jest.fn(() => ({
-    currentUser: { 
-      uid: 'test-123', 
-      email: 'test@example.com',
-      getIdToken: jest.fn(() => Promise.resolve('test-token')),
-    },
-  })),
-  onAuthStateChanged: jest.fn((authInstance, cb) => {
-    cb({ 
-      uid: 'test-123', 
+  onAuthStateChanged: jest.fn((_auth: any, callback: (user: any) => void) => {
+    callback({
+      uid: 'test-123',
       email: 'test@example.com',
       getIdToken: jest.fn(() => Promise.resolve('test-token')),
     });
-    return () => {};
+    return () => {}; // unsubscribe
   }),
 }));
 
+
 const mockUsersApi = new MockAdapter(usersApi);
 
-let queryClient: QueryClient;
-
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-);
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: Infinity,
+        staleTime: 0,
+      },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 describe('useUser Hook', () => {
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: { 
-        queries: { 
-          retry: false,
-          gcTime: Infinity, 
-          staleTime: 0,
-        } 
-      },
-    });
     mockUsersApi.reset();
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    queryClient.clear();
-  });
-
   it('fetches existing user metadata', async () => {
     mockUsersApi.onGet('/users/me').reply(200, {
-      uid: 'test-123', email: 'test@example.com', is_premium: true
+      uid: 'test-123',
+      email: 'test@example.com',
+      is_premium: true,
+      created_at: new Date().toISOString(),
     });
 
-    const { result } = renderHook(() => useUser(), { wrapper });
+    const { result } = renderHook(() => useUser(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -83,12 +70,16 @@ describe('useUser Hook', () => {
   it('automatically registers user if not found (404)', async () => {
     mockUsersApi.onGet('/users/me').reply(404);
     mockUsersApi.onPost('/users/').reply(200, {
-      uid: 'test-123', email: 'test@example.com', is_premium: false
+      uid: 'test-123',
+      email: 'test@example.com',
+      is_premium: false,
+      created_at: new Date().toISOString(),
     });
 
-    const { result } = renderHook(() => useUser(), { wrapper });
+    const { result } = renderHook(() => useUser(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await waitFor(() => expect(result.current.user?.uid).toBe('test-123'));
   });
 });
+

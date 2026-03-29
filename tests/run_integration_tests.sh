@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Configuration
+cd "$(dirname "$0")/.."
 TEST_COMPOSE_FILE="docker-compose-test.yml"
 TESTS_DIR="tests/integration"
 
