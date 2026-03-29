@@ -22,7 +22,7 @@ GCS_BUCKET = os.getenv("GCS_BUCKET_NAME", "")
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Trystr — Profiles Service", version="1.0.0")
+app = FastAPI(title="Tavern Swiper — Profiles Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

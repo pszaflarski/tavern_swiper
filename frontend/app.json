@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Trystr",
-    "slug": "trystr",
+    "name": "Tavern Swiper",
+    "slug": "tavern-swiper",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +15,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.peter.trystr",
+      "package": "com.peter.tavern_swiper",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

@@ -1,4 +1,4 @@
-appId: com.peter.trystr
+appId: com.peter.tavern_swiper
 ---
 - launchApp:
     clearState: true

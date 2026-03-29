@@ -24,7 +24,7 @@ FEED_LIMIT = int(os.getenv("FEED_LIMIT", "20"))
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Trystr — Discovery Service", version="1.0.0")
+app = FastAPI(title="Tavern Swiper — Discovery Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

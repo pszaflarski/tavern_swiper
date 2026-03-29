@@ -1,4 +1,4 @@
-# The Tavern Swipes — Trystr
+# The Tavern Swipes — Tavern Swiper
 
 > *"Every interaction should feel like a discovery."*
 

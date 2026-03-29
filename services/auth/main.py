@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # tokens. It manages Firebase Auth users and provides an internal API for
 # profile services (like the Users service) to verify and manage identities.
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Trystr — Auth Service", version="1.0.0")
+app = FastAPI(title="Tavern Swiper — Auth Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

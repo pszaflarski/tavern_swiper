@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Trystr Microservices Test Runner
+# Tavern Swiper Microservices Test Runner
 # This script runs the test suites for all 6 backend services in sequence.
 
 set -e
@@ -8,7 +8,7 @@ set -e
 SERVICES=("auth" "profiles" "discovery" "swipes" "messages" "users")
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-echo "🛡️ Starting Trystr Microservices Test Suite..."
+echo "🛡️ Starting Tavern Swiper Microservices Test Suite..."
 echo "-------------------------------------------"
 
 # Bypass Firestore credential checks during unit testing

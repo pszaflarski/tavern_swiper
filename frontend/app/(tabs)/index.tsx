@@ -45,7 +45,7 @@ export default function TavernScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Trystr</Text>
+          <Text style={styles.headerTitle}>Tavern Swiper</Text>
           <Text style={styles.headerSub}>The Hero's Quest</Text>
         </View>
         <View style={[styles.centered, { padding: Spacing[10] }]} testID="tavern-empty-state">
@@ -72,7 +72,7 @@ export default function TavernScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Trystr</Text>
+          <Text style={styles.headerTitle}>Tavern Swiper</Text>
           <Text style={styles.headerSub}>The Hero's Quest</Text>
         </View>
         <View style={[styles.centered, { padding: Spacing[10] }]}>
@@ -95,7 +95,7 @@ export default function TavernScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Trystr</Text>
+        <Text style={styles.headerTitle}>Tavern Swiper</Text>
         <Text style={styles.headerSub}>The Hero's Quest</Text>
         {activeProfile && (
           <Text style={styles.activeProfileLabel}>

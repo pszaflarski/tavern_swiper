@@ -24,7 +24,7 @@ PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Trystr — Swipes Service", version="1.0.0")
+app = FastAPI(title="Tavern Swiper — Swipes Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

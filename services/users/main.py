@@ -22,7 +22,7 @@ COLLECTION = "users"
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Trystr — Users Service", version="1.0.0")
+app = FastAPI(title="Tavern Swiper — Users Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

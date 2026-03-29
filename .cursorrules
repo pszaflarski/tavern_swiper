@@ -44,4 +44,4 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 ## 🤖 AI Guidelines
 - When asked to create a new service, follow the existing pattern in `services/`.
 - Ensure new services have their own `.env` and Firestore DB ID.
-- Maintain the fantasy-themed nomenclature ("Tavern", "Swiper", "Trystr", etc.).
+- Maintain the fantasy-themed nomenclature ("Tavern", "Swiper", "Tavern Swiper", etc.).
