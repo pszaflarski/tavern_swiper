@@ -48,6 +48,7 @@ def _doc_to_profile(doc) -> ProfileOut:
         talents=d.get("talents", []),
         attributes=CoreAttributes(**attrs),
         image_url=d.get("image_url"),
+        image_urls=d.get("image_urls", []),
         gender=d.get("gender"),
     )
 
@@ -58,16 +59,18 @@ async def health():
 
 
 @app.get("/profiles/all", response_model=list[ProfileOut])
-async def list_all_profiles(auth_data: tuple[str, str] = Depends(get_current_user)):
+async def list_all_profiles(auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Internal endpoint used by the Discovery service. Now secured with Auth."""
-    _, _ = auth_data
+    _, _, _ = auth_data
     docs = db.collection(COLLECTION).stream()
     return [_doc_to_profile(doc) for doc in docs]
 
 
 @app.post("/profiles/", response_model=ProfileOut, status_code=201)
-async def create_profile(body: ProfileCreate, auth_data: tuple[str, str] = Depends(get_current_user)):
-    uid, _ = auth_data
+async def create_profile(body: ProfileCreate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    uid, role, _ = auth_data
+    if role not in ["admin", "root_admin"]:
+        raise HTTPException(status_code=403, detail="Only admins or root admins can create profiles")
     profile_id = str(uuid.uuid4())
     data = body.model_dump()
     data["user_id"] = uid  # Enforce authenticated UID
@@ -78,9 +81,9 @@ async def create_profile(body: ProfileCreate, auth_data: tuple[str, str] = Depen
 
 
 @app.get("/profiles/{profile_id}", response_model=ProfileOut)
-async def get_profile(profile_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def get_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Fetch a single profile. Now secured with Auth."""
-    _, _ = auth_data
+    _, _, _ = auth_data
     doc = db.collection(COLLECTION).document(profile_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -88,9 +91,9 @@ async def get_profile(profile_id: str, auth_data: tuple[str, str] = Depends(get_
 
 
 @app.get("/profiles/user/{user_id}", response_model=list[ProfileOut])
-async def list_profiles_for_user(user_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def list_profiles_for_user(user_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """List profiles for a user. Only allows viewing your own profiles."""
-    uid, _ = auth_data
+    uid, _, _ = auth_data
     if user_id != uid:
         raise HTTPException(status_code=403, detail="Not authorized to view another user's profiles")
     docs = db.collection(COLLECTION).where("user_id", "==", user_id).stream()
@@ -98,8 +101,8 @@ async def list_profiles_for_user(user_id: str, auth_data: tuple[str, str] = Depe
 
 
 @app.put("/profiles/{profile_id}", response_model=ProfileOut)
-async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[str, str] = Depends(get_current_user)):
-    uid, _ = auth_data
+async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    uid, _, _ = auth_data
     ref = db.collection(COLLECTION).document(profile_id)
     doc = ref.get()
     if not doc.exists:
@@ -116,8 +119,8 @@ async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[
 
 
 @app.delete("/profiles/{profile_id}", status_code=204)
-async def delete_profile(profile_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
-    uid, _ = auth_data
+async def delete_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    uid, _, _ = auth_data
     ref = db.collection(COLLECTION).document(profile_id)
     doc = ref.get()
     if not doc.exists:
@@ -130,9 +133,9 @@ async def delete_profile(profile_id: str, auth_data: tuple[str, str] = Depends(g
 
 
 @app.post("/profiles/{profile_id}/image", response_model=ProfileOut)
-async def upload_profile_image(profile_id: str, file: UploadFile = File(...), auth_data: tuple[str, str] = Depends(get_current_user)):
+async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile = File(...), auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Upload profile image to GCS and save the public URL to Firestore. Only the owner can upload."""
-    uid, _ = auth_data
+    uid, _, _ = auth_data
     if not GCS_BUCKET:
         raise HTTPException(status_code=503, detail="GCS_BUCKET_NAME not configured")
     ref = db.collection(COLLECTION).document(profile_id)
@@ -145,11 +148,22 @@ async def upload_profile_image(profile_id: str, file: UploadFile = File(...), au
 
     client = storage.Client()
     bucket = client.bucket(GCS_BUCKET)
-    blob_name = f"profiles/{profile_id}/{file.filename}"
+    blob_name = f"profiles/{profile_id}/{index}_{file.filename}"
     blob = bucket.blob(blob_name)
     contents = await file.read()
     blob.upload_from_string(contents, content_type=file.content_type)
     blob.make_public()
 
-    ref.update({"image_url": blob.public_url})
+    profile_dict = doc.to_dict()
+    image_urls = profile_dict.get("image_urls", [])
+    # Ensure list is long enough
+    while len(image_urls) <= index:
+        image_urls.append("")
+    image_urls[index] = blob.public_url
+
+    updates = {"image_urls": image_urls}
+    if index == 0:
+        updates["image_url"] = blob.public_url
+    
+    ref.update(updates)
     return _doc_to_profile(ref.get())

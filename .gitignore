@@ -45,9 +45,6 @@ frontend/blob-report/
 frontend/playwright/.cache/
 **/__mocks__/
 
-# AI / Agents
-.agents/
-
 # macOS
 .AppleDouble
 .LSOverride

@@ -6,6 +6,7 @@ class TokenRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     uid: str
+    role: str
 
 class LoginRequest(BaseModel):
     email: str

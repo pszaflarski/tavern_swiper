@@ -18,6 +18,7 @@ export interface Profile {
   talents: string[];
   attributes: CoreAttributes;
   image_url?: string;
+  image_urls?: string[];
   gender?: string;
 }
 
@@ -72,15 +73,15 @@ export function useUpdateProfile() {
 
 export function useUploadProfileImage() {
   const queryClient = useQueryClient();
-  return useMutation<Profile, Error, { profileId: string; uri: string; mimeType?: string }>({
-    mutationFn: async ({ profileId, uri, mimeType = 'image/jpeg' }) => {
+  return useMutation<Profile, Error, { profileId: string; uri: string; index?: number; mimeType?: string }>({
+    mutationFn: async ({ profileId, uri, index = 0, mimeType = 'image/jpeg' }) => {
       const formData = new FormData();
       formData.append('file', {
         uri,
         type: mimeType,
-        name: `profile-${profileId}.jpg`,
+        name: `profile-${profileId}-${index}.jpg`,
       } as unknown as Blob);
-      const res = await profilesApi.post(`/profiles/${profileId}/image`, formData, {
+      const res = await profilesApi.post(`/profiles/${profileId}/image?index=${index}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return res.data;

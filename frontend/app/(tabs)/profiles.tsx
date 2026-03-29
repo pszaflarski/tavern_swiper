@@ -38,6 +38,7 @@ export default function ProfilesScreen() {
     bio: '',
     gender: '',
     image_url: '',
+    image_urls: [] as string[],
     tagline: 'A new hero arises.',
     character_class: 'Adventurer',
     realm: 'Fort Tavern',
@@ -56,6 +57,7 @@ export default function ProfilesScreen() {
       bio: '',
       gender: '',
       image_url: '',
+      image_urls: [],
       tagline: 'A new hero arises.',
       character_class: 'Adventurer',
       realm: 'Fort Tavern',
@@ -70,6 +72,7 @@ export default function ProfilesScreen() {
       bio: profile.bio || '',
       gender: profile.gender || '',
       image_url: profile.image_url || '',
+      image_urls: profile.image_urls || [],
       tagline: profile.tagline || '',
       character_class: profile.character_class || '',
       realm: profile.realm || '',
@@ -77,7 +80,7 @@ export default function ProfilesScreen() {
     setMode('edit');
   };
 
-  const pickImage = async () => {
+  const pickImage = async (index: number) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -86,7 +89,17 @@ export default function ProfilesScreen() {
     });
 
     if (!result.canceled) {
-      setFormData((prev) => ({ ...prev, image_url: result.assets[0].uri }));
+      setFormData((prev) => {
+        const newUrls = [...(prev.image_urls || [])];
+        while (newUrls.length <= index) newUrls.push('');
+        newUrls[index] = result.assets[0].uri;
+        
+        // If it's the first image, also update the primary image_url
+        if (index === 0) {
+          return { ...prev, image_url: result.assets[0].uri, image_urls: newUrls };
+        }
+        return { ...prev, image_urls: newUrls };
+      });
     }
   };
 
@@ -120,12 +133,33 @@ export default function ProfilesScreen() {
         });
       }
 
-      if (isLocalImage && currentProfileId) {
-        await uploadProfileImage.mutateAsync({
-          profileId: currentProfileId,
-          uri: formData.image_url,
-        });
+      // Upload all local images
+      const uploadPromises = (formData.image_urls || []).map(async (uri, idx) => {
+        if (uri && !uri.startsWith('http')) {
+          return uploadProfileImage.mutateAsync({
+            profileId: currentProfileId,
+            uri,
+            index: idx,
+          });
+        }
+        return Promise.resolve();
+      });
+      
+      // Also check the primary image_url if it was set explicitly (backward compatibility)
+      if (formData.image_url && !formData.image_url.startsWith('http')) {
+        const alreadyUploadingFirst = formData.image_urls[0] === formData.image_url;
+        if (!alreadyUploadingFirst) {
+          uploadPromises.push(
+            uploadProfileImage.mutateAsync({
+              profileId: currentProfileId,
+              uri: formData.image_url,
+              index: 0,
+            }) as any
+          );
+        }
       }
+
+      await Promise.all(uploadPromises);
 
       // If we just created the first profile, or if there is no active profile, select this one
       if (mode === 'create' || !activeProfileId) {
@@ -236,8 +270,48 @@ export default function ProfilesScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{mode === 'create' ? 'New Hero' : 'Edit Hero'}</Text>
       </View>
-
       <View style={styles.form}>
+        {/* Portrait Grid at the Top */}
+        <View style={styles.imageGridContainer}>
+          <Text style={[styles.label, { marginBottom: Spacing[4] }]}>Hero's Portraits (Up to 6)</Text>
+          <View style={styles.imageGrid}>
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.gridItem}
+                onPress={() => pickImage(index)}
+                testID={`identity-image-slot-${index}`}
+              >
+                {formData.image_urls && formData.image_urls[index] ? (
+                  <Image source={{ uri: formData.image_urls[index] }} style={styles.gridImage} resizeMode="cover" />
+                ) : (
+                  <View style={styles.gridPlaceholder}>
+                    <Text style={styles.gridPlaceholderText}>+</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+          {__DEV__ && (
+            <TouchableOpacity
+              style={[styles.pickerButton, { backgroundColor: Colors.tertiaryContainer, marginTop: Spacing[4] }]}
+              onPress={() => {
+                const mock = 'https://placehold.co/600x400/3e2723/ffffff?text=Hero';
+                setFormData(prev => ({ 
+                  ...prev, 
+                  image_url: mock, 
+                  image_urls: [mock, mock, mock, mock, mock, mock] 
+                }))
+              }}
+              testID="identity-mock-images-button"
+            >
+              <Text style={[styles.pickerButtonText, { color: Colors.onTertiaryContainer }]}>
+                (DEV) Fill All with Mocks
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         <Text style={styles.label}>True Name</Text>
         <TextInput
           style={styles.input}
@@ -270,36 +344,6 @@ export default function ProfilesScreen() {
           testID="identity-gender-input"
         />
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Portrait Image</Text>
-          {formData.image_url ? (
-            <Image source={{ uri: formData.image_url }} style={styles.previewImage} resizeMode="cover" />
-          ) : (
-            <View style={[styles.previewImage, styles.previewPlaceholder]}>
-              <Text style={{ color: Colors.outline }}>No portrait yet</Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[styles.pickerButton, { backgroundColor: Colors.surfaceContainerHigh }]}
-            onPress={pickImage}
-            testID="identity-picker-button"
-          >
-            <Text style={[styles.pickerButtonText, { color: Colors.primary }]}>
-              {formData.image_url ? 'Change Portrait' : 'Select Portrait'}
-            </Text>
-          </TouchableOpacity>
-          {__DEV__ && (
-            <TouchableOpacity
-              style={[styles.pickerButton, { backgroundColor: Colors.tertiaryContainer, marginTop: Spacing[2] }]}
-              onPress={() => setFormData({ ...formData, image_url: 'https://placehold.co/600x400/3e2723/ffffff?text=Maestro+Hero' })}
-              testID="identity-mock-image-button"
-            >
-              <Text style={[styles.pickerButtonText, { color: Colors.onTertiaryContainer }]}>
-                (DEV) Use Mock Image
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
         <TouchableOpacity
           style={[styles.saveButton, isSaving && { opacity: 0.7 }]}
@@ -527,5 +571,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.onSecondary,
+  },
+  imageGridContainer: {
+    marginBottom: Spacing[6],
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: Spacing[2],
+  },
+  gridItem: {
+    width: '31%',
+    aspectRatio: 1,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gridPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridPlaceholderText: {
+    fontSize: 32,
+    color: Colors.outline,
+    fontFamily: Fonts.scribe,
   },
 });

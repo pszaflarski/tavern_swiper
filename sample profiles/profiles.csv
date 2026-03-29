@@ -1,0 +1,5 @@
+user_id,name,bio,gender,image_1,image_2,image_3,image_4,image_5,image_6
+user1,Valerius the Bold,"A legendary knight known for his courage and impeccable armor. Seeking companionship in the Tavern.","Male","1f2ee97a-1bce-4da8-abe8-e5ae8c429868.jpg","2bbfac57-b369-1ad6-edc7-d7fc29b9c651.jpeg","2d799bbf-e43b-46ed-a48b-7a93629cef22.jpeg","2dff66ec-c121-7164-b339-87fce85af7e0.jpeg","42f61adf-86ee-417f-a535-304aa4c50f94.jpeg","4d7e7069-5a8f-44cb-88c6-dbeece1e4caa.jpg"
+user2,Elara Brightsoul,"A wandering bard with a voice like silver and a heart of gold. Exploring the world one ballad at a time.","Female","539d70c7-0626-4314-ae95-22aaf0ed26c8.jpg","67bccd3e-89e0-4933-9277-df4ebd18add4.jpg","","","",""
+user3,Thrain Ironfoot,"A master blacksmith from the deep mountains. Strength and honor above all else.","Non-binary","6c8df807-3ded-459e-8283-46b678d14595.jpeg","","","","",""
+user4,Lyra Windrunner,"The swiftest ranger in the realm. Quiet as a shadow, fast as the wind.","Female","733977df-f3b1-4aa2-88d4-148fe12895f3.jpeg","80540bf2-b6e1-4df6-9a61-8b6d0baeec67.jpg","","","",""

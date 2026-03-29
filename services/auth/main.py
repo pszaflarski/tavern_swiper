@@ -13,6 +13,7 @@ load_dotenv()
 # Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
 db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
+users_db = firestore.Client(database=os.getenv("USERS_DATABASE_ID", "users"))
 firebase_admin.initialize_app()
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,8 +52,21 @@ async def verify_token(body: TokenRequest):
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Auth unavailable: {e}")
 
+    uid = decoded["uid"]
+    
+    # Fetch role from users database
+    role = "user"
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        if user_doc.exists:
+            role = user_doc.to_dict().get("user_type", "user")
+    except Exception as e:
+        print(f"Warning: Failed to fetch role for {uid}: {e}")
+        # Default to 'user' if lookup fails
+
     return TokenResponse(
-        uid=decoded["uid"]
+        uid=uid,
+        role=role
     )
 
 FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY", "")

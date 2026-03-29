@@ -37,7 +37,7 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 
 ## 🧪 Development Workflow
 - **Testing**: Always run `bash services/run_tests.sh` after backend changes to ensure zero-trust boundaries are intact.
-- **Adding Features**:
+- **Python Usage**: Always run python commands using the virtual environment at `/.venv/bin/python3`.
   1. Update microservice `main.py` and `models.py`.
   2. Update its local `.env`.
   3. Verify with `run_tests.sh`.
