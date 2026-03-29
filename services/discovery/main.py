@@ -69,7 +69,8 @@ async def get_feed(profile_id: str, auth_data: tuple[str, str] = Depends(get_cur
         # 1. Already-swiped IDs
         try:
             swipes_resp = await client.get(
-                f"{SWIPES_SERVICE_URL}/swipes/swiped-by/{profile_id}"
+                f"{SWIPES_SERVICE_URL}/swipes/swiped-by/{profile_id}",
+                headers=headers
             )
             swipes_resp.raise_for_status()
             already_swiped: set[str] = set(swipes_resp.json().get("profile_ids", []))

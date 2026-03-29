@@ -41,12 +41,13 @@ def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-async def _verify_match_access(match_id: str, uid: str) -> None:
-    """Verify match exists AND the authenticated uid owns one of the profiles in it."""
+async def _verify_match_access(match_id: str, uid: str, token: str) -> None:
+    """Verify match exists AND the authenticated uid owns one of the profiles in it. Secured with Auth."""
+    headers = {"Authorization": f"Bearer {token}"}
     async with httpx.AsyncClient(timeout=5.0) as client:
         # 1. Get match details
         try:
-            resp = await client.get(f"{SWIPES_SERVICE_URL}/swipes/matches/{match_id}")
+            resp = await client.get(f"{SWIPES_SERVICE_URL}/swipes/matches/{match_id}", headers=headers)
             if resp.status_code != 200:
                 raise HTTPException(status_code=403, detail="Not an active match")
             match_data = resp.json()
@@ -58,7 +59,7 @@ async def _verify_match_access(match_id: str, uid: str) -> None:
         owned = False
         for pid in p_ids:
             try:
-                p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{pid}")
+                p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{pid}", headers=headers)
                 if p_resp.status_code == 200 and p_resp.json().get("user_id") == uid:
                     owned = True
                     break
@@ -75,9 +76,10 @@ async def health():
 
 
 @app.post("/messages/", response_model=MessageOut, status_code=201)
-async def send_message(body: MessageCreate, uid: str = Depends(get_current_user)):
+async def send_message(body: MessageCreate, auth_data: tuple[str, str] = Depends(get_current_user)):
     """Send a message. Enforces match ownership."""
-    await _verify_match_access(body.match_id, uid)
+    uid, token = auth_data
+    await _verify_match_access(body.match_id, uid, token)
 
     message_id = str(uuid.uuid4())
     now = _now()
@@ -92,9 +94,10 @@ async def send_message(body: MessageCreate, uid: str = Depends(get_current_user)
 
 
 @app.get("/messages/{match_id}", response_model=list[MessageOut])
-async def get_messages(match_id: str, uid: str = Depends(get_current_user)):
+async def get_messages(match_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
     """Fetch message history for a match, ordered by time."""
-    await _verify_match_access(match_id, uid)
+    uid, token = auth_data
+    await _verify_match_access(match_id, uid, token)
     docs = (
         db.collection(COLLECTION)
         .where("match_id", "==", match_id)

@@ -4,6 +4,13 @@ frontend/google-services.json
 # If any other sensitive JSON files exist, list them explicitly here
 # credentials/*.json
 
+# Node / Expo / Building
+frontend/node_modules/
+frontend/.expo/
+dist/
+build/
+web-build/
+
 # Python
 __pycache__/
 *.pyc
@@ -11,27 +18,37 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.python-version
 .coverage
 htmlcov/
 .tox/
 .nox/
 
-# Editors / OS
+# Editor / OS
 .vscode/
 .idea/
 .DS_Store
+*.swp
+*~
 Thumbs.db
 
-# Environment
+# Environment & Logs
 .env
 .env.*
+*.log
+*_log.txt
 
-# Node / Expo
-frontend/node_modules/
-frontend/.expo/
+# Testing (Playwright / Jest)
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+**/__mocks__/
+
+# AI / Agents
+.agents/
 
 # macOS
-.DS_Store
 .AppleDouble
 .LSOverride
 

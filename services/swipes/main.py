@@ -140,8 +140,9 @@ async def list_matches(profile_id: str, auth_data: tuple[str, str] = Depends(get
 
 
 @app.get("/swipes/matches/{match_id}", response_model=MatchOut)
-async def get_match_details(match_id: str):
-    """Internal endpoint: get details of a specific match."""
+async def get_match_details(match_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+    """Internal endpoint: get details of a specific match. Now secured."""
+    _, _ = auth_data
     doc = db.collection(MATCHES_COLLECTION).document(match_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Match not found")
@@ -157,8 +158,9 @@ async def get_match_details(match_id: str):
 
 
 @app.get("/swipes/swiped-by/{profile_id}")
-async def swiped_by(profile_id: str):
-    """Internal endpoint: return all profile IDs already swiped by this profile. Used by Discovery."""
+async def swiped_by(profile_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+    """Internal endpoint: return all profile IDs already swiped by this profile. Now secured."""
+    _, _ = auth_data
     docs = (
         db.collection(SWIPES_COLLECTION)
         .where("swiper_profile_id", "==", profile_id)

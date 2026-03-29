@@ -127,6 +127,11 @@ export default function ProfilesScreen() {
         });
       }
 
+      // If we just created the first profile, or if there is no active profile, select this one
+      if (mode === 'create' || !activeProfileId) {
+        setActiveProfileId(currentProfileId);
+      }
+
       setMode('list');
       await refetch();
     } catch (error) {
@@ -155,7 +160,7 @@ export default function ProfilesScreen() {
           </View>
           <View style={styles.profileCardContent}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing[2] }}>
-              <Text style={styles.profileCardName}>{item.display_name}</Text>
+              <Text style={styles.profileCardName} testID="profile-card-name">{item.display_name}</Text>
               {isActive && (
                 <View style={styles.activeBadge}>
                   <Text style={styles.activeBadgeText}>ACTIVE</Text>

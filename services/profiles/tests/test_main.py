@@ -88,7 +88,7 @@ def test_create_profile(mock_firestore, mock_auth_service):
     assert response.json()["profile_id"] == "new-profile-id" # Ensure profile_id is returned
 
 @patch("main.db")
-def test_get_profile_success(mock_db, mock_profile_data):
+def test_get_profile_success(mock_db, mock_profile_data, mock_auth_service):
     mock_doc = MagicMock()
     mock_doc.id = "test-id"
     mock_doc.to_dict.return_value = mock_profile_data
@@ -96,28 +96,30 @@ def test_get_profile_success(mock_db, mock_profile_data):
 
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
 
-    response = client.get("/profiles/test-id")
+    headers = {"Authorization": "Bearer fake-token"}
+    response = client.get("/profiles/test-id", headers=headers)
     assert response.status_code == 200
     assert response.json()["display_name"] == "Gimli"
 
 @patch("main.db")
-def test_get_profile_not_found(mock_db):
+def test_get_profile_not_found(mock_db, mock_auth_service):
     mock_doc = MagicMock()
     mock_doc.exists = False
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
     
-    response = client.get("/profiles/missing")
+    headers = {"Authorization": "Bearer fake-token"}
+    response = client.get("/profiles/missing", headers=headers)
     assert response.status_code == 404
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image(mock_db, mock_storage, mock_profile_data):
+def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_service):
     with patch("main.GCS_BUCKET", "test-bucket"):
         # Mock Profile existence
         mock_doc = MagicMock()
         mock_doc.id = "test-id"
         mock_doc.exists = True
-        mock_doc.to_dict.return_value = {**mock_profile_data, "image_url": "http://gcs.com/img.png"}
+        mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_url": "http://gcs.com/img.png"}
         mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
         
         # Mock Storage
@@ -126,9 +128,11 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data):
         mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
         
         file_content = b"fake-image-data"
+        headers = {"Authorization": "Bearer fake-token"}
         response = client.post(
             "/profiles/test-id/image",
-            files={"file": ("test.png", file_content, "image/png")}
+            files={"file": ("test.png", file_content, "image/png")},
+            headers=headers
         )
         
         assert response.status_code == 200

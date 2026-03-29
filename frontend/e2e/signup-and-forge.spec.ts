@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, BrowserContext, Page } from '@playwright/test';
 import * as exec from 'child_process';
 import * as util from 'util';
 import axios from 'axios';
@@ -23,9 +23,22 @@ async function cleanupDbs() {
     console.log('✅ Cleanup complete.');
   } catch (error: any) {
     console.error('❌ Cleanup failed:', error.message);
-    if (error.stdout) console.log(error.stdout);
-    if (error.stderr) console.error(error.stderr);
   }
+}
+
+async function forgeIdentity(page: Page, heroName: string) {
+  await page.click('[data-testid="forge-identity-button"]');
+  await page.click('[data-testid="forge-new-identity-button"]');
+  await page.fill('[data-testid="identity-name-input"]', heroName);
+  await page.fill('[data-testid="identity-bio-input"]', `${heroName}'s lore for verification.`);
+  await page.click('[data-testid="identity-mock-image-button"]');
+  await page.click('[data-testid="identity-save-button"]');
+
+  // Wait for return to Profiles list
+  await expect(page.getByText('Your Identities').first()).toBeVisible({ timeout: 15000 });
+  const profileName = page.locator('[data-testid="profile-card-name"]').first();
+  await profileName.waitFor({ state: 'visible', timeout: 10000 });
+  await expect(profileName).toContainText(heroName);
 }
 
 test.describe('Tavern Swiper Integration Flow', () => {
@@ -34,63 +47,99 @@ test.describe('Tavern Swiper Integration Flow', () => {
     await cleanupDbs();
   });
 
-  test('Signup, Forge Profile, and Verify via REST API', async ({ page }) => {
-    const testEmail = `hero-${Date.now()}@example.com`;
-    const testPassword = 'Password123!';
-    const testFullName = 'Playwright Hero';
-    let userToken = '';
+  test('Signup, Forge Profile, Swipe, and Verify Match via REST API', async ({ browser, page }) => {
+    // ---- 1. SETUP USER A ----
+    const emailA = `hero-a-${Date.now()}@example.com`;
+    const pwd = 'Password123!';
+    let tokenA = '';
 
-    // Capture token
     page.on('request', request => {
       const headers = request.headers();
       if (headers['authorization']?.startsWith('Bearer ')) {
-        userToken = headers['authorization'].replace('Bearer ', '');
+        tokenA = headers['authorization'].replace('Bearer ', '');
       }
     });
 
-    // 1. Signup
     await page.goto('/auth');
     await page.click('text=New to the realm? Sign up instead');
-    await page.fill('[data-testid="auth-name-input"]', testFullName);
-    await page.fill('[data-testid="auth-email-input"]', testEmail);
-    await page.fill('[data-testid="auth-password-input"]', testPassword);
+    await page.fill('[data-testid="auth-name-input"]', 'User A');
+    await page.fill('[data-testid="auth-email-input"]', emailA);
+    await page.fill('[data-testid="auth-password-input"]', pwd);
     await page.click('[data-testid="auth-submit-button"]');
-
-    // Wait for redirect to index
     await expect(page.getByText('The Tavern is Empty')).toBeVisible({ timeout: 15000 });
 
-    // 2. Forge Identity
-    await page.click('[data-testid="forge-identity-button"]');
-    await page.click('[data-testid="forge-new-identity-button"]');
-    await page.fill('[data-testid="identity-name-input"]', 'Sir Playwright');
-    await page.fill('[data-testid="identity-bio-input"]', 'Verified via API.');
-    await page.click('[data-testid="identity-mock-image-button"]');
-    await page.click('[data-testid="identity-save-button"]');
+    await forgeIdentity(page, 'Sir Playwright');
+    console.log('✅ User A created and verified.');
 
-    // Wait for return to Profiles list
-    await expect(page.getByText('Your Identities').first()).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Sir Playwright').first()).toBeVisible({ timeout: 15000 });
+    // ---- 2. SETUP USER B (New Context) ----
+    const contextB = await browser.newContext();
+    const pageB = await contextB.newPage();
+    const emailB = `hero-b-${Date.now()}@example.com`;
+    let tokenB = '';
 
-    // 3. Verify via REST API
-    expect(userToken).not.toBe('');
-    const headers = { Authorization: `Bearer ${userToken}` };
+    pageB.on('request', request => {
+      const headers = request.headers();
+      if (headers['authorization']?.startsWith('Bearer ')) {
+        tokenB = headers['authorization'].replace('Bearer ', '');
+      }
+    });
 
-    // A. Verify User
-    const userResp = await axios.get(`${USERS_SERVICE_URL}/users/me`, { headers });
-    expect(userResp.status).toBe(200);
-    expect(userResp.data.email).toBe(testEmail);
-    const uid = userResp.data.uid;
+    await pageB.goto('/auth');
+    await pageB.click('text=New to the realm? Sign up instead');
+    await pageB.fill('[data-testid="auth-name-input"]', 'User B');
+    await pageB.fill('[data-testid="auth-email-input"]', emailB);
+    await pageB.fill('[data-testid="auth-password-input"]', pwd);
+    await pageB.click('[data-testid="auth-submit-button"]');
+    await expect(pageB.getByText('The Tavern is Empty')).toBeVisible({ timeout: 15000 });
 
-    // B. Verify Profile
-    const profilesResp = await axios.get(`${PROFILES_SERVICE_URL}/profiles/user/${uid}`, { headers });
-    expect(profilesResp.status).toBe(200);
-    const profile = profilesResp.data.find((p: any) => p.display_name === 'Sir Playwright');
-    expect(profile).toBeDefined();
+    await forgeIdentity(pageB, 'Madam E2E');
+    console.log('✅ User B created and verified.');
 
-    console.log('✅ Signup and Forge verified via REST API.');
+    // ---- 3. USER A SWIPES RIGHT ON USER B ----
+    // Refresh Tavern to see User B
+    await page.goto('/');
+    // Check for Madam E2E in the feed
+    await expect(page.getByText('Madam E2E')).toBeVisible({ timeout: 15000 });
+    // Swipe Right
+    await page.click('[data-testid="swipe-right-button"]');
+    console.log('✅ User A swiped RIGHT on User B.');
+
+    // ---- 4. USER B SWIPES RIGHT ON USER A ----
+    await pageB.goto('/');
+    await expect(pageB.getByText('Sir Playwright')).toBeVisible({ timeout: 15000 });
+    await pageB.click('[data-testid="swipe-right-button"]');
+    console.log('✅ User B swiped RIGHT on User A.');
+
+    // ---- 5. FINAL API VERIFICATION ----
+    expect(tokenA).not.toBe('');
+    expect(tokenB).not.toBe('');
+    const headersA = { Authorization: `Bearer ${tokenA}` };
+    const headersB = { Authorization: `Bearer ${tokenB}` };
+
+    // A. Verify User A Profiles
+    const userAResp = await axios.get(`${USERS_SERVICE_URL}/users/me`, { headers: headersA });
+    const uidA = userAResp.data.uid;
+    const profilesAResp = await axios.get(`${PROFILES_SERVICE_URL}/profiles/user/${uidA}`, { headers: headersA });
+    const profileA_id = profilesAResp.data[0].profile_id;
+
+    // B. Verify User B Profiles
+    const userBResp = await axios.get(`${USERS_SERVICE_URL}/users/me`, { headers: headersB });
+    const uidB = userBResp.data.uid;
+    const profilesBResp = await axios.get(`${PROFILES_SERVICE_URL}/profiles/user/${uidB}`, { headers: headersB });
+    const profileB_id = profilesBResp.data[0].profile_id;
+
+    // C. Verify Match via API
+    console.log('🔍 Checking Swipes API for Match...');
+    const matchResp = await axios.get(`${SWIPES_SERVICE_URL}/swipes/matches/${profileA_id}`, { headers: headersA });
+    expect(matchResp.status).toBe(200);
+    
+    const match = matchResp.data.find((m: any) => 
+      (m.profile_id_a === profileA_id && m.profile_id_b === profileB_id) ||
+      (m.profile_id_a === profileB_id && m.profile_id_b === profileA_id)
+    );
+    expect(match).toBeDefined();
+    console.log('✅ Match A<->B verified in Swipes API.');
+
+    await contextB.close();
   });
-
-  // Note: For a full match test, we would repeat the process for User B
-  // and then have User A swipe on User B, then User B swipe on User A.
-  // This can be added as a multi-stage test if the user requests more depth.
 });

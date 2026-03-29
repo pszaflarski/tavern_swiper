@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import SwipeDeck, { SwipeProfile } from '../../components/SwipeDeck';
-import { Colors, Fonts, Spacing, Radius } from '../../theme';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useDiscovery } from '../../hooks/useDiscovery';
 import { useSwipe } from '../../hooks/useSwipe';
 import { useProfiles } from '../../hooks/useProfiles';
@@ -118,11 +118,31 @@ export default function TavernScreen() {
              </TouchableOpacity>
           </View>
         ) : (
-          <SwipeDeck
-            profiles={activeProfiles}
-            onSwipeLeft={handleSwipeLeft}
-            onSwipeRight={handleSwipeRight}
-          />
+          <>
+            <View style={{ flex: 1 }}>
+              <SwipeDeck
+                profiles={activeProfiles}
+                onSwipeLeft={handleSwipeLeft}
+                onSwipeRight={handleSwipeRight}
+              />
+            </View>
+            <View style={styles.actionRow}>
+              <TouchableOpacity 
+                style={[styles.roundButton, { borderColor: Colors.error }]} 
+                onPress={() => activeProfiles[0] && handleSwipeLeft(activeProfiles[0].profile_id)}
+                testID="swipe-left-button"
+              >
+                <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
+                onPress={() => activeProfiles[0] && handleSwipeRight(activeProfiles[0].profile_id)}
+                testID="swipe-right-button"
+              >
+                <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
       </View>
     </View>
@@ -200,5 +220,27 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.heroic,
     fontSize: 16,
     fontWeight: '600',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing[10],
+    paddingBottom: Spacing[10],
+    backgroundColor: Colors.surface,
+  },
+  roundButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    backgroundColor: Colors.surfaceContainerLowest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+  },
+  roundButtonText: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
 });

@@ -35,8 +35,9 @@ app.add_middleware(
 def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
-async def get_admin(uid: str = Depends(get_current_user)):
+async def get_admin(auth_data: tuple[str, str] = Depends(get_current_user)):
     """Dependency to ensure the user has admin or root_admin role."""
+    uid, _ = auth_data
     doc = db.collection(COLLECTION).document(uid).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="User record not found in database")
@@ -45,8 +46,9 @@ async def get_admin(uid: str = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin or Root Admin role required")
     return uid
 
-async def get_root_admin(uid: str = Depends(get_current_user)):
+async def get_root_admin(auth_data: tuple[str, str] = Depends(get_current_user)):
     """Dependency to ensure the user has root_admin role."""
+    uid, _ = auth_data
     doc = db.collection(COLLECTION).document(uid).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="User record not found in database")
@@ -81,8 +83,9 @@ async def list_users(include_deleted: bool = False, _: str = Depends(get_admin))
     return users
 
 @app.get("/users/me", response_model=UserOut)
-async def get_me(uid: str = Depends(get_current_user)):
+async def get_me(auth_data: tuple[str, str] = Depends(get_current_user)):
     """Fetch current user's account info."""
+    uid, _ = auth_data
     doc = db.collection(COLLECTION).document(uid).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -91,8 +94,9 @@ async def get_me(uid: str = Depends(get_current_user)):
     return UserOut(uid=uid, **data)
 
 @app.put("/users/me", response_model=UserOut)
-async def update_me(body: UserUpdate, uid: str = Depends(get_current_user)):
+async def update_me(body: UserUpdate, auth_data: tuple[str, str] = Depends(get_current_user)):
     """Update user metadata."""
+    uid, _ = auth_data
     ref = db.collection(COLLECTION).document(uid)
     if not ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -176,7 +180,7 @@ async def restore_user(target_uid: str, _: str = Depends(get_admin)):
     return UserOut(uid=target_uid, **updated_doc)
 
 @app.post("/users/", response_model=UserOut, status_code=201)
-async def create_user(body: UserCreate, caller_uid: str = Depends(get_current_user)):
+async def create_user(body: UserCreate, auth_data: tuple[str, str] = Depends(get_current_user)):
     """
     Consolidated user creation endpoint.
     
@@ -185,6 +189,7 @@ async def create_user(body: UserCreate, caller_uid: str = Depends(get_current_us
     2. Administrative Creation: body.uid is set, caller must be admin.
     3. Self Registration: body.uid is None, user creates their own record.
     """
+    caller_uid, _ = auth_data
     # 1. Handle Root Admin Initialization (Singleton)
     if body.user_type == UserType.ROOT_ADMIN:
         query = db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).limit(1).stream()
