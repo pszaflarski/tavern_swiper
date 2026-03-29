@@ -41,7 +41,7 @@ async def health():
 
 
 @app.get("/discovery/feed/{profile_id}", response_model=FeedResponse)
-async def get_feed(profile_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def get_feed(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Fetch a deck of candidate profiles to swipe on.
     
     Strategy:
@@ -51,7 +51,7 @@ async def get_feed(profile_id: str, auth_data: tuple[str, str] = Depends(get_cur
     3. Exclude already-swiped profiles and the requesting profile itself.
     4. Return up to FEED_LIMIT candidates.
     """
-    uid, token = auth_data
+    uid, _, token = auth_data
     headers = {"Authorization": f"Bearer {token}"}
     
     async with httpx.AsyncClient(timeout=10.0) as client:

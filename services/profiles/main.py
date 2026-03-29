@@ -71,13 +71,20 @@ async def create_profile(body: ProfileCreate, auth_data: tuple[str, str, str] = 
     uid, role, _ = auth_data
     if role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Only admins or root admins can create profiles")
+    
+    # 1. Determine target UID (Admin can override, others use their own UID)
+    target_uid = uid
+    if body.user_id and role in ["admin", "root_admin"]:
+        target_uid = body.user_id
+
     profile_id = str(uuid.uuid4())
     data = body.model_dump()
-    data["user_id"] = uid  # Enforce authenticated UID
+    data["user_id"] = target_uid
     data["attributes"] = body.attributes.model_dump()
     db.collection(COLLECTION).document(profile_id).set(data)
     doc = db.collection(COLLECTION).document(profile_id).get()
     return _doc_to_profile(doc)
+    
 
 
 @app.get("/profiles/{profile_id}", response_model=ProfileOut)
@@ -92,9 +99,9 @@ async def get_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends
 
 @app.get("/profiles/user/{user_id}", response_model=list[ProfileOut])
 async def list_profiles_for_user(user_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
-    """List profiles for a user. Only allows viewing your own profiles."""
-    uid, _, _ = auth_data
-    if user_id != uid:
+    """List profiles for a user. Only allows viewing your own profiles (except for admins)."""
+    uid, role, _ = auth_data
+    if user_id != uid and role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to view another user's profiles")
     docs = db.collection(COLLECTION).where("user_id", "==", user_id).stream()
     return [_doc_to_profile(doc) for doc in docs]
@@ -102,11 +109,14 @@ async def list_profiles_for_user(user_id: str, auth_data: tuple[str, str, str] =
 
 @app.put("/profiles/{profile_id}", response_model=ProfileOut)
 async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
-    uid, _, _ = auth_data
+    uid, role, _ = auth_data
     ref = db.collection(COLLECTION).document(profile_id)
     doc = ref.get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
+    
+    if doc.to_dict().get("user_id") != uid and role not in ["admin", "root_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized to update this profile")
     
     if doc.to_dict().get("user_id") != uid:
         raise HTTPException(status_code=403, detail="Not authorized to update this profile")
@@ -120,13 +130,13 @@ async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[
 
 @app.delete("/profiles/{profile_id}", status_code=204)
 async def delete_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
-    uid, _, _ = auth_data
+    uid, role, _ = auth_data
     ref = db.collection(COLLECTION).document(profile_id)
     doc = ref.get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
     
-    if doc.to_dict().get("user_id") != uid:
+    if doc.to_dict().get("user_id") != uid and role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete this profile")
         
     ref.delete()
@@ -134,8 +144,8 @@ async def delete_profile(profile_id: str, auth_data: tuple[str, str, str] = Depe
 
 @app.post("/profiles/{profile_id}/image", response_model=ProfileOut)
 async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile = File(...), auth_data: tuple[str, str, str] = Depends(get_current_user)):
-    """Upload profile image to GCS and save the public URL to Firestore. Only the owner can upload."""
-    uid, _, _ = auth_data
+    """Upload profile image to GCS and save the public URL to Firestore. Admins can upload on behalf of others."""
+    uid, role, _ = auth_data
     if not GCS_BUCKET:
         raise HTTPException(status_code=503, detail="GCS_BUCKET_NAME not configured")
     ref = db.collection(COLLECTION).document(profile_id)
@@ -143,7 +153,7 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
     
-    if doc.to_dict().get("user_id") != uid:
+    if doc.to_dict().get("user_id") != uid and role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to update this profile's image")
 
     client = storage.Client()
@@ -167,3 +177,26 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     
     ref.update(updates)
     return _doc_to_profile(ref.get())
+
+
+@app.delete("/profiles/", status_code=204)
+async def delete_all_profiles(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Delete all profiles. Admin/Root Admin only."""
+    _, role, _ = auth_data
+    if role not in ["admin", "root_admin"]:
+        raise HTTPException(status_code=403, detail="Admin or Root Admin authorization required")
+    
+    # Batch delete
+    batch_size = 500
+    while True:
+        docs = db.collection(COLLECTION).limit(batch_size).stream()
+        deleted = 0
+        batch = db.batch()
+        for doc in docs:
+            batch.delete(doc.reference)
+            deleted += 1
+        
+        if deleted == 0:
+            break
+        
+        batch.commit()

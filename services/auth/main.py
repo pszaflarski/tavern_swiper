@@ -143,3 +143,16 @@ async def delete_auth_users_bulk(body: BulkDeleteRequest):
             print(f"Auth bulk delete errors: {len(result.errors)} failed")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed bulk auth delete: {e}")
+@app.delete("/auth/all", status_code=204)
+async def delete_all_auth_users():
+    """Delete all users from Firebase Authentication. High-risk operation."""
+    try:
+        # Iterate through all users and delete in batches
+        page = firebase_auth.list_users()
+        while page:
+            uids = [user.uid for user in page.users]
+            if uids:
+                firebase_auth.delete_users(uids)
+            page = page.get_next_page()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear all auth users: {e}")

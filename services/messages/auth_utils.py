@@ -24,7 +24,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
                     detail=f"Auth verification failed: {resp.text}"
                 )
             user_data = resp.json()
-            return user_data["uid"], token
+            return user_data["uid"], user_data.get("role", "user"), token
         except httpx.HTTPError as e:
             raise HTTPException(
                 status_code=503,

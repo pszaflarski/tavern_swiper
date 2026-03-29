@@ -19,6 +19,7 @@ class ProfileCreate(BaseModel):
     image_url: Optional[str] = None
     image_urls: List[str] = []
     gender: Optional[str] = None
+    user_id: Optional[str] = None
 
 
 class ProfileUpdate(BaseModel):

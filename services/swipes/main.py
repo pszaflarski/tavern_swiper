@@ -168,3 +168,26 @@ async def swiped_by(profile_id: str, auth_data: tuple[str, str] = Depends(get_cu
     )
     ids = [doc.to_dict()["swiped_profile_id"] for doc in docs]
     return {"profile_ids": ids}
+
+
+@app.delete("/swipes/", status_code=204)
+async def delete_all_swipes(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Delete all swipes and matches. Admin/Root Admin only."""
+    _, role, _ = auth_data
+    if role not in ["admin", "root_admin"]:
+        raise HTTPException(status_code=403, detail="Admin or Root Admin authorization required")
+    
+    # Simple batch delete for swipes and matches
+    # (Note: In production with many docs, should use paginated loop like Profiles)
+    for collection in [SWIPES_COLLECTION, MATCHES_COLLECTION]:
+        batch_size = 500
+        while True:
+            docs = db.collection(collection).limit(batch_size).stream()
+            deleted = 0
+            batch = db.batch()
+            for doc in docs:
+                batch.delete(doc.reference)
+                deleted += 1
+            if deleted == 0:
+                break
+            batch.commit()

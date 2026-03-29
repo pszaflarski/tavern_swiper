@@ -117,3 +117,26 @@ async def get_messages(match_id: str, auth_data: tuple[str, str] = Depends(get_c
             )
         )
     return result
+
+
+@app.delete("/messages/", status_code=204)
+async def delete_all_messages(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Delete all messages. Admin/Root Admin only."""
+    _, role, _ = auth_data
+    if role not in ["admin", "root_admin"]:
+        raise HTTPException(status_code=403, detail="Admin or Root Admin authorization required")
+    
+    # Batch delete
+    batch_size = 500
+    while True:
+        docs = db.collection(COLLECTION).limit(batch_size).stream()
+        deleted = 0
+        batch = db.batch()
+        for doc in docs:
+            batch.delete(doc.reference)
+            deleted += 1
+        
+        if deleted == 0:
+            break
+        
+        batch.commit()
