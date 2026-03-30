@@ -17,7 +17,7 @@ from auth_utils import get_current_user
 # Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
 firebase_admin.initialize_app()
-db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
+db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 SWIPES_SERVICE_URL = os.getenv("SWIPES_SERVICE_URL", "http://swipes:8004")
 FEED_LIMIT = int(os.getenv("FEED_LIMIT", "20"))

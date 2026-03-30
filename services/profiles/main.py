@@ -17,7 +17,7 @@ from auth_utils import get_current_user
 # Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
 firebase_admin.initialize_app()
-db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
+db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 GCS_BUCKET = os.getenv("GCS_BUCKET_NAME", "")
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,13 +69,13 @@ async def list_all_profiles(auth_data: tuple[str, str, str] = Depends(get_curren
 @app.post("/profiles/", response_model=ProfileOut, status_code=201)
 async def create_profile(body: ProfileCreate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     uid, role, _ = auth_data
-    if role not in ["admin", "root_admin"]:
-        raise HTTPException(status_code=403, detail="Only admins or root admins can create profiles")
-    
     # 1. Determine target UID (Admin can override, others use their own UID)
     target_uid = uid
-    if body.user_id and role in ["admin", "root_admin"]:
-        target_uid = body.user_id
+    if body.user_id:
+        if role in ["admin", "root_admin"]:
+            target_uid = body.user_id
+        else:
+            raise HTTPException(status_code=403, detail="Only admins or root admins can specify a target user_id")
 
     profile_id = str(uuid.uuid4())
     data = body.model_dump()

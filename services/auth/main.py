@@ -12,8 +12,8 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
-db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
-users_db = firestore.Client(database=os.getenv("USERS_DATABASE_ID", "users"))
+db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
+users_db = firestore.Client(database=os.environ["USERS_DATABASE_ID"])
 firebase_admin.initialize_app()
 
 from fastapi.middleware.cors import CORSMiddleware

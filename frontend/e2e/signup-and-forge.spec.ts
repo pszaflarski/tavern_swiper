@@ -99,15 +99,27 @@ test.describe('Tavern Swiper Integration Flow', () => {
     // Refresh Tavern to see User B
     await page.goto('/');
     // Check for Madam E2E in the feed
-    await expect(page.getByText('Madam E2E')).toBeVisible({ timeout: 15000 });
-    // Swipe Right
-    await page.click('[data-testid="swipe-right-button"]');
+    await expect(page.getByText('Madam E2E').first()).toBeVisible({ timeout: 15000 });
+    // Swipe Right — wait for the POST /swipes/ 201 response in parallel with the click
+    await Promise.all([
+      page.waitForResponse(
+        response => response.url().includes('/swipes') && response.request().method() === 'POST' && response.status() === 201,
+        { timeout: 30000 }
+      ),
+      page.click('[data-testid="swipe-right-button"]'),
+    ]);
     console.log('✅ User A swiped RIGHT on User B.');
 
     // ---- 4. USER B SWIPES RIGHT ON USER A ----
     await pageB.goto('/');
-    await expect(pageB.getByText('Sir Playwright')).toBeVisible({ timeout: 15000 });
-    await pageB.click('[data-testid="swipe-right-button"]');
+    await expect(pageB.getByText('Sir Playwright').first()).toBeVisible({ timeout: 15000 });
+    await Promise.all([
+      pageB.waitForResponse(
+        response => response.url().includes('/swipes') && response.request().method() === 'POST' && response.status() === 201,
+        { timeout: 30000 }
+      ),
+      pageB.click('[data-testid="swipe-right-button"]'),
+    ]);
     console.log('✅ User B swiped RIGHT on User A.');
 
     // ---- 5. FINAL API VERIFICATION ----
@@ -128,16 +140,22 @@ test.describe('Tavern Swiper Integration Flow', () => {
     const profilesBResp = await axios.get(`${PROFILES_SERVICE_URL}/profiles/user/${uidB}`, { headers: headersB });
     const profileB_id = profilesBResp.data[0].profile_id;
 
-    // C. Verify Match via API
-    console.log('🔍 Checking Swipes API for Match...');
-    const matchResp = await axios.get(`${SWIPES_SERVICE_URL}/swipes/matches/${profileA_id}`, { headers: headersA });
-    expect(matchResp.status).toBe(200);
-    
-    const match = matchResp.data.find((m: any) => 
-      (m.profile_id_a === profileA_id && m.profile_id_b === profileB_id) ||
-      (m.profile_id_a === profileB_id && m.profile_id_b === profileA_id)
-    );
-    expect(match).toBeDefined();
+    // C. Verify Match via API — poll because match creation is eventually consistent
+    console.log('🔍 Checking Swipes API for Match (polling)...');
+    await expect.poll(async () => {
+      try {
+        const matchResp = await axios.get(`${SWIPES_SERVICE_URL}/swipes/matches/${profileA_id}`, { headers: headersA });
+        const match = matchResp.data.find((m: any) =>
+          (m.profile_id_a === profileA_id && m.profile_id_b === profileB_id) ||
+          (m.profile_id_a === profileB_id && m.profile_id_b === profileA_id)
+        );
+        return match;
+      } catch { return undefined; }
+    }, {
+      message: 'Match between User A and User B should exist',
+      timeout: 30000,
+      intervals: [1000, 2000, 3000],
+    }).toBeDefined();
     console.log('✅ Match A<->B verified in Swipes API.');
 
     await contextB.close();

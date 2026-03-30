@@ -116,7 +116,7 @@ export default function ProfilesScreen() {
         const profileData = {
           ...formData,
           image_url: '',
-          user_id: user.uid,
+          // user_id: user.uid,
           talents: ['Navigation'],
           attributes: { strength: 5, charisma: 5, spark: 5 },
         };
@@ -275,22 +275,30 @@ export default function ProfilesScreen() {
         <View style={styles.imageGridContainer}>
           <Text style={[styles.label, { marginBottom: Spacing[4] }]}>Hero's Portraits (Up to 6)</Text>
           <View style={styles.imageGrid}>
-            {[0, 1, 2, 3, 4, 5].map((index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.gridItem}
-                onPress={() => pickImage(index)}
-                testID={`identity-image-slot-${index}`}
-              >
-                {formData.image_urls && formData.image_urls[index] ? (
-                  <Image source={{ uri: formData.image_urls[index] }} style={styles.gridImage} resizeMode="cover" />
-                ) : (
-                  <View style={styles.gridPlaceholder}>
-                    <Text style={styles.gridPlaceholderText}>+</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+            {(() => {
+              const displayUrls = (formData.image_urls || []).filter(url => !!url);
+              const slots = [...displayUrls];
+              if (slots.length < 6) {
+                slots.push(''); // Add the next upload slot
+              }
+              
+              return slots.map((url, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.gridItem}
+                  onPress={() => pickImage(index)}
+                  testID={`identity-image-slot-${index}`}
+                >
+                  {url ? (
+                    <Image source={{ uri: url }} style={styles.gridImage} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.gridPlaceholder}>
+                      <Text style={styles.gridPlaceholderText}>+</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ));
+            })()}
           </View>
           {__DEV__ && (
             <TouchableOpacity
@@ -303,7 +311,7 @@ export default function ProfilesScreen() {
                   image_urls: [mock, mock, mock, mock, mock, mock] 
                 }))
               }}
-              testID="identity-mock-images-button"
+              testID="identity-mock-image-button"
             >
               <Text style={[styles.pickerButtonText, { color: Colors.onTertiaryContainer }]}>
                 (DEV) Fill All with Mocks
@@ -582,7 +590,7 @@ const styles = StyleSheet.create({
     gap: Spacing[2],
   },
   gridItem: {
-    width: '31%',
+    width: '23%',
     aspectRatio: 1,
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: Radius.md,

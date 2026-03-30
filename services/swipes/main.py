@@ -19,7 +19,7 @@ from auth_utils import get_current_user
 # Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
 firebase_admin.initialize_app()
-db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
+db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,9 +47,9 @@ async def health():
 
 
 @app.post("/swipes/", response_model=SwipeOut, status_code=201)
-async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Record a swipe and create a Match if both profiles swiped right."""
-    uid, token = auth_data
+    uid, _, token = auth_data
     headers = {"Authorization": f"Bearer {token}"}
     
     # Verify ownership of the swiper profile
@@ -75,23 +75,25 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str] = Depends(g
 
     # Check for mutual right swipe → create Match
     if body.direction == "right":
-        reverse = (
-            db.collection(SWIPES_COLLECTION)
-            .where("swiper_profile_id", "==", body.swiped_profile_id)
-            .where("swiped_profile_id", "==", body.swiper_profile_id)
-            .where("direction", "==", "right")
-            .limit(1)
-            .stream()
-        )
-        if any(True for _ in reverse):
-            match_id = str(uuid.uuid4())
-            db.collection(MATCHES_COLLECTION).document(match_id).set(
-                {
-                    "profile_id_a": body.swiper_profile_id,
-                    "profile_id_b": body.swiped_profile_id,
-                    "created_at": now,
-                }
+        try:
+            reverse_docs = list(
+                db.collection(SWIPES_COLLECTION)
+                .where("swiper_profile_id", "==", body.swiped_profile_id)
+                .where("swiped_profile_id", "==", body.swiper_profile_id)
+                .stream()
             )
+            reverse_right = [d for d in reverse_docs if d.to_dict().get("direction") == "right"]
+            if reverse_right:
+                match_id = str(uuid.uuid4())
+                db.collection(MATCHES_COLLECTION).document(match_id).set(
+                    {
+                        "profile_id_a": body.swiper_profile_id,
+                        "profile_id_b": body.swiped_profile_id,
+                        "created_at": now,
+                    }
+                )
+        except Exception:
+            pass  # Match creation is best-effort; swipe is still recorded
 
     return SwipeOut(
         swipe_id=swipe_id,
@@ -103,9 +105,9 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str] = Depends(g
 
 
 @app.get("/swipes/matches/{profile_id}", response_model=list[MatchOut])
-async def list_matches(profile_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def list_matches(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """List all matches for a given profile (queried from both sides)."""
-    uid, token = auth_data
+    uid, _, token = auth_data
     headers = {"Authorization": f"Bearer {token}"}
     
     # Verify ownership
@@ -140,9 +142,9 @@ async def list_matches(profile_id: str, auth_data: tuple[str, str] = Depends(get
 
 
 @app.get("/swipes/matches/{match_id}", response_model=MatchOut)
-async def get_match_details(match_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def get_match_details(match_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Internal endpoint: get details of a specific match. Now secured."""
-    _, _ = auth_data
+    _, _, _ = auth_data
     doc = db.collection(MATCHES_COLLECTION).document(match_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Match not found")
@@ -158,9 +160,9 @@ async def get_match_details(match_id: str, auth_data: tuple[str, str] = Depends(
 
 
 @app.get("/swipes/swiped-by/{profile_id}")
-async def swiped_by(profile_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def swiped_by(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Internal endpoint: return all profile IDs already swiped by this profile. Now secured."""
-    _, _ = auth_data
+    _, _, _ = auth_data
     docs = (
         db.collection(SWIPES_COLLECTION)
         .where("swiper_profile_id", "==", profile_id)

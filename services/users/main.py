@@ -15,7 +15,7 @@ AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 # ---------------------------------------------------------------------------
 # Firestore initialisation
 # ---------------------------------------------------------------------------
-db = firestore.Client(database=os.getenv("FIRESTORE_DATABASE_ID", "(default)"))
+db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 COLLECTION = "users"
 
 # ...
