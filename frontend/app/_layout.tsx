@@ -1,13 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import { 
+  useFonts,
+  Manrope_400Regular,
+  Manrope_700Bold,
+} from '@expo-google-fonts/manrope';
+import {
+  NotoSerif_400Regular,
+  NotoSerif_700Bold,
+} from '@expo-google-fonts/noto-serif';
 import { Colors } from '../theme';
 import { useUser } from '../hooks/useUser';
 import AuthScreen from './auth';
 import { ActiveProfileProvider } from '../lib/ActiveProfileContext';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* ignore error */
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,9 +34,21 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useUser();
+  const { isAuthenticated, isLoading: authLoading } = useUser();
+  const [fontsLoaded, fontError] = useFonts({
+    'Manrope': Manrope_400Regular,
+    'Manrope-Bold': Manrope_700Bold,
+    'NotoSerif': NotoSerif_400Regular,
+    'NotoSerif-Bold': NotoSerif_700Bold,
+  });
 
-  if (isLoading) {
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (authLoading || (!fontsLoaded && !fontError)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
         <ActivityIndicator size="large" color={Colors.primary} />

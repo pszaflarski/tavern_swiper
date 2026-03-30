@@ -38,8 +38,13 @@ export const ActiveProfileProvider: React.FC<{ children: React.ReactNode }> = ({
               await usersApi.put('/users/me', { active_profile_id: savedId });
             }
           }
-        } catch (e) {
-          console.warn('Failed to sync active profile from API, falling back to local storage', e);
+        } catch (e: any) {
+          // If it's a 404, it just means the user record doesn't exist in our DB yet (new user or test reset)
+          // We can handle this gracefully without logging a red warning to the console.
+          if (e.response?.status !== 404) {
+            console.warn('Failed to sync active profile from API, falling back to local storage', e);
+          }
+          
           const savedId = await AsyncStorage.getItem(STORAGE_KEY);
           if (savedId) setActiveProfileIdState(savedId);
         } finally {

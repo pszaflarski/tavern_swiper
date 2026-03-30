@@ -3,35 +3,47 @@ import csv
 import os
 import time
 
-# --- Configuration ---
-AUTH_URL = "https://auth-374390417125.us-central1.run.app"
-PROFILES_URL = "https://profiles-374390417125.us-central1.run.app"
-USERS_URL = "https://users-374390417125.us-central1.run.app"
-CSV_PATH = "sample profiles/profiles.csv"
-SAMPLE_IMAGES_DIR = "sample profiles"
-
 # Primary Seeder (Already elevated to Admin/RootAdmin in database)
-SEEDER_EMAIL = "seeder@example.com"
-SEEDER_PASSWORD = "Password123!"
+SEEDER_EMAIL = "admin@e.com"
+SEEDER_PASSWORD = "adminadmin"
+
+# --- Configuration ---
+AUTH_URL = "https://auth-test-hhqol7siba-uc.a.run.app"
+PROFILES_URL = "https://profiles-test-hhqol7siba-uc.a.run.app"
+USERS_URL = "https://users-test-hhqol7siba-uc.a.run.app"
+CSV_PATH = "sample_profiles/profiles.csv"
+SAMPLE_IMAGES_DIR = "sample_profiles"
 
 def get_token(email, password):
     """Register or Login a user to get their token and UID."""
-    resp = requests.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": password})
-    if resp.status_code == 200:
-        return resp.json()["id_token"], resp.json()["uid"]
+    login_resp = requests.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": password})
+    if login_resp.status_code == 200:
+        return login_resp.json()["id_token"], login_resp.json()["uid"]
     
     # Try register if login fails
-    resp = requests.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
-    if resp.status_code == 200:
-        return resp.json()["id_token"], resp.json()["uid"]
+    reg_resp = requests.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
+    if reg_resp.status_code == 200:
+        return reg_resp.json()["id_token"], reg_resp.json()["uid"]
     
-    raise Exception(f"Failed to auth {email}: {resp.text}")
+    raise Exception(f"Failed to auth {email}.\n  Login Error: {login_resp.text}\n  Register Error: {reg_resp.text}")
 
 def seed_system():
     # 1. Login as primary seeder
     print(f"Authenticating primary seeder: {SEEDER_EMAIL}...")
     seeder_token, seeder_uid = get_token(SEEDER_EMAIL, SEEDER_PASSWORD)
     seeder_headers = {"Authorization": f"Bearer {seeder_token}"}
+
+    # 1b. Bootstrap: Ensure seeder is Root Admin (needed for user overrides)
+    print("Elevating seeder to Root Admin for administrative seeding...")
+    bootstrap_data = {
+        "email": SEEDER_EMAIL,
+        "user_type": "root_admin",
+        "is_premium": True
+    }
+    # This will succeed if the DB is empty (singleton check in Users service) or return 200/201 if already exists
+    b_resp = requests.post(f"{USERS_URL}/users/", json=bootstrap_data, headers=seeder_headers)
+    if b_resp.status_code not in [200, 201]:
+        print(f"Note: Seeder bootstrap status: {b_resp.status_code} ({b_resp.text})")
 
     # 2. Read CSV
     print(f"Reading {CSV_PATH}...")

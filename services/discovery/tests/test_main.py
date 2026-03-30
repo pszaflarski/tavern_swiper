@@ -3,6 +3,7 @@ import respx
 from httpx import Response
 from fastapi.testclient import TestClient
 from unittest.mock import patch
+import os
 
 # Mock firestore before importing app
 with patch("google.cloud.firestore.Client"):
@@ -18,12 +19,18 @@ def mock_profiles():
         {"profile_id": "p3", "user_id": "u3", "display_name": "Gimli", "attributes": {}},
     ]
 
-@respx.mock
-def test_get_feed_success(respx_mock, mock_profiles):
-    # Mock Auth Service
-    respx_mock.post("http://auth:8001/auth/verify").mock(
-        return_value=Response(200, json={"uid": "u1"})
-    )
+@pytest.fixture
+def mock_auth_service():
+    with respx.mock as respx_mock:
+        auth_url = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
+        respx_mock.post(f"{auth_url}/auth/verify").mock(
+            return_value=Response(200, json={"uid": "u1", "role": "user"})
+        )
+        yield respx_mock
+
+@pytest.mark.asyncio
+async def test_get_feed_success(mock_auth_service, mock_profiles):
+    respx_mock = mock_auth_service
     
     # Mock Profiles Service (ownership check for p1)
     respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(
@@ -48,12 +55,9 @@ def test_get_feed_success(respx_mock, mock_profiles):
     assert len(profiles) == 1
     assert profiles[0]["profile_id"] == "p3"
 
-@respx.mock
-def test_get_feed_unauthorized_profile(respx_mock):
-    # Mock Auth Service: user is u1
-    respx_mock.post("http://auth:8001/auth/verify").mock(
-        return_value=Response(200, json={"uid": "u1"})
-    )
+@pytest.mark.asyncio
+async def test_get_feed_unauthorized_profile(mock_auth_service):
+    respx_mock = mock_auth_service
     # Mock Profiles Service: p1 belongs to u2
     respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(
         return_value=Response(200, json={"user_id": "u2"})

@@ -10,7 +10,6 @@ class UserType(str, Enum):
 
 class UserBase(BaseModel):
     email: EmailStr
-    full_name: Optional[str] = None
     is_premium: bool = False
     user_type: UserType = UserType.USER
     is_deleted: bool = False
@@ -19,7 +18,6 @@ class UserCreate(UserBase):
     uid: Optional[str] = None
 
 class UserUpdate(BaseModel):
-    full_name: Optional[str] = None
     is_premium: Optional[bool] = None
     user_type: Optional[UserType] = None
     active_profile_id: Optional[str] = None

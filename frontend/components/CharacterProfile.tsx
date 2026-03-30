@@ -86,25 +86,25 @@ export default function CharacterProfile({
         {/* Glassmorphism overlay */}
         <View style={styles.heroOverlay} />
         <View style={styles.heroTextContainer}>
-          {profile.character_class && (
+          {!!profile.character_class && (
             <Text style={styles.characterClass}>{profile.character_class.toUpperCase()}</Text>
           )}
           <Text style={styles.heroName}>{profile.display_name}</Text>
-          {profile.realm && (
+          {!!profile.realm && (
             <Text style={styles.realm}>📍 {profile.realm}</Text>
           )}
         </View>
       </View>
 
       {/* Tagline */}
-      {profile.tagline && (
+      {!!profile.tagline && (
         <View style={styles.section}>
           <Text style={styles.tagline}>"{profile.tagline}"</Text>
         </View>
       )}
 
       {/* Bio */}
-      {profile.bio && (
+      {!!profile.bio && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>The Chronicle</Text>
           <Text style={styles.bio}>{profile.bio}</Text>

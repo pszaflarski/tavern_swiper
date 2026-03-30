@@ -17,7 +17,7 @@ const BASE_URLS = {
  * Real Token Provider — fetches the current user's ID token from Firebase.
  * This is automatically injected into every request header.
  */
-async function getIdToken(): Promise<string | null> {
+export async function getIdToken(): Promise<string | null> {
   const fetchWithTimeout = async (promise: Promise<string>, timeout: number = 5000) => {
     let timeoutHandle: any;
     const timeoutPromise = new Promise<never>((_, reject) => {

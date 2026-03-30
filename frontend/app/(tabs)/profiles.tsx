@@ -168,8 +168,11 @@ export default function ProfilesScreen() {
 
       setMode('list');
       await refetch();
-    } catch (error) {
-      console.error('Failed to save profile:', error);
+    } catch (error: any) {
+      console.error('Failed to save profile or upload portraits:', error);
+      if (error.response) {
+        console.error('SERVER ERROR DETAIL:', JSON.stringify(error.response.data, null, 2));
+      }
     } finally {
       setIsSaving(false);
     }
@@ -202,7 +205,7 @@ export default function ProfilesScreen() {
               )}
             </View>
             <Text style={styles.profileCardClass}>{item.character_class}</Text>
-            {item.gender && <Text style={styles.profileCardGender}>{item.gender}</Text>}
+            {!!item.gender && <Text style={styles.profileCardGender}>{item.gender}</Text>}
           </View>
           <Text style={styles.editIcon}>🖊️</Text>
         </TouchableOpacity>

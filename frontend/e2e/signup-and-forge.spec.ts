@@ -1,6 +1,8 @@
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 import * as exec from 'child_process';
 import * as util from 'util';
+import * as path from 'path';
+import * as fs from 'fs';
 import axios from 'axios';
 
 const execPromise = util.promisify(exec.exec);
@@ -26,12 +28,50 @@ async function cleanupDbs() {
   }
 }
 
+// Sample images from the repo's 'sample profiles' folder.
+// Paths are relative to this spec file (frontend/e2e → ../../sample profiles/).
+const SAMPLE_IMAGES = [
+  path.resolve(__dirname, '../../sample profiles/1f2ee97a-1bce-4da8-abe8-e5ae8c429868.jpg'),
+  path.resolve(__dirname, '../../sample profiles/2bbfac57-b369-1ad6-edc7-d7fc29b9c651.jpeg'),
+];
+
 async function forgeIdentity(page: Page, heroName: string) {
   await page.click('[data-testid="forge-identity-button"]');
   await page.click('[data-testid="forge-new-identity-button"]');
   await page.fill('[data-testid="identity-name-input"]', heroName);
   await page.fill('[data-testid="identity-bio-input"]', `${heroName}'s lore for verification.`);
-  await page.click('[data-testid="identity-mock-image-button"]');
+
+  // --- Upload a real image via the native file chooser ---
+  // expo-image-picker on web opens an <input type="file"> dialog.
+  // Playwright intercepts it and injects a real file from sample profiles/.
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent('filechooser', { timeout: 10000 }),
+    page.click('[data-testid="identity-image-slot-0"]'),
+  ]);
+  await fileChooser.setFiles(SAMPLE_IMAGES[0]);
+  console.log(`🖼️ Uploaded sample image to slot 0 for ${heroName}.`);
+
+  // Verify the image slot now shows an image (not the '+' placeholder)
+  const slot0 = page.locator('[data-testid="identity-image-slot-0"] img');
+  await slot0.waitFor({ state: 'visible', timeout: 10000 });
+  console.log(`✅ Image slot 0 is populated for ${heroName}.`);
+
+  // Upload a second image
+  const [fileChooser2] = await Promise.all([
+    page.waitForEvent('filechooser', { timeout: 10000 }),
+    page.click('[data-testid="identity-image-slot-1"]'),
+  ]);
+  await fileChooser2.setFiles(SAMPLE_IMAGES[1]);
+  console.log(`🖼️ Uploaded sample image to slot 1 for ${heroName}.`);
+
+  // Verify second image
+  const slot1 = page.locator('[data-testid="identity-image-slot-1"] img');
+  await slot1.waitFor({ state: 'visible', timeout: 10000 });
+  console.log(`✅ Image slot 1 is populated for ${heroName}.`);
+
+  // Small delay to ensure state updates are complete
+  await page.waitForTimeout(1000);
+
   await page.click('[data-testid="identity-save-button"]');
 
   // Wait for return to Profiles list
@@ -57,6 +97,13 @@ test.describe('Tavern Swiper Integration Flow', () => {
       const headers = request.headers();
       if (headers['authorization']?.startsWith('Bearer ')) {
         tokenA = headers['authorization'].replace('Bearer ', '');
+      }
+    });
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        console.error(`[BROWSER ERROR] ${msg.text()}`);
+      } else {
+        console.log(`[BROWSER] ${msg.text()}`);
       }
     });
 

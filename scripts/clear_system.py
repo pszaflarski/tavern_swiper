@@ -1,63 +1,68 @@
-import requests
-import sys
+from google.cloud import firestore
+import firebase_admin
+from firebase_admin import auth, credentials
+import os
 
 # --- Configuration ---
-# Admin Credentials (must be Root Admin for full purge)
-ADMIN_EMAIL = "seeder@example.com"
-ADMIN_PASSWORD = "Password123!" # Assuming standard test password
+PROJECT_ID = "tavern-swiper-dev"
+# All test databases defined in our architecture
+DATABASES = ["auth-test", "profiles-test", "discovery-test", "swipes-test", "messages-test", "users-test"]
 
-SERVICES = {
-    "Messages": "https://messages-374390417125.us-central1.run.app",
-    "Swipes": "https://swipes-374390417125.us-central1.run.app",
-    "Profiles": "https://profiles-374390417125.us-central1.run.app",
-    "Users": "https://users-374390417125.us-central1.run.app",
-    "Auth": "https://auth-374390417125.us-central1.run.app"
-}
+def delete_collections(db):
+    print(f"  Purging database: {db._database}...")
+    try:
+        collections = db.collections()
+        for col in collections:
+            print(f"    🗑️ Deleting collection: {col.id}...")
+            # Simple batch delete for small test datasets
+            docs = list(col.limit(500).stream())
+            while docs:
+                batch = db.batch()
+                for doc in docs:
+                    batch.delete(doc.reference)
+                batch.commit()
+                docs = list(col.limit(500).stream())
+    except Exception as e:
+        print(f"    ❌ Error cleaning {db._database}: {e}")
 
-def get_auth_token():
-    print(f"Logging in as {ADMIN_EMAIL}...")
-    # Using the Auth service directly to get a token
-    resp = requests.post(f"{SERVICES['Auth']}/auth/login", json={
-        "email": ADMIN_EMAIL,
-        "password": ADMIN_PASSWORD
-    })
-    if resp.status_code == 200:
-        return resp.json()["id_token"]
-    raise Exception(f"Failed to authenticate: {resp.text}")
+def clear_auth():
+    print(f"\n🔑 Purging Firebase Auth for project {PROJECT_ID}...")
+    try:
+        users = auth.list_users().iterate_all()
+        uids = [u.uid for u in users]
+        if uids:
+            # Batch delete
+            for i in range(0, len(uids), 1000):
+                batch = uids[i:i + 1000]
+                auth.delete_users(batch)
+            print(f"    ✅ Deleted {len(uids)} users from Auth.")
+        else:
+            print("    ✅ Auth is already empty.")
+    except Exception as e:
+        print(f"    ❌ Error clearing Auth: {e}")
 
 def clear_all():
-    print("WARNING: This will permanently delete ALL data in the Tavern Swiper environment.")
-    confirm = input("Are you absolutely sure? (type 'YES' to confirm): ")
-    if confirm != "YES":
-        print("Abort.")
-        return
+    print(f"🚀 Starting System-Wide Purge for {PROJECT_ID}\n")
 
+    # 1. Initialize Firebase Admin (for Auth)
     try:
-        token = get_auth_token()
-    except Exception as e:
-        print(f"Error: {e}")
-        return
+        firebase_admin.get_app()
+    except ValueError:
+        firebase_admin.initialize_app(options={'projectId': PROJECT_ID})
 
-    headers = {"Authorization": f"Bearer {token}"}
+    # 2. Purge Firestore Databases
+    for db_id in DATABASES:
+        db = firestore.Client(project=PROJECT_ID, database=db_id)
+        delete_collections(db)
+        print(f"  ✅ {db_id} cleared.")
 
-    # Order matters: Detailed data first, then identities
-    purge_order = [
-        ("Messages", f"{SERVICES['Messages']}/messages/"),
-        ("Swipes", f"{SERVICES['Swipes']}/swipes/"),
-        ("Profiles", f"{SERVICES['Profiles']}/profiles/"),
-        ("Users", f"{SERVICES['Users']}/users/"),
-        ("Auth", f"{SERVICES['Auth']}/auth/all")
-    ]
+    # 3. Purge Auth
+    clear_auth()
 
-    for name, url in purge_order:
-        print(f"Purging {name} database...")
-        resp = requests.delete(url, headers=headers)
-        if resp.status_code in [204, 200]:
-            print(f"✅ {name} database cleared.")
-        else:
-            print(f"❌ Failed to clear {name}: {resp.status_code} - {resp.text}")
+    print("\n🏁 System-wide purge complete!")
 
-    print("\nSystem-wide purge complete!")
+if __name__ == "__main__":
+    clear_all()
 
 if __name__ == "__main__":
     clear_all()

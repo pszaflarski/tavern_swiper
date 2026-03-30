@@ -36,8 +36,9 @@ def mock_profile_data():
 def mock_auth_service():
     with respx.mock as respx_mock:
         # Mock the internal auth service call
-        respx_mock.post("http://auth:8001/auth/verify").mock(
-            return_value=Response(200, json={"uid": "test-user-123"})
+        auth_url = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
+        respx_mock.post(f"{auth_url}/auth/verify").mock(
+            return_value=Response(200, json={"uid": "test-user-123", "role": "user"})
         )
         yield respx_mock
 

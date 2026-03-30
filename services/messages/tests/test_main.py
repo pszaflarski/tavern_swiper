@@ -3,6 +3,7 @@ import respx
 from httpx import Response
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
+import os
 
 # Mock firestore before importing app
 with patch("google.cloud.firestore.Client"):
@@ -13,16 +14,16 @@ client = TestClient(app)
 @pytest.fixture
 def mock_auth_service():
     with respx.mock as respx_mock:
-        respx_mock.post("http://auth:8001/auth/verify").mock(
-            return_value=Response(200, json={"uid": "u1"})
+        auth_url = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
+        respx_mock.post(f"{auth_url}/auth/verify").mock(
+            return_value=Response(200, json={"uid": "u1", "role": "user"})
         )
         yield respx_mock
 
-@respx.mock
+@pytest.mark.asyncio
 @patch("main.db")
-def test_send_message_success(mock_db, respx_mock):
-    # 1. Auth mock
-    respx_mock.post("http://auth:8001/auth/verify").mock(return_value=Response(200, json={"uid": "u1"}))
+async def test_send_message_success(mock_db, mock_auth_service):
+    respx_mock = mock_auth_service
     
     # 2. Match details mock
     respx_mock.get(f"{SWIPES_SERVICE_URL}/swipes/matches/m1").mock(
@@ -47,10 +48,10 @@ def test_send_message_success(mock_db, respx_mock):
     response = client.post("/messages/", json=payload, headers=headers)
     assert response.status_code == 201
 
-@respx.mock
-def test_send_message_forbidden(respx_mock):
+@pytest.mark.asyncio
+async def test_send_message_forbidden(mock_auth_service):
+    respx_mock = mock_auth_service
     # u1 tries to access match m1, but m1 is between p2 and p3 (u2 and u3)
-    respx_mock.post("http://auth:8001/auth/verify").mock(return_value=Response(200, json={"uid": "u1"}))
     respx_mock.get(f"{SWIPES_SERVICE_URL}/swipes/matches/m1").mock(
         return_value=Response(200, json={
             "match_id": "m1",

@@ -46,6 +46,7 @@
             margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -212,6 +213,15 @@
 </head>
 <body>
     <div class="container">
+        <!-- Environment Selector -->
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 2rem;">
+            <select id="envSelector" style="width: auto; padding: 0.5rem 2rem; background: var(--card-bg); border-color: var(--border);">
+                <option value="local">Local Environment (localhost)</option>
+                <option value="dev">Dev Environment (Cloud Run)</option>
+                <option value="test" selected>Test Environment (Cloud Run)</option>
+            </select>
+        </div>
+
         <!-- Initialization Section (Only if no root admin exists) -->
         <div id="init-section" class="auth-card card">
             <h1>Initialize Nexus</h1>
@@ -219,7 +229,6 @@
             <form id="initForm">
                 <div class="form-group"><label>Email</label><input type="email" id="initEmail" required></div>
                 <div class="form-group"><label>Password</label><input type="password" id="initPassword" required minlength="6"></div>
-                <div class="form-group"><label>Full Name</label><input type="text" id="initName" required></div>
                 <button type="submit" class="btn-primary" style="width:100%">Claim the Root</button>
             </form>
             <p id="file-warning" style="margin-top: 1rem; font-size: 0.75rem; color: #f59e0b; display: none;">
@@ -252,7 +261,6 @@
                 <h2>Create New Intelligence</h2>
                 <form id="createForm" style="display: grid; grid-template-columns: 2fr 2fr 1.5fr 1fr; gap: 1rem; align-items: end;">
                     <div class="form-group"><label>Email</label><input type="email" id="newEmail" required placeholder="email@example.com"></div>
-                    <div class="form-group"><label>Full Name</label><input type="text" id="newName" required placeholder="User Name"></div>
                     <div class="form-group">
                         <label>Role</label>
                         <select id="newRole">
@@ -292,9 +300,32 @@
     </div>
 
     <script>
-        const API_ROOT = 'http://localhost:8006/users';
-        const AUTH_ROOT = 'http://localhost:8001/auth';
+        const ENVS = {
+            local: {
+                users: 'http://localhost:8006/users',
+                auth: 'http://localhost:8001/auth'
+            },
+            dev: {
+                users: 'https://users-374390417125.us-central1.run.app/users',
+                auth: 'https://auth-374390417125.us-central1.run.app/auth'
+            },
+            test: {
+                users: 'https://users-test-374390417125.us-central1.run.app/users',
+                auth: 'https://auth-test-374390417125.us-central1.run.app/auth'
+            }
+        };
+
+        const envSelector = document.getElementById('envSelector');
+        let API_ROOT = ENVS[envSelector.value].users;
+        let AUTH_ROOT = ENVS[envSelector.value].auth;
         
+        envSelector.onchange = () => {
+            const env = ENVS[envSelector.value];
+            API_ROOT = env.users;
+            AUTH_ROOT = env.auth;
+            init(); 
+        };
+
         let idToken = localStorage.getItem('nexus_token');
         let currentUid = localStorage.getItem('nexus_uid');
 
@@ -330,7 +361,6 @@
             e.preventDefault();
             const email = document.getElementById('initEmail').value;
             const password = document.getElementById('initPassword').value;
-            const fullName = document.getElementById('initName').value;
 
             try {
                 // 1. Register (Attempt)
@@ -348,7 +378,7 @@
                 }
 
                 // 2. Consolidated User Creation
-                await apiCall(`${API_ROOT}/`, 'POST', { email, full_name: fullName, user_type: 'root_admin' }, authRes.id_token);
+                await apiCall(`${API_ROOT}/`, 'POST', { email, user_type: 'root_admin' }, authRes.id_token);
                 
                 showMessage('Root Throne Claimed. Please login.', 'success');
                 showSection('auth-section');
@@ -438,8 +468,7 @@
                 list.innerHTML = users.map(u => `
                     <tr class="${u.is_deleted ? 'deleted-row' : ''}">
                         <td>
-                            <div style="font-weight:600">${u.full_name || 'N/A'}</div>
-                            <div style="font-size:0.875rem; color:var(--text-muted)">${u.email}</div>
+                            <div style="font-weight:600">${u.email}</div>
                         </td>
                         <td>
                             <span class="badge badge-${u.user_type === 'root_admin' ? 'root' : u.user_type}">${u.user_type}</span>
@@ -468,7 +497,6 @@
             e.preventDefault();
             const email = document.getElementById('newEmail').value;
             const password = document.getElementById('newPassword').value;
-            const fullName = document.getElementById('newName').value;
             const userType = document.getElementById('newRole').value;
 
             try {
@@ -478,7 +506,6 @@
                 // 2. Consolidated User Creation (Administrative)
                 await apiCall(`${API_ROOT}/`, 'POST', { 
                     email, 
-                    full_name: fullName, 
                     user_type: userType,
                     uid: authRes.uid
                 }, idToken);

@@ -22,11 +22,10 @@ export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async () => {
-    if (!email || !password || (!isLogin && !fullName)) {
+    if (!email || !password) {
       Alert.alert('Missing Info', 'Please fill in all fields.');
       return;
     }
@@ -36,8 +35,7 @@ export default function AuthScreen() {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: fullName });
+        await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (error: any) {
       console.error(error);
@@ -60,19 +58,7 @@ export default function AuthScreen() {
             : 'Join the ranks of heroes seeking companionship.'}
         </Text>
 
-        {!isLogin && (
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Your Hero's Name"
-              placeholderTextColor={Colors.outlineVariant}
-              value={fullName}
-              onChangeText={setFullName}
-              testID="auth-name-input"
-            />
-          </View>
-        )}
+
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email Address</Text>

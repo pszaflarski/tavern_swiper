@@ -16,15 +16,16 @@ Check `frontend/.env` to ensure `EXPO_PUBLIC_*_URL` variables point to the cloud
 Run `npm run test:e2e` from the `frontend` directory. 
 
 5. **Self-Heal Failures**:
-If tests fail due to "hidden" elements or timing issues:
-- Analyze `test-results` for screenshots or console logs.
-- Most transition issues in React Native Web can be fixed by adding `await locator.waitFor({ state: 'visible' })` before assertions.
-- Ensure `ProfilesScreen.tsx` sets the active profile immediately after creation to prevent race conditions.
+   If tests fail due to "hidden" elements or timing issues:
+   - Analyze `test-results` for screenshots or console logs.
+   - Most transition issues in React Native Web can be fixed by adding `await locator.waitFor({ state: 'visible' })` before assertions.
+   - **Image Upload**: The test uses `page.waitForEvent('filechooser')` to intercept the native OS file picker triggered by `expo-image-picker` on web and injects real sample images from `sample profiles/`. If this fails, ensure the sample images exist at `../sample profiles/` relative to the project root.
 
 6. **Verify Match Sync**:
-After a successful run, confirm the console output shows:
-- `✅ Match A<->B verified in Swipes API.`
-- This confirms that the UI, discovery service, and swipes service are correctly connected.
+   After a successful run, confirm the console output shows:
+   - `✅ Image slot 0 is populated for [hero].`
+   - `✅ Match A<->B verified in Swipes API.`
+   - This confirms the UI, image upload, discovery service, and swipes service are all connected.
 
 7. **Cleanup**:
-Terminate the Expo server process when all verification is complete.
+   Terminate the Expo server process when all verification is complete.

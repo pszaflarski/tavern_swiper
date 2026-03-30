@@ -76,9 +76,9 @@ async def health():
 
 
 @app.post("/messages/", response_model=MessageOut, status_code=201)
-async def send_message(body: MessageCreate, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def send_message(body: MessageCreate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Send a message. Enforces match ownership."""
-    uid, token = auth_data
+    uid, _, token = auth_data
     await _verify_match_access(body.match_id, uid, token)
 
     message_id = str(uuid.uuid4())
@@ -94,9 +94,9 @@ async def send_message(body: MessageCreate, auth_data: tuple[str, str] = Depends
 
 
 @app.get("/messages/{match_id}", response_model=list[MessageOut])
-async def get_messages(match_id: str, auth_data: tuple[str, str] = Depends(get_current_user)):
+async def get_messages(match_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Fetch message history for a match, ordered by time."""
-    uid, token = auth_data
+    uid, _, token = auth_data
     await _verify_match_access(match_id, uid, token)
     docs = (
         db.collection(COLLECTION)
