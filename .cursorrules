@@ -35,9 +35,14 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 - **NO DIRECT FIRESTORE ACCESS**: The frontend must never call Firestore directly. All data must be fetched through the microservice APIs.
 - Centralized `.env` in `frontend/` maps localhost ports to the microservice fleet.
 
-## 🧪 Development Workflow
+## ⚙️ Python Usage: VIRTUAL ENVIRONMENT ONLY
+> [!IMPORTANT]
+> **NEVER** run Python commands using the system interpreter. You **MUST** use the project's virtual environment at `.venv/bin/python3`. Failure to do so will pollute the system and cause inconsistencies in the development environment.
+
+### 🧪 Development Workflow
+- **Venv First**: Always prefix python commands with `.venv/bin/python3`.
 - **Testing**: Always run `bash services/run_tests.sh` after backend changes to ensure zero-trust boundaries are intact.
-- **Python Usage**: Always run python commands using the virtual environment at `/.venv/bin/python3`.
+- **Microservice Cycle**:
   1. Update microservice `main.py` and `models.py`.
   2. Update its local `.env`.
   3. Verify with `run_tests.sh`.

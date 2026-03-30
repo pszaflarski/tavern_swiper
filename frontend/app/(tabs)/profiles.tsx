@@ -300,24 +300,6 @@ export default function ProfilesScreen() {
               ));
             })()}
           </View>
-          {__DEV__ && (
-            <TouchableOpacity
-              style={[styles.pickerButton, { backgroundColor: Colors.tertiaryContainer, marginTop: Spacing[4] }]}
-              onPress={() => {
-                const mock = 'https://placehold.co/600x400/3e2723/ffffff?text=Hero';
-                setFormData(prev => ({ 
-                  ...prev, 
-                  image_url: mock, 
-                  image_urls: [mock, mock, mock, mock, mock, mock] 
-                }))
-              }}
-              testID="identity-mock-image-button"
-            >
-              <Text style={[styles.pickerButtonText, { color: Colors.onTertiaryContainer }]}>
-                (DEV) Fill All with Mocks
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         <Text style={styles.label}>True Name</Text>
@@ -586,11 +568,11 @@ const styles = StyleSheet.create({
   imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: Spacing[2],
+    gap: Spacing[4],
+    justifyContent: 'flex-start',
   },
   gridItem: {
-    width: '23%',
+    width: '30.5%',
     aspectRatio: 1,
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: Radius.md,
