@@ -1,220 +1,69 @@
+[dotenv@17.3.1] injecting env (12) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[2m[WebServer] [22m[33mThe following packages should be updated for best compatibility with the installed [1mexpo[22m version:[39m
+[2m[WebServer] [22m[33m  [1m@react-native-async-storage/async-storage[22m[36m@[39m[33m[31m1.24.0[39m[33m - expected version: [32m1.23.1[39m[33m[39m
+[2m[WebServer] [22m[33mYour project may not work correctly until you install the expected versions of the packages.[39m
+🚀 Running tests against:
+   - Users: https://users-test-hhqol7siba-uc.a.run.app
+   - Profiles: https://profiles-test-hhqol7siba-uc.a.run.app
+   - Swipes: https://swipes-test-hhqol7siba-uc.a.run.app
 
-> frontend@1.0.0 test
-> jest --detectOpenHandles
+Running 1 test using 1 worker
 
-FAIL hooks/useUser.test.tsx
-  ● Console
+[dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+🚀 Running tests against:
+   - Users: https://users-test-hhqol7siba-uc.a.run.app
+   - Profiles: https://profiles-test-hhqol7siba-uc.a.run.app
+   - Swipes: https://swipes-test-hhqol7siba-uc.a.run.app
+🧹 Clearing test databases...
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
 
-    console.error
-      The above error occurred in the <TestComponent> component:
-      
-          at renderCallbackProps (/home/peter/Documents/tavern_swiper/frontend/node_modules/@testing-library/react-native/src/render-hook.tsx:25:28)
-          at QueryClientProvider (/home/peter/Documents/tavern_swiper/frontend/node_modules/@tanstack/react-query/src/QueryClientProvider.tsx:30:3)
-          at children (/home/peter/Documents/tavern_swiper/frontend/hooks/useUser.test.tsx:25:20)
-      
-      Consider adding an error boundary to your tree to customize error handling behavior.
-      Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+🧹 Starting cleanup for project: tavern-swiper-dev
+  Checking database: auth-test...
+    ✅ No collections in auth-test
+  Checking database: profiles-test...
+    ✅ No collections in profiles-test
+  Checking database: discovery-test...
+    ✅ No collections in discovery-test
+  Checking database: swipes-test...
+    ✅ No collections in swipes-test
+  Checking database: messages-test...
+    ✅ No collections in messages-test
+  Checking database: users-test...
+    🗑️ Deleting collection: users in users-test...
+    ✅ Finished users-test
+🏁 Cleanup complete.
 
-      39 |     });
-      40 |
-    > 41 |     const { result } = renderHook(() => useUser(), { wrapper });
-         |                                  ^
-      42 |
-      43 |     await waitFor(() => expect(result.current.isLoading).toBe(false));
-      44 |
 
-      at logCapturedError (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8661:23)
-      at update.callback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8694:5)
-      at callCallback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4092:12)
-      at commitUpdateQueue (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4113:9)
-      at commitLayoutEffectOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13232:13)
-      at commitLayoutMountEffects_complete (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14330:9)
-      at commitLayoutEffects_begin (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14316:7)
-      at commitLayoutEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14301:3)
-      at commitRootImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16062:5)
-      at commitRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15933:5)
-      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15454:3)
-      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
-      at flushPassiveEffectsImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16261:3)
-      at flushPassiveEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16197:14)
-      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16012:9
-      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
-      at act (node_modules/react/cjs/react.development.js:2521:11)
-      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
-      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
-      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
-      at renderHook (node_modules/@testing-library/react-native/src/render-hook.tsx:35:61)
-      at Object.<anonymous> (hooks/useUser.test.tsx:41:34)
-      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
-      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
-      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
-      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+✅ Cleanup complete.
+[BROWSER] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[BROWSER] Running application "main" with appParams:
+ {rootTag: #root, hydrate: false} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+[BROWSER] "shadow*" style props are deprecated. Use "boxShadow".
+[BROWSER] props.pointerEvents is deprecated. Use style.pointerEvents
+  ✘  1 [chromium] › e2e/signup-and-forge.spec.ts:90:7 › Tavern Swiper Integration Flow › Signup, Forge Profile, Swipe, and Verify Match via REST API (4.6s)
 
-    console.error
-      The above error occurred in the <TestComponent> component:
-      
-          at renderCallbackProps (/home/peter/Documents/tavern_swiper/frontend/node_modules/@testing-library/react-native/src/render-hook.tsx:25:28)
-          at QueryClientProvider (/home/peter/Documents/tavern_swiper/frontend/node_modules/@tanstack/react-query/src/QueryClientProvider.tsx:30:3)
-          at children (/home/peter/Documents/tavern_swiper/frontend/hooks/useUser.test.tsx:25:20)
-      
-      Consider adding an error boundary to your tree to customize error handling behavior.
-      Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
 
-      53 |     });
-      54 |
-    > 55 |     const { result } = renderHook(() => useUser(), { wrapper });
-         |                                  ^
-      56 |
-      57 |     await waitFor(() => expect(result.current.isLoading).toBe(false));
-      58 |     await waitFor(() => expect(result.current.user?.uid).toBe('test-123'));
+  1) [chromium] › e2e/signup-and-forge.spec.ts:90:7 › Tavern Swiper Integration Flow › Signup, Forge Profile, Swipe, and Verify Match via REST API 
 
-      at logCapturedError (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8661:23)
-      at update.callback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8694:5)
-      at callCallback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4092:12)
-      at commitUpdateQueue (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4113:9)
-      at commitLayoutEffectOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13232:13)
-      at commitLayoutMountEffects_complete (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14330:9)
-      at commitLayoutEffects_begin (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14316:7)
-      at commitLayoutEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14301:3)
-      at commitRootImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16062:5)
-      at commitRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15933:5)
-      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15454:3)
-      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
-      at flushPassiveEffectsImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16261:3)
-      at flushPassiveEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16197:14)
-      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16012:9
-      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
-      at act (node_modules/react/cjs/react.development.js:2521:11)
-      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
-      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
-      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
-      at renderHook (node_modules/@testing-library/react-native/src/render-hook.tsx:35:61)
-      at Object.<anonymous> (hooks/useUser.test.tsx:55:34)
-      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
-      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
-      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
-      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+    Error: ENOENT: no such file or directory, stat '/home/peter/Documents/tavern_swiper/sample profiles/1f2ee97a-1bce-4da8-abe8-e5ae8c429868.jpg'
 
-  ● useUser Hook › fetches existing user metadata
+      49 |     page.click('[data-testid="identity-image-slot-0"]'),
+      50 |   ]);
+    > 51 |   await fileChooser.setFiles(SAMPLE_IMAGES[0]);
+         |   ^
+      52 |   console.log(`🖼️ Uploaded sample image to slot 0 for ${heroName}.`);
+      53 |
+      54 |   // Verify the image slot now shows an image (not the '+' placeholder)
+        at forgeIdentity (/home/peter/Documents/tavern_swiper/frontend/e2e/signup-and-forge.spec.ts:51:3)
+        at /home/peter/Documents/tavern_swiper/frontend/e2e/signup-and-forge.spec.ts:117:5
 
-    TypeError: (0 , _auth.onAuthStateChanged) is not a function
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/signup-and-forge-Tavern-Sw-ab764-d-Verify-Match-via-REST-API-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
 
-      23 |   // Listen for auth changes
-      24 |   useEffect(() => {
-    > 25 |     const unsubscribe = onAuthStateChanged(auth, (user) => {
-         |                                           ^
-      26 |       setFirebaseUser(user);
-      27 |       if (!user) {
-      28 |         queryClient.setQueryData(['user', 'me'], null);
+    Error Context: test-results/signup-and-forge-Tavern-Sw-ab764-d-Verify-Match-via-REST-API-chromium/error-context.md
 
-      at hooks/useUser.ts:25:43
-      at commitHookEffectListMount (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12999:26)
-      at commitPassiveMountOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14422:11)
-      at commitPassiveMountEffects_complete (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14382:9)
-      at commitPassiveMountEffects_begin (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14369:7)
-      at commitPassiveMountEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14357:3)
-      at flushPassiveEffectsImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16248:3)
-      at flushPassiveEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16197:14)
-      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16012:9
-      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
-      at act (node_modules/react/cjs/react.development.js:2521:11)
-      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
-      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
-      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
-      at renderHook (node_modules/@testing-library/react-native/src/render-hook.tsx:35:61)
-      at Object.<anonymous> (hooks/useUser.test.tsx:41:34)
-      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
-      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
-      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
-      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
-
-  ● useUser Hook › automatically registers user if not found (404)
-
-    TypeError: (0 , _auth.onAuthStateChanged) is not a function
-
-      23 |   // Listen for auth changes
-      24 |   useEffect(() => {
-    > 25 |     const unsubscribe = onAuthStateChanged(auth, (user) => {
-         |                                           ^
-      26 |       setFirebaseUser(user);
-      27 |       if (!user) {
-      28 |         queryClient.setQueryData(['user', 'me'], null);
-
-      at hooks/useUser.ts:25:43
-      at commitHookEffectListMount (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12999:26)
-      at commitPassiveMountOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14422:11)
-      at commitPassiveMountEffects_complete (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14382:9)
-      at commitPassiveMountEffects_begin (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14369:7)
-      at commitPassiveMountEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14357:3)
-      at flushPassiveEffectsImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16248:3)
-      at flushPassiveEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16197:14)
-      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16012:9
-      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
-      at act (node_modules/react/cjs/react.development.js:2521:11)
-      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
-      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
-      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
-      at renderHook (node_modules/@testing-library/react-native/src/render-hook.tsx:35:61)
-      at Object.<anonymous> (hooks/useUser.test.tsx:55:34)
-      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
-      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
-      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
-      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
-
-PASS lib/api.test.ts
-
-Test Suites: 1 failed, 1 passed, 2 total
-Tests:       2 failed, 2 passed, 4 total
-Snapshots:   0 total
-Time:        1.943 s, estimated 2 s
-Ran all test suites.
-
-Jest has detected the following 1 open handle potentially keeping Jest from exiting:
-
-  ●  Timeout
-
-      33 |
-      34 |   // Fetch user metadata from our backend
-    > 35 |   const userQuery = useQuery<UserMetadata | null>({
-         |                             ^
-      36 |     queryKey: ['user', 'me'],
-      37 |     queryFn: async () => {
-      38 |       try {
-
-      at Object.setTimeout (node_modules/@tanstack/query-core/src/timeoutManager.ts:44:36)
-      at TimeoutManager.setTimeout (node_modules/@tanstack/query-core/src/timeoutManager.ts:108:27)
-      at Query.scheduleGc (node_modules/@tanstack/query-core/src/removable.ts:18:40)
-      at new Query (node_modules/@tanstack/query-core/src/query.ts:192:10)
-      at QueryCache.build (node_modules/@tanstack/query-core/src/queryCache.ts:119:15)
-      at QueryObserver.#updateQuery (node_modules/@tanstack/query-core/src/queryObserver.ts:704:48)
-      at QueryObserver.setOptions (node_modules/@tanstack/query-core/src/queryObserver.ts:164:10)
-      at new QueryObserver (node_modules/@tanstack/query-core/src/queryObserver.ts:88:10)
-      at node_modules/@tanstack/react-query/src/useBaseQuery.ts:93:7
-      at mountState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7003:20)
-      at Object.useState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7673:16)
-      at Object.useState (node_modules/react/cjs/react.development.js:1622:21)
-      at useBaseQuery (node_modules/@tanstack/react-query/src/useBaseQuery.ts:91:28)
-      at useQuery (node_modules/@tanstack/react-query/src/useQuery.ts:51:10)
-      at useUser (hooks/useUser.ts:35:29)
-      at _renderHook2.wrapper (hooks/useUser.test.tsx:55:48)
-      at renderCallback (node_modules/@testing-library/react-native/src/render-hook.tsx:26:26)
-      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6351:18)
-      at mountIndeterminateComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9855:13)
-      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11312:16)
-      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15811:12)
-      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15745:5)
-      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15717:7)
-      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15422:20)
-      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
-      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
-      at act (node_modules/react/cjs/react.development.js:2521:11)
-      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
-      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
-      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
-      at renderHook (node_modules/@testing-library/react-native/src/render-hook.tsx:35:61)
-      at Object.<anonymous> (hooks/useUser.test.tsx:55:34)
-      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
-      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
-      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
-      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
-
+  1 failed
+    [chromium] › e2e/signup-and-forge.spec.ts:90:7 › Tavern Swiper Integration Flow › Signup, Forge Profile, Swipe, and Verify Match via REST API 

@@ -9,6 +9,9 @@ export interface UserMetadata {
   email: string;
   full_name?: string;
   is_premium: boolean;
+  user_type: 'user' | 'admin' | 'root_admin';
+  is_deleted: boolean;
+  active_profile_id?: string;
   created_at: string;
 }
 
@@ -19,11 +22,13 @@ export interface UserMetadata {
 export function useUser() {
   const queryClient = useQueryClient();
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
+  const [authInitialized, setAuthInitialized] = useState(!!auth.currentUser);
 
   // Listen for auth changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
+      setAuthInitialized(true);
       if (!user) {
         queryClient.setQueryData(['user', 'me'], null);
       }
@@ -65,17 +70,30 @@ export function useUser() {
     },
   });
 
+  // Check if root admin exists
+  const rootExistsQuery = useQuery({
+    queryKey: ['admin', 'root-exists'],
+    queryFn: async () => {
+      const res = await usersApi.get('/users/root-admin-exists');
+      return res.data.exists;
+    },
+    staleTime: Infinity, // Only need to check once per session usually
+  });
+
   // Effect to trigger registration
   useEffect(() => {
     if (userQuery.isSuccess && !userQuery.data && firebaseUser && !registerMutation.isPending) {
+      // If no root exists, the first user might be claiming it via a different flow, 
+      // but normal registration defaults to 'user'. 
       registerMutation.mutate();
     }
-  }, [userQuery.isSuccess, userQuery.data, firebaseUser]);
+  }, [userQuery.isSuccess, userQuery.data, firebaseUser, rootExistsQuery.data]);
 
   return {
     user: userQuery.data,
-    isLoading: userQuery.isLoading || registerMutation.isPending,
+    isLoading: !authInitialized || userQuery.isLoading || registerMutation.isPending || rootExistsQuery.isLoading,
     firebaseUser,
     isAuthenticated: !!firebaseUser,
+    rootExists: rootExistsQuery.data ?? true,
   };
 }

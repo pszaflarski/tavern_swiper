@@ -1,0 +1,32 @@
+[dotenv@17.3.1] injecting env (12) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+[2m[WebServer] [22m[33mThe following packages should be updated for best compatibility with the installed [1mexpo[22m version:[39m
+[2m[WebServer] [22m[33m  [1m@react-native-async-storage/async-storage[22m[36m@[39m[33m[31m1.24.0[39m[33m - expected version: [32m1.23.1[39m[33m[39m
+[2m[WebServer] [22m[33mYour project may not work correctly until you install the expected versions of the packages.[39m
+
+Running 1 test using 1 worker
+
+[dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+  ✘  1 [chromium] › e2e/profile-preview.spec.ts:9:7 › Profile Preview › New Hero forge → Preview Hero → Dismiss (13.6s)
+
+
+  1) [chromium] › e2e/profile-preview.spec.ts:9:7 › Profile Preview › New Hero forge → Preview Hero → Dismiss 
+
+    Error: ENOENT: no such file or directory, stat '/home/peter/Documents/tavern_swiper/sample profiles/1f2ee97a-1bce-4da8-abe8-e5ae8c429868.jpg'
+
+      43 |       page.click('[data-testid="identity-image-slot-0"]'),
+      44 |     ]);
+    > 45 |     await fileChooser.setFiles(SAMPLE_IMAGE);
+         |     ^
+      46 |     await page.locator('[data-testid="identity-image-slot-0"] img').waitFor({ state: 'visible' });
+      47 |
+      48 |     // 6. Click "Preview Hero"
+        at /home/peter/Documents/tavern_swiper/frontend/e2e/profile-preview.spec.ts:45:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/profile-preview-Profile-Pr-35f4d-ge-→-Preview-Hero-→-Dismiss-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/profile-preview-Profile-Pr-35f4d-ge-→-Preview-Hero-→-Dismiss-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/profile-preview.spec.ts:9:7 › Profile Preview › New Hero forge → Preview Hero → Dismiss 

@@ -42,7 +42,7 @@ interface SwipeCardProps {
   onSwipeRight: (profileId: string) => void;
 }
 
-function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
+export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
 

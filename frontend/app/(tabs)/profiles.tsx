@@ -10,17 +10,21 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors, Fonts, Radius, Spacing, Shadow } from '../../theme';
 import { useUser } from '../../hooks/useUser';
 import { useProfiles, useCreateProfile, useUpdateProfile, useUploadProfileImage, Profile } from '../../hooks/useProfiles';
 import CharacterProfile from '../../components/CharacterProfile';
+import { SwipeCard } from '../../components/SwipeDeck';
 import { auth } from '../../lib/firebase';
 import { useActiveProfile } from '../../lib/ActiveProfileContext';
 
 type Mode = 'list' | 'create' | 'edit';
 
 export default function ProfilesScreen() {
+  const router = useRouter();
   const { user } = useUser();
   const { data: profiles, isLoading, refetch } = useProfiles(user?.uid);
   const createProfile = useCreateProfile();
@@ -31,8 +35,8 @@ export default function ProfilesScreen() {
   const [mode, setMode] = useState<Mode>('list');
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     display_name: '',
     bio: '',
@@ -42,6 +46,10 @@ export default function ProfilesScreen() {
     tagline: 'A new hero arises.',
     character_class: 'Adventurer',
     realm: 'Fort Tavern',
+    talents: 'Navigation',
+    strength: 5,
+    charisma: 5,
+    spark: 5,
   });
 
   // Auto-select first profile if none is active
@@ -61,6 +69,10 @@ export default function ProfilesScreen() {
       tagline: 'A new hero arises.',
       character_class: 'Adventurer',
       realm: 'Fort Tavern',
+      talents: 'Navigation',
+      strength: 5,
+      charisma: 5,
+      spark: 5,
     });
     setMode('create');
   };
@@ -76,6 +88,10 @@ export default function ProfilesScreen() {
       tagline: profile.tagline || '',
       character_class: profile.character_class || '',
       realm: profile.realm || '',
+      talents: profile.talents?.join(', ') || '',
+      strength: profile.attributes?.strength || 5,
+      charisma: profile.attributes?.charisma || 5,
+      spark: profile.attributes?.spark || 5,
     });
     setMode('edit');
   };
@@ -116,20 +132,31 @@ export default function ProfilesScreen() {
         const profileData = {
           ...formData,
           image_url: '',
-          // user_id: user.uid,
-          talents: ['Navigation'],
-          attributes: { strength: 5, charisma: 5, spark: 5 },
+          talents: formData.talents.split(',').map(s => s.trim()).filter(s => s !== ''),
+          attributes: { 
+            strength: Number(formData.strength), 
+            charisma: Number(formData.charisma), 
+            spark: Number(formData.spark) 
+          },
         };
         const newProfile = await createProfile.mutateAsync(profileData as any);
         currentProfileId = newProfile.profile_id;
       } else if (mode === 'edit' && editingProfile) {
         currentProfileId = editingProfile.profile_id;
-        const updateData = { ...formData };
+        const updateData = { 
+          ...formData,
+          talents: formData.talents.split(',').map(s => s.trim()).filter(s => s !== ''),
+          attributes: { 
+            strength: Number(formData.strength), 
+            charisma: Number(formData.charisma), 
+            spark: Number(formData.spark) 
+          },
+        };
         if (isLocalImage) updateData.image_url = editingProfile.image_url || '';
 
         await updateProfile.mutateAsync({
           profileId: currentProfileId,
-          data: updateData,
+          data: updateData as any,
         });
       }
 
@@ -260,6 +287,15 @@ export default function ProfilesScreen() {
           >
             <Text style={[styles.createButtonText, { color: Colors.error }]}>Log Out</Text>
           </TouchableOpacity>
+
+          {(user?.user_type === 'admin' || user?.user_type === 'root_admin') && (
+            <TouchableOpacity
+              style={[styles.createButton, { marginTop: Spacing[8], backgroundColor: Colors.surfaceContainerHigh, borderColor: Colors.tertiary, borderWidth: 1 }]}
+              onPress={() => router.push('/admin')}
+            >
+              <Text style={[styles.createButtonText, { color: Colors.tertiary }]}>Nexus Admin Panel</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -305,38 +341,140 @@ export default function ProfilesScreen() {
           </View>
         </View>
 
-        <Text style={styles.label}>True Name</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.display_name}
-          onChangeText={(text) => setFormData({ ...formData, display_name: text })}
-          placeholder="e.g. Valerius the Bold"
-          placeholderTextColor={Colors.outline}
-          testID="identity-name-input"
-        />
+        <Text style={[styles.sectionHeader, { marginTop: 0 }]}>Heroic Identity</Text>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>True Name</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.display_name}
+            onChangeText={(text) => setFormData({ ...formData, display_name: text })}
+            placeholder="e.g. Valerius the Bold"
+            placeholderTextColor={Colors.outline}
+            testID="identity-name-input"
+          />
+        </View>
 
-        <Text style={styles.label}>Hero's Lore (Bio)</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={formData.bio}
-          onChangeText={(text) => setFormData({ ...formData, bio: text })}
-          placeholder="Tell your tale..."
-          placeholderTextColor={Colors.outline}
-          multiline
-          numberOfLines={4}
-          testID="identity-bio-input"
-        />
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Hero's Class</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.character_class}
+            onChangeText={(text) => setFormData({ ...formData, character_class: text })}
+            placeholder="e.g. Knight, Rogue, Mage..."
+            placeholderTextColor={Colors.outline}
+            testID="identity-class-input"
+          />
+        </View>
 
-        <Text style={styles.label}>Gender / Essence</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.gender}
-          onChangeText={(text) => setFormData({ ...formData, gender: text })}
-          placeholder="e.g. Masculine, Feminine, Celestial..."
-          placeholderTextColor={Colors.outline}
-          testID="identity-gender-input"
-        />
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Hero's Tagline</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.tagline}
+            onChangeText={(text) => setFormData({ ...formData, tagline: text })}
+            placeholder="e.g. Born for the blade."
+            placeholderTextColor={Colors.outline}
+            testID="identity-tagline-input"
+          />
+        </View>
 
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Hero's Realm</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.realm}
+            onChangeText={(text) => setFormData({ ...formData, realm: text })}
+            placeholder="e.g. Fort Tavern"
+            placeholderTextColor={Colors.outline}
+            testID="identity-realm-input"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Gender / Essence</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.gender}
+            onChangeText={(text) => setFormData({ ...formData, gender: text })}
+            placeholder="e.g. Masculine, Feminine, Celestial..."
+            placeholderTextColor={Colors.outline}
+            testID="identity-gender-input"
+          />
+        </View>
+
+        <Text style={styles.sectionHeader}>Heroic Attributes</Text>
+        <View style={styles.attributesRow}>
+          <View style={styles.attributeField}>
+            <Text style={styles.label}>Strength</Text>
+            <TextInput
+              style={styles.input}
+              value={String(formData.strength)}
+              onChangeText={(text) => setFormData({ ...formData, strength: parseInt(text) || 0 })}
+              keyboardType="numeric"
+              maxLength={2}
+              testID="identity-strength-input"
+            />
+          </View>
+          <View style={styles.attributeField}>
+            <Text style={styles.label}>Charisma</Text>
+            <TextInput
+              style={styles.input}
+              value={String(formData.charisma)}
+              onChangeText={(text) => setFormData({ ...formData, charisma: parseInt(text) || 0 })}
+              keyboardType="numeric"
+              maxLength={2}
+              testID="identity-charisma-input"
+            />
+          </View>
+          <View style={styles.attributeField}>
+            <Text style={styles.label}>Spark</Text>
+            <TextInput
+              style={styles.input}
+              value={String(formData.spark)}
+              onChangeText={(text) => setFormData({ ...formData, spark: parseInt(text) || 0 })}
+              keyboardType="numeric"
+              maxLength={2}
+              testID="identity-spark-input"
+            />
+          </View>
+        </View>
+
+        <Text style={styles.sectionHeader}>Heroic Talents</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={formData.talents}
+            onChangeText={(text) => setFormData({ ...formData, talents: text })}
+            placeholder="e.g. Navigation, Stealth, Alchemy"
+            placeholderTextColor={Colors.outline}
+            testID="identity-talents-input"
+          />
+          <Text style={styles.fieldHint}>Separate with commas</Text>
+        </View>
+
+        <Text style={styles.sectionHeader}>Heroic Lore</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.bio}
+            onChangeText={(text) => setFormData({ ...formData, bio: text })}
+            placeholder="Tell your tale..."
+            placeholderTextColor={Colors.outline}
+            multiline
+            numberOfLines={4}
+            testID="identity-bio-input"
+          />
+        </View>
+
+
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: Colors.surfaceVariant, marginTop: Spacing[2] }]}
+          onPress={() => setShowPreview(true)}
+          testID="identity-preview-button"
+        >
+          <Text style={[styles.saveButtonText, { color: Colors.onSurfaceVariant }]}>Preview Hero</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.saveButton, isSaving && { opacity: 0.7 }]}
@@ -351,6 +489,62 @@ export default function ProfilesScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showPreview}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowPreview(false)}
+      >
+        <View style={styles.previewModalContainer}>
+          <View style={styles.previewHeader}>
+            <Text style={styles.previewHeaderTitle}>Hero Discovery Preview</Text>
+            <TouchableOpacity onPress={() => setShowPreview(false)} style={styles.closePreviewButton}>
+              <Text style={styles.closePreviewText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.previewDeckWrapper}>
+            <View style={{ height: 500, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+              <SwipeCard
+                profile={{
+                  profile_id: 'preview',
+                  display_name: formData.display_name || 'Unnamed Hero',
+                  tagline: formData.tagline,
+                  character_class: formData.character_class,
+                  realm: formData.realm,
+                  image_url: formData.image_url || (formData.image_urls.length > 0 ? formData.image_urls[0] : ''),
+                  talents: formData.talents.split(',').map(s => s.trim()).filter(s => s !== ''),
+                }}
+                isTop={true}
+                index={0}
+                onSwipeLeft={() => setShowPreview(false)}
+                onSwipeRight={() => setShowPreview(false)}
+              />
+            </View>
+
+            <View style={styles.previewActionRow}>
+              <TouchableOpacity 
+                style={[styles.roundButton, { borderColor: Colors.error }]} 
+                onPress={() => setShowPreview(false)}
+              >
+                <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
+                onPress={() => setShowPreview(false)}
+              >
+                <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.previewInstructions}>
+              This is how your hero appears to others during discovery. 
+              Swipe left or right (or use the buttons) to return to your forge.
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -506,8 +700,33 @@ const styles = StyleSheet.create({
     padding: Spacing[6],
     gap: Spacing[4],
   },
+  sectionHeader: {
+    fontFamily: Fonts.heroic,
+    fontSize: 18,
+    color: Colors.primary,
+    marginTop: Spacing[6],
+    marginBottom: Spacing[2],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+    paddingBottom: Spacing[1],
+  },
+  attributesRow: {
+    flexDirection: 'row',
+    gap: Spacing[4],
+    justifyContent: 'space-between',
+  },
+  attributeField: {
+    flex: 1,
+    gap: Spacing[2],
+  },
+  fieldHint: {
+    fontFamily: Fonts.scribe,
+    fontSize: 10,
+    color: Colors.outline,
+    marginTop: -Spacing[2],
+  },
   inputContainer: {
-    gap: Spacing[3],
+    gap: Spacing[2],
   },
   label: {
     fontFamily: Fonts.heroic,
@@ -598,5 +817,72 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: Colors.outline,
     fontFamily: Fonts.scribe,
+  },
+  previewModalContainer: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Spacing[16],
+    paddingBottom: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    backgroundColor: Colors.surfaceContainerLowest,
+  },
+  previewHeaderTitle: {
+    fontFamily: Fonts.heroic,
+    fontSize: 22,
+    color: Colors.primary,
+  },
+  closePreviewButton: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceContainerHighest,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closePreviewText: {
+    fontSize: 18,
+    color: Colors.onSurface,
+  },
+  previewDeckWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: Spacing[4],
+  },
+  previewActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing[10],
+    marginTop: Spacing[6],
+    marginBottom: Spacing[4],
+  },
+  roundButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    backgroundColor: Colors.surfaceContainerLowest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+  },
+  roundButtonText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  previewInstructions: {
+    fontFamily: Fonts.scribe,
+    fontSize: 13,
+    color: Colors.outline,
+    textAlign: 'center',
+    paddingHorizontal: Spacing[8],
+    marginTop: Spacing[4],
+    fontStyle: 'italic',
   },
 });

@@ -57,15 +57,17 @@ docker compose up --build
 
 ## Admin Nexus Dashboard
 
-The project includes a centralized administrative dashboard for user management and system resets.
+The application includes an integrated administrative dashboard for user management, role assignment, and system-wide actions.
 
-**Start the Admin Interface**:
-```bash
-bash serve_admin.sh
-```
-Access the dashboard at `http://localhost:8000/admin.html`. It provides tools to:
-- Reset the entire system ("The Nuke" button).
-- Manage per-service records and Firestore documents.
+**Accessing the Admin Interface**:
+1. Log in as a user with `admin` or `root_admin` role.
+2. Navigate to the **Profiles** tab.
+3. Select the **Nexus Admin Panel** button.
+
+The dashboard provides tools to:
+- **Initialize the Realm**: Claim the root throne on fresh environments.
+- **Entity Oversight**: Search, identify, and manage user roles.
+- **System Sanitization**: Irreversibly purge all entities (Root Admin only).
 
 ---
 

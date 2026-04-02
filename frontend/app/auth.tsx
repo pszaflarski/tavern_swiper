@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,36 +10,59 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../theme';
 import { auth } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile,
 } from '@firebase/auth';
+import { useUser } from '../hooks/useUser';
+import { usersApi } from '../lib/api';
 
 export default function AuthScreen() {
+  const { isLoading: authLoading } = useUser();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const handleAuth = async () => {
     if (!email || !password) {
-      Alert.alert('Missing Info', 'Please fill in all fields.');
+      setError('Please fill in all fields.');
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        // Standard registration always defaults to 'user' type in backend, 
+        // root admin must be claimed via /admin.
+        await usersApi.post('/users/', {
+          email: userCred.user.email,
+          user_type: 'user',
+          is_premium: false
+        });
       }
     } catch (error: any) {
       console.error(error);
-      Alert.alert('Authentication Failed', error.message);
+      let errorMessage = error.message;
+      if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Wrong password. Please try again.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'User not found. Sign up instead?';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password should be at least 6 characters.';
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -51,14 +74,14 @@ export default function AuthScreen() {
       style={styles.container}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>{isLogin ? 'Sign In' : 'Begin Your Quest'}</Text>
+        <Text style={styles.title}>
+          {isLogin ? 'Sign In' : 'Begin Your Quest'}
+        </Text>
         <Text style={styles.subtitle}>
           {isLogin
             ? 'Enter the tavern to continue your journey.'
             : 'Join the ranks of heroes seeking companionship.'}
         </Text>
-
-
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email Address</Text>
@@ -67,7 +90,10 @@ export default function AuthScreen() {
             placeholder="hero@realm.com"
             placeholderTextColor={Colors.outlineVariant}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              setError(null);
+            }}
             autoCapitalize="none"
             keyboardType="email-address"
             testID="auth-email-input"
@@ -76,35 +102,64 @@ export default function AuthScreen() {
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            placeholderTextColor={Colors.outlineVariant}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            testID="auth-password-input"
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="••••••••"
+              placeholderTextColor={Colors.outlineVariant}
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError(null);
+              }}
+              secureTextEntry={!isPasswordVisible}
+              testID="auth-password-input"
+            />
+            <TouchableOpacity
+              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              style={styles.eyeIcon}
+              testID="auth-password-toggle"
+            >
+              <Ionicons
+                name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={Colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
+        {error && (
+          <Text style={styles.errorText} testID="auth-error-text">
+            {error}
+          </Text>
+        )}
+
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, (loading || authLoading) && styles.buttonDisabled]}
           onPress={handleAuth}
-          disabled={loading}
+          disabled={loading || authLoading}
           testID="auth-submit-button"
+          accessibilityRole="button"
         >
-          {loading ? (
+          {loading || authLoading ? (
             <ActivityIndicator color={Colors.onPrimary} />
           ) : (
-            <Text style={styles.buttonText}>{isLogin ? 'Enter Tavern' : 'Claim Your Title'}</Text>
+            <Text style={styles.buttonText}>
+              {isLogin ? 'Enter Tavern' : 'Claim Your Title'}
+            </Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.toggle}
-          onPress={() => setIsLogin(!isLogin)}
+          onPress={() => {
+            setIsLogin(!isLogin);
+            setError(null);
+          }}
           disabled={loading}
           testID="auth-toggle-link"
+          accessibilityRole="link"
         >
           <Text style={styles.toggleText}>
             {isLogin
@@ -167,6 +222,30 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.scribe,
     color: Colors.onSurface,
     fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderRadius: Radius.md,
+  },
+  passwordInput: {
+    flex: 1,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  eyeIcon: {
+    paddingHorizontal: Spacing[3],
+  },
+  errorText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.error,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: Spacing[2],
+    marginBottom: Spacing[2],
   },
   button: {
     backgroundColor: Colors.primary,

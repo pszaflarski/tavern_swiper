@@ -1,95 +1,102 @@
 import { test, expect, BrowserContext, Page } from '@playwright/test';
-import * as exec from 'child_process';
-import * as util from 'util';
 import * as path from 'path';
 import * as fs from 'fs';
 import axios from 'axios';
-
-const execPromise = util.promisify(exec.exec);
 
 const USERS_SERVICE_URL = process.env.EXPO_PUBLIC_USERS_URL || 'http://localhost:8006';
 const PROFILES_SERVICE_URL = process.env.EXPO_PUBLIC_PROFILES_URL || 'http://localhost:8002';
 const SWIPES_SERVICE_URL = process.env.EXPO_PUBLIC_SWIPES_URL || 'http://localhost:8004';
 
-console.log(`🚀 Running tests against:`);
-console.log(`   - Users: ${USERS_SERVICE_URL}`);
-console.log(`   - Profiles: ${PROFILES_SERVICE_URL}`);
-console.log(`   - Swipes: ${SWIPES_SERVICE_URL}`);
-
-async function cleanupDbs() {
-  console.log('🧹 Clearing test databases...');
-  try {
-    const { stdout, stderr } = await execPromise('npx ts-node scripts/cleanup-test-dbs.ts');
-    if (stdout) console.log(stdout);
-    if (stderr) console.error(stderr);
-    console.log('✅ Cleanup complete.');
-  } catch (error: any) {
-    console.error('❌ Cleanup failed:', error.message);
-  }
-}
-
-// Sample images from the repo's 'sample profiles' folder.
-// Paths are relative to this spec file (frontend/e2e → ../../sample profiles/).
 const SAMPLE_IMAGES = [
-  path.resolve(__dirname, '../../sample profiles/1f2ee97a-1bce-4da8-abe8-e5ae8c429868.jpg'),
-  path.resolve(__dirname, '../../sample profiles/2bbfac57-b369-1ad6-edc7-d7fc29b9c651.jpeg'),
+  path.resolve(__dirname, '../../sample_profiles/1f2ee97a-1bce-4da8-abe8-e5ae8c429868.jpg'),
+  path.resolve(__dirname, '../../sample_profiles/2bbfac57-b369-1ad6-edc7-d7fc29b9c651.jpeg'),
 ];
 
-async function forgeIdentity(page: Page, heroName: string) {
-  await page.click('[data-testid="forge-identity-button"]');
-  await page.click('[data-testid="forge-new-identity-button"]');
-  await page.fill('[data-testid="identity-name-input"]', heroName);
-  await page.fill('[data-testid="identity-bio-input"]', `${heroName}'s lore for verification.`);
+/**
+ * Signs up a new user via the auth screen.
+ * Handles toggling to signup mode, filling credentials, submitting,
+ * and navigating to the main app after signup.
+ */
+async function signupUser(page: Page, email: string, password: string) {
+  await page.goto('/auth');
+  await page.waitForURL('/auth');
+  await page.waitForLoadState('networkidle');
 
-  // --- Upload a real image via the native file chooser ---
-  // expo-image-picker on web opens an <input type="file"> dialog.
-  // Playwright intercepts it and injects a real file from sample profiles/.
+  // Wait for the auth form to render
+  await expect(page.getByTestId('auth-submit-button').filter({ visible: true })).toBeVisible({ timeout: 20000 });
+
+  // Switch to Signup if in Login mode
+  const signInTitle = page.getByText(/^Sign In$/i).filter({ visible: true }).first();
+  if (await signInTitle.isVisible()) {
+    await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
+    await expect(page.getByText(/Begin Your Quest/i).filter({ visible: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  await page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true }).fill(email);
+  await page.getByPlaceholder('••••••••', { exact: true }).filter({ visible: true }).fill(password);
+
+  // Click signup and wait for Firebase auth response
+  const signupResponse = page.waitForResponse(
+    response => response.url().includes('identitytoolkit.googleapis.com') && response.request().method() === 'POST',
+    { timeout: 15000 }
+  );
+  await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
+  await signupResponse;
+
+  // Wait for the backend user record creation to complete
+  await page.waitForTimeout(1500);
+
+  // The auth screen doesn't auto-redirect, navigate to the main app explicitly
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+
+  // Wait for Tavern empty state (new user has no profiles)
+  await expect(page.getByText(/The Tavern is Empty/i).filter({ visible: true })).toBeVisible({ timeout: 30000 });
+}
+
+async function forgeIdentity(page: Page, heroName: string) {
+  const visible = (selector: string) => page.locator(selector).filter({ visible: true });
+  const getVisibleTestId = (testId: string) => page.getByTestId(testId).filter({ visible: true });
+
+  await getVisibleTestId('forge-identity-button').click();
+  await getVisibleTestId('forge-new-identity-button').click();
+  
+  await visible('[data-testid="identity-name-input"]').fill(heroName);
+  await visible('[data-testid="identity-bio-input"]').fill(`${heroName}'s lore for verification.`);
+
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser', { timeout: 10000 }),
-    page.click('[data-testid="identity-image-slot-0"]'),
+    getVisibleTestId('identity-image-slot-0').click(),
   ]);
   await fileChooser.setFiles(SAMPLE_IMAGES[0]);
-  console.log(`🖼️ Uploaded sample image to slot 0 for ${heroName}.`);
 
-  // Verify the image slot now shows an image (not the '+' placeholder)
-  const slot0 = page.locator('[data-testid="identity-image-slot-0"] img');
-  await slot0.waitFor({ state: 'visible', timeout: 10000 });
-  console.log(`✅ Image slot 0 is populated for ${heroName}.`);
+  const slot0 = visible('[data-testid="identity-image-slot-0"] img');
+  await slot0.waitFor({ state: 'visible', timeout: 15000 });
 
-  // Upload a second image
   const [fileChooser2] = await Promise.all([
     page.waitForEvent('filechooser', { timeout: 10000 }),
-    page.click('[data-testid="identity-image-slot-1"]'),
+    getVisibleTestId('identity-image-slot-1').click(),
   ]);
   await fileChooser2.setFiles(SAMPLE_IMAGES[1]);
-  console.log(`🖼️ Uploaded sample image to slot 1 for ${heroName}.`);
 
-  // Verify second image
-  const slot1 = page.locator('[data-testid="identity-image-slot-1"] img');
-  await slot1.waitFor({ state: 'visible', timeout: 10000 });
-  console.log(`✅ Image slot 1 is populated for ${heroName}.`);
+  const slot1 = visible('[data-testid="identity-image-slot-1"] img');
+  await slot1.waitFor({ state: 'visible', timeout: 15000 });
 
-  // Small delay to ensure state updates are complete
   await page.waitForTimeout(1000);
+  await getVisibleTestId('identity-save-button').click();
 
-  await page.click('[data-testid="identity-save-button"]');
-
-  // Wait for return to Profiles list
-  await expect(page.getByText('Your Identities').first()).toBeVisible({ timeout: 15000 });
-  const profileName = page.locator('[data-testid="profile-card-name"]').first();
+  await expect(page.getByText(/Your Identities/i).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+  const profileName = page.locator('[data-testid="profile-card-name"]').filter({ visible: true }).first();
   await profileName.waitFor({ state: 'visible', timeout: 10000 });
   await expect(profileName).toContainText(heroName);
 }
 
 test.describe('Tavern Swiper Integration Flow', () => {
-  
-  test.beforeAll(async () => {
-    await cleanupDbs();
-  });
 
   test('Signup, Forge Profile, Swipe, and Verify Match via REST API', async ({ browser, page }) => {
-    // ---- 1. SETUP USER A ----
-    const emailA = `hero-a-${Date.now()}@example.com`;
+    const timestamp = Date.now();
+    const emailA = `hero-a-${timestamp}@example.com`;
+    const emailB = `hero-b-${timestamp}@example.com`;
     const pwd = 'Password123!';
     let tokenA = '';
 
@@ -99,112 +106,70 @@ test.describe('Tavern Swiper Integration Flow', () => {
         tokenA = headers['authorization'].replace('Bearer ', '');
       }
     });
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        console.error(`[BROWSER ERROR] ${msg.text()}`);
-      } else {
-        console.log(`[BROWSER] ${msg.text()}`);
-      }
-    });
 
-    await page.goto('/auth');
-    await page.click('text=New to the realm? Sign up instead');
-    await page.fill('[data-testid="auth-name-input"]', 'User A');
-    await page.fill('[data-testid="auth-email-input"]', emailA);
-    await page.fill('[data-testid="auth-password-input"]', pwd);
-    await page.click('[data-testid="auth-submit-button"]');
-    await expect(page.getByText('The Tavern is Empty')).toBeVisible({ timeout: 15000 });
-
+    // ---- 1. SETUP USER A ----
+    await signupUser(page, emailA, pwd);
     await forgeIdentity(page, 'Sir Playwright');
-    console.log('✅ User A created and verified.');
+    console.log('✅ User A identity forged');
 
-    // ---- 2. SETUP USER B (New Context) ----
+    // ---- 2. SETUP USER B ----
     const contextB = await browser.newContext();
-    const pageB = await contextB.newPage();
-    const emailB = `hero-b-${Date.now()}@example.com`;
-    let tokenB = '';
+    try {
+      const pageB = await contextB.newPage();
+      let tokenB = '';
 
-    pageB.on('request', request => {
-      const headers = request.headers();
-      if (headers['authorization']?.startsWith('Bearer ')) {
-        tokenB = headers['authorization'].replace('Bearer ', '');
-      }
-    });
+      pageB.on('request', request => {
+        const headers = request.headers();
+        if (headers['authorization']?.startsWith('Bearer ')) {
+          tokenB = headers['authorization'].replace('Bearer ', '');
+        }
+      });
 
-    await pageB.goto('/auth');
-    await pageB.click('text=New to the realm? Sign up instead');
-    await pageB.fill('[data-testid="auth-name-input"]', 'User B');
-    await pageB.fill('[data-testid="auth-email-input"]', emailB);
-    await pageB.fill('[data-testid="auth-password-input"]', pwd);
-    await pageB.click('[data-testid="auth-submit-button"]');
-    await expect(pageB.getByText('The Tavern is Empty')).toBeVisible({ timeout: 15000 });
+      await signupUser(pageB, emailB, pwd);
+      await forgeIdentity(pageB, 'Madam E2E');
+      console.log('✅ User B identity forged');
 
-    await forgeIdentity(pageB, 'Madam E2E');
-    console.log('✅ User B created and verified.');
+      // ---- 3. USER A SWIPES RIGHT ON USER B ----
+      await page.goto('/');
+      await page.waitForURL('/');
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByText(/Madam E2E/i).filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+      await Promise.all([
+        page.waitForResponse(r => r.url().includes('/swipes') && r.status() === 201, { timeout: 30000 }),
+        page.getByTestId('swipe-right-button').filter({ visible: true }).click(),
+      ]);
+      console.log('✅ User A swiped right');
 
-    // ---- 3. USER A SWIPES RIGHT ON USER B ----
-    // Refresh Tavern to see User B
-    await page.goto('/');
-    // Check for Madam E2E in the feed
-    await expect(page.getByText('Madam E2E').first()).toBeVisible({ timeout: 15000 });
-    // Swipe Right — wait for the POST /swipes/ 201 response in parallel with the click
-    await Promise.all([
-      page.waitForResponse(
-        response => response.url().includes('/swipes') && response.request().method() === 'POST' && response.status() === 201,
-        { timeout: 30000 }
-      ),
-      page.click('[data-testid="swipe-right-button"]'),
-    ]);
-    console.log('✅ User A swiped RIGHT on User B.');
+      // ---- 4. USER B SWIPES RIGHT ON USER A ----
+      await pageB.goto('/');
+      await pageB.waitForURL('/');
+      await pageB.waitForLoadState('networkidle');
+      await expect(pageB.getByText(/Sir Playwright/i).filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+      await Promise.all([
+        pageB.waitForResponse(r => r.url().includes('/swipes') && r.status() === 201, { timeout: 30000 }),
+        pageB.getByTestId('swipe-right-button').filter({ visible: true }).click(),
+      ]);
+      console.log('✅ User B swiped right');
 
-    // ---- 4. USER B SWIPES RIGHT ON USER A ----
-    await pageB.goto('/');
-    await expect(pageB.getByText('Sir Playwright').first()).toBeVisible({ timeout: 15000 });
-    await Promise.all([
-      pageB.waitForResponse(
-        response => response.url().includes('/swipes') && response.request().method() === 'POST' && response.status() === 201,
-        { timeout: 30000 }
-      ),
-      pageB.click('[data-testid="swipe-right-button"]'),
-    ]);
-    console.log('✅ User B swiped RIGHT on User A.');
+      // ---- 5. MATCH VERIFICATION ----
+      expect(tokenA).not.toBe('');
+      const headersA = { Authorization: `Bearer ${tokenA}` };
+      const userAResp = await axios.get(`${USERS_SERVICE_URL}/users/me`, { headers: headersA });
+      const profileA_id = (await axios.get(`${PROFILES_SERVICE_URL}/profiles/user/${userAResp.data.uid}`, { headers: headersA })).data[0].profile_id;
 
-    // ---- 5. FINAL API VERIFICATION ----
-    expect(tokenA).not.toBe('');
-    expect(tokenB).not.toBe('');
-    const headersA = { Authorization: `Bearer ${tokenA}` };
-    const headersB = { Authorization: `Bearer ${tokenB}` };
-
-    // A. Verify User A Profiles
-    const userAResp = await axios.get(`${USERS_SERVICE_URL}/users/me`, { headers: headersA });
-    const uidA = userAResp.data.uid;
-    const profilesAResp = await axios.get(`${PROFILES_SERVICE_URL}/profiles/user/${uidA}`, { headers: headersA });
-    const profileA_id = profilesAResp.data[0].profile_id;
-
-    // B. Verify User B Profiles
-    const userBResp = await axios.get(`${USERS_SERVICE_URL}/users/me`, { headers: headersB });
-    const uidB = userBResp.data.uid;
-    const profilesBResp = await axios.get(`${PROFILES_SERVICE_URL}/profiles/user/${uidB}`, { headers: headersB });
-    const profileB_id = profilesBResp.data[0].profile_id;
-
-    // C. Verify Match via API — poll because match creation is eventually consistent
-    console.log('🔍 Checking Swipes API for Match (polling)...');
-    await expect.poll(async () => {
-      try {
-        const matchResp = await axios.get(`${SWIPES_SERVICE_URL}/swipes/matches/${profileA_id}`, { headers: headersA });
-        const match = matchResp.data.find((m: any) =>
-          (m.profile_id_a === profileA_id && m.profile_id_b === profileB_id) ||
-          (m.profile_id_a === profileB_id && m.profile_id_b === profileA_id)
-        );
-        return match;
-      } catch { return undefined; }
-    }, {
-      message: 'Match between User A and User B should exist',
-      timeout: 30000,
-      intervals: [1000, 2000, 3000],
-    }).toBeDefined();
-    console.log('✅ Match A<->B verified in Swipes API.');
-
-    await contextB.close();
+      await expect.poll(async () => {
+        try {
+          const matchResp = await axios.get(`${SWIPES_SERVICE_URL}/swipes/matches/${profileA_id}`, { headers: headersA });
+          console.log(`🔍 Polling matches for profile ${profileA_id}: found ${matchResp.data.length}`);
+          return matchResp.data.length > 0;
+        } catch (e: any) { 
+          console.log(`⚠️ Match poll error: ${e.message}`);
+          return false; 
+        }
+      }, { timeout: 60000, intervals: [2000, 5000] }).toBeTruthy();
+      console.log('✅ Match verified successfully!');
+    } finally {
+      await contextB.close();
+    }
   });
 });

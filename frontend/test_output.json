@@ -1,0 +1,149 @@
+[dotenv@17.3.1] injecting env (12) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+{
+  "config": {
+    "configFile": "/home/peter/Documents/tavern_swiper/frontend/playwright.config.ts",
+    "rootDir": "/home/peter/Documents/tavern_swiper/frontend/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/peter/Documents/tavern_swiper/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/peter/Documents/tavern_swiper/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run web",
+      "url": "http://localhost:8081",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "profile-preview.spec.ts",
+      "file": "profile-preview.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Profile Preview",
+          "file": "profile-preview.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "New Hero forge → Preview Hero → Dismiss",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 120098,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 120000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 120000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 120000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/peter/Documents/tavern_swiper/frontend/e2e/profile-preview.spec.ts",
+                            "column": 16,
+                            "line": 16
+                          },
+                          "message": "Error: page.click: Test timeout of 120000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=New to the realm? Sign up instead')\u001b[22m\n\n\n  14 |\n  15 |     await page.goto('/auth');\n> 16 |     await page.click('text=New to the realm? Sign up instead');\n     |                ^\n  17 |     await page.fill('[data-testid=\"auth-name-input\"]', 'Tester');\n  18 |     await page.fill('[data-testid=\"auth-email-input\"]', email);\n  19 |     await page.fill('[data-testid=\"auth-password-input\"]', pwd);\n    at /home/peter/Documents/tavern_swiper/frontend/e2e/profile-preview.spec.ts:16:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-30T13:15:35.239Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/peter/Documents/tavern_swiper/frontend/test-results/profile-preview-Profile-Pr-35f4d-ge-→-Preview-Hero-→-Dismiss-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/peter/Documents/tavern_swiper/frontend/test-results/profile-preview-Profile-Pr-35f4d-ge-→-Preview-Hero-→-Dismiss-chromium/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "de80bc82c24762783b13-e4f21e6e2ee50b6c6169",
+              "file": "profile-preview.spec.ts",
+              "line": 9,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-03-30T13:15:32.994Z",
+    "duration": 122679.453,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

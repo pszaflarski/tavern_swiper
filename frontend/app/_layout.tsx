@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,7 +16,6 @@ import {
 } from '@expo-google-fonts/noto-serif';
 import { Colors } from '../theme';
 import { useUser } from '../hooks/useUser';
-import AuthScreen from './auth';
 import { ActiveProfileProvider } from '../lib/ActiveProfileContext';
 
 // Keep the splash screen visible while we fetch resources
@@ -24,17 +23,10 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* ignore error */
 });
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 30,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading: authLoading } = useUser();
+  const { isLoading: authLoading } = useUser();
   const [fontsLoaded, fontError] = useFonts({
     'Manrope': Manrope_400Regular,
     'Manrope-Bold': Manrope_700Bold,
@@ -56,15 +48,14 @@ function RootLayoutNav() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthScreen />;
-  }
-
+  // The Stack will handle all routes. Authentication is now handled at sub-layouts or screen levels.
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/index" options={{ headerShown: false }} />
       </Stack>
     </GestureHandlerRootView>
   );
