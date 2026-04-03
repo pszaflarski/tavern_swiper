@@ -147,7 +147,7 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     """Upload profile image to GCS and save the public URL to Firestore. Admins can upload on behalf of others."""
     uid, role, _ = auth_data
     if not GCS_BUCKET:
-        raise HTTPException(status_code=503, detail="GCS_BUCKET_NAME not configured")
+        raise HTTPException(status_code=503, detail="Storage provider configuration error")
     ref = db.collection(COLLECTION).document(profile_id)
     doc = ref.get()
     if not doc.exists:

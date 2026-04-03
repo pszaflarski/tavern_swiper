@@ -21,7 +21,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             if resp.status_code != 200:
                 raise HTTPException(
                     status_code=resp.status_code,
-                    detail=f"Auth verification failed: {resp.text}"
+                    detail="Identity verification failed"
                 )
             user_data = resp.json()
             return user_data["uid"], user_data.get("role", "user"), token
@@ -29,5 +29,5 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             print(f"[ERROR] Auth service call failed: {e}")
             raise HTTPException(
                 status_code=503,
-                detail=f"Auth service unavailable: {type(e).__name__} - {e}"
+                detail="Identity service unavailable"
             )

@@ -63,8 +63,8 @@ async def get_feed(profile_id: str, auth_data: tuple[str, str, str] = Depends(ge
             p_data = p_resp.json()
             if p_data.get("user_id") != uid:
                 raise HTTPException(status_code=403, detail="Not authorized for this profile")
-        except httpx.HTTPError as e:
-             raise HTTPException(status_code=502, detail=f"Profiles service unavailable: {e}")
+        except httpx.HTTPError:
+             raise HTTPException(status_code=502, detail="Required dependency unavailable")
 
         # 1. Already-swiped IDs
         try:
@@ -82,9 +82,9 @@ async def get_feed(profile_id: str, auth_data: tuple[str, str, str] = Depends(ge
             profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/all", headers=headers)
             profiles_resp.raise_for_status()
             all_profiles = profiles_resp.json()
-        except httpx.HTTPError as e:
+        except httpx.HTTPError:
             raise HTTPException(
-                status_code=502, detail=f"Profiles service unavailable: {e}"
+                status_code=502, detail="Required dependency unavailable"
             )
 
     # 3. Filter

@@ -32,7 +32,7 @@ def test_verify_token_invalid(mock_verify):
     
     response = client.post("/auth/verify", json={"id_token": "invalid-token"})
     assert response.status_code == 401
-    assert "Invalid token" in response.json()["detail"]
+    assert response.json()["detail"] == "Invalid authentication token"
 
 @patch("firebase_admin.auth.verify_id_token")
 def test_verify_token_expired(mock_verify):

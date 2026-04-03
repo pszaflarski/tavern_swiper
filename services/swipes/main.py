@@ -60,8 +60,8 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
                  raise HTTPException(status_code=404, detail="Swiper profile not found")
             if p_resp.json().get("user_id") != uid:
                  raise HTTPException(status_code=403, detail="Not authorized for this profile")
-        except httpx.HTTPError as e:
-             raise HTTPException(status_code=502, detail=f"Profiles service unavailable: {e}")
+        except httpx.HTTPError:
+             raise HTTPException(status_code=502, detail="Required dependency unavailable")
 
     swipe_id = str(uuid.uuid4())
     now = _now()
@@ -118,8 +118,8 @@ async def list_matches(profile_id: str, auth_data: tuple[str, str, str] = Depend
                  raise HTTPException(status_code=404, detail="Profile not found")
             if p_resp.json().get("user_id") != uid:
                  raise HTTPException(status_code=403, detail="Not authorized for this profile")
-        except httpx.HTTPError as e:
-             raise HTTPException(status_code=502, detail=f"Profiles service unavailable: {e}")
+        except httpx.HTTPError:
+             raise HTTPException(status_code=502, detail="Required dependency unavailable")
 
     results = []
     for field in ("profile_id_a", "profile_id_b"):

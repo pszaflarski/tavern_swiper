@@ -45,12 +45,12 @@ async def verify_token(body: TokenRequest):
     """Verify a Firebase Auth ID token and return decoded user info."""
     try:
         decoded = firebase_auth.verify_id_token(body.id_token)
-    except firebase_admin.auth.InvalidIdTokenError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
     except firebase_admin.auth.ExpiredIdTokenError:
         raise HTTPException(status_code=401, detail="Token has expired")
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Auth unavailable: {e}")
+    except firebase_admin.auth.InvalidIdTokenError:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+    except Exception:
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
 
     uid = decoded["uid"]
     
@@ -75,7 +75,7 @@ FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY", "")
 async def register_user(body: LoginRequest):
     """Registers a new user using Firebase Authentication REST API and returns an ID token."""
     if not FIREBASE_WEB_API_KEY:
-        raise HTTPException(status_code=503, detail="FIREBASE_WEB_API_KEY is not configured")
+        raise HTTPException(status_code=503, detail="Authentication provider configuration error")
         
     url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_WEB_API_KEY}"
     payload = {
@@ -99,7 +99,7 @@ async def register_user(body: LoginRequest):
 async def login_user(body: LoginRequest):
     """Logs in an existing user using Firebase Authentication REST API and returns an ID token."""
     if not FIREBASE_WEB_API_KEY:
-        raise HTTPException(status_code=503, detail="FIREBASE_WEB_API_KEY is not configured")
+        raise HTTPException(status_code=503, detail="Authentication provider configuration error")
         
     url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
     payload = {
@@ -127,8 +127,8 @@ async def delete_auth_user(uid: str):
     except firebase_admin.auth.UserNotFoundError:
         # If user not in Auth, consider it a success
         pass
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete auth user: {e}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to process user identity deletion")
 
 @app.delete("/auth/users/", status_code=204)
 async def delete_auth_users_bulk(body: BulkDeleteRequest):
@@ -141,8 +141,8 @@ async def delete_auth_users_bulk(body: BulkDeleteRequest):
         if result.errors:
             # Optionally log errors but continue
             print(f"Auth bulk delete errors: {len(result.errors)} failed")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed bulk auth delete: {e}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to process bulk identity deletion")
 @app.delete("/auth/all", status_code=204)
 async def delete_all_auth_users():
     """Delete all users from Firebase Authentication. High-risk operation."""
@@ -154,5 +154,5 @@ async def delete_all_auth_users():
             if uids:
                 firebase_auth.delete_users(uids)
             page = page.get_next_page()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to clear all auth users: {e}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to clear identity store")

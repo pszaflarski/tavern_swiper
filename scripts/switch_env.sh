@@ -4,7 +4,7 @@ set -e
 ENV=$1
 PROJECT_ID="tavern-swiper-dev"
 REGION="us-central1"
-FRONTEND_ENV="../frontend/.env"
+FRONTEND_ENV="frontend/.env"
 
 if [[ -z "$ENV" ]]; then
     echo "Usage: ./scripts/switch_env.sh [local|dev|test]"
