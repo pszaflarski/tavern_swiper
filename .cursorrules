@@ -53,7 +53,13 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
   2. Update its local `.env`.
   3. Verify with `run_tests.sh`.
 
-## 🤖 AI Guidelines
+## 🧪 E2E Stability Guidelines
+- **Declarative Assertions Only**: Never use `isVisible()` inside polling loops. Always use native `expect(locator).toBeVisible()` or `expect(locator).toBeHidden()` for automatic retry and wait behavior.
+- **Microservice Cold Starts**: Assume 10-15s latency for initial Cloud Run / Firestore cold starts. Use 30s timeouts on initial dashboard loading assertions.
+- **Routing Guards**: Test suites must handle declarative `Redirect` triggers in `app/admin/index.tsx`. Authenticate *before* assertion of dashboard-protected states.
+- **Eventual Consistency**: Avoid `page.reload()` in `toPass` or polling loops. If synchronization is required, reload once after the network promise settles, then use declarative assertions.
+
+## � AI Guidelines
 - When asked to create a new service, follow the existing pattern in `services/`.
 - Ensure new services have their own `.env` and Firestore DB ID.
 - Maintain the fantasy-themed nomenclature ("Tavern", "Swiper", "Tavern Swiper", etc.).
