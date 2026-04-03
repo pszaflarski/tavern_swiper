@@ -26,6 +26,13 @@ export function useUser() {
 
   // Listen for auth changes
   useEffect(() => {
+    // Wait for Firebase to definitively resolve auth state
+    // (including restoring from persistence on web)
+    auth.authStateReady().then(() => {
+      setFirebaseUser(auth.currentUser);
+      setAuthInitialized(true);
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
       setAuthInitialized(true);

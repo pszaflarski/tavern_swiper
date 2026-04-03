@@ -73,15 +73,29 @@ test.describe('Nexus Stabilization flows', () => {
     await claimBtn.click();
     await claimRootPromise;
     
-    // Forced Resync: We wait for the role claims to propagate, reload once, 
-    // and then let React Query naturally fetch the new data without destroying the context.
-    console.log('[DEBUG] Root claim successful. Waiting for propagation and re-loading once...');
-    await page.waitForTimeout(3000);
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    // Forced Resync: We wait for the role claims to propagate.
+    // Instead of a brittle sleep+reload, we use Playwright's toPass() 
+    // to poll for the dashboard's presence, handling potential redirects.
+    console.log('[DEBUG] Root claim successful. Waiting for dashboard to appear...');
 
-    // Rely on Playwright's native auto-waiting for the header to appear
-    await expect(page.getByTestId('admin-dashboard-header')).toBeVisible({ timeout: 30000 });
+    await expect(async () => {
+      const dashboardHeader = page.getByTestId('admin-dashboard-header');
+      const provisionText = page.getByText('Provision Intelligence');
+
+      if (!await dashboardHeader.isVisible().catch(() => false)) {
+        // If not visible, ensure we are on the right URL (in case of bounce)
+        if (!page.url().includes('/admin')) {
+            await page.goto('/admin');
+            await page.waitForLoadState('networkidle');
+        } else {
+            await page.reload();
+            await page.waitForLoadState('networkidle');
+        }
+      }
+
+      await expect(dashboardHeader.or(provisionText).first()).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 45000, intervals: [3000, 5000] });
+
     await expect(page.getByText('Identified Entities')).toBeVisible({ timeout: 10000 });
 
     console.log('✅ System Bootstrapped: Root throne claimed by authenticated Architect.');

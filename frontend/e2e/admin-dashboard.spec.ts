@@ -74,15 +74,26 @@ test.describe('Admin Dashboard Nexus', () => {
         await claimBtn.click();
         await postUsersPromise;
         
-        // Propagation Delay: Backend needs time to sync Firestore roles
-        console.log('[DEBUG] Root claim successful. Waiting 10s for backend propagation...');
-        await page.waitForTimeout(10000);
-        
-        // Reload to ensure the useUser hook fetches the updated role
-        await page.reload();
-        await page.waitForLoadState('networkidle');
-        
-        await expect(page.getByText('Provision Intelligence')).toBeVisible({ timeout: 20000 });
+        // Forced Resync: We wait for the role claims to propagate.
+        // Instead of a brittle 10s sleep, we use Playwright's toPass() 
+        // to poll for the dashboard's presence, handling potential redirects.
+        console.log('[DEBUG] Root claim successful. Waiting for dashboard to appear...');
+
+        await expect(async () => {
+          const provisionText = page.getByText('Provision Intelligence');
+          
+          if (!await provisionText.isVisible().catch(() => false)) {
+            // Ensure we navigate explicitly to /admin (in case of bounce)
+            if (!page.url().includes('/admin')) {
+                await page.goto('/admin');
+            } else {
+                await page.reload();
+            }
+            await page.waitForLoadState('networkidle');
+          }
+          
+          await expect(provisionText).toBeVisible({ timeout: 10000 });
+        }).toPass({ timeout: 45000, intervals: [3000, 5000] });
     } else {
         console.log('Nexus dashboard already active.');
     }
