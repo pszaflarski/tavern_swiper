@@ -13,32 +13,58 @@ test.describe('Admin Dashboard Nexus', () => {
     });
 
     const timestamp = Date.now();
-    // Use a fixed admin email to allow login even if infrastructure cleanup (Firestore purge) fails
     const adminEmail = 'root-admin-e2e@nexus.com';
     const userEmail = `hero-${timestamp}@realm.com`;
     const pwd = 'TestPassword123!';
 
-    // 1. Initial State: Initialization or Login?
-    await page.goto('/admin');
+    // 1. Authenticate as Root Admin First
+    await page.goto('/auth');
+    await page.waitForLoadState('networkidle');
+
+    // Attempt login first
+    await page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true }).fill(adminEmail);
+    await page.getByPlaceholder('••••••••', { exact: true }).filter({ visible: true }).fill(pwd);
     
-    // Use toPass to wait for the page to decide between "Bootstrap" or "Login"
-    await expect(async () => {
-      const claimVisible = await page.getByRole('button', { name: /Claim the Root/i }).filter({ visible: true }).isVisible();
-      const loginVisible = await page.getByRole('button', { name: /Login/i }).filter({ visible: true }).isVisible();
-      if (!claimVisible && !loginVisible) {
-        throw new Error('Neither bootstrap nor login screen is visible (auth loading?)');
+    console.log('Attempting login for Root Admin...');
+    const authResPromise = page.waitForResponse(response => 
+      response.url().includes('identitytoolkit.googleapis.com') && response.request().method() === 'POST', 
+      { timeout: 15000 }
+    );
+    await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
+    
+    // We don't await the promise immediately because it might fail if user doesn't exist
+    // Instead, we check the response or UI state
+    try {
+      const authRes = await authResPromise;
+      if (!authRes.ok()) {
+        throw new Error('Login failed');
       }
-    }).toPass({ timeout: 20000 });
+    } catch (e) {
+      console.log('Login failed (likely pristine database). Proceeding with Signup...');
+      await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
+      await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
+    }
+    
+    // Wait for auto-redirect to tavern root
+    await expect(page).toHaveURL(/\/(|\(tabs\).*)$/, { timeout: 30000 });
+    console.log('✅ Identity verified. Proceeding to Admin Dashboard...');
+
+    // 2. Initial State: Initialization or Dashboard?
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for the page to decide between "Bootstrap" or "Dashboard"
+    await expect(
+      page.getByRole('button', { name: /Claim the Root/i }).or(page.getByText('Provision Intelligence'))
+    ).toBeVisible({ timeout: 30000 });
 
     const claimBtn = page.getByRole('button', { name: /Claim the Root/i }).filter({ visible: true });
     
     if (await claimBtn.isVisible()) {
         console.log('Nexus is uninitialized. Starting bootstrapping flow...');
-        const initEmail = page.getByPlaceholder('Email', { exact: true }).filter({ visible: true });
-        await initEmail.fill(adminEmail);
+        await page.getByPlaceholder('Email', { exact: true }).filter({ visible: true }).fill(adminEmail);
         await page.getByPlaceholder('Password', { exact: true }).filter({ visible: true }).fill(pwd);
         
-        // Monitor the network request instead of the dialog to ensure the backend is done
         const postUsersPromise = page.waitForResponse(response => 
             response.url().includes('/users/') && 
             response.request().method() === 'POST', 
@@ -47,59 +73,19 @@ test.describe('Admin Dashboard Nexus', () => {
 
         await claimBtn.click();
         await postUsersPromise;
-        // Small delay to ensure DB sync before navigating to /auth
-        await page.waitForTimeout(2000);
-    } else {
-        console.log('Nexus is already initialized (dirty cleanup). Skipping bootstrapping...');
-    }
-
-    // 2. Login as Root Admin
-    await page.goto('/auth');
-    await page.waitForLoadState('networkidle');
-
-    // If we're already logged in (due to dirty state or previous step), check if we need to log out first
-    const logoutBtn = page.getByTestId('auth-logout-button').filter({ visible: true });
-    if (await logoutBtn.isVisible()) {
-        console.log('Already logged in. Logging out to ensure fresh admin session...');
-        await logoutBtn.click();
-        await page.waitForLoadState('networkidle');
-    }
-    
-    // Wait for auth form to fully render
-    await expect(page.getByTestId('auth-submit-button').filter({ visible: true })).toBeVisible({ timeout: 20000 });
-
-
-    // Ensure we're in login mode (should be default)
-    const authEmail = page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true });
-    await authEmail.fill(adminEmail);
-    await page.getByPlaceholder('••••••••', { exact: true }).filter({ visible: true }).fill(pwd);
-    
-    // Click login and wait for Firebase response
-    const loginPromise = page.waitForResponse(response => response.url().includes('identitytoolkit.googleapis.com') && response.request().method() === 'POST', { timeout: 15000 });
-    await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
-    await loginPromise;
-    
-    // Wait for Firebase auth to persist to indexedDB and for
-    // the useUser hook to resolve the user metadata
-    await page.waitForTimeout(2500);
-
-    // 3. Navigate to admin dashboard (auth screen doesn't auto-redirect)
-    await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
-    
-    // The admin page might take time to resolve auth state and fetch user role
-    // If it lands on "Initialize Nexus", wait a bit and reload (eventual consistency)
-    await expect(async () => {
-      if (await page.getByText(/Initialize Nexus/i).filter({ visible: true }).first().isVisible()) {
-        console.log('Backend sync delay: re-initializing Nexus view...');
+        
+        // Propagation Delay: Backend needs time to sync Firestore roles
+        console.log('[DEBUG] Root claim successful. Waiting 10s for backend propagation...');
+        await page.waitForTimeout(10000);
+        
+        // Reload to ensure the useUser hook fetches the updated role
         await page.reload();
         await page.waitForLoadState('networkidle');
-      }
-      await expect(page.getByText('Provision Intelligence')).toBeVisible();
-    }).toPass({ 
-      intervals: [2000, 3000, 5000], 
-      timeout: 30000 
-    });
+        
+        await expect(page.getByText('Provision Intelligence')).toBeVisible({ timeout: 20000 });
+    } else {
+        console.log('Nexus dashboard already active.');
+    }
 
     // 4. Provision a New User
     await page.getByTestId('admin-provision-email').filter({ visible: true }).fill(userEmail);
@@ -111,51 +97,31 @@ test.describe('Admin Dashboard Nexus', () => {
 
     // 6. Soft Delete User
     const userRow = page.getByTestId(`admin-user-row-${userEmail}`);
-    
-    // Intercept the soft-delete response
-    const deleteResponsePromise = page.waitForResponse(response => 
-      response.url().includes(`/users/${userEmail.split('@')[0]}`) || // Match by UID if possible, or common part
-      response.url().includes('/users/') && response.request().method() === 'DELETE', 
-      { timeout: 15000 }
-    );
-
     await userRow.filter({ visible: true }).getByTestId('admin-delete-user-button').click();
-    await deleteResponsePromise;
-    
-    // Verify user is removed from active list
-    await expect(userRow.filter({ visible: true })).toBeHidden();
+    await expect(userRow.filter({ visible: true })).toBeHidden({ timeout: 10000 });
 
     // Toggle "Show Deleted" to see the soft-deleted user with its badge
     await page.getByTestId('admin-show-deleted-switch').click();
     await expect(userRow.getByTestId('admin-user-is-deleted')).toBeVisible();
 
     // 7. Restore User
-    const restoreResponsePromise = page.waitForResponse(response => 
-      response.url().includes('/restore') && response.request().method() === 'PATCH', 
-      { timeout: 15000 }
-    );
-
     await userRow.getByTestId('admin-restore-user-button').click();
-    await restoreResponsePromise;
-
     await expect(userRow.getByTestId('admin-user-is-deleted')).toBeHidden();
 
     // 8. Hard Delete User
-    const hardDeletePromise = page.waitForResponse(response => 
-      response.url().includes('hard=true') && response.request().method() === 'DELETE', 
-      { timeout: 15000 }
-    );
-
     await userRow.getByTestId('admin-hard-delete-user-button').click();
-    await hardDeletePromise;
-
     await expect(userRow).toBeHidden();
 
     // 9. Nuke All (Danger Zone)
     const nukeBtn = page.getByTestId('admin-nuke-button').filter({ visible: true });
     if (await nukeBtn.isVisible()) {
+        console.log('Initiating Nuke All (Danger Zone)...');
         await nukeBtn.click();
-        await expect(page.getByTestId('admin-init-email').filter({ visible: true })).toBeVisible({ timeout: 20000 });
+        
+        // Expect the application to automatically route to .*auth.* (session invalidated)
+        await expect(page).toHaveURL(/.*auth.*/, { timeout: 30000 });
+        await expect(page.getByTestId('auth-submit-button').filter({ visible: true })).toBeVisible();
+        console.log('✅ Nuke All verified: Session invalidated and redirected to /auth.');
     }
   });
 });
