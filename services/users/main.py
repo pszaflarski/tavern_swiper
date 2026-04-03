@@ -56,8 +56,11 @@ async def health():
 @app.get("/users/root-admin-exists")
 async def check_root_admin():
     """Check if a root admin already exists in the system."""
-    query = db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).limit(1).stream()
-    exists = any(query)
+    query = list(db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).stream())
+    exists = len(query) > 0
+    print(f"[DEBUG] check_root_admin: found {len(query)} root admins. exists={exists}")
+    for doc in query:
+        print(f"[DEBUG]   - Root Admin: {doc.id} | {doc.to_dict()}")
     return {"exists": exists}
 
 @app.get("/users/", response_model=list[UserOut])
@@ -182,6 +185,7 @@ async def create_user(body: UserCreate, auth_data: tuple[str, str, str] = Depend
     3. Self Registration: body.uid is None, user creates their own record.
     """
     caller_uid, caller_role, _ = auth_data
+    print(f"[DEBUG] create_user: Received body: {body.model_dump()}")
     # 1. Handle Root Admin Initialization (Singleton)
     if body.user_type == UserType.ROOT_ADMIN:
         query = db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).limit(1).stream()
@@ -214,6 +218,7 @@ async def create_user(body: UserCreate, auth_data: tuple[str, str, str] = Depend
     # Create Record
     data = body.model_dump(exclude={"uid"})
     data["created_at"] = _now()
+    print(f"[DEBUG] create_user: Setting record for {target_uid} with data: {data}")
     ref.set(data)
     
     return UserOut(uid=target_uid, **data)

@@ -82,10 +82,16 @@ export function useUser() {
 
   // Effect to trigger registration
   useEffect(() => {
+    // Structural Fix: If root-admin doesn't exist, we must PAUSE automatic registration.
+    // This allows the specialized "Claim the Root" flow in AdminDashboard to handle 
+    // the first user creation with the correct 'root_admin' type.
+    if (rootExistsQuery.data !== true) {
+      console.log('[USER HOOK DEBUG] Root existence unknown or false. Skipping auto-registration.');
+      return;
+    }
+
     if (userQuery.isSuccess && !userQuery.data && firebaseUser && !registerMutation.isPending) {
-      // If no root exists, the first user might be claiming it via a different flow, 
-      // but normal registration defaults to 'user'. 
-      registerMutation.mutate();
+        registerMutation.mutate();
     }
   }, [userQuery.isSuccess, userQuery.data, firebaseUser, rootExistsQuery.data]);
 

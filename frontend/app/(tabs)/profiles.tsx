@@ -498,8 +498,8 @@ export default function ProfilesScreen() {
       >
         <View style={styles.previewModalContainer}>
           <View style={styles.previewHeader}>
-            <Text style={styles.previewHeaderTitle}>Hero Discovery Preview</Text>
-            <TouchableOpacity onPress={() => setShowPreview(false)} style={styles.closePreviewButton}>
+            <Text style={styles.previewHeaderTitle} testID="preview-header-title">Hero Discovery Preview</Text>
+            <TouchableOpacity onPress={() => setShowPreview(false)} style={styles.closePreviewButton} testID="close-preview-button">
               <Text style={styles.closePreviewText}>✕</Text>
             </TouchableOpacity>
           </View>

@@ -28,8 +28,13 @@ export async function getIdToken(): Promise<string | null> {
 
   try {
     const user = auth.currentUser;
-    if (!user) return null;
-    return await fetchWithTimeout(user.getIdToken());
+    if (!user) {
+      console.log('[API DEBUG] getIdToken: No current user in firebase auth');
+      return null;
+    }
+    const token = await fetchWithTimeout(user.getIdToken());
+    if (!token) console.log('[API DEBUG] getIdToken: Token was empty/null');
+    return token;
   } catch (error) {
     console.error('Error fetching ID token:', error);
     return null;
@@ -48,6 +53,20 @@ function createClient(baseURL: string) {
   });
 
   return client;
+}
+
+/**
+ * Wait for a valid Firebase token to be available.
+ * Useful after registration/login to avoid race conditions.
+ */
+export async function waitForToken(timeout: number = 5000): Promise<string | null> {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        const token = await getIdToken();
+        if (token) return token;
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    return null;
 }
 
 export const authApi = createClient(BASE_URLS.auth);

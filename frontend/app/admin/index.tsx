@@ -12,15 +12,17 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { usersApi, authApi } from '../../lib/api';
+import { usersApi, authApi, waitForToken } from '../../lib/api';
 import { useUser, UserMetadata } from '../../hooks/useUser';
 import { auth } from '../../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@firebase/auth';
 
 export default function AdminDashboard() {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useUser();
   const [rootExists, setRootExists] = useState<boolean | null>(null);
@@ -43,13 +45,13 @@ export default function AdminDashboard() {
   }, []);
 
   const checkRootAdmin = async () => {
-    console.log('[ADMIN DEBUG] Checking root admin existence...');
+    console.log('[ADMIN DEBUG] checkRootAdmin: Starting check...');
     try {
       const res = await usersApi.get('/users/root-admin-exists');
-      console.log(`[ADMIN DEBUG] Root admin exists: ${res.data.exists}`);
+      console.log(`[ADMIN DEBUG] checkRootAdmin: Backend response exists=${res.data.exists}`);
       setRootExists(res.data.exists);
     } catch (err: any) {
-      console.error('[ADMIN DEBUG] Failed to check root admin', err);
+      console.error('[ADMIN DEBUG] checkRootAdmin: Error', err);
       setError(`Failure identifying the Nexus architecture: ${err.message}`);
     }
   };
@@ -91,14 +93,28 @@ export default function AdminDashboard() {
       }
 
       // 2. Create Root Admin in Users Service
+      // Ensure the token provider has the user updated
+      console.log('[ADMIN DEBUG] handleClaimRoot: User registered, waiting for token...');
+      const token = await waitForToken();
+      if (!token) {
+        throw new Error('Authentication token propagation timed out. Please try claiming again.');
+      }
+      
+      console.log('[ADMIN DEBUG] handleClaimRoot: Token acquired, creating record...');
       await usersApi.post('/users/', {
         email: authEmail,
         user_type: 'root_admin',
       });
+
+      // Refetch state globally
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'root-exists'] });
+      await queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
       
       Alert.alert('Success', 'Root Throne Claimed! Please log in to the dashboard.');
+      console.log('[ADMIN DEBUG] handleClaimRoot: Success, manually setting rootExists to true');
       setRootExists(true);
     } catch (err: any) {
+      console.error('[ADMIN DEBUG] handleClaimRoot: Unexpected exception', err);
       Alert.alert('Error', err.message);
     } finally {
       setLoading(false);
@@ -114,8 +130,8 @@ export default function AdminDashboard() {
         try {
           await usersApi.delete('/users/');
           Alert.alert('Success', 'The Universe has been Cleaned.');
-          auth.signOut();
-          router.replace('/auth');
+          await auth.signOut();
+          router.replace('/admin');
         } catch (err: any) {
           Alert.alert('Error', err.message);
         }
@@ -133,8 +149,8 @@ export default function AdminDashboard() {
                 try {
                   await usersApi.delete('/users/');
                   Alert.alert('Success', 'The Universe has been Cleaned.');
-                  auth.signOut();
-                  router.replace('/auth');
+                  await auth.signOut();
+                  router.replace('/admin');
                 } catch (err: any) {
                   Alert.alert('Error', err.message);
                 }
@@ -165,7 +181,7 @@ export default function AdminDashboard() {
       Alert.alert('Success', `Intelligence Provisioned: ${newEmail}`);
       setNewEmail('');
       setNewPassword('');
-      fetchUsers();
+      await fetchUsers();
     } catch (err: any) {
       Alert.alert('Provisioning Failed', err.message);
     } finally {
@@ -174,18 +190,37 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteUser = async (uid: string, hard: boolean) => {
-    const type = hard ? 'PERMANENTLY NUKE' : 'soft-delete';
+    const message = hard 
+      ? 'CRITICAL WARNING: This will PERMANENTLY EXTERMINATE this entity from both the Nexus and Firebase Auth. Do you wish to proceed?'
+      : 'Do you wish to soft-delete this entity from the Nexus?';
+
+    if (Platform.OS === 'web') {
+        if (window.confirm(message)) {
+            console.log(`[ADMIN DEBUG] handleDeleteUser: Requesting ${hard ? 'HARD' : 'SOFT'} delete for ${uid}`);
+            try {
+                await usersApi.delete(`/users/${uid}${hard ? '?hard=true' : ''}`);
+                console.log('[ADMIN DEBUG] handleDeleteUser: Delete success, refreshing list...');
+                await fetchUsers();
+            } catch (err: any) {
+                alert(err.message);
+            }
+        }
+        return;
+    }
+
     Alert.alert(
       'Confirm Action',
-      `Are you sure you want to ${type} this intelligence?`,
+      message,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Proceed',
           onPress: async () => {
             try {
+              console.log(`[ADMIN DEBUG] handleDeleteUser: Requesting ${hard ? 'HARD' : 'SOFT'} delete for ${uid}`);
               await usersApi.delete(`/users/${uid}${hard ? '?hard=true' : ''}`);
-              fetchUsers();
+              console.log('[ADMIN DEBUG] handleDeleteUser: Delete success, refreshing list...');
+              await fetchUsers();
             } catch (err: any) {
               Alert.alert('Error', err.message);
             }
@@ -196,12 +231,43 @@ export default function AdminDashboard() {
   };
 
   const handleRestoreUser = async (uid: string) => {
-    try {
-      await usersApi.patch(`/users/${uid}/restore`);
-      fetchUsers();
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
+    const message = 'Are you sure you want to restore this intelligence?';
+
+    if (Platform.OS === 'web') {
+        if (window.confirm(message)) {
+            console.log(`[ADMIN DEBUG] handleRestoreUser: Requesting restore for ${uid}`);
+            try {
+                await usersApi.patch(`/users/${uid}/restore`);
+                console.log('[ADMIN DEBUG] handleRestoreUser: Restore success, refreshing list...');
+                await fetchUsers();
+            } catch (err: any) {
+                alert(err.message);
+            }
+        }
+        return;
     }
+
+    Alert.alert(
+      'Confirm Action',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Proceed',
+          onPress: async () => {
+            try {
+              console.log(`[ADMIN DEBUG] handleRestoreUser: Requesting restore for ${uid}`);
+              await usersApi.patch(`/users/${uid}/restore`);
+              console.log('[ADMIN DEBUG] handleRestoreUser: Restore success, refreshing list...');
+              Alert.alert('Success', 'Entity has been restored to the active list.');
+              await fetchUsers();
+            } catch (err: any) {
+              Alert.alert('Error', err.message);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (error) {
@@ -294,7 +360,7 @@ export default function AdminDashboard() {
 
       <View style={{ padding: Spacing[4] }}>
         {/* Provisioning Section */}
-        <View style={styles.card}>
+        <View style={styles.card} testID="admin-dashboard-header">
           <Text style={styles.sectionTitle}>Provision Intelligence</Text>
           <TextInput
             style={styles.input}
@@ -347,6 +413,7 @@ export default function AdminDashboard() {
                 value={showDeleted}
                 onValueChange={setShowDeleted}
                 trackColor={{ false: Colors.surfaceContainer, true: Colors.primary }}
+                testID="admin-show-deleted-switch"
               />
             </View>
           </View>
@@ -355,14 +422,21 @@ export default function AdminDashboard() {
             <ActivityIndicator color={Colors.primary} style={{ margin: 20 }} />
           ) : (
             users.map((u) => (
-              <View key={u.uid} style={[styles.userRow, u.is_deleted && styles.userRowDeleted]}>
+              <View key={u.uid} style={[styles.userRow, u.is_deleted && styles.userRowDeleted]} testID={`admin-user-row-${u.email}`}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.userEmail}>{u.email}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                     <Text style={[styles.badge, styles[`badge_${u.user_type}` as keyof typeof styles]]}>
                       {u.user_type}
                     </Text>
-                    {u.is_deleted && <Text style={[styles.badge, styles.badge_deleted]}>Deleted</Text>}
+                    {u.is_deleted && (
+                      <Text 
+                        style={[styles.badge, styles.badge_deleted]} 
+                        testID="admin-user-is-deleted"
+                      >
+                        Deleted
+                      </Text>
+                    )}
                   </View>
                 </View>
                 
@@ -371,19 +445,39 @@ export default function AdminDashboard() {
                     <Text style={styles.currentLabel}>Current</Text>
                   ) : u.is_deleted ? (
                     <>
-                      <TouchableOpacity onPress={() => handleRestoreUser(u.uid)} style={styles.actionIcon}>
+                      <TouchableOpacity 
+                        onPress={() => handleRestoreUser(u.uid)} 
+                        style={styles.actionIcon}
+                        testID="admin-restore-user-button"
+                        accessibilityRole="button"
+                      >
                         <Ionicons name="refresh" size={20} color={Colors.primary} />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeleteUser(u.uid, true)} style={styles.actionIcon}>
+                      <TouchableOpacity 
+                        onPress={() => handleDeleteUser(u.uid, true)} 
+                        style={styles.actionIcon}
+                        testID="admin-hard-delete-user-button"
+                        accessibilityRole="button"
+                      >
                         <Ionicons name="trash-outline" size={20} color={Colors.error} />
                       </TouchableOpacity>
                     </>
                   ) : (
                     <>
-                      <TouchableOpacity onPress={() => handleDeleteUser(u.uid, false)} style={styles.actionIcon}>
+                      <TouchableOpacity 
+                        testID="admin-delete-user-button" 
+                        accessibilityRole="button"
+                        onPress={() => handleDeleteUser(u.uid, false)} 
+                        style={styles.actionIcon}
+                      >
                         <Ionicons name="remove-circle-outline" size={20} color={Colors.outline} />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeleteUser(u.uid, true)} style={styles.actionIcon}>
+                      <TouchableOpacity 
+                        testID="admin-hard-delete-user-button"
+                        accessibilityRole="button"
+                        onPress={() => handleDeleteUser(u.uid, true)} 
+                        style={styles.actionIcon}
+                      >
                         <Ionicons name="skull-outline" size={20} color={Colors.error} />
                       </TouchableOpacity>
                     </>

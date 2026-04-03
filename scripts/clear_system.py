@@ -6,14 +6,36 @@ import os
 # --- Configuration ---
 PROJECT_ID = "tavern-swiper-dev"
 # All test databases defined in our architecture
-DATABASES = ["auth-test", "profiles-test", "discovery-test", "swipes-test", "messages-test", "users-test"]
+DATABASES = [
+    "auth", "auth-test", 
+    "profiles", "profiles-test", 
+    "discovery", "discovery-test", 
+    "swipes", "swipes-test", 
+    "messages", "messages-test", 
+    "users", "users-test"
+]
+
+# Map database IDs to their expected collection names
+DB_COLLECTIONS = {
+    "auth-test": [], # Auth uses the auth SDK
+    "profiles-test": ["profiles"],
+    "discovery-test": ["discovery"], # Or whatever it is
+    "swipes-test": ["swipes", "matches"],
+    "messages-test": ["messages"],
+    "users-test": ["users"]
+}
 
 def delete_collections(db):
-    print(f"  Purging database: {db._database}...")
-    try:
-        collections = db.collections()
-        for col in collections:
-            print(f"    🗑️ Deleting collection: {col.id}...")
+    db_id = db._database
+    print(f"  Purging database: {db_id}...")
+    
+    # Use explicit names to avoid PERMISSION_DENIED on db.collections() listing
+    cols_to_clear = DB_COLLECTIONS.get(db_id, [])
+    
+    for col_id in cols_to_clear:
+        try:
+            col = db.collection(col_id)
+            print(f"    🗑️ Deleting collection: {col_id}...")
             # Simple batch delete for small test datasets
             docs = list(col.limit(500).stream())
             while docs:
@@ -22,8 +44,8 @@ def delete_collections(db):
                     batch.delete(doc.reference)
                 batch.commit()
                 docs = list(col.limit(500).stream())
-    except Exception as e:
-        print(f"    ❌ Error cleaning {db._database}: {e}")
+        except Exception as e:
+            print(f"    ❌ Error cleaning {db_id}/{col_id}: {e}")
 
 def clear_auth():
     print(f"\n🔑 Purging Firebase Auth for project {PROJECT_ID}...")

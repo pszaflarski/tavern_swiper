@@ -26,7 +26,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             user_data = resp.json()
             return user_data["uid"], user_data.get("role", "user"), token
         except httpx.HTTPError as e:
+            print(f"[ERROR] Auth service call failed: {e}")
             raise HTTPException(
                 status_code=503,
-                detail=f"Auth service unavailable: {e}"
+                detail=f"Auth service unavailable: {type(e).__name__} - {e}"
             )

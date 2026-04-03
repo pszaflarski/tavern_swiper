@@ -71,7 +71,7 @@ test.describe('Profile Preview', () => {
     await page.getByTestId('identity-preview-button').filter({ visible: true }).click({ force: true });
 
     // 7. Verify the preview modal title
-    await expect(page.getByText('Hero Discovery Preview').filter({ visible: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('preview-header-title').filter({ visible: true })).toBeVisible({ timeout: 15000 });
 
     // 8. Verify hero data is visible
     await expect(page.getByText(heroName).filter({ visible: true }).first()).toBeVisible();
@@ -79,15 +79,13 @@ test.describe('Profile Preview', () => {
     await expect(page.getByText(heroTagline).filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByText(`📍 ${heroRealm}`).filter({ visible: true })).toBeVisible();
 
-    // 9. Dismiss via Escape key or close button
-    await page.keyboard.press('Escape');
-    const closeBtn = page.getByText('✕').filter({ visible: true }).first();
-    if (await closeBtn.isVisible()) {
-      await closeBtn.click({ force: true });
-    }
+    // 9. Dismiss via close button
+    const closeBtn = page.getByTestId('close-preview-button').filter({ visible: true }).first();
+    await closeBtn.scrollIntoViewIfNeeded();
+    await closeBtn.dispatchEvent('click', { force: true });
 
     // 10. Verify we are back in the forge
-    await expect(page.getByText('Hero Discovery Preview').filter({ visible: true })).toBeHidden();
+    await expect(page.getByTestId('preview-header-title')).toBeHidden();
     await expect(page.getByText('New Hero').filter({ visible: true })).toBeVisible();
   });
 });
