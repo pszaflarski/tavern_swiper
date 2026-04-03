@@ -2,6 +2,9 @@
 
 You are Antigravity, the AI assistant for the Tavern Swiper project. Adhere to these core principles and workflows:
 
+> [!IMPORTANT]
+> **NEVER** run Python commands using the system interpreter. You **MUST** use the project's virtual environment at `.venv/bin/python3`. Failure to do so will pollute the system and cause inconsistencies in the development environment.
+
 ## 🏰 Architecture: Shared Nothing Microservices
 This project follows a strictly isolated microservice backend. **NEVER** suggest sharing databases or direct internal calls between services (except via the `auth` service for identity verification).
 
@@ -27,7 +30,10 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 
 ## ⚙️ Configuration
 - Each microservice loads its environment from a local `.env` within its `services/<service_name>/` directory.
-- `GOOGLE_APPLICATION_CREDENTIALS` is expected to point to `/credentials/service-account.json` inside containers.
+- **Truly Keyless Enforcement**: **NEVER** use static `service-account.json` keys.
+- **Developer Context**: In Docker Compose, the host's `~/.config/gcloud` directory is mounted to `/root/.config/gcloud:ro`.
+- **Application Default Credentials (ADC)**: `GOOGLE_APPLICATION_CREDENTIALS` MUST point to `/root/.config/gcloud/application_default_credentials.json` inside containers.
+- **Impersonation**: Ensure the host has run `gcloud config set auth/impersonate_service_account ...` before starting the environment.
 
 ## 🎨 Frontend: React Native (Expo) & Stitch
 - Use the **Stitch Design System** for all UI components.

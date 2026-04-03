@@ -25,9 +25,23 @@ This project follows a "Shared Nothing" microservice architecture. Each service 
 - Google Cloud SDK (`gcloud`)
 - A Google Cloud Project (`tavern-swiper-dev`)
 - A Firebase Web API Key
+- Python 3.10+ (for scripts and testing)
 
-### 2. Truly Keyless Configuration
-We no longer use `service-account.json` files. Instead, your local identity impersonates a specific service account.
+### 2. Virtual Environment (Strict Isolation)
+To ensure dependency consistency across microservices and administrative scripts, always use the project's root virtual environment:
+```bash
+# Create the environment (one-time)
+python3 -m venv .venv
+
+# Always activate before running any python scripts or pip commands
+source .venv/bin/activate
+
+# Install shared administrative dependencies
+pip install google-cloud-firestore firebase-admin requests
+```
+
+### 3. Truly Keyless Configuration
+We **NEVER** use `service-account.json` keys. Instead, your local identity impersonates a specific service account.
 
 **One-time Setup**:
 ```bash
@@ -44,7 +58,13 @@ gcloud iam service-accounts add-iam-policy-binding \
 # Re-enable impersonation
 gcloud config set auth/impersonate_service_account \
   tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com
+
+# Generate Application Default Credentials (ADC) for the impersonated identity
+gcloud auth application-default login --impersonate-service-account=tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com
 ```
+
+**Inside Docker Compose**:
+The `docker-compose.yml` is configured to mount your host's `~/.config/gcloud` directory. The containers use your impersonated ADC to authenticate with Google Cloud services (Firestore, GCS).
 
 ### 3. Start the Backend (Docker)
 From the root directory:

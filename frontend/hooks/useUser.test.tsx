@@ -52,6 +52,7 @@ describe('useUser Hook', () => {
   });
 
   it('fetches existing user metadata', async () => {
+    mockUsersApi.onGet('/users/root-admin-exists').reply(200, { exists: true });
     mockUsersApi.onGet('/users/me').reply(200, {
       uid: 'test-123',
       email: 'test@example.com',
@@ -68,6 +69,7 @@ describe('useUser Hook', () => {
   });
 
   it('automatically registers user if not found (404)', async () => {
+    mockUsersApi.onGet('/users/root-admin-exists').reply(200, { exists: true });
     mockUsersApi.onGet('/users/me').reply(404);
     mockUsersApi.onPost('/users/').reply(200, {
       uid: 'test-123',

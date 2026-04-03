@@ -80,7 +80,7 @@ describe('ProfilesScreen Preview', () => {
     expect(getByTestId('mock-swipe-card')).toBeTruthy();
 
     // 6. Dismiss preview
-    fireEvent.press(getByText('✕'));
+    fireEvent.press(getByTestId('close-preview-button'));
 
     // 7. Verify we are back in the forge
     await waitFor(() => {

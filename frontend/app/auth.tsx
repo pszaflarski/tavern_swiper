@@ -20,14 +20,27 @@ import {
 import { useUser } from '../hooks/useUser';
 import { usersApi } from '../lib/api';
 
+import { Stack, useRouter, Redirect } from 'expo-router';
+
 export default function AuthScreen() {
-  const { isLoading: authLoading } = useUser();
+  const { isAuthenticated, isLoading: authLoading } = useUser();
+  const router = useRouter();
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  // --- Navigation Guards ---
+  // If authenticated, drop the user straight into the Tavern tabs.
+  // Declarative redirection is more reliable for strict E2E checks.
+  // CRITICAL: This must be BELOW all hook declarations to avoid rule violations.
+  if (!authLoading && isAuthenticated) {
+    console.log('[AUTH DEBUG] Declarative Redirection to /(tabs)...');
+    return <Redirect href="/(tabs)" />;
+  }
 
   const handleAuth = async () => {
     if (!email || !password) {

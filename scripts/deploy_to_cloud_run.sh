@@ -40,6 +40,23 @@ for SERVICE in "${SERVICES[@]}"; do
         # Special case for auth (if it uses (default) or something else)
         # Based on gcloud list, 'auth' and 'auth-test' exist.
         
+        # Determine extra environment variables
+        EXTRA_VARS="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_DATABASE_ID=${DB_ID}"
+        
+        if [ "$SERVICE" == "auth" ]; then
+            # Needs its own DB + the users DB it looks up roles from
+            if [ "$ENV" == "dev" ]; then
+                USERS_DB="users"
+            else
+                USERS_DB="users-test"
+            fi
+            EXTRA_VARS+=",USERS_DATABASE_ID=${USERS_DB},FIREBASE_WEB_API_KEY=AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk"
+        fi
+
+        if [ "$SERVICE" == "users" ] || [ "$SERVICE" == "profiles" ]; then
+            EXTRA_VARS+=",GCS_BUCKET_NAME=tavern-swiper-dev-media"
+        fi
+
         echo "🚀 Deploying ${DEPLOY_NAME} to Cloud Run..."
         
         gcloud run deploy "${DEPLOY_NAME}" \
@@ -47,7 +64,7 @@ for SERVICE in "${SERVICES[@]}"; do
             --platform managed \
             --region "${REGION}" \
             --service-account "${SERVICE_ACCOUNT}" \
-            --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_DATABASE_ID=${DB_ID}" \
+            --set-env-vars "${EXTRA_VARS}" \
             --memory 512Mi \
             --cpu 1 \
             --allow-unauthenticated \

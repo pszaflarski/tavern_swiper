@@ -3,87 +3,551 @@
 > jest --forceExit
 
 PASS lib/api.test.ts
-PASS hooks/useUser.test.tsx
 FAIL hooks/useMessages.test.tsx
   ● Test suite failed to run
 
-    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
+    Jest encountered an unexpected token
 
-      20 |
-      21 | export const auth = getAuth(app);
-    > 22 | export const db = getFirestore(app);
-         |                               ^
-      23 | export default app;
-      24 |
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
 
-      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
-      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
-      at Object.<anonymous> (lib/firebase.ts:22:31)
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/peter/Documents/tavern_swiper/frontend/node_modules/@firebase/util/dist/index.esm2017.js:2112
+    export { CONSTANTS, DecodeBase64StringError, Deferred, ErrorFactory, FirebaseError, MAX_VALUE_MILLIS, RANDOM_FACTOR, Sha1, areCookiesEnabled, assert, assertionError, async, base64, base64Decode, base64Encode, base64urlEncodeWithoutPadding, calculateBackoffMillis, contains, createMockUserToken, createSubscribe, decode, deepCopy, deepEqual, deepExtend, errorPrefix, extractQuerystring, getDefaultAppConfig, getDefaultEmulatorHost, getDefaultEmulatorHostnameAndPort, getDefaults, getExperimentalSetting, getGlobal, getModularInstance, getUA, isAdmin, isBrowser, isBrowserExtension, isElectron, isEmpty, isIE, isIndexedDBAvailable, isMobileCordova, isNode, isNodeSdk, isReactNative, isSafari, isUWP, isValidFormat, isValidTimestamp, issuedAtTime, jsonEval, map, ordinal, promiseWithTimeout, querystring, querystringDecode, safeGet, stringLength, stringToByteArray, stringify, uuidv4, validateArgCount, validateCallback, validateContextObject, validateIndexedDBOpenable, validateNamespace };
+    ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+    > 1 | import { initializeApp, getApps, getApp } from '@firebase/app';
+        | ^
+      2 | import { getAuth } from '@firebase/auth';
+      3 |
+      4 | /**
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (node_modules/@firebase/component/dist/index.cjs.js:6:12)
+      at Object.<anonymous> (node_modules/@firebase/app/dist/index.cjs.js:5:17)
+      at Object.require (lib/firebase.ts:1:1)
       at Object.require (lib/api.ts:2:1)
       at Object.require (hooks/useMessages.ts:2:1)
       at Object.require (hooks/useMessages.test.tsx:2:1)
 
-FAIL hooks/useProfiles.test.tsx
-  ● Test suite failed to run
-
-    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
-
-      20 |
-      21 | export const auth = getAuth(app);
-    > 22 | export const db = getFirestore(app);
-         |                               ^
-      23 | export default app;
-      24 |
-
-      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
-      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
-      at Object.<anonymous> (lib/firebase.ts:22:31)
-      at Object.require (lib/api.ts:2:1)
-      at Object.require (hooks/useProfiles.ts:2:1)
-      at Object.require (hooks/useProfiles.test.tsx:2:1)
-
-FAIL hooks/useDiscovery.test.tsx
-  ● Test suite failed to run
-
-    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
-
-      20 |
-      21 | export const auth = getAuth(app);
-    > 22 | export const db = getFirestore(app);
-         |                               ^
-      23 | export default app;
-      24 |
-
-      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
-      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
-      at Object.<anonymous> (lib/firebase.ts:22:31)
-      at Object.require (lib/api.ts:2:1)
-      at Object.require (hooks/useDiscovery.ts:2:1)
-      at Object.require (hooks/useDiscovery.test.tsx:2:1)
-
 FAIL hooks/useSwipe.test.tsx
   ● Test suite failed to run
 
-    FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app).
+    Jest encountered an unexpected token
 
-      20 |
-      21 | export const auth = getAuth(app);
-    > 22 | export const db = getFirestore(app);
-         |                               ^
-      23 | export default app;
-      24 |
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
 
-      at Object.getApp (node_modules/@firebase/app/src/api.ts:338:25)
-      at getApp (node_modules/@firebase/firestore/src/api/database.ts:243:61)
-      at Object.<anonymous> (lib/firebase.ts:22:31)
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/peter/Documents/tavern_swiper/frontend/node_modules/@firebase/util/dist/index.esm2017.js:2112
+    export { CONSTANTS, DecodeBase64StringError, Deferred, ErrorFactory, FirebaseError, MAX_VALUE_MILLIS, RANDOM_FACTOR, Sha1, areCookiesEnabled, assert, assertionError, async, base64, base64Decode, base64Encode, base64urlEncodeWithoutPadding, calculateBackoffMillis, contains, createMockUserToken, createSubscribe, decode, deepCopy, deepEqual, deepExtend, errorPrefix, extractQuerystring, getDefaultAppConfig, getDefaultEmulatorHost, getDefaultEmulatorHostnameAndPort, getDefaults, getExperimentalSetting, getGlobal, getModularInstance, getUA, isAdmin, isBrowser, isBrowserExtension, isElectron, isEmpty, isIE, isIndexedDBAvailable, isMobileCordova, isNode, isNodeSdk, isReactNative, isSafari, isUWP, isValidFormat, isValidTimestamp, issuedAtTime, jsonEval, map, ordinal, promiseWithTimeout, querystring, querystringDecode, safeGet, stringLength, stringToByteArray, stringify, uuidv4, validateArgCount, validateCallback, validateContextObject, validateIndexedDBOpenable, validateNamespace };
+    ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+    > 1 | import { initializeApp, getApps, getApp } from '@firebase/app';
+        | ^
+      2 | import { getAuth } from '@firebase/auth';
+      3 |
+      4 | /**
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (node_modules/@firebase/component/dist/index.cjs.js:6:12)
+      at Object.<anonymous> (node_modules/@firebase/app/dist/index.cjs.js:5:17)
+      at Object.require (lib/firebase.ts:1:1)
       at Object.require (lib/api.ts:2:1)
       at Object.require (hooks/useSwipe.ts:2:1)
       at Object.require (hooks/useSwipe.test.tsx:2:1)
 
-A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
-Test Suites: 4 failed, 2 passed, 6 total
-Tests:       4 passed, 4 total
+FAIL hooks/__tests__/useProfiles.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/peter/Documents/tavern_swiper/frontend/node_modules/@firebase/util/dist/index.esm2017.js:2112
+    export { CONSTANTS, DecodeBase64StringError, Deferred, ErrorFactory, FirebaseError, MAX_VALUE_MILLIS, RANDOM_FACTOR, Sha1, areCookiesEnabled, assert, assertionError, async, base64, base64Decode, base64Encode, base64urlEncodeWithoutPadding, calculateBackoffMillis, contains, createMockUserToken, createSubscribe, decode, deepCopy, deepEqual, deepExtend, errorPrefix, extractQuerystring, getDefaultAppConfig, getDefaultEmulatorHost, getDefaultEmulatorHostnameAndPort, getDefaults, getExperimentalSetting, getGlobal, getModularInstance, getUA, isAdmin, isBrowser, isBrowserExtension, isElectron, isEmpty, isIE, isIndexedDBAvailable, isMobileCordova, isNode, isNodeSdk, isReactNative, isSafari, isUWP, isValidFormat, isValidTimestamp, issuedAtTime, jsonEval, map, ordinal, promiseWithTimeout, querystring, querystringDecode, safeGet, stringLength, stringToByteArray, stringify, uuidv4, validateArgCount, validateCallback, validateContextObject, validateIndexedDBOpenable, validateNamespace };
+    ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+    > 1 | import { initializeApp, getApps, getApp } from '@firebase/app';
+        | ^
+      2 | import { getAuth } from '@firebase/auth';
+      3 |
+      4 | /**
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (node_modules/@firebase/component/dist/index.cjs.js:6:12)
+      at Object.<anonymous> (node_modules/@firebase/app/dist/index.cjs.js:5:17)
+      at Object.require (lib/firebase.ts:1:1)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/__tests__/useProfiles.test.tsx:4:1)
+
+FAIL hooks/useDiscovery.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/peter/Documents/tavern_swiper/frontend/node_modules/@firebase/util/dist/index.esm2017.js:2112
+    export { CONSTANTS, DecodeBase64StringError, Deferred, ErrorFactory, FirebaseError, MAX_VALUE_MILLIS, RANDOM_FACTOR, Sha1, areCookiesEnabled, assert, assertionError, async, base64, base64Decode, base64Encode, base64urlEncodeWithoutPadding, calculateBackoffMillis, contains, createMockUserToken, createSubscribe, decode, deepCopy, deepEqual, deepExtend, errorPrefix, extractQuerystring, getDefaultAppConfig, getDefaultEmulatorHost, getDefaultEmulatorHostnameAndPort, getDefaults, getExperimentalSetting, getGlobal, getModularInstance, getUA, isAdmin, isBrowser, isBrowserExtension, isElectron, isEmpty, isIE, isIndexedDBAvailable, isMobileCordova, isNode, isNodeSdk, isReactNative, isSafari, isUWP, isValidFormat, isValidTimestamp, issuedAtTime, jsonEval, map, ordinal, promiseWithTimeout, querystring, querystringDecode, safeGet, stringLength, stringToByteArray, stringify, uuidv4, validateArgCount, validateCallback, validateContextObject, validateIndexedDBOpenable, validateNamespace };
+    ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+    > 1 | import { initializeApp, getApps, getApp } from '@firebase/app';
+        | ^
+      2 | import { getAuth } from '@firebase/auth';
+      3 |
+      4 | /**
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (node_modules/@firebase/component/dist/index.cjs.js:6:12)
+      at Object.<anonymous> (node_modules/@firebase/app/dist/index.cjs.js:5:17)
+      at Object.require (lib/firebase.ts:1:1)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/useDiscovery.ts:2:1)
+      at Object.require (hooks/useDiscovery.test.tsx:2:1)
+
+FAIL hooks/useProfiles.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/peter/Documents/tavern_swiper/frontend/node_modules/@firebase/util/dist/index.esm2017.js:2112
+    export { CONSTANTS, DecodeBase64StringError, Deferred, ErrorFactory, FirebaseError, MAX_VALUE_MILLIS, RANDOM_FACTOR, Sha1, areCookiesEnabled, assert, assertionError, async, base64, base64Decode, base64Encode, base64urlEncodeWithoutPadding, calculateBackoffMillis, contains, createMockUserToken, createSubscribe, decode, deepCopy, deepEqual, deepExtend, errorPrefix, extractQuerystring, getDefaultAppConfig, getDefaultEmulatorHost, getDefaultEmulatorHostnameAndPort, getDefaults, getExperimentalSetting, getGlobal, getModularInstance, getUA, isAdmin, isBrowser, isBrowserExtension, isElectron, isEmpty, isIE, isIndexedDBAvailable, isMobileCordova, isNode, isNodeSdk, isReactNative, isSafari, isUWP, isValidFormat, isValidTimestamp, issuedAtTime, jsonEval, map, ordinal, promiseWithTimeout, querystring, querystringDecode, safeGet, stringLength, stringToByteArray, stringify, uuidv4, validateArgCount, validateCallback, validateContextObject, validateIndexedDBOpenable, validateNamespace };
+    ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+    > 1 | import { initializeApp, getApps, getApp } from '@firebase/app';
+        | ^
+      2 | import { getAuth } from '@firebase/auth';
+      3 |
+      4 | /**
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (node_modules/@firebase/component/dist/index.cjs.js:6:12)
+      at Object.<anonymous> (node_modules/@firebase/app/dist/index.cjs.js:5:17)
+      at Object.require (lib/firebase.ts:1:1)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/useProfiles.ts:3:1)
+      at Object.require (hooks/useProfiles.test.tsx:2:1)
+
+FAIL hooks/useUser.test.tsx
+  ● Console
+
+    console.log
+      [USER HOOK DEBUG] Root existence unknown or false. Skipping auto-registration.
+
+      at log (hooks/useUser.ts:89:15)
+
+    console.log
+      [USER HOOK DEBUG] Root existence unknown or false. Skipping auto-registration.
+
+      at log (hooks/useUser.ts:89:15)
+
+    console.log
+      [USER HOOK DEBUG] Root existence unknown or false. Skipping auto-registration.
+
+      at log (hooks/useUser.ts:89:15)
+
+    console.log
+      [USER HOOK DEBUG] Root existence unknown or false. Skipping auto-registration.
+
+      at log (hooks/useUser.ts:89:15)
+
+    console.log
+      [USER HOOK DEBUG] Root existence unknown or false. Skipping auto-registration.
+
+      at log (hooks/useUser.ts:89:15)
+
+    console.log
+      [USER HOOK DEBUG] Root existence unknown or false. Skipping auto-registration.
+
+      at log (hooks/useUser.ts:89:15)
+
+  ● useUser Hook › automatically registers user if not found (404)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "test-123"
+    Received: undefined
+
+      80 |
+      81 |     await waitFor(() => expect(result.current.isLoading).toBe(false));
+    > 82 |     await waitFor(() => expect(result.current.user?.uid).toBe('test-123'));
+         |                  ^
+      83 |   });
+      84 | });
+      85 |
+
+      at Object.<anonymous> (hooks/useUser.test.tsx:82:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL app/(tabs)/__tests__/profiles.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/peter/Documents/tavern_swiper/frontend/node_modules/@firebase/util/dist/index.esm2017.js:2112
+    export { CONSTANTS, DecodeBase64StringError, Deferred, ErrorFactory, FirebaseError, MAX_VALUE_MILLIS, RANDOM_FACTOR, Sha1, areCookiesEnabled, assert, assertionError, async, base64, base64Decode, base64Encode, base64urlEncodeWithoutPadding, calculateBackoffMillis, contains, createMockUserToken, createSubscribe, decode, deepCopy, deepEqual, deepExtend, errorPrefix, extractQuerystring, getDefaultAppConfig, getDefaultEmulatorHost, getDefaultEmulatorHostnameAndPort, getDefaults, getExperimentalSetting, getGlobal, getModularInstance, getUA, isAdmin, isBrowser, isBrowserExtension, isElectron, isEmpty, isIE, isIndexedDBAvailable, isMobileCordova, isNode, isNodeSdk, isReactNative, isSafari, isUWP, isValidFormat, isValidTimestamp, issuedAtTime, jsonEval, map, ordinal, promiseWithTimeout, querystring, querystringDecode, safeGet, stringLength, stringToByteArray, stringify, uuidv4, validateArgCount, validateCallback, validateContextObject, validateIndexedDBOpenable, validateNamespace };
+    ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+    > 1 | import { initializeApp, getApps, getApp } from '@firebase/app';
+        | ^
+      2 | import { getAuth } from '@firebase/auth';
+      3 |
+      4 | /**
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (node_modules/@firebase/component/dist/index.cjs.js:6:12)
+      at Object.<anonymous> (node_modules/@firebase/app/dist/index.cjs.js:5:17)
+      at Object.require (lib/firebase.ts:1:1)
+      at Object.require (lib/api.ts:2:1)
+      at Object.require (hooks/useUser.ts:2:1)
+      at Object.require (/home/peter/Documents/tavern_swiper/frontend/app/(tabs)../../../../../profiles.tsx:17:1)
+      at Object.require (/home/peter/Documents/tavern_swiper/frontend/app/(tabs)../../../../../__tests__/profiles.test.tsx:3:1)
+
+FAIL app/__tests__/auth.test.tsx (5.32 s)
+  ● Console
+
+    console.error
+      The above error occurred in the <AuthScreen> component:
+      
+          at AuthScreen (/home/peter/Documents/tavern_swiper/frontend/app/auth.tsx:26:62)
+      
+      Consider adding an error boundary to your tree to customize error handling behavior.
+      Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+      53 |     (signInWithEmailAndPassword as jest.Mock).mockRejectedValueOnce(mockError);
+      54 |
+    > 55 |     const { getByTestId, findByText } = render(<AuthScreen />);
+         |                                               ^
+      56 |
+      57 |     fireEvent.changeText(getByTestId('auth-email-input'), 'test@example.com');
+      58 |     fireEvent.changeText(getByTestId('auth-password-input'), 'wrongpassword');
+
+      at logCapturedError (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8661:23)
+      at update.callback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8694:5)
+      at callCallback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4092:12)
+      at commitUpdateQueue (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4113:9)
+      at commitLayoutEffectOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13232:13)
+      at commitLayoutMountEffects_complete (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14330:9)
+      at commitLayoutEffects_begin (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14316:7)
+      at commitLayoutEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14301:3)
+      at commitRootImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16062:5)
+      at commitRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15933:5)
+      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15454:3)
+      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2521:11)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:29:10)
+      at Object.<anonymous> (app/__tests__/auth.test.tsx:55:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+    console.error
+      The above error occurred in the <AuthScreen> component:
+      
+          at AuthScreen (/home/peter/Documents/tavern_swiper/frontend/app/auth.tsx:26:62)
+      
+      Consider adding an error boundary to your tree to customize error handling behavior.
+      Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+      64 |
+      65 |   it('toggles password visibility when eye icon is pressed', () => {
+    > 66 |     const { getByTestId } = render(<AuthScreen />);
+         |                                   ^
+      67 |     const passwordInput = getByTestId('auth-password-input');
+      68 |     const toggleButton = getByTestId('auth-password-toggle');
+      69 |
+
+      at logCapturedError (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8661:23)
+      at update.callback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8694:5)
+      at callCallback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4092:12)
+      at commitUpdateQueue (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4113:9)
+      at commitLayoutEffectOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13232:13)
+      at commitLayoutMountEffects_complete (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14330:9)
+      at commitLayoutEffects_begin (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14316:7)
+      at commitLayoutEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14301:3)
+      at commitRootImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16062:5)
+      at commitRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15933:5)
+      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15454:3)
+      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2521:11)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:29:10)
+      at Object.<anonymous> (app/__tests__/auth.test.tsx:66:35)
+
+    console.error
+      The above error occurred in the <AuthScreen> component:
+      
+          at AuthScreen (/home/peter/Documents/tavern_swiper/frontend/app/auth.tsx:26:62)
+      
+      Consider adding an error boundary to your tree to customize error handling behavior.
+      Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+      84 |     (signInWithEmailAndPassword as jest.Mock).mockRejectedValueOnce(mockError);
+      85 |
+    > 86 |     const { getByTestId, queryByTestId, findByText } = render(<AuthScreen />);
+         |                                                              ^
+      87 |
+      88 |     fireEvent.changeText(getByTestId('auth-email-input'), 'test@example.com');
+      89 |     fireEvent.changeText(getByTestId('auth-password-input'), 'wrong');
+
+      at logCapturedError (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8661:23)
+      at update.callback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8694:5)
+      at callCallback (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4092:12)
+      at commitUpdateQueue (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4113:9)
+      at commitLayoutEffectOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13232:13)
+      at commitLayoutMountEffects_complete (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14330:9)
+      at commitLayoutEffects_begin (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14316:7)
+      at commitLayoutEffects (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14301:3)
+      at commitRootImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16062:5)
+      at commitRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15933:5)
+      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15454:3)
+      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2521:11)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:29:10)
+      at Object.<anonymous> (app/__tests__/auth.test.tsx:86:62)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● AuthScreen › displays an error message when login fails
+
+    No QueryClient set, use QueryClientProvider to set one
+
+      21 |  */
+      22 | export function useUser() {
+    > 23 |   const queryClient = useQueryClient();
+         |                                     ^
+      24 |   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
+      25 |   const [authInitialized, setAuthInitialized] = useState(!!auth.currentUser);
+      26 |
+
+      at useQueryClient (node_modules/@tanstack/react-query/src/QueryClientProvider.tsx:18:11)
+      at useUser (hooks/useUser.ts:23:37)
+      at AuthScreen (app/auth.tsx:26:62)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6351:18)
+      at mountIndeterminateComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9855:13)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11312:16)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15808:12)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15745:5)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15717:7)
+      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15422:20)
+      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2521:11)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:29:10)
+      at Object.<anonymous> (app/__tests__/auth.test.tsx:55:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● AuthScreen › toggles password visibility when eye icon is pressed
+
+    No QueryClient set, use QueryClientProvider to set one
+
+      21 |  */
+      22 | export function useUser() {
+    > 23 |   const queryClient = useQueryClient();
+         |                                     ^
+      24 |   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
+      25 |   const [authInitialized, setAuthInitialized] = useState(!!auth.currentUser);
+      26 |
+
+      at useQueryClient (node_modules/@tanstack/react-query/src/QueryClientProvider.tsx:18:11)
+      at useUser (hooks/useUser.ts:23:37)
+      at AuthScreen (app/auth.tsx:26:62)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6351:18)
+      at mountIndeterminateComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9855:13)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11312:16)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15808:12)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15745:5)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15717:7)
+      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15422:20)
+      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2521:11)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:29:10)
+      at Object.<anonymous> (app/__tests__/auth.test.tsx:66:35)
+
+  ● AuthScreen › clears error message when user starts typing again
+
+    No QueryClient set, use QueryClientProvider to set one
+
+      21 |  */
+      22 | export function useUser() {
+    > 23 |   const queryClient = useQueryClient();
+         |                                     ^
+      24 |   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
+      25 |   const [authInitialized, setAuthInitialized] = useState(!!auth.currentUser);
+      26 |
+
+      at useQueryClient (node_modules/@tanstack/react-query/src/QueryClientProvider.tsx:18:11)
+      at useUser (hooks/useUser.ts:23:37)
+      at AuthScreen (app/auth.tsx:26:62)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6351:18)
+      at mountIndeterminateComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9855:13)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11312:16)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15808:12)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15745:5)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15717:7)
+      at performSyncWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15422:20)
+      at flushSyncCallbacks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2521:11)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (node_modules/@testing-library/react-native/src/render-act.ts:12:11)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:59:33)
+      at renderInternal (node_modules/@testing-library/react-native/src/render.tsx:29:10)
+      at Object.<anonymous> (app/__tests__/auth.test.tsx:86:62)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+Test Suites: 8 failed, 1 passed, 9 total
+Tests:       4 failed, 3 passed, 7 total
 Snapshots:   0 total
-Time:        3.733 s
+Time:        7.295 s, estimated 40 s
 Ran all test suites.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

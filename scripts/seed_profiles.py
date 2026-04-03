@@ -3,16 +3,20 @@ import csv
 import os
 import time
 
-# Primary Seeder (Already elevated to Admin/RootAdmin in database)
-SEEDER_EMAIL = "admin@e.com"
-SEEDER_PASSWORD = "adminadmin"
+# Primary Seeder (Authenticated first to perform administrative overrides)
+SEEDER_EMAIL = "peter@gmail.com"
+SEEDER_PASSWORD = "Password123!"
 
 # --- Configuration ---
 AUTH_URL = "https://auth-test-hhqol7siba-uc.a.run.app"
 PROFILES_URL = "https://profiles-test-hhqol7siba-uc.a.run.app"
 USERS_URL = "https://users-test-hhqol7siba-uc.a.run.app"
-CSV_PATH = "sample_profiles/profiles.csv"
-SAMPLE_IMAGES_DIR = "sample_profiles"
+
+# Standardize paths to be absolute relative to the project root
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+CSV_PATH = os.path.join(PROJECT_ROOT, "sample_profiles", "profiles.csv")
+SAMPLE_IMAGES_DIR = os.path.join(PROJECT_ROOT, "sample_profiles")
 
 def get_token(email, password):
     """Register or Login a user to get their token and UID."""

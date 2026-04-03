@@ -211,6 +211,15 @@ async def create_user(body: UserCreate, auth_data: tuple[str, str, str] = Depend
     ref = db.collection(COLLECTION).document(target_uid)
     existing_doc = ref.get()
     if existing_doc.exists:
+        # ALLOWANCE: If claiming root_admin and singleton check passed (already did any(query) above),
+        # we allow upgrading the existing record from 'user' to 'root_admin'.
+        if body.user_type == UserType.ROOT_ADMIN:
+             print(f"[DEBUG] create_user: Upgrading existing record for {target_uid} to root_admin.")
+             data = body.model_dump(exclude={"uid"})
+             data["created_at"] = existing_doc.to_dict().get("created_at", _now())
+             ref.set(data)
+             return UserOut(uid=target_uid, **data)
+             
         if not body.uid: # Self-registration (Make it idempotent)
             return UserOut(uid=target_uid, **existing_doc.to_dict())
         raise HTTPException(status_code=400, detail="User record already exists")

@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { usersApi, authApi, waitForToken } from '../../lib/api';
@@ -39,6 +39,10 @@ export default function AdminDashboard() {
   // Init/Login Form State
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+
+  // --- Navigation Guards ---
+  // We handle unauthenticated redirection declaratively in the render blocks below
+  // to ensure all hooks are called consistently first.
 
   useEffect(() => {
     checkRootAdmin();
@@ -283,12 +287,19 @@ export default function AdminDashboard() {
     );
   }
 
-  if (rootExists === null || authLoading) {
+  console.log(`[ADMIN DEBUG] Render state: authLoading=${authLoading}, isAuthenticated=${isAuthenticated}, rootExists=${rootExists}, url=${router.toString()}`);
+
+  if (authLoading || rootExists === null) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
+  }
+
+  // Declarative Guard: Redirect unauthenticated users immediately
+  if (!isAuthenticated) {
+    return <Redirect href="/auth" />;
   }
 
   // --- Initialisation Screen ---
@@ -352,7 +363,14 @@ export default function AdminDashboard() {
         title: 'Nexus Dashboard', 
         headerShown: true,
         headerRight: () => (
-          <TouchableOpacity onPress={() => auth.signOut()} style={{ marginRight: 16 }}>
+          <TouchableOpacity 
+            onPress={async () => {
+              await auth.signOut();
+              router.replace('/auth');
+            }} 
+            style={{ marginRight: 16 }}
+            testID="admin-logout-button"
+          >
              <Ionicons name="log-out-outline" size={24} color={Colors.primary} />
           </TouchableOpacity>
         )

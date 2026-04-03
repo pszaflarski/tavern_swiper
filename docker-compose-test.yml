@@ -6,6 +6,8 @@ services:
       - "8001:8001"
     environment:
       - FIRESTORE_DATABASE_ID=auth-test
+      - USERS_DATABASE_ID=users-test
+      - FIREBASE_WEB_API_KEY=AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:
@@ -25,6 +27,7 @@ services:
       - "8002:8002"
     environment:
       - FIRESTORE_DATABASE_ID=profiles-test
+      - GCS_BUCKET_NAME=tavern-swiper-dev-media
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:
@@ -112,6 +115,7 @@ services:
       - "8006:8006"
     environment:
       - FIRESTORE_DATABASE_ID=users-test
+      - GCS_BUCKET_NAME=tavern-swiper-dev-media
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:

@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'jest-expo',
   transformIgnorePatterns: [
-    'node_modules/(?!(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|axios|@tanstack/react-query)',
+    'node_modules/(?!(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|axios|@tanstack/react-query|@firebase|firebase)',
   ],
   moduleNameMapper: {
     '^firebase/auth$': '<rootDir>/__mocks__/firebase.ts',
@@ -11,4 +11,5 @@ module.exports = {
   modulePathIgnorePatterns: [
     '<rootDir>/e2e/',
   ],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };

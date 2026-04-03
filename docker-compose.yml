@@ -4,9 +4,12 @@ services:
       context: ./services/auth
     ports:
       - "8001:8001"
-    # Environment variables loaded from services/auth/.env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+    env_file: ./services/auth/.env
     volumes:
-      - ./credentials:/credentials:ro
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     healthcheck:
@@ -20,9 +23,12 @@ services:
       context: ./services/profiles
     ports:
       - "8002:8002"
-    # Environment variables loaded from services/profiles/.env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+    env_file: ./services/profiles/.env
     volumes:
-      - ./credentials:/credentials:ro
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     healthcheck:
@@ -36,9 +42,12 @@ services:
       context: ./services/discovery
     ports:
       - "8003:8003"
-    # Environment variables loaded from services/discovery/.env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+    env_file: ./services/discovery/.env
     volumes:
-      - ./credentials:/credentials:ro
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     depends_on:
@@ -57,9 +66,12 @@ services:
       context: ./services/swipes
     ports:
       - "8004:8004"
-    # Environment variables loaded from services/swipes/.env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+    env_file: ./services/swipes/.env
     volumes:
-      - ./credentials:/credentials:ro
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     healthcheck:
@@ -73,9 +85,12 @@ services:
       context: ./services/messages
     ports:
       - "8005:8005"
-    # Environment variables loaded from services/messages/.env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+    env_file: ./services/messages/.env
     volumes:
-      - ./credentials:/credentials:ro
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     depends_on:
@@ -91,10 +106,12 @@ services:
     build: ./services/users
     ports:
       - "8006:8006"
-    # Environment variables loaded from services/users/.env
-    # Note: GCS_BUCKET_NAME and AUTH_SERVICE_URL are now moved to local .env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+    env_file: ./services/users/.env
     volumes:
-      - ./credentials/service-account.json:/app/credentials/service-account.json:ro
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     healthcheck:

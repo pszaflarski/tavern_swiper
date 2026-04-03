@@ -163,13 +163,13 @@ def test_unauthorized(mock_auth_service):
 
 def test_check_root_admin_exists(mock_firestore):
     # Mock exists
-    mock_firestore.collection().where().limit().stream.return_value = [MagicMock()]
+    mock_firestore.collection().where().stream.return_value = [MagicMock()]
     response = client.get("/users/root-admin-exists")
     assert response.status_code == 200
     assert response.json()["exists"] is True
 
     # Mock not exists
-    mock_firestore.collection().where().limit().stream.return_value = []
+    mock_firestore.collection().where().stream.return_value = []
     response = client.get("/users/root-admin-exists")
     assert response.status_code == 200
     assert response.json()["exists"] is False

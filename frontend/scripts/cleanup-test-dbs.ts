@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Firestore, Query } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -48,8 +49,41 @@ async function deleteQueryBatch(db: Firestore, query: Query, resolve: () => void
   });
 }
 
+async function clearAuthUsers() {
+  const auth = getAuth();
+  console.log('  Checking Firebase Auth for users...');
+  
+  let userRecords = await auth.listUsers(100);
+  let totalDeleted = 0;
+
+  while (userRecords.users.length > 0) {
+    const uids = userRecords.users.map((user) => user.uid);
+    console.log(`    🗑️ Deleting ${uids.length} users from Firebase Auth...`);
+    await auth.deleteUsers(uids);
+    totalDeleted += uids.length;
+    
+    if (userRecords.pageToken) {
+      userRecords = await auth.listUsers(100, userRecords.pageToken);
+    } else {
+      break;
+    }
+  }
+
+  if (totalDeleted === 0) {
+    console.log('    ✅ No users in Firebase Auth');
+  } else {
+    console.log(`    ✅ Successfully deleted ${totalDeleted} users.`);
+  }
+}
+
 async function cleanup() {
   console.log(`\n🧹 Starting cleanup for project: ${PROJECT_ID}`);
+
+  try {
+    await clearAuthUsers();
+  } catch (error: any) {
+    console.error('    ❌ Error cleaning up Firebase Auth:', error.message);
+  }
 
   for (const dbId of DATABASE_IDS) {
     console.log(`  Checking database: ${dbId}...`);
