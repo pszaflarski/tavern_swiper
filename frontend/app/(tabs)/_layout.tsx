@@ -1,29 +1,24 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { Tabs, Redirect } from 'expo-router';
+import { View, ActivityIndicator } from 'react-native';
 import BottomNav, { TabName } from '../../components/BottomNav';
 import { Colors } from '../../theme';
-
 import { useUser } from '../../hooks/useUser';
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
 
 export default function TabsLayout() {
-  const { isAuthenticated, isLoading } = useUser();
-  const router = useRouter();
+  const { isAuthenticated, isLoading, authInitialized } = useUser();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/auth');
-    }
-  }, [isLoading, isAuthenticated]);
-
-  if (isLoading) {
+  if (isLoading || !authInitialized) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
+  }
+
+  if (!isAuthenticated) {
+    console.log('[TABS DEBUG] Not authenticated, redirecting to /auth');
+    return <Redirect href="/auth" />;
   }
 
   return (

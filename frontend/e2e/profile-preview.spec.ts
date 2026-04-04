@@ -17,11 +17,16 @@ test.describe('Profile Preview', () => {
     // Wait for the auth form to render
     await expect(page.getByTestId('auth-submit-button').filter({ visible: true })).toBeVisible({ timeout: 20000 });
 
-    // Switch to Signup if in Login mode using testID for reliable click
-    const signInTitle = page.getByText(/^Sign In$/i).filter({ visible: true }).first();
+    // Switch to Signup if in Login mode using robust check
+    const signInTitle = page.getByText(/^Sign In$/i).first();
+    const signUpTitle = page.getByText(/Begin Your Quest/i).first();
+
+    // Wait for the UI to settle in either state before checking visibility
+    await expect(signInTitle.or(signUpTitle)).toBeVisible({ timeout: 10000 });
+
     if (await signInTitle.isVisible()) {
       await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
-      await expect(page.getByText(/Begin Your Quest/i).filter({ visible: true })).toBeVisible({ timeout: 10000 });
+      await expect(signUpTitle).toBeVisible({ timeout: 10000 });
     }
     
     await page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true }).fill(email);

@@ -35,9 +35,17 @@ export default function AuthScreen() {
 
   // --- Navigation Guards ---
   // If authenticated, drop the user straight into the Tavern tabs.
-  // Declarative redirection is more reliable for strict E2E checks.
-  // CRITICAL: This must be BELOW all hook declarations to avoid rule violations.
-  if (!authLoading && isAuthenticated) {
+  // Using <Redirect /> is more stable for the web and avoids the 
+  // "Attempted to navigate before mounting the Root Layout component" error.
+  if (authLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (isAuthenticated) {
     console.log('[AUTH DEBUG] Declarative Redirection to /(tabs)...');
     return <Redirect href="/(tabs)" />;
   }
@@ -65,16 +73,24 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error(error);
-      let errorMessage = error.message;
+      let errorMessage = error.message || 'An identification error occurred.';
+      
+      // Map specific Firebase Auth error codes to user-friendly messages
       if (error.code === 'auth/wrong-password') {
         errorMessage = 'Wrong password. Please try again.';
-      } else if (error.code === 'auth/user-not-found') {
+      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/user-not-found') {
         errorMessage = 'User not found. Sign up instead?';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
       } else if (error.code === 'auth/weak-password') {
         errorMessage = 'Password should be at least 6 characters.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (errorMessage.toLowerCase().includes('firebase')) {
+        // Obfuscate any direct Firebase SDK messages that leak through
+        errorMessage = 'The authentication service encountered an error. Please try again.';
       }
+      
       setError(errorMessage);
     } finally {
       setLoading(false);

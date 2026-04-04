@@ -57,6 +57,17 @@ for SERVICE in "${SERVICES[@]}"; do
             EXTRA_VARS+=",GCS_BUCKET_NAME=tavern-swiper-dev-media"
         fi
 
+        # Determine resource allocation
+        MEMORY="512Mi"
+        CPU="1"
+        TIMEOUT="60"
+        
+        if [ "$SERVICE" == "auth" ]; then
+            MEMORY="1Gi"
+            CPU="2"
+            TIMEOUT="300"
+        fi
+
         echo "🚀 Deploying ${DEPLOY_NAME} to Cloud Run..."
         
         gcloud run deploy "${DEPLOY_NAME}" \
@@ -65,8 +76,10 @@ for SERVICE in "${SERVICES[@]}"; do
             --region "${REGION}" \
             --service-account "${SERVICE_ACCOUNT}" \
             --set-env-vars "${EXTRA_VARS}" \
-            --memory 512Mi \
-            --cpu 1 \
+            --memory "${MEMORY}" \
+            --cpu "${CPU}" \
+            --timeout "${TIMEOUT}" \
+            --cpu-boost \
             --allow-unauthenticated \
             --project "${PROJECT_ID}" \
             --quiet

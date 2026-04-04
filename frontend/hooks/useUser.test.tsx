@@ -13,6 +13,7 @@ jest.mock('../lib/firebase', () => ({
       email: 'test@example.com',
       getIdToken: jest.fn(() => Promise.resolve('test-token')),
     },
+    authStateReady: jest.fn(() => Promise.resolve()),
   },
 }));
 
@@ -62,7 +63,11 @@ describe('useUser Hook', () => {
 
     const { result } = renderHook(() => useUser(), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    // Wait for the final state where loading is false AND the user is present
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.user).not.toBeNull();
+    }, { timeout: 5000 });
 
     expect(result.current.user?.uid).toBe('test-123');
     expect(result.current.user?.is_premium).toBe(true);
@@ -80,8 +85,11 @@ describe('useUser Hook', () => {
 
     const { result } = renderHook(() => useUser(), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    await waitFor(() => expect(result.current.user?.uid).toBe('test-123'));
+    // Wait for the final state where loading is false AND the user record has been created
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.user?.uid).toBe('test-123');
+    }, { timeout: 10000 });
   });
 });
 

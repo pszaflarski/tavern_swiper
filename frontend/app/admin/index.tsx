@@ -195,7 +195,7 @@ export default function AdminDashboard() {
 
   const handleDeleteUser = async (uid: string, hard: boolean) => {
     const message = hard 
-      ? 'CRITICAL WARNING: This will PERMANENTLY EXTERMINATE this entity from both the Nexus and Firebase Auth. Do you wish to proceed?'
+      ? 'CRITICAL WARNING: This will PERMANENTLY EXTERMINATE this entity from both the Nexus and the identity store. Do you wish to proceed?'
       : 'Do you wish to soft-delete this entity from the Nexus?';
 
     if (Platform.OS === 'web') {

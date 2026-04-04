@@ -31,7 +31,17 @@ test.describe('Nexus Stabilization flows', () => {
     console.log('✅ Security Guard verified: Unauthenticated access to /admin redirected to /auth.');
 
     // 2. Architect Signup
-    await page.getByTestId('auth-toggle-link').filter({ visible: true }).click(); // Switch to Sign Up
+    const signInTitle = page.getByText(/^Sign In$/i).first();
+    const signUpTitle = page.getByText(/Begin Your Quest/i).first();
+
+    // Wait for the UI to settle in either state before checking visibility
+    await expect(signInTitle.or(signUpTitle)).toBeVisible({ timeout: 10000 });
+
+    if (await signInTitle.isVisible()) {
+      await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
+      await expect(signUpTitle).toBeVisible({ timeout: 10000 });
+    }
+
     await page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true }).fill(adminEmail);
     await page.getByPlaceholder('••••••••', { exact: true }).filter({ visible: true }).fill(pwd);
 

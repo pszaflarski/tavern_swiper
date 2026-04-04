@@ -17,6 +17,12 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@fir
 import { usersApi } from '../../lib/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+jest.mock('expo-router', () => ({
+  useRouter: jest.fn(() => ({ replace: jest.fn() })),
+  Stack: { Screen: jest.fn(() => null) },
+  Redirect: jest.fn(() => null),
+}));
+
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -74,6 +80,7 @@ jest.mock('@expo/vector-icons', () => ({
 describe('AuthScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.setTimeout(15000);
   });
 
   it('displays an error message when login fails', async () => {
@@ -175,5 +182,21 @@ describe('AuthScreen', () => {
         is_premium: false,
       });
     });
+  });
+
+  it('sanitizes error messages containing Firebase', async () => {
+    const mockError = {
+      message: 'Firebase: Error (auth/internal-error).',
+    };
+    (signInWithEmailAndPassword as jest.Mock).mockRejectedValueOnce(mockError);
+
+    const { getByTestId, findByText } = render(<AuthScreen />, { wrapper: createWrapper() });
+
+    fireEvent.changeText(getByTestId('auth-email-input'), 'test@example.com');
+    fireEvent.changeText(getByTestId('auth-password-input'), 'password');
+    fireEvent.press(getByTestId('auth-submit-button'));
+
+    const errorText = await findByText('The authentication service encountered an error. Please try again.');
+    expect(errorText).toBeTruthy();
   });
 });

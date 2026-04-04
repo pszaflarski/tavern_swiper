@@ -107,6 +107,7 @@ export function useUser() {
     isLoading: !authInitialized || userQuery.isLoading || registerMutation.isPending || rootExistsQuery.isLoading,
     firebaseUser,
     isAuthenticated: !!firebaseUser,
+    authInitialized,
     rootExists: rootExistsQuery.data ?? true,
   };
 }

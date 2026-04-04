@@ -27,6 +27,7 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   const { isLoading: authLoading } = useUser();
+  const [isMounted, setIsMounted] = React.useState(false);
   const [fontsLoaded, fontError] = useFonts({
     'Manrope': Manrope_400Regular,
     'Manrope-Bold': Manrope_700Bold,
@@ -35,12 +36,16 @@ function RootLayoutNav() {
   });
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  if (authLoading || (!fontsLoaded && !fontError)) {
+  if (authLoading || (!fontsLoaded && !fontError) || !isMounted) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
         <ActivityIndicator size="large" color={Colors.primary} />

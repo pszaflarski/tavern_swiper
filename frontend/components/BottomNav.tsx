@@ -23,7 +23,7 @@ interface BottomNavProps {
 
 export default function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="bottom-nav">
       {TABS.map((tab) => {
         const isActive = activeTab === tab.name;
         return (
