@@ -10,7 +10,7 @@ class DiscoveryProfile(BaseModel):
     tagline: Optional[str] = None
     character_class: Optional[str] = None
     realm: Optional[str] = None
-    image_url: Optional[str] = None
+    image_urls: List[str] = []
     talents: List[str] = []
 
 

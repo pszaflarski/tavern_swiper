@@ -16,7 +16,6 @@ class ProfileCreate(BaseModel):
     realm: Optional[str] = None             # Location / hometown
     talents: List[str] = []                 # Hobbies / Affinity Sigils
     attributes: CoreAttributes = CoreAttributes()
-    image_url: Optional[str] = None
     image_urls: List[str] = []
     gender: Optional[str] = None
     user_id: Optional[str] = None
@@ -30,7 +29,6 @@ class ProfileUpdate(BaseModel):
     realm: Optional[str] = None
     talents: Optional[List[str]] = None
     attributes: Optional[CoreAttributes] = None
-    image_url: Optional[str] = None
     image_urls: Optional[List[str]] = None
     gender: Optional[str] = None
 
@@ -45,6 +43,5 @@ class ProfileOut(BaseModel):
     realm: Optional[str] = None
     talents: List[str] = []
     attributes: CoreAttributes
-    image_url: Optional[str] = None
     image_urls: List[str] = []
     gender: Optional[str] = None

@@ -22,8 +22,8 @@ function MatchItem({ match, activeProfileId }: { match: MatchOut; activeProfileI
   return (
     <View style={styles.matchItem}>
       <View style={styles.matchAvatarContainer}>
-        {profile.image_url ? (
-          <Image source={{ uri: profile.image_url }} style={styles.matchAvatar} />
+        {profile.image_urls && profile.image_urls[0] ? (
+          <Image source={{ uri: profile.image_urls[0] }} style={styles.matchAvatar} />
         ) : (
           <Text style={{ fontSize: 20 }}>🛡️</Text>
         )}

@@ -17,11 +17,17 @@ DATABASES = [
 
 # Map database IDs to their expected collection names
 DB_COLLECTIONS = {
-    "auth-test": [], # Auth uses the auth SDK
+    "auth": [],
+    "auth-test": [],
+    "profiles": ["profiles"],
     "profiles-test": ["profiles"],
-    "discovery-test": ["discovery"], # Or whatever it is
+    "discovery": ["discovery"],
+    "discovery-test": ["discovery"],
+    "swipes": ["swipes", "matches"],
     "swipes-test": ["swipes", "matches"],
+    "messages": ["messages"],
     "messages-test": ["messages"],
+    "users": ["users"],
     "users-test": ["users"]
 }
 

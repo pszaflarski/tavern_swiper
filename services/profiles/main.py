@@ -47,10 +47,35 @@ def _doc_to_profile(doc) -> ProfileOut:
         realm=d.get("realm"),
         talents=d.get("talents", []),
         attributes=CoreAttributes(**attrs),
-        image_url=d.get("image_url"),
         image_urls=d.get("image_urls", []),
         gender=d.get("gender"),
     )
+
+
+def _validate_data_for_firestore(data: any, path: str = ""):
+    """
+    Recursively ensures the data structure is 'simple' (no massive strings, 
+    massive arrays, or complex nested types) to prevent Firestore document 
+    size limits from being reached.
+    """
+    MAX_STRING_LENGTH = 15360  # 15KB: comfortably larger than any reasonable bio/tagline, but too small for base64 images
+    MAX_ARRAY_LENGTH = 100      # Prevents 'vector' or massive list explosion
+    
+    if isinstance(data, dict):
+        for k, v in data.items():
+            _validate_data_for_firestore(v, f"{path}.{k}" if path else k)
+    elif isinstance(data, list):
+        if len(data) > MAX_ARRAY_LENGTH:
+            raise HTTPException(status_code=400, detail=f"Array at path '{path}' is too large ({len(data)} items). Max is {MAX_ARRAY_LENGTH}.")
+        for i, item in enumerate(data):
+            _validate_data_for_firestore(item, f"{path}[{i}]")
+    elif isinstance(data, str):
+        if len(data) > MAX_STRING_LENGTH:
+            raise HTTPException(status_code=400, detail=f"String at path '{path}' is too long ({len(data)} chars). Max is {MAX_STRING_LENGTH}. (Likely unintended base64 image data).")
+    elif isinstance(data, (int, float, bool)) or data is None:
+        pass
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported data type '{type(data).__name__}' at path '{path}'. Simple types only.")
 
 
 @app.get("/profiles/health")
@@ -81,6 +106,10 @@ async def create_profile(body: ProfileCreate, auth_data: tuple[str, str, str] = 
     data = body.model_dump()
     data["user_id"] = target_uid
     data["attributes"] = body.attributes.model_dump()
+    
+    # Safety Validation: Ensure no massive strings or vectors are being sent
+    _validate_data_for_firestore(data)
+    
     db.collection(COLLECTION).document(profile_id).set(data)
     doc = db.collection(COLLECTION).document(profile_id).get()
     return _doc_to_profile(doc)
@@ -124,6 +153,10 @@ async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
     if "attributes" in updates and updates["attributes"]:
         updates["attributes"] = body.attributes.model_dump()
+    
+    # Safety Validation: Ensure no massive strings or vectors are being sent
+    _validate_data_for_firestore(updates)
+    
     ref.update(updates)
     return _doc_to_profile(ref.get())
 
@@ -160,8 +193,10 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     bucket = client.bucket(GCS_BUCKET)
     blob_name = f"profiles/{profile_id}/{index}_{file.filename}"
     blob = bucket.blob(blob_name)
-    contents = await file.read()
-    blob.upload_from_string(contents, content_type=file.content_type)
+    
+    # Seek to the beginning and upload directly from the stream
+    await file.seek(0)
+    blob.upload_from_file(file.file, content_type=file.content_type)
     blob.make_public()
 
     profile_dict = doc.to_dict()
@@ -172,8 +207,6 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     image_urls[index] = blob.public_url
 
     updates = {"image_urls": image_urls}
-    if index == 0:
-        updates["image_url"] = blob.public_url
     
     ref.update(updates)
     return _doc_to_profile(ref.get())

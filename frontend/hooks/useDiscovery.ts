@@ -7,7 +7,7 @@ interface DiscoveryProfile {
   tagline?: string;
   character_class?: string;
   realm?: string;
-  image_url?: string;
+  image_urls: string[];
   talents: string[];
 }
 

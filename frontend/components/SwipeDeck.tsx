@@ -30,7 +30,7 @@ export interface SwipeProfile {
   tagline?: string;
   character_class?: string;
   realm?: string;
-  image_url?: string;
+  image_urls: string[];
   talents: string[];
 }
 
@@ -100,8 +100,8 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.card, animatedStyle]}>
         {/* Profile image */}
-        {profile.image_url ? (
-          <Image source={{ uri: profile.image_url }} style={styles.image} />
+        {profile.image_urls && profile.image_urls[0] ? (
+          <Image source={{ uri: profile.image_urls[0] }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Text style={styles.imagePlaceholderText}>⚔️</Text>

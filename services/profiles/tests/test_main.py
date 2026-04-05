@@ -66,7 +66,6 @@ def test_create_profile(mock_firestore, mock_auth_service):
         "realm": "Aethelgard",
         "talents": ["Smite", "Lay on Hands"],
         "attributes": {"strength": 18, "dexterity": 12, "intelligence": 10, "wisdom": 14, "charisma": 16},
-        "image_url": None
     }
     mock_doc.exists = True
 
@@ -120,7 +119,7 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_servic
         mock_doc = MagicMock()
         mock_doc.id = "test-id"
         mock_doc.exists = True
-        mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_url": "http://gcs.com/img.png"}
+        mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_urls": ["http://gcs.com/img.png"]}
         mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
         
         # Mock Storage
@@ -137,4 +136,37 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_servic
         )
         
         assert response.status_code == 200
-        assert response.json()["image_url"] == "http://gcs.com/img.png"
+        assert "http://gcs.com/img.png" in response.json()["image_urls"]
+
+
+def test_create_profile_validation_error_string_length(mock_firestore, mock_auth_service):
+    # Mock auth response to bypass dependency
+    headers = {"Authorization": "Bearer fake-token"}
+    
+    # Payload with a very long string (over 15KB)
+    long_string = "A" * 16000
+    payload = {
+        "display_name": "Too Long",
+        "bio": long_string,
+        "attributes": {"strength": 10, "charisma": 10, "spark": 10}
+    }
+    
+    response = client.post("/profiles/", json=payload, headers=headers)
+    assert response.status_code == 400
+    assert "is too long" in response.json()["detail"]
+
+
+def test_create_profile_validation_error_array_length(mock_firestore, mock_auth_service):
+    headers = {"Authorization": "Bearer fake-token"}
+    
+    # Payload with too many talents (over 100)
+    many_talents = ["talent"] * 101
+    payload = {
+        "display_name": "Too Many Talents",
+        "talents": many_talents,
+        "attributes": {"strength": 10, "charisma": 10, "spark": 10}
+    }
+    
+    response = client.post("/profiles/", json=payload, headers=headers)
+    assert response.status_code == 400
+    assert "is too large" in response.json()["detail"]

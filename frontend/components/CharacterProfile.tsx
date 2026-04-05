@@ -25,7 +25,7 @@ export interface CharacterProfileData {
   realm?: string;
   talents: string[];
   attributes: CoreAttributes;
-  image_url?: string;
+  image_urls: string[];
   gender?: string;
 }
 
@@ -76,8 +76,8 @@ export default function CharacterProfile({
     >
       {/* Hero section — asymmetric image offset */}
       <View style={styles.heroSection}>
-        {profile.image_url ? (
-          <Image source={{ uri: profile.image_url }} style={styles.heroImage} />
+        {profile.image_urls && profile.image_urls[0] ? (
+          <Image source={{ uri: profile.image_urls[0] }} style={styles.heroImage} />
         ) : (
           <View style={styles.heroImagePlaceholder}>
             <Text style={styles.heroPlaceholderEmoji}>⚔️</Text>

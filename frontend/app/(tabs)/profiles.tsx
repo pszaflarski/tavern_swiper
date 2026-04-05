@@ -41,7 +41,6 @@ export default function ProfilesScreen() {
     display_name: '',
     bio: '',
     gender: '',
-    image_url: '',
     image_urls: [] as string[],
     tagline: 'A new hero arises.',
     character_class: 'Adventurer',
@@ -64,7 +63,6 @@ export default function ProfilesScreen() {
       display_name: '',
       bio: '',
       gender: '',
-      image_url: '',
       image_urls: [],
       tagline: 'A new hero arises.',
       character_class: 'Adventurer',
@@ -83,7 +81,6 @@ export default function ProfilesScreen() {
       display_name: profile.display_name,
       bio: profile.bio || '',
       gender: profile.gender || '',
-      image_url: profile.image_url || '',
       image_urls: profile.image_urls || [],
       tagline: profile.tagline || '',
       character_class: profile.character_class || '',
@@ -110,10 +107,7 @@ export default function ProfilesScreen() {
         while (newUrls.length <= index) newUrls.push('');
         newUrls[index] = result.assets[0].uri;
         
-        // If it's the first image, also update the primary image_url
-        if (index === 0) {
-          return { ...prev, image_url: result.assets[0].uri, image_urls: newUrls };
-        }
+        newUrls[index] = result.assets[0].uri;
         return { ...prev, image_urls: newUrls };
       });
     }
@@ -126,12 +120,12 @@ export default function ProfilesScreen() {
 
     try {
       let currentProfileId = '';
-      const isLocalImage = !!formData.image_url && !formData.image_url.startsWith('http');
+      const isLocalImage = formData.image_urls.length > 0 && !!formData.image_urls[0] && !formData.image_urls[0].startsWith('http');
 
       if (mode === 'create') {
         const profileData = {
           ...formData,
-          image_url: '',
+          image_urls: [], // Only allow URLs from GCS; strip local URIs before create
           talents: formData.talents.split(',').map(s => s.trim()).filter(s => s !== ''),
           attributes: { 
             strength: Number(formData.strength), 
@@ -145,6 +139,8 @@ export default function ProfilesScreen() {
         currentProfileId = editingProfile.profile_id;
         const updateData = { 
           ...formData,
+          // Only keep existing remote URLs in the metadata update
+          image_urls: (formData.image_urls || []).filter(url => url.startsWith('http')),
           talents: formData.talents.split(',').map(s => s.trim()).filter(s => s !== ''),
           attributes: { 
             strength: Number(formData.strength), 
@@ -152,7 +148,6 @@ export default function ProfilesScreen() {
             spark: Number(formData.spark) 
           },
         };
-        if (isLocalImage) updateData.image_url = editingProfile.image_url || '';
 
         await updateProfile.mutateAsync({
           profileId: currentProfileId,
@@ -172,20 +167,6 @@ export default function ProfilesScreen() {
         return Promise.resolve();
       });
       
-      // Also check the primary image_url if it was set explicitly (backward compatibility)
-      if (formData.image_url && !formData.image_url.startsWith('http')) {
-        const alreadyUploadingFirst = formData.image_urls[0] === formData.image_url;
-        if (!alreadyUploadingFirst) {
-          uploadPromises.push(
-            uploadProfileImage.mutateAsync({
-              profileId: currentProfileId,
-              uri: formData.image_url,
-              index: 0,
-            }) as any
-          );
-        }
-      }
-
       await Promise.all(uploadPromises);
 
       // If we just created the first profile, or if there is no active profile, select this one
@@ -216,8 +197,8 @@ export default function ProfilesScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.profileCardImageContainer}>
-            {item.image_url ? (
-              <Image source={{ uri: item.image_url }} style={styles.profileCardImage} />
+            {item.image_urls && item.image_urls[0] ? (
+              <Image source={{ uri: item.image_urls[0] }} style={styles.profileCardImage} />
             ) : (
               <Text style={{ fontSize: 24 }}>🛡️</Text>
             )}
@@ -513,7 +494,7 @@ export default function ProfilesScreen() {
                   tagline: formData.tagline,
                   character_class: formData.character_class,
                   realm: formData.realm,
-                  image_url: formData.image_url || (formData.image_urls.length > 0 ? formData.image_urls[0] : ''),
+                  image_urls: formData.image_urls.filter(url => !!url),
                   talents: formData.talents.split(',').map(s => s.trim()).filter(s => s !== ''),
                 }}
                 isTop={true}

@@ -18,8 +18,7 @@ export interface Profile {
   realm?: string;
   talents: string[];
   attributes: CoreAttributes;
-  image_url?: string;
-  image_urls?: string[];
+  image_urls: string[];
   gender?: string;
 }
 
