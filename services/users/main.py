@@ -188,8 +188,13 @@ async def create_user(body: UserCreate, auth_data: tuple[str, str, str] = Depend
     print(f"[DEBUG] create_user: Received body: {body.model_dump()}")
     # 1. Handle Root Admin Initialization (Singleton)
     if body.user_type == UserType.ROOT_ADMIN:
-        query = db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).limit(1).stream()
+        query = list(db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).limit(1).stream())
         if any(query):
+            existing_root = query[0]
+            # If the caller is ALREADY the root admin, allow the call to return 200 (idempotency)
+            if existing_root.id == caller_uid:
+                print(f"[DEBUG] create_user: Caller {caller_uid} is already the root admin. Returning early.")
+                return UserOut(uid=caller_uid, **existing_root.to_dict())
             raise HTTPException(status_code=400, detail="A root admin already exists.")
         target_uid = caller_uid
 

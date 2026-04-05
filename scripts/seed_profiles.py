@@ -8,6 +8,7 @@ SEEDER_EMAIL = "peter@gmail.com"
 SEEDER_PASSWORD = "Password123!"
 
 # --- Configuration ---
+# Targets the test environment by default
 AUTH_URL = "https://auth-test-hhqol7siba-uc.a.run.app"
 PROFILES_URL = "https://profiles-test-hhqol7siba-uc.a.run.app"
 USERS_URL = "https://users-test-hhqol7siba-uc.a.run.app"
@@ -31,6 +32,23 @@ def get_token(email, password):
     
     raise Exception(f"Failed to auth {email}.\n  Login Error: {login_resp.text}\n  Register Error: {reg_resp.text}")
 
+def wait_for_root_admin(token):
+    """Poll the Auth service until the seeder's role is correctly reported as root_admin."""
+    print("⏳ Waiting for root_admin role to propagate...")
+    max_retries = 15
+    for i in range(max_retries):
+        resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": token})
+        if resp.status_code == 200:
+            role = resp.json().get("role")
+            if role == "root_admin":
+                print(f"  ✅ Role confirmed: {role}")
+                return True
+            print(f"  ... role is still '{role}' (retry {i+1}/{max_retries})")
+        else:
+            print(f"  ... verify failed: {resp.status_code} (retry {i+1}/{max_retries})")
+        time.sleep(2)
+    return False
+
 def seed_system():
     # 1. Login as primary seeder
     print(f"Authenticating primary seeder: {SEEDER_EMAIL}...")
@@ -44,10 +62,13 @@ def seed_system():
         "user_type": "root_admin",
         "is_premium": True
     }
-    # This will succeed if the DB is empty (singleton check in Users service) or return 200/201 if already exists
     b_resp = requests.post(f"{USERS_URL}/users/", json=bootstrap_data, headers=seeder_headers)
     if b_resp.status_code not in [200, 201]:
         print(f"Note: Seeder bootstrap status: {b_resp.status_code} ({b_resp.text})")
+
+    # 1c. Poll for role propagation
+    if not wait_for_root_admin(seeder_token):
+         print("❌ Error: Root admin role did not propagate in time. Seeding may fail.")
 
     # 2. Read CSV
     print(f"Reading {CSV_PATH}...")
@@ -69,9 +90,13 @@ def seed_system():
                 "user_type": row["user_role"],
                 "is_premium": True
             }
-            u_resp = requests.post(f"{USERS_URL}/users/", json=user_data, headers=seeder_headers)
-            if u_resp.status_code not in [201, 200]:
-                print(f"Warning: Could not set user record/role for {email}: {u_resp.text}")
+            # Idempotency: skip seeder as he's already handled
+            if email == SEEDER_EMAIL:
+                print(f"  (Skipping {email} setup - already bootstrapped)")
+            else:
+                u_resp = requests.post(f"{USERS_URL}/users/", json=user_data, headers=seeder_headers)
+                if u_resp.status_code not in [201, 200]:
+                    print(f"Warning: Could not set user record/role for {email}: {u_resp.text}")
             
             user_map[email] = {"uid": uid, "token": token, "role": row["user_role"]}
 

@@ -219,17 +219,34 @@ async def delete_all_profiles(auth_data: tuple[str, str, str] = Depends(get_curr
     if role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Admin or Root Admin authorization required")
     
-    # Batch delete
+    # 1. Clear GCS media (profiles/ prefix)
+    if GCS_BUCKET:
+        try:
+            client = storage.Client()
+            bucket = client.bucket(GCS_BUCKET)
+            # Fetch all blobs first
+            blobs = list(bucket.list_blobs(prefix="profiles/"))
+            if blobs:
+                # Use batch delete for performance (up to 1000 per call, bucket.delete_blobs handles this)
+                bucket.delete_blobs(blobs)
+            print(f"[DEBUG] GCS: Cleared {len(blobs)} blobs in profiles/ prefix")
+        except Exception as e:
+            print(f"[WARNING] GCS: Failed to clear media: {e}")
+
+    # 2. Batch delete Firestore profiles
     batch_size = 500
+    total_deleted = 0
     while True:
-        docs = db.collection(COLLECTION).limit(batch_size).stream()
+        docs = list(db.collection(COLLECTION).limit(batch_size).stream())
         deleted = 0
         batch = db.batch()
         for doc in docs:
             batch.delete(doc.reference)
             deleted += 1
+            total_deleted += 1
         
         if deleted == 0:
             break
         
         batch.commit()
+    print(f"[DEBUG] Firestore: Cleared {total_deleted} profiles")
