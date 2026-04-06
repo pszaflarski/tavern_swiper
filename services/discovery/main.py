@@ -41,7 +41,7 @@ async def health():
 
 
 @app.get("/discovery/feed/{profile_id}", response_model=FeedResponse)
-async def get_feed(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+async def get_feed(profile_id: str, limit: int = 10, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Fetch a deck of candidate profiles to swipe on.
     
     Strategy:
@@ -79,7 +79,9 @@ async def get_feed(profile_id: str, auth_data: tuple[str, str, str] = Depends(ge
 
         # 2. All profiles (via discovery endpoint)
         try:
-            profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/discovery", headers=headers)
+            # We fetch a bit more than the limit from Profiles to account for local filtering
+            # But the user asked to put a limit on both, so I'll respect the param.
+            profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/discovery?limit={limit + 5}", headers=headers)
             profiles_resp.raise_for_status()
             all_profiles = profiles_resp.json()
         except httpx.HTTPError:
@@ -92,6 +94,6 @@ async def get_feed(profile_id: str, auth_data: tuple[str, str, str] = Depends(ge
         DiscoveryProfile(**p)
         for p in all_profiles
         if p["profile_id"] != profile_id and p["profile_id"] not in already_swiped
-    ][:FEED_LIMIT]
+    ][:limit]
 
     return FeedResponse(profiles=candidates)

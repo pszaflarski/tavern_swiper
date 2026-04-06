@@ -247,3 +247,31 @@ async def test_root_singleton_enforcement(auth_token):
         # Should fail with 400 "A root admin already exists"
         assert user_resp.status_code == 400, f"Expected 400, got {user_resp.status_code}. Data: {user_resp.text}"
         assert "root admin already exists" in user_resp.text.lower()
+
+@pytest.mark.asyncio
+async def test_discovery_feed_limit():
+    """Verify the 'limit' query parameter on the discovery feed."""
+    email = f"limit-user-{uuid.uuid4().hex[:8]}@example.com"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # 1. Setup User & Profile
+        reg_resp = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
+        id_token = reg_resp.json()["id_token"]
+        v_resp = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
+        token = v_resp.json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+        p_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Limit Tester"})
+        profile_id = p_resp.json()["profile_id"]
+
+        # 2. Test Limit = 1
+        feed_1 = await client.get(f"{DISCOVERY_URL}/discovery/feed/{profile_id}?limit=1", headers=headers)
+        assert feed_1.status_code == 200
+        assert len(feed_1.json()["profiles"]) <= 1
+
+        # 3. Test Limit = 5
+        feed_5 = await client.get(f"{DISCOVERY_URL}/discovery/feed/{profile_id}?limit=5", headers=headers)
+        assert feed_5.status_code == 200
+        assert len(feed_5.json()["profiles"]) <= 5
+        
+        print(f"\nSuccessfully verified discovery limit for {profile_id}")

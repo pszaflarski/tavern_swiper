@@ -98,10 +98,10 @@ async def health():
 
 
 @app.get("/profiles/discovery", response_model=list[ProfileOut])
-async def discovery_list_profiles(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+async def discovery_list_profiles(limit: int = 10, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Public endpoint for Discovery service to find candidates. Accessible to all logged-in users."""
     _, _, _ = auth_data
-    docs = db.collection(COLLECTION).stream()
+    docs = db.collection(COLLECTION).limit(limit).stream()
     return [_doc_to_profile(doc) for doc in docs]
 
 
