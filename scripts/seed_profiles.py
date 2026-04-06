@@ -9,9 +9,10 @@ SEEDER_PASSWORD = "Password123!"
 
 # --- Configuration ---
 # Targets the test environment by default
-AUTH_URL = "https://auth-test-hhqol7siba-uc.a.run.app"
-PROFILES_URL = "https://profiles-test-hhqol7siba-uc.a.run.app"
-USERS_URL = "https://users-test-hhqol7siba-uc.a.run.app"
+# Targets the local services by default (which connect to the cloud DB)
+AUTH_URL = os.getenv("AUTH_URL", "http://localhost:8001")
+PROFILES_URL = os.getenv("PROFILES_URL", "http://localhost:8002")
+USERS_URL = os.getenv("USERS_URL", "http://localhost:8006")
 
 # Standardize paths to be absolute relative to the project root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -110,11 +111,8 @@ def seed_system():
             "display_name": row["name"],
             "bio": row["bio"],
             "gender": row["gender"],
-            "character_class": "Adventurer",
-            "realm": "Sample",
-            "talents": [],
-            "attributes": {"strength": 10, "charisma": 10, "spark": 10},
-            "user_id": target_uid # Administrative override!
+            "user_id": target_uid, # Administrative override!
+            "is_active": True
         }
         
         resp = requests.post(f"{PROFILES_URL}/profiles/", json=profile_data, headers=seeder_headers)

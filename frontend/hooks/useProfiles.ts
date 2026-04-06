@@ -1,24 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profilesApi } from '../lib/api';
 
-export interface CoreAttributes {
-  strength: number;
-  charisma: number;
-  spark: number;
-}
-
 export interface Profile {
   profile_id: string;
   user_id: string;
   display_name: string;
   tagline?: string;
   bio?: string;
-  character_class?: string;
-  realm?: string;
-  talents: string[];
-  attributes: CoreAttributes;
   image_urls: string[];
   gender?: string;
+  is_active: boolean;
 }
 
 /**
@@ -48,5 +39,22 @@ export function useProfiles(userId: string | undefined) {
       return res.data;
     },
     enabled: !!userId,
+  });
+}
+
+/**
+ * Update a profile.
+ */
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ profileId, data }: { profileId: string; data: Partial<Profile> }) => {
+      const res = await profilesApi.put(`/profiles/${profileId}`, data);
+      return res.data;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate both 'all' and user-specific profiles to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
   });
 }

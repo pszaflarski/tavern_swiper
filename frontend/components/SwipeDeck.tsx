@@ -27,11 +27,8 @@ const ROTATION_FACTOR = 15;
 export interface SwipeProfile {
   profile_id: string;
   display_name: string;
-  tagline?: string;
-  character_class?: string;
-  realm?: string;
+  bio?: string;
   image_urls: string[];
-  talents: string[];
 }
 
 interface SwipeCardProps {
@@ -118,20 +115,8 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
 
         <View style={styles.info}>
           <Text style={styles.name} testID="profile-card-name">{profile.display_name}</Text>
-          {profile.character_class && (
-            <Text style={styles.characterClass}>{profile.character_class}</Text>
-          )}
-          {profile.tagline && (
-            <Text style={styles.tagline}>{profile.tagline}</Text>
-          )}
-          {profile.talents && profile.talents.length > 0 && (
-            <View style={styles.talentsRow}>
-              {profile.talents.slice(0, 3).map((t) => (
-                <View key={t} style={styles.sigil}>
-                  <Text style={styles.sigilText}>{t}</Text>
-                </View>
-              ))}
-            </View>
+          {profile.bio && (
+            <Text style={styles.tagline}>{profile.bio}</Text>
           )}
         </View>
       </Animated.View>

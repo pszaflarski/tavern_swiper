@@ -8,21 +8,21 @@ def cleanup_test_databases():
     project = "tavern-swiper-dev"
     databases = ["users-test", "profiles-test", "auth-test", "swipes-test", "messages-test", "discovery-test"]
     
-    def wipe():
-        print(f"\n🧹 Wiping test databases ({project})...")
-        for db_id in databases:
-            try:
-                db = firestore.Client(project=project, database=db_id)
-                collections = db.collections()
-                for coll in collections:
-                    _delete_collection(coll, 500)
-                print(f"  ✅ {db_id} cleaned.")
-            except Exception as e:
-                print(f"  ⚠️ Could not clean {db_id}: {e}")
+    # def wipe():
+    #     print(f"\n🧹 Wiping test databases ({project})...")
+    #     for db_id in databases:
+    #         try:
+    #             db = firestore.Client(project=project, database=db_id)
+    #             collections = db.collections()
+    #             for coll in collections:
+    #                 _delete_collection(coll, 500)
+    #             print(f"  ✅ {db_id} cleaned.")
+    #         except Exception as e:
+    #             print(f"  ⚠️ Could not clean {db_id}: {e}")
 
-    wipe()  # Before session
+    # wipe()  # Before session
     yield
-    wipe()  # After session
+    # wipe()  # After session
 
 def _delete_collection(coll_ref, batch_size):
     """Helper to delete a collection in batches."""

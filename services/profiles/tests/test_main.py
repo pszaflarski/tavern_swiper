@@ -156,8 +156,7 @@ def test_create_profile_validation_error_string_length(mock_firestore, mock_auth
     long_string = "A" * 16000
     payload = {
         "display_name": "Too Long",
-        "bio": long_string,
-        "attributes": {"strength": 10, "charisma": 10, "spark": 10}
+        "bio": long_string
     }
     
     response = client.post("/profiles/", json=payload, headers=headers)
@@ -168,14 +167,47 @@ def test_create_profile_validation_error_string_length(mock_firestore, mock_auth
 def test_create_profile_validation_error_array_length(mock_firestore, mock_auth_service):
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     
-    # Payload with too many talents (over 100)
-    many_talents = ["talent"] * 101
+    # Payload with too many image_urls (over 100)
+    many_images = ["http://img.com/a.png"] * 101
     payload = {
-        "display_name": "Too Many Talents",
-        "talents": many_talents,
-        "attributes": {"strength": 10, "charisma": 10, "spark": 10}
+        "display_name": "Too Many Images",
+        "image_urls": many_images
     }
     
     response = client.post("/profiles/", json=payload, headers=headers)
     assert response.status_code == 400
     assert "is too large" in response.json()["detail"]
+
+
+def test_list_all_profiles_admin_only(mock_firestore):
+    # Test standard user (should be 403)
+    standard_token = sign_test_token(uid="standard-user", role="user")
+    headers = {"Authorization": f"Bearer {standard_token}"}
+    response = client.get("/profiles/all", headers=headers)
+    assert response.status_code == 403
+    assert "Admin or Root Admin authorization required" in response.json()["detail"]
+
+    # Test admin user (should be 200)
+    admin_token = sign_test_token(uid="admin-user", role="admin")
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    mock_firestore.collection.return_value.stream.return_value = []
+    response = client.get("/profiles/all", headers=headers)
+    assert response.status_code == 200
+
+
+def test_list_profiles_for_user_public(mock_firestore, mock_profile_data):
+    # Any logged in user should be able to see profiles for another user
+    caller_token = sign_test_token(uid="another-user", role="user")
+    headers = {"Authorization": f"Bearer {caller_token}"}
+    
+    mock_doc = MagicMock()
+    mock_doc.id = "p1"
+    mock_doc.to_dict.return_value = mock_profile_data
+    mock_firestore.collection.return_value.where.return_value.stream.return_value = [mock_doc]
+    
+    response = client.get("/profiles/user/someone-else", headers=headers)
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["display_name"] == "Gimli"
+
+

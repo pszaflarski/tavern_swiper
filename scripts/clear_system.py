@@ -1,71 +1,94 @@
-import requests
-import os
-import time
+import sys
+import subprocess
+import firebase_admin
+from firebase_admin import auth, credentials
+from google.cloud import firestore
+from google.oauth2.credentials import Credentials
 
 # --- Configuration ---
-# Targets the test environment by default
-AUTH_URL = "https://auth-test-hhqol7siba-uc.a.run.app"
-USERS_URL = "https://users-test-hhqol7siba-uc.a.run.app"
-PROFILES_URL = "https://profiles-test-hhqol7siba-uc.a.run.app"
-DISCOVERY_URL = "https://discovery-test-hhqol7siba-uc.a.run.app"
-SWIPES_URL = "https://swipes-test-hhqol7siba-uc.a.run.app"
-MESSAGES_URL = "https://messages-test-hhqol7siba-uc.a.run.app"
+PROJECT_ID = "tavern-swiper-dev"
+SERVICES = ["users", "profiles", "auth", "swipes", "messages", "discovery"]
 
-SEEDER_EMAIL = "peter@gmail.com"
-SEEDER_PASSWORD = "Password123!"
+def get_gcloud_credentials():
+    """Helper to fetch credentials from gcloud if Application Default Credentials are missing/broken."""
+    try:
+        # Try to get the active account's access token
+        token = subprocess.check_output(["gcloud", "auth", "print-access-token"]).decode("utf-8").strip()
+        return Credentials(token)
+    except Exception as e:
+        print(f"⚠️ Warning: Could not fetch gcloud token: {e}")
+        return None
 
-def get_token(email, password):
-    """Login or Register to get a token."""
-    resp = requests.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": password})
-    if resp.status_code == 200:
-        return resp.json()["id_token"]
+def delete_collection(coll_ref, batch_size=500):
+    """Helper to recursively delete a Firestore collection in batches."""
+    docs = coll_ref.limit(batch_size).stream()
+    deleted = 0
+
+    for doc in docs:
+        # Delete sub-collections recursively if any (standard practice for a deep clean)
+        # Note: In our current schema, we don't have deep sub-collections, but this is robust.
+        for sub_coll in doc.reference.collections():
+            delete_collection(sub_coll, batch_size)
+        
+        doc.reference.delete()
+        deleted += 1
+
+    if deleted >= batch_size:
+        return delete_collection(coll_ref, batch_size)
+
+def purge_system(env="dev"):
+    print(f"🚀 Starting Direct Firestore Purge for environment: {env}\n")
+    suffix = "-test" if env == "test" else ""
     
-    resp = requests.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
-    if resp.status_code == 200:
-        return resp.json()["id_token"]
+    # 1. Initialize Credentials
+    g_creds = get_gcloud_credentials()
     
-    raise Exception(f"Failed to auth: {resp.text}")
+    # 2. Clear Firestore Databases
+    for service in SERVICES:
+        db_id = f"{service}{suffix}"
+        print(f"🗑️ Clearing Firestore Database: {db_id}...")
+        try:
+            # Use explicit credentials from gcloud to avoid ADC permission issues
+            db = firestore.Client(project=PROJECT_ID, database=db_id, credentials=g_creds)
+            collections = db.collections()
+            count = 0
+            for coll in collections:
+                delete_collection(coll)
+                count += 1
+            print(f"  ✅ {db_id} cleared ({count} collections).")
+        except Exception as e:
+            print(f"  ❌ Error clearing {db_id}: {e}")
 
-def purge_system():
-    print(f"🚀 Starting API-Based System Purge for {SEEDER_EMAIL}\n")
+    # 3. Clear Firebase Auth (Standard for the whole project)
+    print("\n🔥 Purging Firebase Auth Users...")
+    try:
+        # Initialize Firebase Admin if not already
+        if not firebase_admin._apps:
+            # We use the same gcloud credentials for Firebase Admin
+            # Note: firebase_admin usually needs a service account for full auth control,
+            # but for bulk-deleting users, an authorized user token might work depending on roles.
+            try:
+                firebase_admin.initialize_app()
+            except Exception:
+                # Fallback if ADC is broken
+                pass
 
-    # 1. Get Seeder Token
-    token = get_token(SEEDER_EMAIL, SEEDER_PASSWORD)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    # 2. Bootstrap Root Admin
-    print("Ensuring Root Admin status...")
-    bootstrap_data = {"email": SEEDER_EMAIL, "user_type": "root_admin", "is_premium": True}
-    requests.post(f"{USERS_URL}/users/", json=bootstrap_data, headers=headers)
-    
-    # Simple wait for propagation
-    time.sleep(2)
-
-    # 3. Purge Services in Order
-    services = [
-        ("MESSAGES", MESSAGES_URL, "/messages/"),
-        ("SWIPES", SWIPES_URL, "/swipes/"),
-        ("PROFILES", PROFILES_URL, "/profiles/"),
-        ("USERS", USERS_URL, "/users/"),
-    ]
-
-    for name, url, path in services:
-        print(f"🗑️ Purging {name}...")
-        resp = requests.delete(f"{url}{path}", headers=headers)
-        if resp.status_code == 204:
-            print(f"  ✅ {name} cleared.")
+        # Fetch and delete users in batches
+        users = auth.list_users().iterate_all()
+        uids = [user.uid for user in users]
+        if uids:
+            auth.delete_users(uids)
+            print(f"  ✅ {len(uids)} users deleted from Firebase Auth.")
         else:
-            print(f"  ❌ Error purging {name}: {resp.status_code} - {resp.text}")
+            print("  ✅ No users found in Firebase Auth.")
+    except Exception as e:
+        print(f"  ❌ Error purging Firebase Auth: {e}")
 
-    # 4. Final Blow: Purge Auth
-    print("🔥 Final Step: Purging Auth Store...")
-    resp = requests.delete(f"{AUTH_URL}/auth/all", headers=headers)
-    if resp.status_code == 204:
-        print("  ✅ Auth cleared.")
-    else:
-        print(f"  ❌ Error purging Auth: {resp.status_code} - {resp.text}")
-
-    print("\n🏁 API-based system purge complete!")
+    print("\n🏁 Direct system purge complete!")
 
 if __name__ == "__main__":
-    purge_system()
+    target_env = "dev"
+    if len(sys.argv) > 1:
+        target_env = sys.argv[1]
+    
+    purge_system(target_env)

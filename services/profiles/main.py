@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from dotenv import load_dotenv
 
 load_dotenv()
-from models import ProfileCreate, ProfileUpdate, ProfileOut, CoreAttributes
+from models import ProfileCreate, ProfileUpdate, ProfileOut
 from auth_utils import get_current_user
 
 # ---------------------------------------------------------------------------
@@ -42,22 +42,28 @@ app.add_middleware(
 COLLECTION = "profiles"
 
 
+def _deactivate_other_profiles(user_id: str, active_profile_id: str):
+    """Sets is_active=False for all profiles owned by user_id except the specified active_profile_id."""
+    other_active_docs = db.collection(COLLECTION).where("user_id", "==", user_id).where("is_active", "==", True).stream()
+    for doc in other_active_docs:
+        if doc.id != active_profile_id:
+            doc.reference.update({"is_active": False})
+
+
 def _doc_to_profile(doc) -> ProfileOut:
     d = doc.to_dict()
-    attrs = d.get("attributes", {})
     return ProfileOut(
         profile_id=doc.id,
         user_id=d["user_id"],
         display_name=d["display_name"],
         tagline=d.get("tagline"),
         bio=d.get("bio"),
-        character_class=d.get("character_class"),
-        realm=d.get("realm"),
-        talents=d.get("talents", []),
-        attributes=CoreAttributes(**attrs),
         image_urls=d.get("image_urls", []),
         gender=d.get("gender"),
+        is_active=d.get("is_active", False)
     )
+
+
 
 
 def _validate_data_for_firestore(data: any, path: str = ""):
@@ -91,10 +97,21 @@ async def health():
     return {"service": "profiles", "status": "ok"}
 
 
+@app.get("/profiles/discovery", response_model=list[ProfileOut])
+async def discovery_list_profiles(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Public endpoint for Discovery service to find candidates. Accessible to all logged-in users."""
+    _, _, _ = auth_data
+    docs = db.collection(COLLECTION).stream()
+    return [_doc_to_profile(doc) for doc in docs]
+
+
 @app.get("/profiles/all", response_model=list[ProfileOut])
 async def list_all_profiles(auth_data: tuple[str, str, str] = Depends(get_current_user)):
-    """Internal endpoint used by the Discovery service. Now secured with Auth."""
-    _, _, _ = auth_data
+    """Internal endpoint used by the Discovery service. Only accessible to Admins."""
+    uid, role, _ = auth_data
+    if role not in ["admin", "root_admin"]:
+        raise HTTPException(status_code=403, detail="Admin or Root Admin authorization required")
+    
     docs = db.collection(COLLECTION).stream()
     return [_doc_to_profile(doc) for doc in docs]
 
@@ -113,12 +130,16 @@ async def create_profile(body: ProfileCreate, auth_data: tuple[str, str, str] = 
     profile_id = str(uuid.uuid4())
     data = body.model_dump()
     data["user_id"] = target_uid
-    data["attributes"] = body.attributes.model_dump()
     
     # Safety Validation: Ensure no massive strings or vectors are being sent
     _validate_data_for_firestore(data)
     
+    # Ensure new profile is active and others are deactivated
+    data["is_active"] = True
+    
     db.collection(COLLECTION).document(profile_id).set(data)
+    _deactivate_other_profiles(target_uid, profile_id)
+    
     doc = db.collection(COLLECTION).document(profile_id).get()
     return _doc_to_profile(doc)
     
@@ -136,10 +157,8 @@ async def get_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends
 
 @app.get("/profiles/user/{user_id}", response_model=list[ProfileOut])
 async def list_profiles_for_user(user_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
-    """List profiles for a user. Only allows viewing your own profiles (except for admins)."""
+    """List profiles for a specific user. Available to all logged-in users for discovery."""
     uid, role, _ = auth_data
-    if user_id != uid and role not in ["admin", "root_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized to view another user's profiles")
     docs = db.collection(COLLECTION).where("user_id", "==", user_id).stream()
     return [_doc_to_profile(doc) for doc in docs]
 
@@ -159,13 +178,36 @@ async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[
         raise HTTPException(status_code=403, detail="Not authorized to update this profile")
 
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
-    if "attributes" in updates and updates["attributes"]:
-        updates["attributes"] = body.attributes.model_dump()
     
     # Safety Validation: Ensure no massive strings or vectors are being sent
     _validate_data_for_firestore(updates)
     
+    # If we are setting this profile to active, deactivate other profiles for this user
+    if updates.get("is_active"):
+        target_uid = doc.to_dict().get("user_id")
+        _deactivate_other_profiles(target_uid, profile_id)
+    
     ref.update(updates)
+    return _doc_to_profile(ref.get())
+
+
+@app.post("/profiles/{profile_id}/set_active", response_model=ProfileOut)
+async def set_profile_active(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Set a specific profile as the active one for the user."""
+    uid, role, _ = auth_data
+    ref = db.collection(COLLECTION).document(profile_id)
+    doc = ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    profile_data = doc.to_dict()
+    if profile_data.get("user_id") != uid and role not in ["admin", "root_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized to set this profile as active")
+
+    # Update to active and deactivate others
+    ref.update({"is_active": True})
+    _deactivate_other_profiles(profile_data.get("user_id"), profile_id)
+    
     return _doc_to_profile(ref.get())
 
 

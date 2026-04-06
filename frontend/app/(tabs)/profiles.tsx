@@ -42,9 +42,8 @@ export default function ProfilesScreen() {
 
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>{item.display_name}</Text>
-          <Text style={styles.profileClass}>{item.character_class || 'Adventurer'} • {item.realm || 'The Unknown'}</Text>
-          {item.tagline && (
-            <Text style={styles.profileTagline} numberOfLines={1}>"{item.tagline}"</Text>
+          {item.bio && (
+            <Text style={styles.profileTagline} numberOfLines={2}>{item.bio}</Text>
           )}
         </View>
 

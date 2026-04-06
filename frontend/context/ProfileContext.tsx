@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useProfiles } from '../hooks/useProfiles';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useProfiles, useUpdateProfile } from '../hooks/useProfiles';
 import { useUser } from '../hooks/useUser';
 
 interface ProfileContextType {
@@ -12,17 +12,15 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { data: myProfiles } = useProfiles(user?.uid);
-  const [activeProfileId, setActiveProfileIdInternal] = useState<string | undefined>(undefined);
+  const updateProfileMutation = useUpdateProfile();
 
-  // Default to the first profile if none is selected and profiles are loaded
-  useEffect(() => {
-    if (!activeProfileId && myProfiles && myProfiles.length > 0) {
-      setActiveProfileIdInternal(myProfiles[0].profile_id);
-    }
-  }, [myProfiles, activeProfileId]);
+  // Derive activeProfileId from boolean flag on Profile
+  const activeProfileId = React.useMemo(() => {
+    return myProfiles?.find(p => p.is_active)?.profile_id;
+  }, [myProfiles]);
 
   const setActiveProfileId = (id: string) => {
-    setActiveProfileIdInternal(id);
+    updateProfileMutation.mutate({ profileId: id, data: { is_active: true } });
   };
 
   return (

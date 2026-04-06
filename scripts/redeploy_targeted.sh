@@ -6,7 +6,7 @@ PROJECT_ID="tavern-swiper-dev"
 REGION="us-central1"
 SERVICE_ACCOUNT="tavern-swiper-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
-TARGET_SERVICES=("users" "profiles")
+TARGET_SERVICES=("profiles" "discovery")
 ENVIRONMENTS=("dev" "test")
 
 # URLs (Extracted from previous gcloud list)

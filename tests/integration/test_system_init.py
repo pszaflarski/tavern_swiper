@@ -18,18 +18,26 @@ TEST_PASSWORD = "TestPassword123!"
 
 @pytest.fixture(scope="module")
 async def auth_token():
-    """Fixture to register a new user and return their ID token."""
+    """Fixture to register a new user and return their custom Tavern token."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Register via Auth Service
-        register_resp = await client.post(
+        resp = await client.post(
             f"{AUTH_URL}/auth/register",
             json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
         )
-        assert register_resp.status_code == 200, f"Registration failed: {register_resp.text}"
-        data = register_resp.json()
-        token = data["id_token"]
-        uid = data["uid"]
-        return {"token": token, "uid": uid}
+        assert resp.status_code == 200, f"Registration failed: {resp.text}"
+        id_token = resp.json()["id_token"]
+        uid = resp.json()["uid"]
+
+        # 2. Exchange for custom Tavern JWT
+        verify_resp = await client.post(
+            f"{AUTH_URL}/auth/verify",
+            json={"id_token": id_token}
+        )
+        assert verify_resp.status_code == 200, f"Auth verification failed: {verify_resp.text}"
+        tavern_token = verify_resp.json()["token"]
+
+        return {"token": tavern_token, "uid": uid}
 
 @pytest.mark.asyncio
 async def test_root_initialization_flow(auth_token):
@@ -68,14 +76,7 @@ async def test_root_initialization_flow(auth_token):
                 "display_name": "Archmage Root",
                 "tagline": "Guardian of the Tavern",
                 "bio": "The first soul to manifest in this realm.",
-                "character_class": "Archmage",
-                "realm": "Aetheria",
-                "talents": ["Governance", "Creation"],
-                "attributes": {
-                    "strength": 10,
-                    "charisma": 15,
-                    "spark": 20
-                }
+                "gender": "Other"
             }
         )
         assert profile_resp.status_code == 201, f"Profile creation failed: {profile_resp.text}"
@@ -101,9 +102,13 @@ async def test_user_self_registration_flow():
             json={"email": email, "password": TEST_PASSWORD}
         )
         assert reg_resp.status_code == 200
-        data = reg_resp.json()
-        token = data["id_token"]
-        uid = data["uid"]
+        id_token = reg_resp.json()["id_token"]
+        uid = reg_resp.json()["uid"]
+
+        # 1b. Exchange for Tavern Token
+        v_resp = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
+        assert v_resp.status_code == 200
+        token = v_resp.json()["token"]
         headers = {"Authorization": f"Bearer {token}"}
 
         # 2. Users Self-Registration
@@ -121,8 +126,8 @@ async def test_user_self_registration_flow():
             headers=headers,
             json={
                 "display_name": "New Adventurer",
-                "character_class": "Ranger",
-                "attributes": {"strength": 8, "charisma": 10, "spark": 5}
+                "bio": "A fresh recruit from the woods.",
+                "gender": "Man"
             }
         )
         assert profile_resp.status_code == 201
@@ -144,7 +149,9 @@ async def test_multi_profile_discovery_and_matching():
         # --- 1. Setup User A ---
         email_a = f"user-a-{uuid.uuid4().hex[:8]}@example.com"
         reg_a = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_a, "password": TEST_PASSWORD})
-        token_a = reg_a.json()["id_token"]
+        id_token_a = reg_a.json()["id_token"]
+        v_a = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token_a})
+        token_a = v_a.json()["token"]
         headers_a = {"Authorization": f"Bearer {token_a}"}
         await client.post(f"{USERS_URL}/users/", headers=headers_a, json={"email": email_a})
         
@@ -158,7 +165,9 @@ async def test_multi_profile_discovery_and_matching():
         # --- 2. Setup User B ---
         email_b = f"user-b-{uuid.uuid4().hex[:8]}@example.com"
         reg_b = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
-        token_b = reg_b.json()["id_token"]
+        id_token_b = reg_b.json()["id_token"]
+        v_b = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token_b})
+        token_b = v_b.json()["token"]
         headers_b = {"Authorization": f"Bearer {token_b}"}
         await client.post(f"{USERS_URL}/users/", headers=headers_b, json={"email": email_b})
         
@@ -220,7 +229,9 @@ async def test_root_singleton_enforcement(auth_token):
             json={"email": other_email, "password": TEST_PASSWORD}
         )
         assert reg_resp.status_code == 200
-        other_token = reg_resp.json()["id_token"]
+        id_token_other = reg_resp.json()["id_token"]
+        v_ohter = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token_other})
+        other_token = v_ohter.json()["token"]
         
         # Try to init as root_admin
         headers = {"Authorization": f"Bearer {other_token}"}

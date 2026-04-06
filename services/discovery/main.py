@@ -77,9 +77,9 @@ async def get_feed(profile_id: str, auth_data: tuple[str, str, str] = Depends(ge
         except httpx.HTTPError:
             already_swiped = set()
 
-        # 2. All profiles
+        # 2. All profiles (via discovery endpoint)
         try:
-            profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/all", headers=headers)
+            profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/discovery", headers=headers)
             profiles_resp.raise_for_status()
             all_profiles = profiles_resp.json()
         except httpx.HTTPError:
