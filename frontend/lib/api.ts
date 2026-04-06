@@ -15,37 +15,68 @@ const BASE_URLS = {
 
 /**
  * Real Token Provider — fetches the current user's ID token from Firebase.
- * This is automatically injected into every request header.
  */
 export async function getIdToken(): Promise<string | null> {
-  const fetchWithTimeout = async (promise: Promise<string>, timeout: number = 5000) => {
-    let timeoutHandle: any;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutHandle = setTimeout(() => reject(new Error('Token fetch timeout')), timeout);
-    });
-    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutHandle));
-  };
-
   try {
     const user = auth.currentUser;
-    if (!user) {
-      console.log('[API DEBUG] getIdToken: No current user in firebase auth');
-      return null;
-    }
-    const token = await fetchWithTimeout(user.getIdToken());
-    if (!token) console.log('[API DEBUG] getIdToken: Token was empty/null');
-    return token;
+    if (!user) return null;
+    return await user.getIdToken();
   } catch (error) {
     console.error('Error fetching ID token:', error);
     return null;
   }
 }
 
-function createClient(baseURL: string) {
+/**
+ * Tavern Token management — exchanges Firebase ID tokens for our custom Tavern JWT.
+ */
+let cachedTavernToken: string | null = null;
+let tokenExpiryTime: number = 0; // ms
+
+export async function getTavernToken(): Promise<string | null> {
+  // 1. Return cached token if valid (with 30s buffer)
+  const now = Date.now();
+  if (cachedTavernToken && now < tokenExpiryTime - 30_000) {
+    return cachedTavernToken;
+  }
+
+  // 2. Exchange Firebase token for a Tavern token
+  try {
+    const firebaseToken = await getIdToken();
+    if (!firebaseToken) return null;
+
+    // Call Auth service directly for the exchange
+    // We use a raw axios call here to avoid circular interceptors
+    const res = await axios.post(`${BASE_URLS.auth}/auth/verify`, {
+      id_token: firebaseToken
+    }, { timeout: 10_000 });
+
+    if (res.status === 200 && res.data.token) {
+      cachedTavernToken = res.data.token;
+      // We assume a 30m expiry from the backend; we'll set locally to 28m
+      tokenExpiryTime = now + (28 * 60 * 1000); 
+      return cachedTavernToken;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error exchanging Tavern token:', error);
+    return null;
+  }
+}
+
+/**
+ * Client factory — creates an Axios instance with appropriate interceptors.
+ * @param baseURL The service base URL
+ * @param useTavernToken Whether to use the Tavern JWT (true) or fallback to Firebase (false)
+ */
+function createClient(baseURL: string, useTavernToken: boolean = true) {
   const client = axios.create({ baseURL, timeout: 10_000 });
 
   client.interceptors.request.use(async (config) => {
-    const token = await getIdToken();
+    // Auth service always expects Firebase ID Token for verification/login
+    // Other services expect the Tavern JWT
+    const token = useTavernToken ? await getTavernToken() : await getIdToken();
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -55,23 +86,12 @@ function createClient(baseURL: string) {
   return client;
 }
 
-/**
- * Wait for a valid Firebase token to be available.
- * Useful after registration/login to avoid race conditions.
- */
-export async function waitForToken(timeout: number = 5000): Promise<string | null> {
-    const start = Date.now();
-    while (Date.now() - start < timeout) {
-        const token = await getIdToken();
-        if (token) return token;
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    return null;
-}
+// Auth API uses Firebase ID Tokens (as it is the issuer of Tavern Tokens)
+export const authApi = createClient(BASE_URLS.auth, false);
 
-export const authApi = createClient(BASE_URLS.auth);
-export const profilesApi = createClient(BASE_URLS.profiles);
-export const discoveryApi = createClient(BASE_URLS.discovery);
-export const swipesApi = createClient(BASE_URLS.swipes);
-export const messagesApi = createClient(BASE_URLS.messages);
-export const usersApi = createClient(BASE_URLS.users);
+// Functional APIs use the custom Tavern JWT
+export const profilesApi = createClient(BASE_URLS.profiles, true);
+export const discoveryApi = createClient(BASE_URLS.discovery, true);
+export const swipesApi = createClient(BASE_URLS.swipes, true);
+export const messagesApi = createClient(BASE_URLS.messages, true);
+export const usersApi = createClient(BASE_URLS.users, true);

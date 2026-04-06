@@ -1,93 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
-import SwipeDeck, { SwipeProfile } from '../../components/SwipeDeck';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import SwipeDeck from '../../components/SwipeDeck';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { useDiscovery } from '../../hooks/useDiscovery';
+import { useAllProfiles, useProfiles } from '../../hooks/useProfiles';
 import { useSwipe } from '../../hooks/useSwipe';
-import { useProfiles } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
-import { useActiveProfile } from '../../lib/ActiveProfileContext';
 
 export default function TavernScreen() {
-  const { user } = useUser();
-  const { data: profiles, isLoading: isLoadingProfiles } = useProfiles(user?.uid);
-  const [useRealData, setUseRealData] = useState(true); // Default to true now
-  const { activeProfileId } = useActiveProfile();
+  const { user, isAuthenticated, isLoading: isLoadingUser } = useUser();
+  const { data: allProfiles, isLoading: isLoadingFeed, refetch } = useAllProfiles(isAuthenticated);
+  const { data: myProfiles } = useProfiles(user?.uid);
+  
+  // Use the first profile as the default "swiper" if it exists
+  const activeProfileId = myProfiles?.[0]?.profile_id;
+  const swipeMutation = useSwipe();
 
-  // Find the full profile object for the active ID
-  const activeProfile = profiles?.find(p => p.profile_id === activeProfileId);
-  const myProfileId = activeProfileId || undefined;
+  // Show all profiles (including user's own) as requested
+  const activeProfiles = useMemo(() => {
+    return allProfiles ?? [];
+  }, [allProfiles]);
 
-  const { data: feed, isLoading: isLoadingFeed, refetch } = useDiscovery(myProfileId);
-  const swipeMutation = useSwipe(myProfileId);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  const activeProfiles = feed?.profiles || [];
+  // Reset the index ONLY when the feed is initially loaded or transitions from empty to having data
+  const lastProfileCount = React.useRef(0);
+  useEffect(() => {
+    const currentCount = allProfiles?.length ?? 0;
+    if (lastProfileCount.current === 0 && currentCount > 0) {
+      setCurrentIndex(0);
+    }
+    lastProfileCount.current = currentCount;
+  }, [allProfiles]);
+
+  const currentProfile = activeProfiles[currentIndex];
 
   const handleSwipeLeft = (id: string) => {
-    swipeMutation.mutate({ swipedProfileId: id, direction: 'left' });
+    if (!activeProfileId) return; // Cannot swipe without a profile
+    swipeMutation.mutate({ swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'left' });
+    setCurrentIndex(prev => prev + 1);
   };
 
   const handleSwipeRight = (id: string) => {
-    swipeMutation.mutate({ swipedProfileId: id, direction: 'right' });
+    if (!activeProfileId) return; // Cannot swipe without a profile
+    swipeMutation.mutate({ swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'right' });
+    setCurrentIndex(prev => prev + 1);
   };
 
-  if (isLoadingProfiles) {
+
+  if (isLoadingUser || (isLoadingFeed && !allProfiles)) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.headerSub}>Summoning your presence...</Text>
-      </View>
-    );
-  }
-
-  // CRITICAL: No profiles = No entry to the Tavern
-  if (!profiles || profiles.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Tavern Swiper</Text>
-          <Text style={styles.headerSub}>The Hero's Quest</Text>
-        </View>
-        <View style={[styles.centered, { padding: Spacing[10] }]} testID="tavern-empty-state">
-          <Text style={styles.emptyIcon}>🪑</Text>
-          <Text style={styles.emptyTitle}>The Tavern is Empty</Text>
-          <Text style={styles.emptyDesc}>
-            You cannot enter the Tavern without a Hero's identity.
-            Create your first profile to start discovery.
-          </Text>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/profiles')}
-            testID="forge-identity-button"
-          >
-            <Text style={styles.actionButtonText}>Forge Your Identity</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // Handle case where profiles exist but none is active (e.g. storage empty)
-  if (!activeProfileId) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Tavern Swiper</Text>
-          <Text style={styles.headerSub}>The Hero's Quest</Text>
-        </View>
-        <View style={[styles.centered, { padding: Spacing[10] }]}>
-          <Text style={styles.emptyIcon}>👤</Text>
-          <Text style={styles.emptyTitle}>Identity Required</Text>
-          <Text style={styles.emptyDesc}>
-            You have identities forged, but you must choose which one to use in the Tavern.
-          </Text>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/profiles')}
-          >
-            <Text style={styles.actionButtonText}>Choose Identity</Text>
-          </TouchableOpacity>
-        </View>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.headerSub}>Summoning the realm...</Text>
       </View>
     );
   }
@@ -97,47 +61,41 @@ export default function TavernScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tavern Swiper</Text>
         <Text style={styles.headerSub}>The Hero's Quest</Text>
-        {activeProfile && (
-          <Text style={styles.activeProfileLabel}>
-            ADVENTURING AS: <Text style={{ color: Colors.tertiary }}>{activeProfile.display_name}</Text>
-          </Text>
-        )}
       </View>
+
       <View style={styles.deckWrapper}>
-        {isLoadingFeed ? (
+        {activeProfiles.length === 0 || currentIndex >= activeProfiles.length ? (
           <View style={styles.centered}>
-            <Text style={styles.headerSub}>Scrying the realm...</Text>
-          </View>
-        ) : activeProfiles.length === 0 ? (
-          <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>🌪️</Text>
-            <Text style={styles.emptyTitle}>No Heroes Found</Text>
-            <Text style={styles.emptyDesc}>The realm is quiet tonight. Try again later.</Text>
-            <TouchableOpacity onPress={() => refetch()} style={{ marginTop: Spacing[4] }}>
-              <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
-            </TouchableOpacity>
+             <Text style={styles.emptyIcon}>🌪️</Text>
+             <Text style={styles.emptyTitle}>No Heroes Found</Text>
+             <Text style={styles.emptyDesc}>The realm is quiet tonight. Try again later.</Text>
+             <TouchableOpacity onPress={() => refetch()} style={{ marginTop: Spacing[4] }}>
+                <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
+             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <View style={{ flex: 1 }}>
+             <View style={{ flex: 1 }}>
               <SwipeDeck
-                profiles={activeProfiles}
+                profiles={activeProfiles.slice(currentIndex)}
                 onSwipeLeft={handleSwipeLeft}
                 onSwipeRight={handleSwipeRight}
               />
             </View>
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.roundButton, { borderColor: Colors.error }]}
-                onPress={() => activeProfiles[0] && handleSwipeLeft(activeProfiles[0].profile_id)}
+             <View style={styles.actionRow}>
+              <TouchableOpacity 
+                style={[styles.roundButton, { borderColor: Colors.error }]} 
+                onPress={() => currentProfile && handleSwipeLeft(currentProfile.profile_id)}
                 testID="swipe-left-button"
+                disabled={!activeProfileId}
               >
                 <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]}
-                onPress={() => activeProfiles[0] && handleSwipeRight(activeProfiles[0].profile_id)}
+              <TouchableOpacity 
+                style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
+                onPress={() => currentProfile && handleSwipeRight(currentProfile.profile_id)}
                 testID="swipe-right-button"
+                disabled={!activeProfileId}
               >
                 <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
               </TouchableOpacity>
@@ -174,13 +132,7 @@ const styles = StyleSheet.create({
     color: Colors.outline,
     textTransform: 'uppercase',
     letterSpacing: 2,
-  },
-  activeProfileLabel: {
-    fontFamily: Fonts.scribe,
-    fontSize: 10,
-    color: Colors.outline,
     marginTop: Spacing[2],
-    opacity: 0.8,
   },
   deckWrapper: {
     flex: 1,
@@ -208,18 +160,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: Spacing[8],
-  },
-  actionButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing[3],
-    paddingHorizontal: Spacing[8],
-    borderRadius: Radius.full,
-  },
-  actionButtonText: {
-    color: Colors.onPrimary,
-    fontFamily: Fonts.heroic,
-    fontSize: 16,
-    fontWeight: '600',
   },
   actionRow: {
     flexDirection: 'row',

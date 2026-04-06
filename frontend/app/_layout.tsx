@@ -1,51 +1,73 @@
-import React, { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Stack } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StatusBar } from 'expo-status-bar';
+import { useFonts, Manrope_400Regular, Manrope_700Bold } from '@expo-google-fonts/manrope';
+import { NotoSerif_400Regular, NotoSerif_700Bold } from '@expo-google-fonts/noto-serif';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { 
-  useFonts,
-  Manrope_400Regular,
-  Manrope_700Bold,
-} from '@expo-google-fonts/manrope';
-import {
-  NotoSerif_400Regular,
-  NotoSerif_700Bold,
-} from '@expo-google-fonts/noto-serif';
-import { Colors } from '../theme';
+import { useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useUser } from '../hooks/useUser';
-import { ActiveProfileProvider } from '../lib/ActiveProfileContext';
+import { Colors } from '../theme';
+import { View, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync().catch(() => {
-  /* ignore error */
-});
+export {
+  ErrorBoundary,
+} from 'expo-router';
+
+SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function RootLayoutNav() {
-  const { isLoading: authLoading } = useUser();
-  const [isMounted, setIsMounted] = React.useState(false);
-  const [fontsLoaded, fontError] = useFonts({
-    'Manrope': Manrope_400Regular,
-    'Manrope-Bold': Manrope_700Bold,
-    'NotoSerif': NotoSerif_400Regular,
-    'NotoSerif-Bold': NotoSerif_700Bold,
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    Manrope: Manrope_400Regular,
+    ManropeBold: Manrope_700Bold,
+    NotoSerif: NotoSerif_400Regular,
+    NotoSerifBold: NotoSerif_700Bold,
   });
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    if (error) throw error;
+  }, [error]);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (loaded) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [loaded]);
 
-  if (authLoading || (!fontsLoaded && !fontError) || !isMounted) {
+  if (!loaded) {
+    return null;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <RootLayoutNav />
+      </QueryClientProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function RootLayoutNav() {
+  const { isAuthenticated, isLoading } = useUser();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      // Redirect to the login page if the user is not authenticated
+      router.replace('/auth');
+    } else if (isAuthenticated && inAuthGroup) {
+      // Redirect away from the login page if the user is authenticated
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, segments]);
+
+  if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -53,25 +75,10 @@ function RootLayoutNav() {
     );
   }
 
-  // The Stack will handle all routes. Authentication is now handled at sub-layouts or screen levels.
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="admin/index" options={{ headerShown: false }} />
-      </Stack>
-    </GestureHandlerRootView>
-  );
-}
-
-export default function RootLayout() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ActiveProfileProvider>
-        <RootLayoutNav />
-      </ActiveProfileProvider>
-    </QueryClientProvider>
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+    </Stack>
   );
 }

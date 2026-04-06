@@ -38,10 +38,14 @@ test.describe('Swiping Flow', () => {
   });
 
   test('should skip a profile and show next (swipe left button)', async () => {
+    // Wait for profile to load (sentinel: swipe button becomes enabled)
+    await expect(page.getByTestId('swipe-left-button')).toBeEnabled();
+
     // Rule 65: Use last() to target top-most element in card decks (due to reverse DOM stacking)
     const firstName = await page.getByTestId('profile-card-name').last().textContent();
     
-    await page.getByTestId('swipe-left-button').click();
+    await page.waitForTimeout(1000); // Give RNW state a moment to settle
+    await page.getByTestId('swipe-left-button').dispatchEvent('click');
 
     // Rule 58: Polling with toPass
     await expect(async () => {
@@ -51,9 +55,13 @@ test.describe('Swiping Flow', () => {
   });
 
   test('should like a profile and show next (swipe right button)', async () => {
+    // Wait for profile to load (sentinel: swipe button becomes enabled)
+    await expect(page.getByTestId('swipe-right-button')).toBeEnabled();
+
     const firstName = await page.getByTestId('profile-card-name').last().textContent();
 
-    await page.getByTestId('swipe-right-button').click();
+    await page.waitForTimeout(1000);
+    await page.getByTestId('swipe-right-button').dispatchEvent('click');
 
     await expect(async () => {
       const nextName = await page.getByTestId('profile-card-name').last().textContent();

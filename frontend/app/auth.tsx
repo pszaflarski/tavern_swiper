@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../theme';
@@ -16,16 +15,14 @@ import { auth } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-} from '@firebase/auth';
+} from 'firebase/auth';
 import { useUser } from '../hooks/useUser';
 import { usersApi } from '../lib/api';
 
-import { Stack, useRouter, Redirect } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 
 export default function AuthScreen() {
   const { isAuthenticated, isLoading: authLoading } = useUser();
-  const router = useRouter();
-
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,10 +30,6 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-  // --- Navigation Guards ---
-  // If authenticated, drop the user straight into the Tavern tabs.
-  // Using <Redirect /> is more stable for the web and avoids the 
-  // "Attempted to navigate before mounting the Root Layout component" error.
   if (authLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
@@ -46,7 +39,6 @@ export default function AuthScreen() {
   }
 
   if (isAuthenticated) {
-    console.log('[AUTH DEBUG] Declarative Redirection to /(tabs)...');
     return <Redirect href="/(tabs)" />;
   }
 
@@ -63,22 +55,21 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        // Standard registration always defaults to 'user' type in backend, 
-        // root admin must be claimed via /admin.
+        const token = await userCred.user.getIdToken();
         await usersApi.post('/users/', {
           email: userCred.user.email,
           user_type: 'user',
           is_premium: false
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
         });
       }
     } catch (error: any) {
-      console.error(error);
       let errorMessage = error.message || 'An identification error occurred.';
-      
-      // Map specific Firebase Auth error codes to user-friendly messages
+
       if (error.code === 'auth/wrong-password') {
         errorMessage = 'Wrong password. Please try again.';
-      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/user-not-found') {
+      } else if (error.code === 'auth/user-not-found') {
         errorMessage = 'User not found. Sign up instead?';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
@@ -87,10 +78,9 @@ export default function AuthScreen() {
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
       } else if (errorMessage.toLowerCase().includes('firebase')) {
-        // Obfuscate any direct Firebase SDK messages that leak through
         errorMessage = 'The authentication service encountered an error. Please try again.';
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -101,7 +91,6 @@ export default function AuthScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-      testID="auth-screen"
     >
       <View style={styles.card}>
         <Text style={styles.title}>
@@ -170,7 +159,6 @@ export default function AuthScreen() {
           onPress={handleAuth}
           disabled={loading || authLoading}
           testID="auth-submit-button"
-          accessibilityRole="button"
         >
           {loading || authLoading ? (
             <ActivityIndicator color={Colors.onPrimary} />
@@ -189,7 +177,6 @@ export default function AuthScreen() {
           }}
           disabled={loading}
           testID="auth-toggle-link"
-          accessibilityRole="link"
         >
           <Text style={styles.toggleText}>
             {isLogin

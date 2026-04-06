@@ -20,9 +20,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const CARD_W = SCREEN_W - Spacing[8] * 2;
+const CARD_W = Math.min(SCREEN_W - Spacing[8] * 2, 450);
 const SWIPE_THRESHOLD = SCREEN_W * 0.35;
-const ROTATION_FACTOR = 15; // degrees at full swipe
+const ROTATION_FACTOR = 15;
 
 export interface SwipeProfile {
   profile_id: string;
@@ -75,7 +75,6 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
       [-ROTATION_FACTOR, 0, ROTATION_FACTOR],
       Extrapolation.CLAMP,
     );
-    // Deck stacking: non-top cards are scaled down and offset
     const scale = isTop ? 1 : interpolate(index, [1, 2, 3], [0.96, 0.92, 0.88]);
     const stackY = isTop ? 0 : index * 8;
     return {
@@ -88,7 +87,6 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
     };
   });
 
-  // Overlay indicators
   const likeOpacity = useAnimatedStyle(() => ({
     opacity: interpolate(translateX.value, [0, SWIPE_THRESHOLD * 0.5], [0, 1], Extrapolation.CLAMP),
   }));
@@ -98,13 +96,11 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.card, animatedStyle]}>
-        {/* Profile image */}
+      <Animated.View style={[styles.card, animatedStyle]} testID="profile-card">
         {profile.image_urls && profile.image_urls[0] ? (
           <Image 
             source={{ uri: profile.image_urls[0] }} 
             style={styles.image} 
-            testID="discovery-hero-image"
           />
         ) : (
           <View style={styles.imagePlaceholder}>
@@ -112,32 +108,25 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
           </View>
         )}
 
-        {/* Right-swipe indicator */}
         <Animated.View style={[styles.overlayLabel, styles.overlayRight, likeOpacity]}>
           <Text style={styles.overlayTextRight}>QUEST</Text>
         </Animated.View>
 
-        {/* Left-swipe indicator */}
         <Animated.View style={[styles.overlayLabel, styles.overlayLeft, nopeOpacity]}>
           <Text style={styles.overlayTextLeft}>PASS</Text>
         </Animated.View>
 
-        {/* Profile info */}
         <View style={styles.info}>
-          <Text style={styles.name}>{profile.display_name}</Text>
+          <Text style={styles.name} testID="profile-card-name">{profile.display_name}</Text>
           {profile.character_class && (
             <Text style={styles.characterClass}>{profile.character_class}</Text>
           )}
           {profile.tagline && (
             <Text style={styles.tagline}>{profile.tagline}</Text>
           )}
-          {profile.realm && (
-            <Text style={styles.realm}>📍 {profile.realm}</Text>
-          )}
-          {/* Affinity Sigils (talents chips) */}
-          {profile.talents.length > 0 && (
+          {profile.talents && profile.talents.length > 0 && (
             <View style={styles.talentsRow}>
-              {profile.talents.slice(0, 4).map((t) => (
+              {profile.talents.slice(0, 3).map((t) => (
                 <View key={t} style={styles.sigil}>
                   <Text style={styles.sigilText}>{t}</Text>
                 </View>
@@ -154,10 +143,9 @@ interface SwipeDeckProps {
   profiles: SwipeProfile[];
   onSwipeLeft: (profileId: string) => void;
   onSwipeRight: (profileId: string) => void;
-  onEmpty?: () => void;
 }
 
-export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight, onEmpty }: SwipeDeckProps) {
+export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight }: SwipeDeckProps) {
   if (profiles.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -169,7 +157,6 @@ export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight, onEmpty
 
   return (
     <View style={styles.deckContainer}>
-      {/* Render in reverse so top card is on top */}
       {profiles
         .slice(0, 4)
         .map((profile, index) => (
@@ -192,6 +179,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
   },
   card: {
     position: 'absolute',
@@ -200,7 +188,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl,
     overflow: 'hidden',
     ...Shadow.waxSeal,
-    // Asymmetric corners per design system (approximated via uniform radius)
     borderTopLeftRadius: Radius.cardTL,
     borderTopRightRadius: Radius.cardTR,
     borderBottomLeftRadius: Radius.cardBL,
@@ -228,6 +215,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[2],
     borderWidth: 3,
     borderRadius: Radius.sm,
+    zIndex: 10,
   },
   overlayRight: {
     left: Spacing[5],
@@ -274,11 +262,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.onSurfaceVariant,
     fontStyle: 'italic',
-  },
-  realm: {
-    fontFamily: Fonts.scribe,
-    fontSize: 13,
-    color: Colors.outline,
   },
   talentsRow: {
     flexDirection: 'row',

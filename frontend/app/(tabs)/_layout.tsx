@@ -1,41 +1,39 @@
 import React from 'react';
-import { Tabs, Redirect } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
-import BottomNav, { TabName } from '../../components/BottomNav';
-import { Colors } from '../../theme';
-import { useUser } from '../../hooks/useUser';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Fonts } from '../../theme';
 
-export default function TabsLayout() {
-  const { isAuthenticated, isLoading, authInitialized } = useUser();
-
-  if (isLoading || !authInitialized) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
-
-  if (!isAuthenticated) {
-    console.log('[TABS DEBUG] Not authenticated, redirecting to /auth');
-    return <Redirect href="/auth" />;
-  }
-
+export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => (
-        <BottomNav
-          activeTab={props.state.routes[props.state.index].name as TabName}
-          onTabPress={(name) => props.navigation.navigate(name)}
-        />
-      )}
       screenOptions={{
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.outline,
+        tabBarStyle: {
+          backgroundColor: Colors.surfaceContainerLowest,
+          borderTopColor: Colors.outlineVariant,
+        },
         headerShown: false,
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: 'Tavern' }} />
-      <Tabs.Screen name="scrolls" options={{ title: 'Scrolls' }} />
-      <Tabs.Screen name="profiles" options={{ title: 'Profiles' }} />
+        tabBarLabelStyle: {
+          fontFamily: Fonts.scribe,
+          fontSize: 10,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+        },
+      }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Tavern',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? 'beer' : 'beer-outline'} 
+              size={24} 
+              color={color} 
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

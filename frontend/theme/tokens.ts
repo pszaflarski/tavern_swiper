@@ -97,10 +97,14 @@ export const Spacing = {
 export const Shadow = {
   // "Magical Glow" — candle-lit shadow (on_surface at 6% opacity)
   waxSeal: {
-    shadowColor: '#1f1c0b',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 24,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 8,
+        blur: 24,
+        color: 'rgba(31, 28, 11, 0.06)',
+      },
+    ],
     elevation: 4,
   },
 };
