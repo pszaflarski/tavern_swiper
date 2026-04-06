@@ -22,7 +22,7 @@ export function useSwipe() {
 
   return useMutation<SwipeResult, Error, { swiperProfileId: string; swipedProfileId: string; direction: Direction }>({
     mutationFn: async ({ swiperProfileId, swipedProfileId, direction }) => {
-      const res = await swipesApi.post('/swipes/', {
+      const res = await swipesApi.post('/discovery/swipe/', {
         swiper_profile_id: swiperProfileId,
         swiped_profile_id: swipedProfileId,
         direction,

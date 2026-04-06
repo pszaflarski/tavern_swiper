@@ -7,7 +7,7 @@ from google.oauth2.credentials import Credentials
 
 # --- Configuration ---
 PROJECT_ID = "tavern-swiper-dev"
-SERVICES = ["users", "profiles", "auth", "swipes", "messages", "discovery"]
+SERVICES = ["users", "profiles", "auth", "messages", "discovery"]
 
 def get_gcloud_credentials():
     """Helper to fetch credentials from gcloud if Application Default Credentials are missing/broken."""

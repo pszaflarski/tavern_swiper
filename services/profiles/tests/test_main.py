@@ -211,3 +211,20 @@ def test_list_profiles_for_user_public(mock_firestore, mock_profile_data):
     assert response.json()[0]["display_name"] == "Gimli"
 
 
+def test_get_my_active_profile(mock_firestore, mock_profile_data):
+    # Mock firestore doc
+    mock_doc = MagicMock()
+    mock_doc.id = "active-p1"
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "is_active": True}
+    
+    # Mock query chain: db.collection().where().where().limit().stream()
+    mock_firestore.collection.return_value.where.return_value.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    response = client.get("/profiles/user/me/active", headers=headers)
+    
+    assert response.status_code == 200
+    assert response.json()["profile_id"] == "active-p1"
+    assert response.json()["is_active"] is True
+
+

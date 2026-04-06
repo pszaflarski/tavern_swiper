@@ -31,12 +31,11 @@ if [[ "$ENV" == "local" ]]; then
     update_env_var "EXPO_PUBLIC_AUTH_URL" "http://localhost:8001"
     update_env_var "EXPO_PUBLIC_PROFILES_URL" "http://localhost:8002"
     update_env_var "EXPO_PUBLIC_DISCOVERY_URL" "http://localhost:8003"
-    update_env_var "EXPO_PUBLIC_SWIPES_URL" "http://localhost:8004"
     update_env_var "EXPO_PUBLIC_MESSAGES_URL" "http://localhost:8005"
     update_env_var "EXPO_PUBLIC_USERS_URL" "http://localhost:8006"
     echo "✅ Switched to local (localhost)."
 else
-    SERVICES=("auth" "users" "profiles" "discovery" "swipes" "messages")
+    SERVICES=("auth" "users" "profiles" "discovery" "messages")
     for SERVICE in "${SERVICES[@]}"; do
         if [[ "$ENV" == "dev" ]]; then
             DEPLOY_NAME="${SERVICE}"

@@ -1,30 +1,30 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useProfiles, useUpdateProfile } from '../hooks/useProfiles';
+import { useProfiles, useUpdateProfile, useActiveProfile } from '../hooks/useProfiles';
 import { useUser } from '../hooks/useUser';
 
 interface ProfileContextType {
   activeProfileId: string | undefined;
   setActiveProfileId: (id: string) => void;
+  isLoadingActiveProfile: boolean;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { user } = useUser();
-  const { data: myProfiles } = useProfiles(user?.uid);
+  const { user, isAuthenticated } = useUser();
+  const { data: activeProfile, isLoading: isLoadingActiveProfile } = useActiveProfile(isAuthenticated);
   const updateProfileMutation = useUpdateProfile();
 
-  // Derive activeProfileId from boolean flag on Profile
   const activeProfileId = React.useMemo(() => {
-    return myProfiles?.find(p => p.is_active)?.profile_id;
-  }, [myProfiles]);
+    return activeProfile?.profile_id;
+  }, [activeProfile]);
 
   const setActiveProfileId = (id: string) => {
     updateProfileMutation.mutate({ profileId: id, data: { is_active: true } });
   };
 
   return (
-    <ProfileContext.Provider value={{ activeProfileId, setActiveProfileId }}>
+    <ProfileContext.Provider value={{ activeProfileId, setActiveProfileId, isLoadingActiveProfile }}>
       {children}
     </ProfileContext.Provider>
   );

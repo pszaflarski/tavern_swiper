@@ -6,7 +6,7 @@ PROJECT_ID="tavern-swiper-dev"
 REGION="us-central1"
 SERVICE_ACCOUNT="tavern-swiper-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
-SERVICES=("auth" "users" "profiles" "discovery" "swipes" "messages")
+SERVICES=("auth" "users" "profiles" "discovery" "messages")
 ENVIRONMENTS=("dev" "test")
 
 echo "🚀 Starting Tavern Swiper Dual-Environment Cloud Run Deployment (Keyless)..."
@@ -103,7 +103,6 @@ for ENV in "${ENVIRONMENTS[@]}"; do
     AUTH_URL=${SERVICE_URLS["auth-${ENV}"]}
     USERS_URL=${SERVICE_URLS["users-${ENV}"]}
     PROFILES_URL=${SERVICE_URLS["profiles-${ENV}"]}
-    SWIPES_URL=${SERVICE_URLS["swipes-${ENV}"]}
     DISCOVERY_URL=${SERVICE_URLS["discovery-${ENV}"]}
     MESSAGES_URL=${SERVICE_URLS["messages-${ENV}"]}
 
@@ -121,7 +120,6 @@ for ENV in "${ENVIRONMENTS[@]}"; do
         ENV_VARS="AUTH_SERVICE_URL=${AUTH_URL}"
         ENV_VARS+=",USERS_SERVICE_URL=${USERS_URL}"
         ENV_VARS+=",PROFILES_SERVICE_URL=${PROFILES_URL}"
-        ENV_VARS+=",SWIPES_SERVICE_URL=${SWIPES_URL}"
         ENV_VARS+=",DISCOVERY_SERVICE_URL=${DISCOVERY_URL}"
         ENV_VARS+=",MESSAGES_SERVICE_URL=${MESSAGES_URL}"
         

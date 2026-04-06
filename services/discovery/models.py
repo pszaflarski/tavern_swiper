@@ -8,11 +8,29 @@ class DiscoveryProfile(BaseModel):
     profile_id: str
     display_name: str
     tagline: Optional[str] = None
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    image_urls: List[str] = []
+    is_active: bool = False
+    # Fantasy-themed fields for future use
     character_class: Optional[str] = None
     realm: Optional[str] = None
-    image_urls: List[str] = []
     talents: List[str] = []
 
 
 class FeedResponse(BaseModel):
     profiles: List[DiscoveryProfile]
+
+
+class SwipeCreate(BaseModel):
+    swiper_profile_id: str
+    swiped_profile_id: str
+    direction: str  # 'left' or 'right'
+
+
+class SwipeOut(BaseModel):
+    swipe_id: str
+    swiper_profile_id: str
+    swiped_profile_id: str
+    direction: str
+    created_at: str

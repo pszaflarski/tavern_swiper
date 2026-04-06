@@ -6,7 +6,7 @@ PROJECT_ID="tavern-swiper-dev"
 REGION="us-central1"
 SERVICE_ACCOUNT="tavern-swiper-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
-TARGET_SERVICES=("profiles" "discovery")
+TARGET_SERVICES=("profiles" "discovery" "messages")
 ENVIRONMENTS=("dev" "test")
 
 # URLs (Extracted from previous gcloud list)
@@ -21,10 +21,6 @@ USERS_URLS["test"]="https://users-test-hhqol7siba-uc.a.run.app"
 declare -A PROFILES_URLS
 PROFILES_URLS["dev"]="https://profiles-hhqol7siba-uc.a.run.app"
 PROFILES_URLS["test"]="https://profiles-test-hhqol7siba-uc.a.run.app"
-
-declare -A SWIPES_URLS
-SWIPES_URLS["dev"]="https://swipes-hhqol7siba-uc.a.run.app"
-SWIPES_URLS["test"]="https://swipes-test-hhqol7siba-uc.a.run.app"
 
 declare -A DISCOVERY_URLS
 DISCOVERY_URLS["dev"]="https://discovery-hhqol7siba-uc.a.run.app"
@@ -63,7 +59,6 @@ for SERVICE in "${TARGET_SERVICES[@]}"; do
         ENV_VARS+=",AUTH_SERVICE_URL=${AUTH_URLS[$ENV]}"
         ENV_VARS+=",USERS_SERVICE_URL=${USERS_URLS[$ENV]}"
         ENV_VARS+=",PROFILES_SERVICE_URL=${PROFILES_URLS[$ENV]}"
-        ENV_VARS+=",SWIPES_SERVICE_URL=${SWIPES_URLS[$ENV]}"
         ENV_VARS+=",DISCOVERY_SERVICE_URL=${DISCOVERY_URLS[$ENV]}"
         ENV_VARS+=",MESSAGES_SERVICE_URL=${MESSAGES_URLS[$ENV]}"
 

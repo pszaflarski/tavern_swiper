@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { profilesApi } from '../lib/api';
+import { profilesApi, discoveryApi } from '../lib/api';
 
 export interface Profile {
   profile_id: string;
@@ -13,18 +13,19 @@ export interface Profile {
 }
 
 /**
- * Custom hook to fetch all profiles from the Profiles service.
- * This will be used as a "random" discovery feed for now.
- * Conditional fetching via 'enabled' to prevent unauthorized requests.
+ * Custom hook to fetch the discovery feed from the Discovery service.
+ * Requires an active profile ID to filter out already-swiped profiles.
  */
-export function useAllProfiles(enabled: boolean = true) {
+export function useDiscoveryFeed(profileId: string | undefined, enabled: boolean = true, limit: number = 10) {
   return useQuery<Profile[]>({
-    queryKey: ['profiles', 'all'],
+    queryKey: ['discovery', 'feed', profileId, limit],
     queryFn: async () => {
-      const res = await profilesApi.get('/profiles/all');
-      return res.data;
+      if (!profileId) return [];
+      const res = await discoveryApi.get(`/discovery/feed/${profileId}?limit=${limit}`);
+      // Discovery service returns { "profiles": [...] }
+      return res.data.profiles;
     },
-    enabled,
+    enabled: enabled && !!profileId,
   });
 }
 
@@ -39,6 +40,21 @@ export function useProfiles(userId: string | undefined) {
       return res.data;
     },
     enabled: !!userId,
+  });
+}
+
+/**
+ * Fetch the currently active profile for the authenticated user.
+ */
+export function useActiveProfile(enabled: boolean = true) {
+  return useQuery<Profile>({
+    queryKey: ['profiles', 'me', 'active'],
+    queryFn: async () => {
+      const res = await profilesApi.get('/profiles/user/me/active');
+      return res.data;
+    },
+    enabled,
+    retry: false, // If no active profile, 404 is expected, don't spam retries
   });
 }
 

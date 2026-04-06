@@ -2,16 +2,16 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import SwipeDeck from '../../components/SwipeDeck';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { useAllProfiles, useProfiles } from '../../hooks/useProfiles';
+import { useDiscoveryFeed, useProfiles } from '../../hooks/useProfiles';
 import { useSwipe } from '../../hooks/useSwipe';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
 
 export default function TavernScreen() {
   const { user, isAuthenticated, isLoading: isLoadingUser } = useUser();
-  const { data: allProfiles, isLoading: isLoadingFeed, refetch } = useAllProfiles(isAuthenticated);
+  const { activeProfileId, isLoadingActiveProfile } = useProfileContext();
+  const { data: allProfiles, isLoading: isLoadingFeed, refetch } = useDiscoveryFeed(activeProfileId, isAuthenticated, 5);
   const { data: myProfiles } = useProfiles(user?.uid);
-  const { activeProfileId } = useProfileContext();
   
   const swipeMutation = useSwipe();
 
@@ -47,11 +47,34 @@ export default function TavernScreen() {
   };
 
 
-  if (isLoadingUser || (isLoadingFeed && !allProfiles)) {
+  if (isLoadingUser || isLoadingActiveProfile || (isLoadingFeed && !allProfiles)) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.headerSub}>Summoning the realm...</Text>
+      </View>
+    );
+  }
+
+  // If authenticated but no active profile, we can't show a feed
+  if (isAuthenticated && !activeProfileId && !isLoadingUser) {
+    return (
+      <View style={styles.container} testID="tavern-screen-no-profile">
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Tavern Swiper</Text>
+          <Text style={styles.headerSub}>The Hero's Quest</Text>
+        </View>
+        <View style={styles.centered}>
+          <Text style={styles.emptyIcon}>🛡️</Text>
+          <Text style={styles.emptyTitle}>Create Your Hero</Text>
+          <Text style={styles.emptyDesc}>You must have an active profile to discover other heroes in the realm.</Text>
+          <TouchableOpacity 
+            style={[styles.roundButton, { width: 'auto', paddingHorizontal: Spacing[6], borderRadius: Radius.md }]} 
+            onPress={() => { /* Navigation to Profile might be handled by tabs, or we can just tell them */ }}
+          >
+            <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>VISIT THE ARMORY (PROFILES)</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }

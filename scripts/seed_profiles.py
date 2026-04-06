@@ -4,8 +4,9 @@ import os
 import time
 
 # Primary Seeder (Authenticated first to perform administrative overrides)
-SEEDER_EMAIL = "peter@gmail.com"
-SEEDER_PASSWORD = "Password123!"
+# Primary Seeder (Authenticated as an existing root admin)
+SEEDER_EMAIL = os.getenv("ROOT_EMAIL", "root@example.com")
+SEEDER_PASSWORD = os.getenv("ROOT_PASSWORD", "Password123!")
 
 # --- Configuration ---
 # Targets the test environment by default
@@ -22,54 +23,35 @@ SAMPLE_IMAGES_DIR = os.path.join(PROJECT_ROOT, "sample_profiles")
 
 def get_token(email, password):
     """Register or Login a user to get their token and UID."""
+    # We verify the token after login to ensure it's a valid Tavern token
     login_resp = requests.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": password})
     if login_resp.status_code == 200:
-        return login_resp.json()["id_token"], login_resp.json()["uid"]
+        id_token = login_resp.json()["id_token"]
+        uid = login_resp.json()["uid"]
+        
+        # Exchange for Tavern token
+        v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
+        if v_resp.status_code == 200:
+            return v_resp.json()["token"], uid
     
     # Try register if login fails
     reg_resp = requests.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
     if reg_resp.status_code == 200:
-        return reg_resp.json()["id_token"], reg_resp.json()["uid"]
+        id_token = reg_resp.json()["id_token"]
+        uid = reg_resp.json()["uid"]
+        
+        # Exchange for Tavern token
+        v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
+        if v_resp.status_code == 200:
+            return v_resp.json()["token"], uid
     
     raise Exception(f"Failed to auth {email}.\n  Login Error: {login_resp.text}\n  Register Error: {reg_resp.text}")
 
-def wait_for_root_admin(token):
-    """Poll the Auth service until the seeder's role is correctly reported as root_admin."""
-    print("⏳ Waiting for root_admin role to propagate...")
-    max_retries = 15
-    for i in range(max_retries):
-        resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": token})
-        if resp.status_code == 200:
-            role = resp.json().get("role")
-            if role == "root_admin":
-                print(f"  ✅ Role confirmed: {role}")
-                return True
-            print(f"  ... role is still '{role}' (retry {i+1}/{max_retries})")
-        else:
-            print(f"  ... verify failed: {resp.status_code} (retry {i+1}/{max_retries})")
-        time.sleep(2)
-    return False
-
 def seed_system():
-    # 1. Login as primary seeder
+    # 1. Login as primary seeder (Existing Root Admin)
     print(f"Authenticating primary seeder: {SEEDER_EMAIL}...")
     seeder_token, seeder_uid = get_token(SEEDER_EMAIL, SEEDER_PASSWORD)
     seeder_headers = {"Authorization": f"Bearer {seeder_token}"}
-
-    # 1b. Bootstrap: Ensure seeder is Root Admin (needed for user overrides)
-    print("Elevating seeder to Root Admin for administrative seeding...")
-    bootstrap_data = {
-        "email": SEEDER_EMAIL,
-        "user_type": "root_admin",
-        "is_premium": True
-    }
-    b_resp = requests.post(f"{USERS_URL}/users/", json=bootstrap_data, headers=seeder_headers)
-    if b_resp.status_code not in [200, 201]:
-        print(f"Note: Seeder bootstrap status: {b_resp.status_code} ({b_resp.text})")
-
-    # 1c. Poll for role propagation
-    if not wait_for_root_admin(seeder_token):
-         print("❌ Error: Root admin role did not propagate in time. Seeding may fail.")
 
     # 2. Read CSV
     print(f"Reading {CSV_PATH}...")

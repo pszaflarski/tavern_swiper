@@ -8,7 +8,7 @@ const BASE_URLS = {
   auth: process.env.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:8001',
   profiles: process.env.EXPO_PUBLIC_PROFILES_URL ?? 'http://localhost:8002',
   discovery: process.env.EXPO_PUBLIC_DISCOVERY_URL ?? 'http://localhost:8003',
-  swipes: process.env.EXPO_PUBLIC_SWIPES_URL ?? 'http://localhost:8004',
+  swipes: process.env.EXPO_PUBLIC_DISCOVERY_URL ?? 'http://localhost:8003',
   messages: process.env.EXPO_PUBLIC_MESSAGES_URL ?? 'http://localhost:8005',
   users: process.env.EXPO_PUBLIC_USERS_URL ?? 'http://localhost:8006',
 };

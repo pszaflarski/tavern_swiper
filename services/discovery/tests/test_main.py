@@ -21,16 +21,16 @@ def sign_test_token(uid="u1", role="user"):
 
 # Mock firestore before importing app
 with patch("google.cloud.firestore.Client"):
-    from main import app, PROFILES_SERVICE_URL, SWIPES_SERVICE_URL
+    from main import app, PROFILES_SERVICE_URL
 
 client = TestClient(app)
 
 @pytest.fixture
 def mock_profiles():
     return [
-        {"profile_id": "p1", "user_id": "u1", "display_name": "Aragorn", "attributes": {}},
-        {"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "attributes": {}},
-        {"profile_id": "p3", "user_id": "u3", "display_name": "Gimli", "attributes": {}},
+        {"profile_id": "p1", "display_name": "Aragorn", "is_active": True, "image_urls": []},
+        {"profile_id": "p2", "display_name": "Legolas", "is_active": True, "image_urls": []},
+        {"profile_id": "p3", "display_name": "Gimli", "is_active": True, "image_urls": []},
     ]
 
 @pytest.fixture
@@ -48,23 +48,22 @@ async def test_get_feed_success(mock_auth_service, mock_profiles):
         return_value=Response(200, json={"user_id": "u1"})
     )
     
-    # Mock Swipes Service: already swiped p2
-    respx_mock.get(f"{SWIPES_SERVICE_URL}/swipes/swiped-by/p1").mock(
-        return_value=Response(200, json={"profile_ids": ["p2"]})
-    )
-    
-    # Mock Profiles Service: returns all profiles
-    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/all").mock(
+    # Mock Profiles Service: returns all profiles via discovery endpoint
+    respx_mock.get(url__startswith=f"{PROFILES_SERVICE_URL}/profiles/discovery").mock(
         return_value=Response(200, json=mock_profiles)
     )
+    
+    # Note: Firestore 'swipes' query is mocked via patch("google.cloud.firestore.Client")
+    # and will return an empty stream by default, meaning p2 and p3 should both show up
+    # except p1 (the swiper).
     
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/discovery/feed/p1", headers=headers)
     
     assert response.status_code == 200
     profiles = response.json()["profiles"]
-    assert len(profiles) == 1
-    assert profiles[0]["profile_id"] == "p3"
+    # Expecting p2 and p3 (p1 excluded because it's the requester)
+    assert len(profiles) == 2
 
 @pytest.mark.asyncio
 async def test_get_feed_unauthorized_profile(mock_auth_service):

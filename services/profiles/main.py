@@ -155,6 +155,16 @@ async def get_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends
     return _doc_to_profile(doc)
 
 
+@app.get("/profiles/user/me/active", response_model=ProfileOut)
+async def get_my_active_profile(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Fetch the currently active profile for the authenticated user."""
+    uid, _, _ = auth_data
+    docs = list(db.collection(COLLECTION).where("user_id", "==", uid).where("is_active", "==", True).limit(1).stream())
+    if not docs:
+        raise HTTPException(status_code=404, detail="No active profile found for user")
+    return _doc_to_profile(docs[0])
+
+
 @app.get("/profiles/user/{user_id}", response_model=list[ProfileOut])
 async def list_profiles_for_user(user_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """List profiles for a specific user. Available to all logged-in users for discovery."""

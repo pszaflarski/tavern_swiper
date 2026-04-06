@@ -11,6 +11,11 @@ PROJECT_ID = "tavern-swiper-dev"
 REGION = "us-central1"
 
 def get_url(service_name, env="local"):
+    # Check for explicit environment variable overrides
+    env_var = "AUTH_URL" if service_name == "auth" else "USERS_URL"
+    if os.getenv(env_var):
+        return os.getenv(env_var)
+
     if env == "local":
         ports = {
             "auth": 8001,
