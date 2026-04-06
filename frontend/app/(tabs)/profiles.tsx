@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../theme';
-import { useProfiles, Profile } from '../hooks/useProfiles';
-import { useUser } from '../hooks/useUser';
-import { useProfileContext } from '../context/ProfileContext';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { useProfiles, Profile } from '../../hooks/useProfiles';
+import { useUser } from '../../hooks/useUser';
+import { useProfileContext } from '../../context/ProfileContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfilesScreen() {
