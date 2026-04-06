@@ -2,7 +2,7 @@ import pytest
 import respx
 from httpx import Response
 from fastapi.testclient import TestClient
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import os
 import jwt
 import datetime
@@ -19,6 +19,7 @@ def sign_test_token(uid="u1", role="user"):
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+# Mock firestore before importing app
 # Mock firestore before importing app
 with patch("google.cloud.firestore.Client"):
     from main import app, PROFILES_SERVICE_URL
@@ -53,10 +54,7 @@ async def test_get_feed_success(mock_auth_service, mock_profiles):
         return_value=Response(200, json=mock_profiles)
     )
     
-    # Note: Firestore 'swipes' query is mocked via patch("google.cloud.firestore.Client")
-    # and will return an empty stream by default, meaning p2 and p3 should both show up
-    # except p1 (the swiper).
-    
+    # Firestore is mocked to return empty stream by default via the 'patch' above.
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/discovery/feed/p1", headers=headers)
     
@@ -64,6 +62,56 @@ async def test_get_feed_success(mock_auth_service, mock_profiles):
     profiles = response.json()["profiles"]
     # Expecting p2 and p3 (p1 excluded because it's the requester)
     assert len(profiles) == 2
+
+@pytest.mark.asyncio
+async def test_get_feed_with_filtering(mock_auth_service, mock_profiles):
+    respx_mock = mock_auth_service
+    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(return_value=Response(200, json={"user_id": "u1"}))
+    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/discovery?limit=20").mock(return_value=Response(200, json=mock_profiles))
+    
+    # Mock Firestore to say p2 was already swiped
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = {"swiped_profile_id": "p2"}
+    
+    # We need to reach into main.db and mock the query chain.
+    # This is a bit advanced, but let's try a direct patch for the filtering logic:
+    with patch("main.db.collection") as mock_coll:
+        mock_coll.return_value.where.return_value.stream.return_value = [mock_doc]
+        
+        headers = {"Authorization": f"Bearer {sign_test_token()}"}
+        response = client.get("/discovery/feed/p1", headers=headers)
+        
+        assert response.status_code == 200
+        profiles = response.json()["profiles"]
+        # Only p3 should be left (p1 is self, p2 swiped)
+        assert len(profiles) == 1
+        assert profiles[0]["profile_id"] == "p3"
+
+@pytest.mark.asyncio
+async def test_record_swipe_success(mock_auth_service):
+    respx_mock = mock_auth_service
+    # Mock Profiles (ownership check)
+    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(
+        return_value=Response(200, json={"user_id": "u1"})
+    )
+    
+    payload = {
+        "swiper_profile_id": "p1",
+        "swiped_profile_id": "p2",
+        "direction": "right"
+    }
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    # Mock Firestore for recording the swipe
+    with patch("main.db.collection") as mock_coll:
+        response = client.post("/discovery/swipe/", json=payload, headers=headers)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["direction"] == "right"
+        assert "swipe_id" in data
+        
+        # Verify firestore.set was called correctly (via mock chain)
+        mock_coll.return_value.document.return_value.set.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_get_feed_unauthorized_profile(mock_auth_service):
