@@ -52,4 +52,24 @@ test.describe('Login Flow', () => {
       await expect(page.getByTestId('tavern-screen').first()).toBeVisible();
     }).toPass();
   });
+
+  test('should log out successfully from account screen', async ({ page }) => {
+    // 1. Log in
+    await page.getByTestId('auth-email-input').fill('user@example.com');
+    await page.getByTestId('auth-password-input').fill('Password123!');
+    await page.getByTestId('auth-submit-button').click();
+    await expect(page.getByTestId('tavern-screen').first()).toBeVisible();
+
+    // 2. Navigate to /account
+    await page.goto('/account');
+    await expect(page.getByTestId('account-screen').first()).toBeVisible();
+
+    // 3. Click Logout
+    await page.getByTestId('logout-button').click();
+
+    // 4. Verify Redirect to Auth
+    await expect(async () => {
+      await expect(page.getByTestId('auth-email-input')).toBeVisible();
+    }).toPass();
+  });
 });

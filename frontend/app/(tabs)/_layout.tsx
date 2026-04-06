@@ -1,7 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity } from 'react-native';
 import { Colors, Fonts } from '../../theme';
 
 export default function TabLayout() {
@@ -33,9 +32,7 @@ export default function TabLayout() {
               color={color} 
             />
           ),
-          tabBarButton: (props: any) => (
-            <TouchableOpacity {...props} testID="tab-bar-tavern" />
-          ),
+          tabBarButtonTestID: 'tab-bar-tavern',
         }}
       />
       <Tabs.Screen
@@ -49,9 +46,21 @@ export default function TabLayout() {
               color={color} 
             />
           ),
-          tabBarButton: (props: any) => (
-            <TouchableOpacity {...props} testID="tab-bar-profiles" />
+          tabBarButtonTestID: 'tab-bar-profiles',
+        }}
+      />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: 'Account',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? 'person-circle' : 'person-circle-outline'} 
+              size={24} 
+              color={color} 
+            />
           ),
+          tabBarButtonTestID: 'tab-bar-account',
         }}
       />
     </Tabs>
