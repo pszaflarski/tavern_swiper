@@ -5,14 +5,14 @@ import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useAllProfiles, useProfiles } from '../../hooks/useProfiles';
 import { useSwipe } from '../../hooks/useSwipe';
 import { useUser } from '../../hooks/useUser';
+import { useProfileContext } from '../../context/ProfileContext';
 
 export default function TavernScreen() {
   const { user, isAuthenticated, isLoading: isLoadingUser } = useUser();
   const { data: allProfiles, isLoading: isLoadingFeed, refetch } = useAllProfiles(isAuthenticated);
   const { data: myProfiles } = useProfiles(user?.uid);
+  const { activeProfileId } = useProfileContext();
   
-  // Use the first profile as the default "swiper" if it exists
-  const activeProfileId = myProfiles?.[0]?.profile_id;
   const swipeMutation = useSwipe();
 
   // Show all profiles (including user's own) as requested

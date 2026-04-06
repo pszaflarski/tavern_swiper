@@ -17,6 +17,8 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+import { ProfileProvider } from '../context/ProfileContext';
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     Manrope: Manrope_400Regular,
@@ -42,7 +44,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <RootLayoutNav />
+        <ProfileProvider>
+          <RootLayoutNav />
+        </ProfileProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
