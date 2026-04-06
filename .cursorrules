@@ -56,10 +56,18 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 ## 🧪 E2E Stability & Testing Guidelines
 - **Resilient Async Transitions**: **NEVER** use `page.waitForTimeout()` or fixed `sleep` commands for wait-and-reload flows. They are brittle and cause race conditions.
 - **Use `toPass()`**: Always prefer Playwright's `expect(...).toPass()` for polling state changes that involve backend propagation or page reloads.
-- **Declarative Assertions**: Prefer native `expect(locator).toBeVisible()` or `expect(locator).toBeHidden()` for automatic retry behavior.
+- **Zero-Trust Browser Context Isolation**: For multi-user E2E tests (e.g., matching or messaging), **NEVER** use the default `page` fixture. Instantiate strictly isolated environments using `await browser.newContext()` for each simulated user to prevent Expo/Firebase session leakage.
+- **Declarative Web-First Assertions**: Prefer native assertions like `expect(locator).toBeVisible()`, `expect(locator).toBeAttached()`, and `expect(locator).toContainText()`. Do not use manual `locator.waitFor({ state: 'attached' })` or manually extract text to assert against.
 - **Session Persistence**: On web reloads, account for Firebase Auth persistence delays by waiting for the dashboard component or re-navigating to the protected route if a redirect occurs.
-- **Selective Selectors**: Always use `filter({ visible: true })` for interactive elements to avoid collisions with hidden DOM nodes.
+- **Visibility Assertions**: Never use `filter({ visible: true })` if you are going to follow it with a `.toBeVisible()` assertion. This is a Playwright anti-pattern. Instead, let Playwright locate the element in the DOM first and allow `toBeVisible()` to handle the waiting and visibility checking natively.
+- **Selective Selectors**: Use `filter({ visible: true })` ONLY when you need to distinguish between multiple matching elements where some are permanently hidden and you are NOT using a visibility assertion (e.g. within a `.click()` or `.fill()` on an element that is already assumed stable).
 - **Eventual Consistency**: Avoid unnecessary `page.reload()` in loops. If synchronization is required, reload once after a confirmed network event, then poll with declarative assertions.
+- **Stacked UI / Card Decks**: When interacting with swiping cards or stacked elements, **NEVER** use `getByText()` to locate the active card, as it will match hidden elements deeper in the deck. **ALWAYS** use `getByTestId('profile-card-name').first().textContent()` to evaluate the top-most visible element before triggering actions.
+- **Sentinel-Based Transitions**: In E2E tests, **AVOID** broad text-based or URL-based visibility checks for "landing" transitions (e.g., waiting for "Tavern"). Instead, use unique `data-testid` Sentinels (e.g., `testID="tavern-screen"`) to differentiate between the active foreground screen and background "shadow" copies preserved by Expo Router.
+
+## 🃏 Jest Unit Testing Guidelines
+- **Provider Mocking**: Components relying on global state (e.g., `useQueryClient` or `ActiveProfileContext`) must be rendered with a custom wrapper providing fresh instances of those contexts (e.g., `<QueryClientProvider>`) to avoid cross-test cache pollution.
+- **ESM Transpilation**: Ensure modern ES module dependencies (like `@firebase/util` and `firebase`) are included in Jest's `transformIgnorePatterns` so they are properly transpiled into CommonJS.
 
 ## 🤖 AI Guidelines
 - When asked to create a new service, follow the existing pattern in `services/`.

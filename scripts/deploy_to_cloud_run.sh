@@ -41,7 +41,7 @@ for SERVICE in "${SERVICES[@]}"; do
         # Based on gcloud list, 'auth' and 'auth-test' exist.
         
         # Determine extra environment variables
-        EXTRA_VARS="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_DATABASE_ID=${DB_ID}"
+        EXTRA_VARS="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_DATABASE_ID=${DB_ID},JWT_SECRET=super-secret-tavern-key-123"
         
         if [ "$SERVICE" == "auth" ]; then
             # Needs its own DB + the users DB it looks up roles from
@@ -50,7 +50,7 @@ for SERVICE in "${SERVICES[@]}"; do
             else
                 USERS_DB="users-test"
             fi
-            EXTRA_VARS+=",USERS_DATABASE_ID=${USERS_DB},FIREBASE_WEB_API_KEY=AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk"
+            EXTRA_VARS+=",USERS_DATABASE_ID=${USERS_DB},FIREBASE_WEB_API_KEY=AIzaSyCnKm4gayoO0C35CNeMJ7E82fFITvVpGAw"
         fi
 
         if [ "$SERVICE" == "users" ] || [ "$SERVICE" == "profiles" ]; then

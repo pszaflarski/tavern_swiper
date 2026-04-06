@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 firebase-admin
 google-cloud-firestore
+PyJWT==2.10.1
 google-cloud-storage
 python-multipart
 python-dotenv

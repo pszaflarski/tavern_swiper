@@ -4,6 +4,21 @@ from unittest.mock import patch, MagicMock
 import respx
 from httpx import Response
 import os
+import jwt
+import datetime
+
+# Test JWT settings
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-tavern-key-123")
+JWT_ALGORITHM = "HS256"
+
+def sign_test_token(uid="test-user-123", role="user"):
+    payload = {
+        "sub": uid,
+        "role": role,
+        "iat": datetime.datetime.utcnow(),
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 # Mock firestore and firebase before importing app
 with patch("google.cloud.firestore.Client"), \
@@ -20,31 +35,8 @@ def mock_firestore():
 
 @pytest.fixture
 def mock_auth_service():
-    with respx.mock as respx_mock:
-        # Mock the internal auth service call to handle different roles based on token
-        def auth_verify_side_effect(request):
-            import json
-            body = json.loads(request.content)
-            token = body.get("id_token", "")
-            
-            role = "user"
-            uid = "test-user-123"
-            
-            if token == "fake-admin-token":
-                role = "admin"
-                uid = "admin-user-456"
-            elif token == "fake-root-token":
-                role = "root_admin"
-                uid = "root-user-789"
-                
-            return Response(200, json={"uid": uid, "role": role})
-
-        respx_mock.post("http://auth:8001/auth/verify").side_effect = auth_verify_side_effect
-        # Also mock the Cloud Run URL fetched by run_tests.sh if it exists in the environment
-        if os.getenv("AUTH_SERVICE_URL"):
-            respx_mock.post(f"{os.getenv('AUTH_SERVICE_URL')}/auth/verify").side_effect = auth_verify_side_effect
-            
-        yield respx_mock
+    """No longer mocks network, just provides a standard fixture signature if needed."""
+    yield None
 
 def test_health():
     response = client.get("/users/health")
@@ -58,7 +50,7 @@ def test_consolidated_create_root_admin(mock_firestore, mock_auth_service):
     mock_firestore.collection().document().get().exists = False
 
     payload = {"email": "root@e.com", "user_type": "root_admin"}
-    headers = {"Authorization": "Bearer fake-user-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 201
@@ -70,7 +62,7 @@ def test_consolidated_create_root_admin_fails_if_exists(mock_firestore, mock_aut
     mock_firestore.collection().where().limit().stream.return_value = [MagicMock()]
 
     payload = {"email": "root2@e.com", "user_type": "root_admin"}
-    headers = {"Authorization": "Bearer fake-user-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 400
@@ -82,7 +74,7 @@ def test_consolidated_self_registration(mock_firestore, mock_auth_service):
     mock_firestore.collection().document().get().exists = False
 
     payload = {"email": "user@e.com", "user_type": "user"}
-    headers = {"Authorization": "Bearer fake-user-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 201
@@ -91,7 +83,7 @@ def test_consolidated_self_registration(mock_firestore, mock_auth_service):
 
 def test_consolidated_self_registration_as_admin_fails(mock_firestore, mock_auth_service):
     payload = {"email": "hacker@e.com", "user_type": "admin"}
-    headers = {"Authorization": "Bearer fake-user-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 403
@@ -111,7 +103,7 @@ def test_consolidated_admin_creation(mock_firestore, mock_auth_service):
     mock_target_doc.get.return_value = mock_target_doc
 
     def side_effect(uid):
-        if uid == "test-user-123": return mock_admin_doc
+        if uid == "admin-user-456": return mock_admin_doc
         return mock_target_doc
 
     mock_firestore.collection().document.side_effect = side_effect
@@ -121,7 +113,7 @@ def test_consolidated_admin_creation(mock_firestore, mock_auth_service):
         "user_type": "user",
         "uid": "target-uid"
     }
-    headers = {"Authorization": "Bearer fake-admin-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-user-456', role='admin')}"}
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 201
@@ -139,25 +131,15 @@ def test_get_me(mock_firestore, mock_auth_service):
     }
     mock_firestore.collection().document().get.return_value = mock_doc
 
-    headers = {"Authorization": "Bearer fake-user-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/users/me", headers=headers)
     
     assert response.status_code == 200
     assert response.json()["uid"] == "test-user-123"
     assert response.json()["is_premium"] is True
 
-def test_unauthorized(mock_auth_service):
-    # Mock auth failure for both possible URLs
-    auth_url = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
-    mock_auth_service.post(f"{auth_url}/auth/verify").mock(
-        return_value=Response(401, text="Invalid token")
-    )
-    if auth_url != "http://auth:8001":
-         mock_auth_service.post("http://auth:8001/auth/verify").mock(
-            return_value=Response(401, text="Invalid token")
-        )
-    
-    response = client.get("/users/me", headers={"Authorization": "Bearer invalid"})
+def test_unauthorized():
+    response = client.get("/users/me", headers={"Authorization": "Bearer invalid-jwt"})
     assert response.status_code == 401
 
 
@@ -188,7 +170,7 @@ def test_list_users_admin(mock_firestore, mock_auth_service):
     mock_user_1.to_dict.return_value = {"email": "u1@e.com", "user_type": "user", "created_at": "2026-03-26T12:00:00Z"}
     mock_firestore.collection().stream.return_value = [mock_user_1]
 
-    headers = {"Authorization": "Bearer fake-admin-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-user-456', role='admin')}"}
     response = client.get("/users/", headers=headers)
     
     assert response.status_code == 200
@@ -210,12 +192,12 @@ def test_delete_user_admin(mock_firestore, mock_auth_service):
     mock_target_doc.get.return_value = mock_target_doc
 
     def side_effect(uid):
-        if uid == "test-user-123": return mock_admin_doc
+        if uid == "admin-user-456": return mock_admin_doc
         return mock_target_doc
     
     mock_firestore.collection().document.side_effect = side_effect
 
-    headers = {"Authorization": "Bearer fake-admin-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-user-456', role='admin')}"}
     response = client.delete("/users/user1", headers=headers)
     
     assert response.status_code == 204
@@ -235,12 +217,12 @@ def test_purge_all_users_root(mock_firestore, mock_auth_service):
     mock_firestore.collection().stream.return_value = [mock_doc_1]
 
     def side_effect(uid):
-        if uid == "test-user-123": return mock_root_doc
+        if uid == "root-user-789": return mock_root_doc
         return MagicMock()
 
     mock_firestore.collection().document.side_effect = side_effect
 
-    headers = {"Authorization": "Bearer fake-root-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='root-user-789', role='root_admin')}"}
     response = client.delete("/users/", headers=headers)
     
     assert response.status_code == 204
@@ -257,7 +239,7 @@ def test_purge_all_users_non_root_fails(mock_firestore, mock_auth_service):
 
     mock_firestore.collection().document.return_value = mock_admin_doc
 
-    headers = {"Authorization": "Bearer fake-admin-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-user-456', role='admin')}"}
     response = client.delete("/users/", headers=headers)
     
     assert response.status_code == 403

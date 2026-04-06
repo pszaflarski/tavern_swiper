@@ -1,17 +1,6 @@
-const expoPreset = require('jest-expo/jest-preset');
-
 module.exports = {
-  ...expoPreset,
+  preset: 'jest-expo',
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@firebase/.*|firebase/.*)/",
-  ],
-  moduleNameMapper: {
-    '^firebase/auth$': '<rootDir>/__mocks__/firebase.ts',
-    '^firebase/app$': '<rootDir>/__mocks__/firebase.ts',
-    '^axios$': '<rootDir>/node_modules/axios/dist/node/axios.cjs', 
-  },
-  modulePathIgnorePatterns: [
-    '<rootDir>/e2e/',
-  ],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|firebase|@firebase/.*)'
+  ]
 };

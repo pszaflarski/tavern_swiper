@@ -5,6 +5,8 @@ from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from google.cloud import firestore
 import httpx
+import jwt
+import datetime
 from models import TokenRequest, TokenResponse, LoginRequest, AuthResponse, BulkDeleteRequest
 
 load_dotenv()
@@ -43,6 +45,10 @@ from fastapi.middleware.cors import CORSMiddleware
 # tokens. It manages Firebase Auth users and provides an internal API for
 # profile services (like the Users service) to verify and manage identities.
 # ---------------------------------------------------------------------------
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-tavern-key-123")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_MINUTES = 30
+
 app = FastAPI(title="Tavern Swiper — Auth Service", version="1.0.0")
 
 app.add_middleware(
@@ -84,9 +90,20 @@ async def verify_token(body: TokenRequest):
         print(f"Warning: Failed to fetch role for {uid}: {e}")
         # Default to 'user' if lookup fails
 
+    # Create custom Tavern JWT
+    now = datetime.datetime.utcnow()
+    payload = {
+        "sub": uid,
+        "role": role,
+        "iat": now,
+        "exp": now + datetime.timedelta(minutes=JWT_EXPIRY_MINUTES)
+    }
+    tavern_token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
     return TokenResponse(
         uid=uid,
-        role=role
+        role=role,
+        token=tavern_token # Retain original name, but add the new token
     )
 
 def map_firebase_error(message: str) -> str:

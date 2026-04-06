@@ -4,6 +4,21 @@ from httpx import Response
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 import os
+import jwt
+import datetime
+
+# Test JWT settings
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-tavern-key-123")
+JWT_ALGORITHM = "HS256"
+
+def sign_test_token(uid="u1", role="user"):
+    payload = {
+        "sub": uid,
+        "role": role,
+        "iat": datetime.datetime.utcnow(),
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 # Mock firestore before importing app
 with patch("google.cloud.firestore.Client"):
@@ -13,11 +28,8 @@ client = TestClient(app)
 
 @pytest.fixture
 def mock_auth_service():
+    """Activates respx to mock cross-service calls."""
     with respx.mock as respx_mock:
-        auth_url = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
-        respx_mock.post(f"{auth_url}/auth/verify").mock(
-            return_value=Response(200, json={"uid": "u1", "role": "user"})
-        )
         yield respx_mock
 
 @pytest.mark.asyncio
@@ -44,7 +56,7 @@ async def test_send_message_success(mock_db, mock_auth_service):
     )
     
     payload = {"match_id": "m1", "sender_profile_id": "p1", "content": "Hail!"}
-    headers = {"Authorization": "Bearer token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.post("/messages/", json=payload, headers=headers)
     assert response.status_code == 201
 
@@ -64,7 +76,12 @@ async def test_send_message_forbidden(mock_auth_service):
     respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p3").mock(return_value=Response(200, json={"user_id": "u3"}))
     
     payload = {"match_id": "m1", "sender_profile_id": "p2", "content": "Hack!"}
-    headers = {"Authorization": "Bearer token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.post("/messages/", json=payload, headers=headers)
     assert response.status_code == 403
     assert "Not authorized for this match" in response.json()["detail"]
+
+def test_health():
+    response = client.get("/messages/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"

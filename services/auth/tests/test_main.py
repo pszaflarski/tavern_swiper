@@ -24,6 +24,8 @@ def test_verify_token_success(mock_verify):
     assert response.status_code == 200
     data = response.json()
     assert data["uid"] == "test-uid-123"
+    assert "token" in data
+    assert data["token"] is not None
 
 @patch("firebase_admin.auth.verify_id_token")
 def test_verify_token_invalid(mock_verify):

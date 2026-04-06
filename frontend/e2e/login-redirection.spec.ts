@@ -25,17 +25,17 @@ test.describe('Login Redirection Stability', () => {
     // Switch to Signup if in Login mode using robust check
     const signInTitle = page.getByText(/^Sign In$/i).first();
     const signUpTitle = page.getByText(/Begin Your Quest/i).first();
-    
+
     // Wait for the UI to settle in either state before checking visibility
     await expect(signInTitle.or(signUpTitle)).toBeVisible({ timeout: 10000 });
 
     if (await signInTitle.isVisible()) {
-      await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
+      await page.getByTestId('auth-toggle-link').first().click();
       await expect(signUpTitle).toBeVisible({ timeout: 10000 });
     }
 
-    const emailInput = page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true });
-    const pwdInput = page.getByPlaceholder('••••••••', { exact: true }).filter({ visible: true });
+    const emailInput = page.getByPlaceholder('hero@realm.com', { exact: true }).first();
+    const pwdInput = page.getByPlaceholder('••••••••', { exact: true }).first();
 
     await emailInput.fill(email);
     await pwdInput.fill(password);
@@ -45,7 +45,7 @@ test.describe('Login Redirection Stability', () => {
       response => response.url().includes('identitytoolkit.googleapis.com') && response.request().method() === 'POST',
       { timeout: 15000 }
     );
-    await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
+    await page.getByTestId('auth-submit-button').first().click();
     await signupResponse;
 
     // 3. Wait for redirection to the main tab (/)

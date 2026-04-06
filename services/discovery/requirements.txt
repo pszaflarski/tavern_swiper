@@ -5,3 +5,4 @@ google-cloud-firestore
 httpx
 python-dotenv
 python-dotenv
+PyJWT==2.10.1

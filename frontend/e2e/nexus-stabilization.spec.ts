@@ -9,7 +9,7 @@ test.describe('Nexus Stabilization flows', () => {
     // 0. Ensure clean session state
     await page.goto('/auth');
     await page.waitForLoadState('networkidle');
-    const initialLogoutBtn = page.getByTestId('auth-logout-button').filter({ visible: true });
+    const initialLogoutBtn = page.getByTestId('auth-logout-button').first();
     if (await initialLogoutBtn.isVisible()) {
       console.log('Stale session detected. Logging out...');
       await initialLogoutBtn.click();
@@ -38,21 +38,21 @@ test.describe('Nexus Stabilization flows', () => {
     await expect(signInTitle.or(signUpTitle)).toBeVisible({ timeout: 10000 });
 
     if (await signInTitle.isVisible()) {
-      await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
+      await page.getByTestId('auth-toggle-link').first().click();
       await expect(signUpTitle).toBeVisible({ timeout: 10000 });
     }
 
-    await page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true }).fill(adminEmail);
-    await page.getByPlaceholder('••••••••', { exact: true }).filter({ visible: true }).fill(pwd);
+    await page.getByPlaceholder('hero@realm.com', { exact: true }).first().fill(adminEmail);
+    await page.getByPlaceholder('••••••••', { exact: true }).first().fill(pwd);
 
-    await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
+    await page.getByTestId('auth-submit-button').first().click();
 
     // 2.1 Resilient Verification: Check for "email-already-in-use" fallback
     const authError = page.getByText(/auth\/email-already-in-use/i).first();
     if (await authError.isVisible()) {
-        console.warn('⚠️ User already exists in Auth. Switching to Login...');
-        await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
-        await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
+      console.warn('⚠️ User already exists in Auth. Switching to Login...');
+      await page.getByTestId('auth-toggle-link').first().click();
+      await page.getByTestId('auth-submit-button').first().click();
     }
 
     // After cleanup/signup/login, the internal auth hook should redirect us to the Tavern root (/)
@@ -63,11 +63,11 @@ test.describe('Nexus Stabilization flows', () => {
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    const claimBtn = page.getByRole('button', { name: /Claim the Root/i }).filter({ visible: true });
+    const claimBtn = page.getByRole('button', { name: /Claim the Root/i }).first();
     await expect(claimBtn).toBeVisible({ timeout: 15000 });
 
-    await page.getByPlaceholder('Email', { exact: true }).filter({ visible: true }).fill(adminEmail);
-    await page.getByPlaceholder('Password', { exact: true }).filter({ visible: true }).fill(pwd);
+    await page.getByPlaceholder('Email', { exact: true }).first().fill(adminEmail);
+    await page.getByPlaceholder('Password', { exact: true }).first().fill(pwd);
 
     // Dialog handler
     page.once('dialog', async dialog => {
@@ -75,14 +75,14 @@ test.describe('Nexus Stabilization flows', () => {
       await dialog.accept();
     });
 
-    const claimRootPromise = page.waitForResponse(response => 
-      response.url().includes('/users/') && response.request().method() === 'POST', 
+    const claimRootPromise = page.waitForResponse(response =>
+      response.url().includes('/users/') && response.request().method() === 'POST',
       { timeout: 15000 }
     );
 
     await claimBtn.click();
     await claimRootPromise;
-    
+
     // Forced Resync: We wait for the role claims to propagate.
     // Instead of a brittle sleep+reload, we use Playwright's toPass() 
     // to poll for the dashboard's presence, handling potential redirects.
@@ -95,11 +95,11 @@ test.describe('Nexus Stabilization flows', () => {
       if (!await dashboardHeader.isVisible().catch(() => false)) {
         // If not visible, ensure we are on the right URL (in case of bounce)
         if (!page.url().includes('/admin')) {
-            await page.goto('/admin');
-            await page.waitForLoadState('networkidle');
+          await page.goto('/admin');
+          await page.waitForLoadState('networkidle');
         } else {
-            await page.reload();
-            await page.waitForLoadState('networkidle');
+          await page.reload();
+          await page.waitForLoadState('networkidle');
         }
       }
 
@@ -115,24 +115,24 @@ test.describe('Nexus Stabilization flows', () => {
     await page.waitForLoadState('networkidle');
 
     // Handle identity selection if it appears
-    if (await page.getByText(/Identity Required/i).filter({ visible: true }).isVisible()) {
-      await page.getByRole('button', { name: /Choose Identity/i }).filter({ visible: true }).click();
+    if (await page.getByText(/Identity Required/i).first().isVisible()) {
+      await page.getByRole('button', { name: /Choose Identity/i }).first().click();
       await page.waitForLoadState('networkidle');
     }
 
     // Declarative Discovery Assertion with retry fallback
     await expect(async () => {
       // Check if re-cast is needed
-      const scryBtn = page.getByText(/RE-CAST SCRYING SPELL/i).filter({ visible: true });
+      const scryBtn = page.getByText(/RE-CAST SCRYING SPELL/i).first();
       if (await scryBtn.isVisible()) {
         await scryBtn.click();
       }
-      
+
       // Expected: System correctly shows empty tavern for fresh bootstrap
       // Or if profiles are indexed, a card should appear
-      const card = page.getByTestId('swipe-card').first().filter({ visible: true });
-      const emptyMsg = page.getByText(/The Tavern is Empty/i).filter({ visible: true });
-      
+      const card = page.getByTestId('swipe-card').first();
+      const emptyMsg = page.getByText(/The Tavern is Empty/i).first();
+
       await expect(card.or(emptyMsg)).toBeVisible({ timeout: 10000 });
     }).toPass({ timeout: 45000, intervals: [2000, 5000] });
 
@@ -142,7 +142,7 @@ test.describe('Nexus Stabilization flows', () => {
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    const logoutBtn = page.getByTestId('admin-logout-button').filter({ visible: true });
+    const logoutBtn = page.getByTestId('admin-logout-button').first();
     await logoutBtn.click();
 
     await expect(page).toHaveURL(/.*auth.*/, { timeout: 15000 });

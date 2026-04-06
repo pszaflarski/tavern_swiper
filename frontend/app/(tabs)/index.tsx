@@ -14,11 +14,11 @@ export default function TavernScreen() {
   const { data: profiles, isLoading: isLoadingProfiles } = useProfiles(user?.uid);
   const [useRealData, setUseRealData] = useState(true); // Default to true now
   const { activeProfileId } = useActiveProfile();
-  
+
   // Find the full profile object for the active ID
   const activeProfile = profiles?.find(p => p.profile_id === activeProfileId);
   const myProfileId = activeProfileId || undefined;
-  
+
   const { data: feed, isLoading: isLoadingFeed, refetch } = useDiscovery(myProfileId);
   const swipeMutation = useSwipe(myProfileId);
 
@@ -52,10 +52,10 @@ export default function TavernScreen() {
           <Text style={styles.emptyIcon}>🪑</Text>
           <Text style={styles.emptyTitle}>The Tavern is Empty</Text>
           <Text style={styles.emptyDesc}>
-            You cannot enter the Tavern without a Hero's identity. 
+            You cannot enter the Tavern without a Hero's identity.
             Create your first profile to start discovery.
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push('/profiles')}
             testID="forge-identity-button"
@@ -81,7 +81,7 @@ export default function TavernScreen() {
           <Text style={styles.emptyDesc}>
             You have identities forged, but you must choose which one to use in the Tavern.
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push('/profiles')}
           >
@@ -93,7 +93,7 @@ export default function TavernScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="tavern-screen">
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tavern Swiper</Text>
         <Text style={styles.headerSub}>The Hero's Quest</Text>
@@ -110,12 +110,12 @@ export default function TavernScreen() {
           </View>
         ) : activeProfiles.length === 0 ? (
           <View style={styles.centered}>
-             <Text style={styles.emptyIcon}>🌪️</Text>
-             <Text style={styles.emptyTitle}>No Heroes Found</Text>
-             <Text style={styles.emptyDesc}>The realm is quiet tonight. Try again later.</Text>
-             <TouchableOpacity onPress={() => refetch()} style={{ marginTop: Spacing[4] }}>
-                <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
-             </TouchableOpacity>
+            <Text style={styles.emptyIcon}>🌪️</Text>
+            <Text style={styles.emptyTitle}>No Heroes Found</Text>
+            <Text style={styles.emptyDesc}>The realm is quiet tonight. Try again later.</Text>
+            <TouchableOpacity onPress={() => refetch()} style={{ marginTop: Spacing[4] }}>
+              <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -127,15 +127,15 @@ export default function TavernScreen() {
               />
             </View>
             <View style={styles.actionRow}>
-              <TouchableOpacity 
-                style={[styles.roundButton, { borderColor: Colors.error }]} 
+              <TouchableOpacity
+                style={[styles.roundButton, { borderColor: Colors.error }]}
                 onPress={() => activeProfiles[0] && handleSwipeLeft(activeProfiles[0].profile_id)}
                 testID="swipe-left-button"
               >
                 <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
+              <TouchableOpacity
+                style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]}
                 onPress={() => activeProfiles[0] && handleSwipeRight(activeProfiles[0].profile_id)}
                 testID="swipe-right-button"
               >

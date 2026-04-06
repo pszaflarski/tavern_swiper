@@ -7,6 +7,7 @@ class TokenRequest(BaseModel):
 class TokenResponse(BaseModel):
     uid: str
     role: str
+    token: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: str

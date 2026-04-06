@@ -29,17 +29,20 @@ get_url() {
     gcloud run services describe "${service}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)'
 }
 
-export AUTH_SERVICE_URL=$(get_url "auth-test")
-export USERS_URL=$(get_url "users-test")
-export PROFILES_URL=$(get_url "profiles-test")
-export DISCOVERY_URL=$(get_url "discovery-test")
-export SWIPES_URL=$(get_url "swipes-test")
-export MESSAGES_URL=$(get_url "messages-test")
+# Mock URLs for local testing
+export AUTH_SERVICE_URL="http://localhost:8001"
+export USERS_URL="http://localhost:8006"
+export PROFILES_URL="http://localhost:8002"
+export DISCOVERY_URL="http://localhost:8003"
+export SWIPES_URL="http://localhost:8004"
+export MESSAGES_URL="http://localhost:8005"
 
+# For the Auth service client initialization
 # For the Auth service client initialization
 export FIRESTORE_DATABASE_ID="auth-test"
 export USERS_DATABASE_ID="users-test"
 export FIREBASE_WEB_API_KEY="dummy-key-for-unit-tests"
+export JWT_SECRET="super-secret-tavern-key-123"
 
 echo "✅ Environment Ready"
 
@@ -48,11 +51,19 @@ for SERVICE in "${SERVICES[@]}"; do
     # Use the root venv if it exists
     if [ -f "$SCRIPT_DIR/../.venv/bin/python3" ]; then
         PYTHON="$SCRIPT_DIR/../.venv/bin/python3"
+        PIP="$SCRIPT_DIR/../.venv/bin/pip"
     else
         PYTHON="python3"
+        PIP="pip3"
     fi
     
     cd "$SCRIPT_DIR/$SERVICE"
+    
+    # Install test requirements
+    if [ -f "tests/requirements.txt" ]; then
+        echo "📦 Installing test requirements for $SERVICE..."
+        $PIP install -q -r tests/requirements.txt
+    fi
     
     # Check if tests directory exists
     if [ -d "tests" ]; then

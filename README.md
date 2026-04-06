@@ -105,13 +105,19 @@ Tests individual React hooks and logic in isolation using mocked API responses.
   ```
 
 ### 2. Frontend Web Integration (Playwright) — [RECOMMENDED]
-True end-to-end tests that run the frontend in a browser against local or cloud services.
+True end-to-end tests that run the frontend in a browser against **Cloud services** (to avoid OOM errors on local development machines).
 - **What it does**: 
-    - Performs an automated database wipe of `-test` databases via a cleanup script.
     - Executes real user flows (Signup, Profile Forge) in the web browser.
     - Captures the session token and **verifies results directly via backend REST APIs** to ensure frontend-backend synchronization.
+    - Targets the `*-test` services on Cloud Run for reliable environment consistency.
 
-  > **Note on E2E Stability**: Due to backend microservice cold-starts and eventual consistency of Firestore indexing, these tests employ robust auto-waiting declarative assertions. Avoid hardcoded waits or aggressive page reloads in test suites.
+  > **Note on E2E Stability**: To ensure a clean test run, always restart the Expo/Metro bundler on port 8081 before starting the suite.
+  
+  ```bash
+  # Recommended: Restart Expo and run tests against Cloud Run
+  bash scripts/restart-expo-and-test.sh
+  ```
+  Or for a manual run (assuming `test` environment is set via `switch_env.sh`):
   ```bash
   cd frontend
   npm run test:e2e

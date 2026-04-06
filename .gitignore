@@ -52,3 +52,7 @@ frontend/playwright/.cache/
 # Maestro
 .maestro
 .android_sdk/
+
+explanation.md  
+plan.md
+scratch.py

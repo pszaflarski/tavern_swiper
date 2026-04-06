@@ -101,7 +101,11 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
       <Animated.View style={[styles.card, animatedStyle]}>
         {/* Profile image */}
         {profile.image_urls && profile.image_urls[0] ? (
-          <Image source={{ uri: profile.image_urls[0] }} style={styles.image} />
+          <Image 
+            source={{ uri: profile.image_urls[0] }} 
+            style={styles.image} 
+            testID="discovery-hero-image"
+          />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Text style={styles.imagePlaceholderText}>⚔️</Text>

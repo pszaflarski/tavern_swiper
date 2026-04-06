@@ -4,6 +4,20 @@ from unittest.mock import patch, MagicMock
 import os
 from httpx import Response
 import respx
+import jwt
+import datetime
+
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-tavern-key-123")
+JWT_ALGORITHM = "HS256"
+
+def sign_test_token(uid="test-user-123", role="user"):
+    payload = {
+        "sub": uid,
+        "role": role,
+        "iat": datetime.datetime.utcnow(),
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 # We need to mock the firestore client BEFORE importing app from main
 # The global mock_db is used for tests that don't explicitly patch main.db
@@ -34,13 +48,8 @@ def mock_profile_data():
 
 @pytest.fixture
 def mock_auth_service():
-    with respx.mock as respx_mock:
-        # Mock the internal auth service call
-        auth_url = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
-        respx_mock.post(f"{auth_url}/auth/verify").mock(
-            return_value=Response(200, json={"uid": "test-user-123", "role": "user"})
-        )
-        yield respx_mock
+    """No longer mocks network, just provides a standard fixture signature if needed."""
+    yield None
 
 # Fixture to provide a patched main.db for tests that need it
 @pytest.fixture
@@ -79,7 +88,7 @@ def test_create_profile(mock_firestore, mock_auth_service):
         "attributes": {"strength": 18, "charisma": 16, "spark": 12}
     }
 
-    headers = {"Authorization": "Bearer fake-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.post("/profiles/", json=payload, headers=headers)
 
     assert response.status_code == 201
@@ -96,7 +105,7 @@ def test_get_profile_success(mock_db, mock_profile_data, mock_auth_service):
 
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
 
-    headers = {"Authorization": "Bearer fake-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/profiles/test-id", headers=headers)
     assert response.status_code == 200
     assert response.json()["display_name"] == "Gimli"
@@ -107,7 +116,7 @@ def test_get_profile_not_found(mock_db, mock_auth_service):
     mock_doc.exists = False
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
     
-    headers = {"Authorization": "Bearer fake-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/profiles/missing", headers=headers)
     assert response.status_code == 404
 
@@ -128,7 +137,7 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_servic
         mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
         
         file_content = b"fake-image-data"
-        headers = {"Authorization": "Bearer fake-token"}
+        headers = {"Authorization": f"Bearer {sign_test_token()}"}
         response = client.post(
             "/profiles/test-id/image",
             files={"file": ("test.png", file_content, "image/png")},
@@ -141,7 +150,7 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_servic
 
 def test_create_profile_validation_error_string_length(mock_firestore, mock_auth_service):
     # Mock auth response to bypass dependency
-    headers = {"Authorization": "Bearer fake-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     
     # Payload with a very long string (over 15KB)
     long_string = "A" * 16000
@@ -157,7 +166,7 @@ def test_create_profile_validation_error_string_length(mock_firestore, mock_auth
 
 
 def test_create_profile_validation_error_array_length(mock_firestore, mock_auth_service):
-    headers = {"Authorization": "Bearer fake-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     
     # Payload with too many talents (over 100)
     many_talents = ["talent"] * 101

@@ -22,16 +22,16 @@ test.describe('Admin Dashboard Nexus', () => {
     await page.waitForLoadState('networkidle');
 
     // Attempt login first
-    await page.getByPlaceholder('hero@realm.com', { exact: true }).filter({ visible: true }).fill(adminEmail);
-    await page.getByPlaceholder('••••••••', { exact: true }).filter({ visible: true }).fill(pwd);
-    
+    await page.getByPlaceholder('hero@realm.com', { exact: true }).first().fill(adminEmail);
+    await page.getByPlaceholder('••••••••', { exact: true }).first().fill(pwd);
+
     console.log('Attempting login for Root Admin...');
-    const authResPromise = page.waitForResponse(response => 
-      response.url().includes('identitytoolkit.googleapis.com') && response.request().method() === 'POST', 
+    const authResPromise = page.waitForResponse(response =>
+      response.url().includes('identitytoolkit.googleapis.com') && response.request().method() === 'POST',
       { timeout: 15000 }
     );
-    await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
-    
+    await page.getByTestId('auth-submit-button').first().click();
+
     // We don't await the promise immediately because it might fail if user doesn't exist
     // Instead, we check the response or UI state
     try {
@@ -41,10 +41,10 @@ test.describe('Admin Dashboard Nexus', () => {
       }
     } catch (e) {
       console.log('Login failed (likely pristine database). Proceeding with Signup...');
-      await page.getByTestId('auth-toggle-link').filter({ visible: true }).click();
-      await page.getByTestId('auth-submit-button').filter({ visible: true }).click();
+      await page.getByTestId('auth-toggle-link').first().click();
+      await page.getByTestId('auth-submit-button').first().click();
     }
-    
+
     // Wait for auto-redirect to tavern root
     await expect(page).toHaveURL(/\/(|\(tabs\).*)$/, { timeout: 30000 });
     console.log('✅ Identity verified. Proceeding to Admin Dashboard...');
@@ -58,58 +58,58 @@ test.describe('Admin Dashboard Nexus', () => {
       page.getByRole('button', { name: /Claim the Root/i }).or(page.getByText('Provision Intelligence'))
     ).toBeVisible({ timeout: 30000 });
 
-    const claimBtn = page.getByRole('button', { name: /Claim the Root/i }).filter({ visible: true });
-    
+    const claimBtn = page.getByRole('button', { name: /Claim the Root/i }).first();
+
     if (await claimBtn.isVisible()) {
-        console.log('Nexus is uninitialized. Starting bootstrapping flow...');
-        await page.getByPlaceholder('Email', { exact: true }).filter({ visible: true }).fill(adminEmail);
-        await page.getByPlaceholder('Password', { exact: true }).filter({ visible: true }).fill(pwd);
-        
-        const postUsersPromise = page.waitForResponse(response => 
-            response.url().includes('/users/') && 
-            response.request().method() === 'POST', 
-            { timeout: 15000 }
-        );
+      console.log('Nexus is uninitialized. Starting bootstrapping flow...');
+      await page.getByPlaceholder('Email', { exact: true }).first().fill(adminEmail);
+      await page.getByPlaceholder('Password', { exact: true }).first().fill(pwd);
 
-        await claimBtn.click();
-        await postUsersPromise;
-        
-        // Forced Resync: We wait for the role claims to propagate.
-        // Instead of a brittle 10s sleep, we use Playwright's toPass() 
-        // to poll for the dashboard's presence, handling potential redirects.
-        console.log('[DEBUG] Root claim successful. Waiting for dashboard to appear...');
+      const postUsersPromise = page.waitForResponse(response =>
+        response.url().includes('/users/') &&
+        response.request().method() === 'POST',
+        { timeout: 15000 }
+      );
 
-        await expect(async () => {
-          const provisionText = page.getByText('Provision Intelligence');
-          
-          if (!await provisionText.isVisible().catch(() => false)) {
-            // Ensure we navigate explicitly to /admin (in case of bounce)
-            if (!page.url().includes('/admin')) {
-                await page.goto('/admin');
-            } else {
-                await page.reload();
-            }
-            await page.waitForLoadState('networkidle');
+      await claimBtn.click();
+      await postUsersPromise;
+
+      // Forced Resync: We wait for the role claims to propagate.
+      // Instead of a brittle 10s sleep, we use Playwright's toPass() 
+      // to poll for the dashboard's presence, handling potential redirects.
+      console.log('[DEBUG] Root claim successful. Waiting for dashboard to appear...');
+
+      await expect(async () => {
+        const provisionText = page.getByText('Provision Intelligence');
+
+        if (!await provisionText.isVisible().catch(() => false)) {
+          // Ensure we navigate explicitly to /admin (in case of bounce)
+          if (!page.url().includes('/admin')) {
+            await page.goto('/admin');
+          } else {
+            await page.reload();
           }
-          
-          await expect(provisionText).toBeVisible({ timeout: 10000 });
-        }).toPass({ timeout: 45000, intervals: [3000, 5000] });
+          await page.waitForLoadState('networkidle');
+        }
+
+        await expect(provisionText).toBeVisible({ timeout: 10000 });
+      }).toPass({ timeout: 45000, intervals: [3000, 5000] });
     } else {
-        console.log('Nexus dashboard already active.');
+      console.log('Nexus dashboard already active.');
     }
 
     // 4. Provision a New User
-    await page.getByTestId('admin-provision-email').filter({ visible: true }).fill(userEmail);
-    await page.getByTestId('admin-provision-password').filter({ visible: true }).fill(pwd);
-    await page.getByTestId('admin-provision-submit').filter({ visible: true }).click();
-    
+    await page.getByTestId('admin-provision-email').first().fill(userEmail);
+    await page.getByTestId('admin-provision-password').first().fill(pwd);
+    await page.getByTestId('admin-provision-submit').first().click();
+
     // 5. Verify user in list
-    await expect(page.getByText(userEmail).filter({ visible: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(userEmail).first()).toBeVisible({ timeout: 15000 });
 
     // 6. Soft Delete User
     const userRow = page.getByTestId(`admin-user-row-${userEmail}`);
-    await userRow.filter({ visible: true }).getByTestId('admin-delete-user-button').click();
-    await expect(userRow.filter({ visible: true })).toBeHidden({ timeout: 10000 });
+    await userRow.first().getByTestId('admin-delete-user-button').click();
+    await expect(userRow.first()).toBeHidden({ timeout: 10000 });
 
     // Toggle "Show Deleted" to see the soft-deleted user with its badge
     await page.getByTestId('admin-show-deleted-switch').click();
@@ -124,15 +124,15 @@ test.describe('Admin Dashboard Nexus', () => {
     await expect(userRow).toBeHidden();
 
     // 9. Nuke All (Danger Zone)
-    const nukeBtn = page.getByTestId('admin-nuke-button').filter({ visible: true });
+    const nukeBtn = page.getByTestId('admin-nuke-button').first();
     if (await nukeBtn.isVisible()) {
-        console.log('Initiating Nuke All (Danger Zone)...');
-        await nukeBtn.click();
-        
-        // Expect the application to automatically route to .*auth.* (session invalidated)
-        await expect(page).toHaveURL(/.*auth.*/, { timeout: 30000 });
-        await expect(page.getByTestId('auth-submit-button').filter({ visible: true })).toBeVisible();
-        console.log('✅ Nuke All verified: Session invalidated and redirected to /auth.');
+      console.log('Initiating Nuke All (Danger Zone)...');
+      await nukeBtn.click();
+
+      // Expect the application to automatically route to .*auth.* (session invalidated)
+      await expect(page).toHaveURL(/.*auth.*/, { timeout: 30000 });
+      await expect(page.getByTestId('auth-submit-button').first()).toBeVisible();
+      console.log('✅ Nuke All verified: Session invalidated and redirected to /auth.');
     }
   });
 });

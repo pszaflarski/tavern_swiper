@@ -4,6 +4,20 @@ from httpx import Response
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 import os
+import jwt
+import datetime
+
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-tavern-key-123")
+JWT_ALGORITHM = "HS256"
+
+def sign_test_token(uid="u1", role="user"):
+    payload = {
+        "sub": uid,
+        "role": role,
+        "iat": datetime.datetime.utcnow(),
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 # Mock firestore before importing app
 with patch("google.cloud.firestore.Client"):
@@ -21,11 +35,8 @@ def mock_profiles():
 
 @pytest.fixture
 def mock_auth_service():
+    """Activates respx to mock cross-service calls."""
     with respx.mock as respx_mock:
-        auth_url = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
-        respx_mock.post(f"{auth_url}/auth/verify").mock(
-            return_value=Response(200, json={"uid": "u1", "role": "user"})
-        )
         yield respx_mock
 
 @pytest.mark.asyncio
@@ -47,7 +58,7 @@ async def test_get_feed_success(mock_auth_service, mock_profiles):
         return_value=Response(200, json=mock_profiles)
     )
     
-    headers = {"Authorization": "Bearer fake-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/discovery/feed/p1", headers=headers)
     
     assert response.status_code == 200
@@ -63,7 +74,7 @@ async def test_get_feed_unauthorized_profile(mock_auth_service):
         return_value=Response(200, json={"user_id": "u2"})
     )
     
-    headers = {"Authorization": "Bearer fake-token"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/discovery/feed/p1", headers=headers)
     assert response.status_code == 403
 

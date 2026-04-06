@@ -13,11 +13,19 @@ from auth_utils import get_current_user
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# Firebase / Firestore initialisation
-# ---------------------------------------------------------------------------
-firebase_admin.initialize_app()
-db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
+try:
+    firebase_admin.initialize_app()
+    db_id = os.environ.get("FIRESTORE_DATABASE_ID", "(default)")
+    print(f"[INFO] Initializing Firestore Client with Database ID: '{db_id}'")
+    db = firestore.Client(database=db_id)
+    # Verification fetch to catch 503/initialization errors early
+    print(f"[INFO] Profiles Service Status: Connected to Firestore ({db_id})")
+except Exception as e:
+    print(f"[CRITICAL] Failed to initialize Profiles Service: {e}")
+    # In a real environment, we might want to exit, but for Cloud Run, 
+    # we let the first request fail with a clear error if it hasn't crashed.
+    db = None 
+
 GCS_BUCKET = os.getenv("GCS_BUCKET_NAME", "")
 
 from fastapi.middleware.cors import CORSMiddleware

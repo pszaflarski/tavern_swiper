@@ -3,3 +3,4 @@ httpx
 pytest-asyncio
 fastapi
 respx
+PyJWT==2.10.1

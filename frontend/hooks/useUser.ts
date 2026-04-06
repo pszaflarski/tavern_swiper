@@ -108,6 +108,6 @@ export function useUser() {
     firebaseUser,
     isAuthenticated: !!firebaseUser,
     authInitialized,
-    rootExists: rootExistsQuery.data ?? true,
+    rootExists: rootExistsQuery.data,
   };
 }

@@ -3,3 +3,5 @@ httpx
 pytest-asyncio
 fastapi
 python-multipart
+PyJWT==2.10.1
+respx

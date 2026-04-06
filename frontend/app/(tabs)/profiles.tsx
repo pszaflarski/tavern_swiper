@@ -114,7 +114,14 @@ export default function ProfilesScreen() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      if (rootExists === false) {
+        Alert.alert('Nexus Uninitialized', 'The Nexus has not been claimed yet. Please claim the root throne in the Admin Dashboard before forging your first identity.');
+      } else {
+        Alert.alert('Identity Not Found', 'Your hero record was not found in the Nexus. Please check your connection or contact an admin.');
+      }
+      return;
+    }
 
     setIsSaving(true);
 
@@ -240,7 +247,7 @@ export default function ProfilesScreen() {
 
   if (mode === 'list') {
     return (
-      <View style={styles.container}>
+      <View style={styles.container} testID="profiles-screen">
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Identities</Text>
           <Text style={styles.headerSub}>Choose your path</Text>
@@ -269,12 +276,14 @@ export default function ProfilesScreen() {
             <Text style={[styles.createButtonText, { color: Colors.error }]}>Log Out</Text>
           </TouchableOpacity>
 
-          {(user?.user_type === 'admin' || user?.user_type === 'root_admin') && (
+          {(rootExists === false || user?.user_type === 'admin' || user?.user_type === 'root_admin') && (
             <TouchableOpacity
               style={[styles.createButton, { marginTop: Spacing[8], backgroundColor: Colors.surfaceContainerHigh, borderColor: Colors.tertiary, borderWidth: 1 }]}
               onPress={() => router.push('/admin')}
             >
-              <Text style={[styles.createButtonText, { color: Colors.tertiary }]}>Nexus Admin Panel</Text>
+              <Text style={[styles.createButtonText, { color: Colors.tertiary }]}>
+                {rootExists === false ? 'Claim the Root Throne' : 'Nexus Admin Panel'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -283,7 +292,7 @@ export default function ProfilesScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.formContent}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.formContent} testID="profiles-form-screen">
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setMode('list')} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
