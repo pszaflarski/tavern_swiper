@@ -1,0 +1,473 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Image,
+  Alert,
+  Dimensions,
+} from 'react-native';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { useCreateProfile, useUpdateProfile, useProfile } from '../../hooks/useProfiles';
+import { useUser } from '../../hooks/useUser';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+const GRID_SPACING = Spacing[3];
+const ITEM_WIDTH = (width - Spacing[6] * 2 - GRID_SPACING * 2) / 3;
+const ITEM_HEIGHT = ITEM_WIDTH * (16 / 9); // Tall 9:16 vertical thumbnails
+
+export default function CreateAndEditProfileScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const router = useRouter();
+  const { user } = useUser();
+  const isEditing = !!id;
+
+  const { data: existingProfile, isLoading: isLoadingProfile } = useProfile(id);
+  const createProfile = useCreateProfile();
+  const updateProfile = useUpdateProfile();
+
+  const [displayName, setDisplayName] = useState('');
+  const [tagline, setTagline] = useState('');
+  const [bio, setBio] = useState('');
+  const [gender, setGender] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+
+  // Initialise form if editing
+  useEffect(() => {
+    if (existingProfile) {
+      setDisplayName(existingProfile.display_name || '');
+      setTagline(existingProfile.tagline || '');
+      setBio(existingProfile.bio || '');
+      setGender(existingProfile.gender || '');
+      setImageUrls(existingProfile.image_urls || []);
+    }
+  }, [existingProfile]);
+
+  const pickImage = async () => {
+    if (imageUrls.length >= 6) {
+      Alert.alert('Full Arsenal', 'A hero can only carry six relics of their past.');
+      return;
+    }
+
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert('Vision Denied', 'The camera roll requires your permission to reveal its secrets.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [9, 16],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImageUrls([...imageUrls, result.assets[0].uri]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...imageUrls];
+    newImages.splice(index, 1);
+    setImageUrls(newImages);
+  };
+
+  const handleSave = async () => {
+    if (!displayName.trim()) {
+      Alert.alert('Incomplete Ritual', 'Your hero must have a name to be remembered.');
+      return;
+    }
+
+    const payload = {
+      display_name: displayName,
+      tagline,
+      bio,
+      gender,
+      image_urls: imageUrls,
+    };
+
+    try {
+      if (isEditing && id) {
+        await updateProfile.mutateAsync({ profileId: id, data: payload });
+      } else {
+        await createProfile.mutateAsync(payload);
+      }
+      router.back();
+    } catch (err) {
+      Alert.alert('Magic Failed', 'The summoning spell could not be completed. Try again.');
+    }
+  };
+
+  const isPending = createProfile.isPending || updateProfile.isPending;
+
+  if (isEditing && isLoadingProfile) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Recalling the legend...</Text>
+      </View>
+    );
+  }
+
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={100}
+    >
+      <Stack.Screen
+        options={{
+          title: isEditing ? 'Alter Your Path' : 'Forge Your Hero',
+          headerShown: true,
+          headerStyle: { backgroundColor: Colors.surfaceContainerLowest },
+          headerTitleStyle: { fontFamily: Fonts.heroic, color: Colors.onSurface },
+          headerTintColor: Colors.primary,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+              <Ionicons name="close" size={24} color={Colors.outline} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity 
+              onPress={handleSave} 
+              disabled={isPending}
+              style={styles.headerButton}
+            >
+              {isPending ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Text style={styles.saveActionText}>Save</Text>
+              )}
+            </TouchableOpacity>
+          ),
+        }}
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Enchanted Image Grid */}
+        <View style={styles.gridSection}>
+          <Text style={styles.sectionTitle}>Visions of the Self</Text>
+          <View style={styles.imageGrid}>
+            {[...Array(6)].map((_, index) => {
+              const uri = imageUrls[index];
+              return (
+                <View key={index} style={styles.gridSlotContainer} testID={`profile-image-slot-${index}`}>
+                  {uri ? (
+                    <View style={styles.filledSlot} testID={`profile-image-filled-${index}`}>
+                      <Image 
+                        source={{ uri }} 
+                        style={styles.gridImage} 
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity 
+                        style={styles.removeSeal} 
+                        onPress={() => removeImage(index)}
+                      >
+                        <Ionicons name="close-circle" size={20} color={Colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.emptySlot} onPress={pickImage}>
+                      <View style={styles.emptySlotContent}>
+                        <Ionicons name="camera" size={24} color={Colors.surfaceVariant} />
+                        <Text style={styles.addLabel}>Add</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+          <Text style={styles.gridHint}>Tap to reveal your hero's appearance (Max 6)</Text>
+        </View>
+
+        {/* Identity Section */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Identity</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>True Name</Text>
+              <TextInput
+                style={styles.input}
+                value={displayName}
+                testID="profile-name-input"
+                onChangeText={setDisplayName}
+                placeholder="e.g. Elara Brightsoul"
+                placeholderTextColor={Colors.surfaceVariant}
+              />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Title / Tagline</Text>
+            <TextInput
+              style={styles.input}
+              value={tagline}
+              testID="profile-tagline-input"
+              onChangeText={setTagline}
+              placeholder="e.g. Keeper of the Ancient Light"
+              placeholderTextColor={Colors.surfaceVariant}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Chronicle (Bio)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={bio}
+              testID="profile-bio-input"
+              onChangeText={setBio}
+              placeholder="Tell your tale..."
+              placeholderTextColor={Colors.surfaceVariant}
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+        </View>
+
+        {/* Attributes Section */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Attributes</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Gender / Essence</Text>
+            <View style={styles.choiceRow}>
+              {['Male', 'Female', 'Other'].map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  testID={`profile-gender-${opt}`}
+                  style={[styles.choiceBtn, gender === opt && styles.choiceBtnActive]}
+                  onPress={() => setGender(opt)}
+                >
+                  <Text style={[styles.choiceText, gender === opt && styles.choiceTextActive]}>
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <TouchableOpacity 
+          style={[styles.forgeButton, isPending && styles.forgeButtonDisabled]} 
+          onPress={handleSave}
+          testID="profile-forge-button"
+          disabled={isPending}
+        >
+          {isPending ? (
+            <ActivityIndicator color={Colors.onPrimary} />
+          ) : (
+            <>
+              <Ionicons name="flash" size={20} color={Colors.onPrimary} style={{ marginRight: 8 }} />
+              <Text style={styles.forgeButtonText}>
+                {isEditing ? 'Confirm Alteration' : 'Forge Identity'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+        
+        {Platform.OS === 'web' && (
+          <input
+            type="file"
+            multiple
+            data-testid="hidden-image-upload"
+            style={{ display: 'none' }}
+            onChange={(e: any) => {
+              const files = Array.from(e.target.files || []);
+              const uris = files.map(f => URL.createObjectURL(f as any));
+              setImageUrls(prev => [...prev, ...uris].slice(0, 6));
+            }}
+          />
+        )}
+        <View style={styles.footerPlaceholder} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+  },
+  loadingText: {
+    marginTop: Spacing[4],
+    fontFamily: Fonts.scribe,
+    color: Colors.outline,
+  },
+  scrollContent: {
+    padding: Spacing[6],
+  },
+  headerButton: {
+    padding: 8,
+  },
+  saveActionText: {
+    fontFamily: Fonts.heroic,
+    fontSize: 16,
+    color: Colors.primary,
+  },
+  gridSection: {
+    alignItems: 'center',
+    marginBottom: Spacing[8],
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: GRID_SPACING,
+  },
+  gridSlotContainer: {
+    width: ITEM_WIDTH,
+    height: ITEM_HEIGHT,
+  },
+  filledSlot: {
+    width: '100%',
+    height: '100%',
+    borderRadius: Radius.sm,
+    overflow: 'hidden',
+    backgroundColor: Colors.surfaceContainerHigh,
+    ...Shadow.waxSeal,
+    borderWidth: 1.5,
+    borderColor: Colors.tertiary,
+  },
+  emptySlot: {
+    width: '100%',
+    height: '100%',
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: Colors.outlineVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptySlotContent: {
+    alignItems: 'center',
+  },
+  addLabel: {
+    fontFamily: Fonts.scribe,
+    fontSize: 10,
+    color: Colors.outline,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeSeal: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+  },
+  gridHint: {
+    marginTop: Spacing[3],
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: Colors.outline,
+    textAlign: 'center',
+  },
+  formSection: {
+    marginBottom: Spacing[8],
+  },
+  sectionTitle: {
+    fontFamily: Fonts.heroic,
+    fontSize: 18,
+    color: Colors.onSurface,
+    marginBottom: Spacing[4],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+    paddingBottom: Spacing[2],
+  },
+  inputGroup: {
+    marginBottom: Spacing[4],
+  },
+  label: {
+    fontFamily: Fonts.scribe,
+    fontSize: 13,
+    color: Colors.outline,
+    marginBottom: Spacing[2],
+    marginLeft: 4,
+  },
+  input: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    padding: Spacing[3],
+    color: Colors.onSurface,
+    fontFamily: Fonts.scribe,
+    fontSize: 15,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  choiceRow: {
+    flexDirection: 'row',
+    gap: Spacing[2],
+  },
+  choiceBtn: {
+    flex: 1,
+    paddingVertical: Spacing[3],
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    backgroundColor: Colors.surfaceContainerLow,
+    alignItems: 'center',
+  },
+  choiceBtnActive: {
+    backgroundColor: Colors.primaryContainer,
+    borderColor: Colors.primary,
+  },
+  choiceText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
+  },
+  choiceTextActive: {
+    color: Colors.onPrimaryContainer,
+    fontWeight: '600',
+  },
+  forgeButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    padding: Spacing[4],
+    borderRadius: Radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+    marginTop: Spacing[4],
+  },
+  forgeButtonDisabled: {
+    opacity: 0.6,
+  },
+  forgeButtonText: {
+    fontFamily: Fonts.heroic,
+    fontSize: 18,
+    color: Colors.onPrimary,
+  },
+  footerPlaceholder: {
+    height: 40,
+  },
+});

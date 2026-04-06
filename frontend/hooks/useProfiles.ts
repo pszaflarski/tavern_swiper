@@ -74,3 +74,34 @@ export function useUpdateProfile() {
     },
   });
 }
+
+/**
+ * Create a new profile.
+ */
+export function useCreateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Partial<Profile>) => {
+      const res = await profilesApi.post('/profiles/', data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+  });
+}
+
+/**
+ * Fetch a single profile by ID.
+ */
+export function useProfile(profileId: string | undefined) {
+  return useQuery<Profile>({
+    queryKey: ['profiles', 'id', profileId],
+    queryFn: async () => {
+      if (!profileId) throw new Error('Profile ID is required');
+      const res = await profilesApi.get(`/profiles/${profileId}`);
+      return res.data;
+    },
+    enabled: !!profileId,
+  });
+}

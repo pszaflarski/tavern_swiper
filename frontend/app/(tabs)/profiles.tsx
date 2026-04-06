@@ -41,7 +41,7 @@ export default function ProfilesScreen() {
         </View>
 
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{item.display_name}</Text>
+          <Text style={styles.profileName} testID={`profile-name-${item.display_name}`}>{item.display_name}</Text>
           {item.bio && (
             <Text style={styles.profileTagline} numberOfLines={2}>{item.bio}</Text>
           )}
