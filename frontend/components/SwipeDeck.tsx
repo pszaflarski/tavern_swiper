@@ -110,7 +110,7 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
         </Animated.View>
 
         <Animated.View style={[styles.overlayLabel, styles.overlayLeft, nopeOpacity]}>
-          <Text style={styles.overlayTextLeft}>PASS</Text>
+          <Text style={styles.overlayTextLeft}>BANISH</Text>
         </Animated.View>
 
         <View style={styles.info}>
