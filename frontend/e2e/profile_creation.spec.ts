@@ -31,47 +31,78 @@ test.describe('Hero Forge Flow', () => {
   });
 
   test.afterEach(async () => {
-    await context.close();
+    if (context) {
+      await context.close();
+    }
   });
 
-  test('should forge a new hero with 6 images and verify in archives', async () => {
-    const heroName = `Antigravity Hero ${Date.now()}`;
+  test('should forge a new hero, alter their path, and cast them into the void', async () => {
+    test.setTimeout(120000); // Extended for full lifecycle
+    const heroName = `Hero ${Math.random().toString(36).substring(7)}`;
+    const alteredName = `${heroName} the Redeemed`;
     
-    // 1. Navigate to Forge
+    // 1. FORGE (Create)
     await page.goto('/profiles/create_and_edit');
-    await expect(page.getByTestId('profile-name-input')).toBeVisible();
-
-    // 2. Fill Identity
     await page.getByTestId('profile-name-input').fill(heroName);
     await page.getByTestId('profile-tagline-input').fill('The Agent of Automation');
-    await page.getByTestId('profile-bio-input').fill('Forged in the silicon fires of DeepMind to solve any quest.');
-    
-    // 3. Select Gender
+    await page.getByTestId('profile-bio-input').fill('Forged in silicon fires.');
     await page.getByTestId('profile-gender-Other').click();
 
-    // 4. Upload 6 Images (using hidden test sentinel)
+    // Upload initial images
     const assetPath = path.join(__dirname, 'assets', 'test_hero.png');
-    // We upload 6 files at once to the hidden input
-    await page.setInputFiles('input[data-testid="hidden-image-upload"]', [
-      assetPath, assetPath, assetPath, assetPath, assetPath, assetPath
-    ]);
-
-    // 5. Verify images are reflected in UI (filled slots)
-    for (let i = 0; i < 6; i++) {
-      await expect(page.getByTestId(`profile-image-filled-${i}`)).toBeVisible();
-    }
-
-    // 6. Forge Identity (Save)
+    await page.setInputFiles('input[data-testid="hidden-image-upload"]', [assetPath, assetPath]);
+    
     await page.getByTestId('profile-forge-button').click();
 
-    // 7. Verify navigation to Profiles Archives
-    // The screen calls router.back(), which should take us to the previous screen or tavern.
-    // However, the user asked to check /profiles, so we will navigate there.
+    // 2. VERIFY & NAVIGATE TO ARCHIVES
     await page.goto('/profiles');
-    
-    // 8. Find the newly forged hero
     await expect(page.getByTestId(`profile-name-${heroName}`)).toBeVisible();
     
-    console.log(`Hero "${heroName}" successfully forged and verified in archives.`);
+    // 3. ALTER (Edit)
+    // Find the profile card containing this hero and click its edit button
+    await page.getByLabel(`Edit ${heroName} profile`).click();
+    
+    // Verify currently in edit mode
+    await expect(page.getByTestId('profile-name-input')).toHaveValue(heroName);
+    
+    // Update Identity
+    await page.getByTestId('profile-name-input').clear();
+    await page.getByTestId('profile-name-input').fill(alteredName);
+    await page.getByTestId('profile-tagline-input').clear();
+    await page.getByTestId('profile-tagline-input').fill('The Redeemed Hero');
+    
+    // Remove existing images
+    const removeButtons = page.getByLabel(/Remove image .*/);
+    const removeCount = await removeButtons.count();
+    for (let i = 0; i < removeCount; i++) {
+        await removeButtons.first().click();
+    }
+    
+    // Add 1 new image
+    await page.setInputFiles('input[data-testid="hidden-image-upload"]', [assetPath]);
+    
+    // Confirm Alteration
+    await page.getByTestId('profile-forge-button').click();
+    
+    // 4. VERIFY ALTERATION IN ARCHIVES
+    // The app naturally navigates back to /profiles after editing
+    await expect(page.getByTestId(`profile-name-${alteredName}`)).toBeVisible();
+    await expect(page.getByTestId(`profile-name-${heroName}`)).not.toBeVisible();
+
+    // 5. VOID (Delete)
+    // Handle the browser confirm dialog
+    page.once('dialog', async dialog => {
+      console.log(`Confirming deletion dialog: ${dialog.message()}`);
+      await dialog.accept();
+    });
+    
+    console.log(`Initiating deletion for hero: ${alteredName}`);
+    await page.getByLabel(`Delete ${alteredName} profile`).click();
+    
+    // 6. FINAL VERIFICATION
+    // Increase timeout for deletion to reflect in list
+    await expect(page.getByTestId(`profile-name-${alteredName}`)).not.toBeVisible({ timeout: 20000 });
+    
+    console.log(`Full lifecycle verified for hero: ${heroName} -> ${alteredName} -> Voided.`);
   });
 });

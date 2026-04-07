@@ -85,7 +85,12 @@ export default function CreateAndEditProfileScreen() {
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      Alert.alert('Incomplete Ritual', 'Your hero must have a name to be remembered.');
+      const msg = 'Your hero must have a name to be remembered.';
+      if (Platform.OS === 'web') {
+        window.alert(`Incomplete Ritual\n\n${msg}`);
+      } else {
+        Alert.alert('Incomplete Ritual', msg);
+      }
       return;
     }
 
@@ -105,7 +110,12 @@ export default function CreateAndEditProfileScreen() {
       }
       router.back();
     } catch (err) {
-      Alert.alert('Magic Failed', 'The summoning spell could not be completed. Try again.');
+      const msg = 'The summoning spell could not be completed. Try again.';
+      if (Platform.OS === 'web') {
+        window.alert(`Magic Failed\n\n${msg}`);
+      } else {
+        Alert.alert('Magic Failed', msg);
+      }
     }
   };
 
@@ -144,6 +154,9 @@ export default function CreateAndEditProfileScreen() {
               onPress={handleSave} 
               disabled={isPending}
               style={styles.headerButton}
+              testID="profile-header-save-button"
+              accessibilityLabel="Save profile"
+              accessibilityRole="button"
             >
               {isPending ? (
                 <ActivityIndicator size="small" color={Colors.primary} />
@@ -174,12 +187,21 @@ export default function CreateAndEditProfileScreen() {
                       <TouchableOpacity 
                         style={styles.removeSeal} 
                         onPress={() => removeImage(index)}
+                        testID={`profile-image-remove-${index}`}
+                        accessibilityLabel={`Remove image ${index + 1}`}
+                        accessibilityRole="button"
                       >
                         <Ionicons name="close-circle" size={20} color={Colors.error} />
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    <TouchableOpacity style={styles.emptySlot} onPress={pickImage}>
+                    <TouchableOpacity 
+                      style={styles.emptySlot} 
+                      onPress={pickImage}
+                      testID={`profile-image-add-button-${index}`}
+                      accessibilityLabel={`Add image to slot ${index + 1}`}
+                      accessibilityRole="button"
+                    >
                       <View style={styles.emptySlotContent}>
                         <Ionicons name="camera" size={24} color={Colors.surfaceVariant} />
                         <Text style={styles.addLabel}>Add</Text>

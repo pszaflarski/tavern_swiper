@@ -105,3 +105,89 @@ export function useProfile(profileId: string | undefined) {
     enabled: !!profileId,
   });
 }
+
+/**
+ * Activate a specific profile for the user.
+ * Implements optimistic updates for a snappy UI.
+ */
+export function useActivateProfile(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      const res = await profilesApi.post(`/profiles/${profileId}/set_active`);
+      return res.data;
+    },
+    // When mutate is called:
+    onMutate: async (newProfileId: string) => {
+      // 1. Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['profiles', 'me', 'active'] });
+      if (userId) {
+        await queryClient.cancelQueries({ queryKey: ['profiles', 'user', userId] });
+      }
+
+      // 2. Snapshot the previous values
+      const previousActiveProfile = queryClient.getQueryData<Profile>(['profiles', 'me', 'active']);
+      const previousUserProfiles = userId 
+        ? queryClient.getQueryData<Profile[]>(['profiles', 'user', userId])
+        : undefined;
+
+      // 3. Optimistically update to the new value
+      
+      // Update 'me/active' - find the profile from the list if possible, or just build a partial one
+      if (previousUserProfiles) {
+        const newActive = previousUserProfiles.find(p => p.profile_id === newProfileId);
+        if (newActive) {
+          queryClient.setQueryData(['profiles', 'me', 'active'], { ...newActive, is_active: true });
+        }
+      }
+
+      // Update the user's profile list
+      if (userId && previousUserProfiles) {
+        queryClient.setQueryData(['profiles', 'user', userId], (old: Profile[] | undefined) => {
+          if (!old) return old;
+          return old.map(p => ({
+            ...p,
+            is_active: p.profile_id === newProfileId
+          }));
+        });
+      }
+
+      // Return a context object with the snapshotted values
+      return { previousActiveProfile, previousUserProfiles };
+    },
+    // If the mutation fails, use the context we returned above
+    onError: (err, newProfileId, context) => {
+      if (context?.previousActiveProfile) {
+        queryClient.setQueryData(['profiles', 'me', 'active'], context.previousActiveProfile);
+      }
+      if (userId && context?.previousUserProfiles) {
+        queryClient.setQueryData(['profiles', 'user', userId], context.previousUserProfiles);
+      }
+    },
+    // Always refetch after error or success:
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'me', 'active'] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['profiles', 'user', userId] });
+      }
+      // Also invalidate discovery since the active profile changed
+      queryClient.invalidateQueries({ queryKey: ['discovery'] });
+    },
+  });
+}
+
+/**
+ * Delete a profile.
+ */
+export function useDeleteProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      await profilesApi.delete(`/profiles/${profileId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+  });
+}

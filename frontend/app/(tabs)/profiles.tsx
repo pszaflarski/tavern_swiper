@@ -1,58 +1,118 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { useProfiles, Profile } from '../../hooks/useProfiles';
+import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
 import { Ionicons } from '@expo/vector-icons';
+import { Alert } from 'react-native';
 
 export default function ProfilesScreen() {
   const { user } = useUser();
   const { data: profiles, isLoading } = useProfiles(user?.uid);
   const { activeProfileId, setActiveProfileId } = useProfileContext();
+  const deleteProfileMutation = useDeleteProfile();
   const router = useRouter();
+
+  const handleEdit = (profileId: string) => {
+    router.push({
+      pathname: '/profiles/create_and_edit',
+      params: { id: profileId }
+    } as any);
+  };
+
+  const handleDelete = (profileId: string, displayName: string) => {
+    const title = 'Cast Into The Void';
+    const message = `Are you certain you wish to erase the legend of ${displayName} forever?`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`${title}\n\n${message}`);
+      if (confirmed) {
+        deleteProfileMutation.mutate(profileId);
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: 'Spar Them', style: 'cancel' },
+          { 
+            text: 'Erase', 
+            style: 'destructive',
+            onPress: () => deleteProfileMutation.mutate(profileId)
+          },
+        ]
+      );
+    }
+  };
 
   const renderProfileItem = ({ item }: { item: Profile }) => {
     const isActive = item.profile_id === activeProfileId;
 
     return (
-      <TouchableOpacity
-        style={[
-          styles.profileCard,
-          isActive && styles.activeProfileCard
-        ]}
-        onPress={() => setActiveProfileId(item.profile_id)}
-        testID={`profile-item-${item.profile_id}`}
-      >
-        <View style={styles.profileImageContainer}>
-          {item.image_urls?.[0] ? (
-            <Image source={{ uri: item.image_urls[0] }} style={styles.profileImage} />
-          ) : (
-            <View style={styles.profileImagePlaceholder}>
-              <Text style={styles.placeholderEmoji}>🎭</Text>
-            </View>
-          )}
-          {isActive && (
-            <View style={styles.activeBadge}>
-              <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
-            </View>
-          )}
-        </View>
+      <View style={styles.cardContainer}>
+        <TouchableOpacity
+          style={[
+            styles.profileCard,
+            isActive && styles.activeProfileCard
+          ]}
+          onPress={() => setActiveProfileId(item.profile_id)}
+          testID={`profile-item-${item.profile_id}`}
+        >
+          <View style={styles.profileImageContainer}>
+            {item.image_urls?.[0] ? (
+              <Image source={{ uri: item.image_urls[0] }} style={styles.profileImage} />
+            ) : (
+              <View style={styles.profileImagePlaceholder}>
+                <Text style={styles.placeholderEmoji}>🎭</Text>
+              </View>
+            )}
+            {isActive && (
+              <View style={styles.activeBadge}>
+                <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+              </View>
+            )}
+          </View>
 
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName} testID={`profile-name-${item.display_name}`}>{item.display_name}</Text>
-          {item.bio && (
-            <Text style={styles.profileTagline} numberOfLines={2}>{item.bio}</Text>
-          )}
-        </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName} testID={`profile-name-${item.display_name}`}>{item.display_name}</Text>
+            {item.bio && (
+              <Text style={styles.profileTagline} numberOfLines={2}>{item.bio}</Text>
+            )}
+          </View>
 
-        <Ionicons 
-          name={isActive ? 'radio-button-on' : 'radio-button-off'} 
-          size={24} 
-          color={isActive ? Colors.primary : Colors.outline} 
-        />
-      </TouchableOpacity>
+          <View style={styles.cardActions}>
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={() => handleEdit(item.profile_id)}
+              testID={`edit-profile-${item.profile_id}`}
+              accessibilityLabel={`Edit ${item.display_name} profile`}
+              accessibilityRole="button"
+            >
+              <Ionicons name="pencil" size={20} color={Colors.outline} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={() => handleDelete(item.profile_id, item.display_name)}
+              testID={`delete-profile-${item.profile_id}`}
+              accessibilityLabel={`Delete ${item.display_name} profile`}
+              accessibilityRole="button"
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.error} />
+            </TouchableOpacity>
+
+            <View style={styles.selectionIndicator}>
+              <Ionicons 
+                name={isActive ? 'radio-button-on' : 'radio-button-off'} 
+                size={22} 
+                color={isActive ? Colors.primary : Colors.outlineVariant} 
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -133,6 +193,9 @@ const styles = StyleSheet.create({
     padding: Spacing[4],
     gap: Spacing[4],
   },
+  cardContainer: {
+    marginBottom: Spacing[2],
+  },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -183,6 +246,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.onSurface,
     marginBottom: 2,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  actionButton: {
+    padding: Spacing[2],
+  },
+  selectionIndicator: {
+    marginLeft: Spacing[1],
   },
   profileClass: {
     fontFamily: Fonts.scribe,

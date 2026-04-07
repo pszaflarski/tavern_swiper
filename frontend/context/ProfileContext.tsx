@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useProfiles, useUpdateProfile, useActiveProfile } from '../hooks/useProfiles';
+import { useProfiles, useActiveProfile, useActivateProfile } from '../hooks/useProfiles';
 import { useUser } from '../hooks/useUser';
 
 interface ProfileContextType {
@@ -13,14 +13,14 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useUser();
   const { data: activeProfile, isLoading: isLoadingActiveProfile } = useActiveProfile(isAuthenticated);
-  const updateProfileMutation = useUpdateProfile();
+  const activateProfileMutation = useActivateProfile(user?.uid);
 
   const activeProfileId = React.useMemo(() => {
     return activeProfile?.profile_id;
   }, [activeProfile]);
 
   const setActiveProfileId = (id: string) => {
-    updateProfileMutation.mutate({ profileId: id, data: { is_active: true } });
+    activateProfileMutation.mutate(id);
   };
 
   return (
