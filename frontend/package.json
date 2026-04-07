@@ -7,7 +7,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test:e2e": "npx playwright test"
+    "test": "jest --runInBand",
+    "test:jest": "jest --runInBand",
+    "test:e2e": "npx playwright test",
+    "test:playwright": "npx playwright test"
   },
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
@@ -39,9 +42,14 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
     "dotenv": "^17.4.1",
-    "react-test-renderer": "19.1.0",
+    "jest": "^29.7.0",
+    "jest-expo": "^55.0.14",
+    "react-test-renderer": "^19.1.0",
     "typescript": "~5.9.2"
   },
   "private": true

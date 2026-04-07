@@ -1,0 +1,92 @@
+import '@testing-library/jest-native/extend-expect';
+
+// Mock Async Storage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
+// Mock expo-router
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+  }),
+  useLocalSearchParams: () => ({}),
+  usePathname: () => '/',
+  Stack: {
+    Screen: jest.fn(() => null),
+  },
+  Tabs: {
+    Screen: jest.fn(() => null),
+  },
+  Link: jest.fn(({ children }) => children),
+}));
+
+// Mock Firebase
+jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn(() => ({
+    currentUser: { uid: 'test-uid' },
+  })),
+  signInWithEmailAndPassword: jest.fn(),
+  createUserWithEmailAndPassword: jest.fn(),
+  signOut: jest.fn(),
+  onAuthStateChanged: jest.fn((auth, callback) => {
+    callback({ uid: 'test-uid' });
+    return jest.fn(); // Unsubscribe
+  }),
+}));
+
+jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(),
+  collection: jest.fn(),
+  doc: jest.fn(),
+  getDoc: jest.fn(),
+  getDocs: jest.fn(),
+  setDoc: jest.fn(),
+  updateDoc: jest.fn(),
+  deleteDoc: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn(),
+  orderBy: jest.fn(),
+  limit: jest.fn(),
+  onSnapshot: jest.fn(() => jest.fn()),
+}));
+
+// Mock Reanimated
+require('react-native-reanimated').default;
+jest.mock('react-native-reanimated', () => {
+    const Reanimated = require('react-native-reanimated/mock');
+    Reanimated.default.call = () => {};
+    return Reanimated;
+});
+
+// Mock Gesture Handler
+jest.mock('react-native-gesture-handler', () => {
+    return {
+        State: {},
+        PanGestureHandler: 'PanGestureHandler',
+        BaseButton: 'BaseButton',
+        RectButton: 'RectButton',
+        GestureHandlerRootView: 'GestureHandlerRootView',
+        Gesture: {
+            Pan: () => ({
+                onBegin: jest.fn().mockReturnThis(),
+                onUpdate: jest.fn().mockReturnThis(),
+                onEnd: jest.fn().mockReturnThis(),
+                onFinalize: jest.fn().mockReturnThis(),
+            }),
+        },
+    };
+});
+
+// Mock expo-image-picker
+jest.mock('expo-image-picker', () => ({
+    launchImageLibraryAsync: jest.fn(),
+    MediaTypeOptions: {
+        Images: 'Images',
+    },
+}));
+
+// Silence the warning: Animated: `useNativeDriver` is not supported because the native animated module is missing
+// jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
