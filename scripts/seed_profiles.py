@@ -2,18 +2,54 @@ import requests
 import csv
 import os
 import time
+import sys
+import subprocess
+import json
+
+# --- Configuration ---
+PROJECT_ID = "tavern-swiper-dev"
+REGION = "us-central1"
 
 # Primary Seeder (Authenticated first to perform administrative overrides)
-# Primary Seeder (Authenticated as an existing root admin)
 SEEDER_EMAIL = os.getenv("ROOT_EMAIL", "root@example.com")
 SEEDER_PASSWORD = os.getenv("ROOT_PASSWORD", "Password123!")
 
-# --- Configuration ---
-# Targets the test environment by default
-# Targets the local services by default (which connect to the cloud DB)
-AUTH_URL = os.getenv("AUTH_URL", "http://localhost:8001")
-PROFILES_URL = os.getenv("PROFILES_URL", "http://localhost:8002")
-USERS_URL = os.getenv("USERS_URL", "http://localhost:8006")
+def get_url(service_name, env="local"):
+    # Check for explicit environment variable overrides
+    env_var = f"{service_name.upper()}_URL"
+    if os.getenv(env_var):
+        return os.getenv(env_var)
+
+    if env == "local":
+        ports = {
+            "auth": 8001,
+            "profiles": 8002,
+            "users": 8006,
+        }
+        return f"http://localhost:{ports.get(service_name)}"
+    
+    # Fetch from Cloud Run
+    deploy_name = f"{service_name}-test" if env == "test" else service_name
+    if env == "dev":
+        deploy_name = service_name
+    elif env == "test":
+        deploy_name = f"{service_name}-test"
+        
+    try:
+        url = subprocess.check_output([
+            "gcloud", "run", "services", "describe", deploy_name,
+            "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+            "--format", "value(status.url)"
+        ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        return url
+    except Exception as e:
+        print(f"⚠️ Error fetching URL for {deploy_name}: {e}")
+        return None
+
+# These will be set in the __main__ block
+AUTH_URL = None
+PROFILES_URL = None
+USERS_URL = None
 
 # Standardize paths to be absolute relative to the project root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -129,4 +165,19 @@ def seed_system():
     print("\n✅ Multi-user seeding complete!")
 
 if __name__ == "__main__":
+    env = "local"
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ["test", "dev"]:
+            env = sys.argv[1]
+    
+    print(f"🚀 Seeding profiles in {env} environment...")
+    
+    AUTH_URL = get_url("auth", env)
+    PROFILES_URL = get_url("profiles", env)
+    USERS_URL = get_url("users", env)
+    
+    if not all([AUTH_URL, PROFILES_URL, USERS_URL]):
+        print("❌ Could not determine all service URLs.")
+        sys.exit(1)
+        
     seed_system()
