@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import SwipeDeck from '../../components/SwipeDeck';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useDiscoveryFeed, useProfiles } from '../../hooks/useProfiles';
@@ -14,6 +15,7 @@ export default function TavernScreen() {
   const { data: myProfiles } = useProfiles(user?.uid);
   
   const swipeMutation = useSwipe();
+  const router = useRouter();
 
   // Show all profiles (including user's own) as requested
   const activeProfiles = useMemo(() => {
@@ -70,9 +72,10 @@ export default function TavernScreen() {
           <Text style={styles.emptyDesc}>You must have an active profile to discover other heroes in the realm.</Text>
           <TouchableOpacity 
             style={[styles.roundButton, { width: 'auto', paddingHorizontal: Spacing[6], borderRadius: Radius.md }]} 
-            onPress={() => { /* Navigation to Profile might be handled by tabs, or we can just tell them */ }}
+            onPress={() => router.push('/profiles/create_and_edit')}
+            testID="forge-identity-button"
           >
-            <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>VISIT THE ARMORY (PROFILES)</Text>
+            <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>FORGE NEW IDENTITY</Text>
           </TouchableOpacity>
         </View>
       </View>

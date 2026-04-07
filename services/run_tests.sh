@@ -5,7 +5,7 @@
 
 set -e
 
-SERVICES=("auth" "profiles" "discovery" "swipes" "messages" "users")
+SERVICES=("auth" "profiles" "discovery" "messages" "users")
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 echo "🛡️ Starting Tavern Swiper Microservices Test Suite..."

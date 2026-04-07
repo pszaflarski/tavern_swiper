@@ -34,3 +34,10 @@ class SwipeOut(BaseModel):
     swiped_profile_id: str
     direction: str
     created_at: str
+    match_id: Optional[str] = None
+
+
+class MatchOut(BaseModel):
+    match_id: str
+    profiles: List[str]
+    created_at: str

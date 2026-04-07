@@ -241,6 +241,67 @@ def test_purge_all_users_non_root_fails(mock_firestore, mock_auth_service):
 
     headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-user-456', role='admin')}"}
     response = client.delete("/users/", headers=headers)
-    
     assert response.status_code == 403
     assert "Root Admin authority required" in response.json()["detail"]
+
+def test_delete_root_admin_unauthorized(mock_firestore):
+    # Mock caller is ADMIN
+    mock_admin_doc = MagicMock()
+    mock_admin_doc.exists = True
+    mock_admin_doc.to_dict.return_value = {"user_type": "admin"}
+    mock_admin_doc.get.return_value = mock_admin_doc # ref.get() returns doc
+    
+    # Mock target is ROOT_ADMIN
+    mock_target_doc = MagicMock()
+    mock_target_doc.exists = True
+    mock_target_doc.to_dict.return_value = {"user_type": "root_admin"}
+    mock_target_doc.get.return_value = mock_target_doc # ref.get() returns doc
+
+    def side_effect(uid):
+        if uid == "admin-uid": return mock_admin_doc
+        return mock_target_doc
+    
+    mock_firestore.collection().document.side_effect = side_effect
+    
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-uid', role='admin')}"}
+    response = client.delete("/users/root-uid", headers=headers)
+    assert response.status_code == 403
+    assert "Only a Root Admin can delete another Root Admin" in response.json()["detail"]
+
+def test_delete_last_root_admin_fails(mock_firestore):
+    # Mock caller is ROOT_ADMIN
+    mock_root_doc = MagicMock()
+    mock_root_doc.exists = True
+    mock_root_doc.to_dict.return_value = {"user_type": "root_admin"}
+    mock_root_doc.get.return_value = mock_root_doc # ref.get() returns doc
+    
+    # Mock query returns only 1 active root admin
+    mock_root_doc_query = MagicMock()
+    mock_root_doc_query.to_dict.return_value = {"user_type": "root_admin", "is_deleted": False}
+    mock_firestore.collection().where().stream.return_value = [mock_root_doc_query]
+    
+    # Setup the document reference mock
+    mock_firestore.collection().document.return_value = mock_root_doc
+    
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='root-uid', role='root_admin')}"}
+    response = client.delete("/users/root-uid", headers=headers)
+    assert response.status_code == 400
+    assert "last active root admin" in response.json()["detail"]
+    
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='root-uid', role='root_admin')}"}
+    response = client.delete("/users/root-uid", headers=headers)
+    assert response.status_code == 400
+    assert "last active root admin" in response.json()["detail"]
+
+def test_auth_expired_token():
+    exp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+    token = jwt.encode({"sub": "u1", "role": "user", "iat": exp, "exp": exp}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.get("/users/me", headers=headers)
+    assert response.status_code == 401
+
+def test_auth_invalid_signature():
+    token = jwt.encode({"sub": "u1", "role": "user"}, "WRONG_SECRET", algorithm=JWT_ALGORITHM)
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.get("/users/me", headers=headers)
+    assert response.status_code == 401

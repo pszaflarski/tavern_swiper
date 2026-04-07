@@ -9,7 +9,7 @@ import httpx
 load_dotenv()
 import uuid
 from datetime import datetime, timezone
-from models import FeedResponse, DiscoveryProfile, SwipeCreate, SwipeOut
+from models import FeedResponse, DiscoveryProfile, SwipeCreate, SwipeOut, MatchOut
 from auth_utils import get_current_user
 
 # ---------------------------------------------------------------------------
@@ -23,6 +23,7 @@ db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 FEED_LIMIT = int(os.getenv("FEED_LIMIT", "20"))
 SWIPES_COLLECTION = "swipes"
+MATCHES_COLLECTION = "matches"
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -62,6 +63,8 @@ async def get_feed(profile_id: str, limit: int = 10, auth_data: tuple[str, str, 
             p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{profile_id}", headers=headers)
             if p_resp.status_code == 404:
                 raise HTTPException(status_code=404, detail="Profile not found")
+            if p_resp.status_code != 200:
+                 raise HTTPException(status_code=502, detail="Required dependency returned an error")
             p_data = p_resp.json()
             if p_data.get("user_id") != uid:
                 raise HTTPException(status_code=403, detail="Not authorized for this profile")
@@ -112,10 +115,16 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
             p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{body.swiper_profile_id}", headers=headers)
             if p_resp.status_code == 404:
                  raise HTTPException(status_code=404, detail="Swiper profile not found")
-            if p_resp.json().get("user_id") != uid:
+            if p_resp.status_code != 200:
+                 raise HTTPException(status_code=502, detail="Required dependency returned an error")
+            p_data = p_resp.json()
+            if p_data.get("user_id") != uid:
                  raise HTTPException(status_code=403, detail="Not authorized for this profile")
         except httpx.HTTPError:
              raise HTTPException(status_code=502, detail="Required dependency unavailable")
+
+    if body.swiper_profile_id == body.swiped_profile_id:
+        raise HTTPException(status_code=400, detail="Cannot swipe on your own profile.")
 
     swipe_id = str(uuid.uuid4())
     now = datetime.now(tz=timezone.utc)
@@ -131,10 +140,54 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
     }
     db.collection(SWIPES_COLLECTION).document(swipe_id).set(swipe_data)
 
+    # Check for mutual right swipe (Match Detection)
+    match_id = None
+    if body.direction == "right":
+        reciprocal_docs = (
+            db.collection(SWIPES_COLLECTION)
+            .where("swiper_profile_id", "==", body.swiped_profile_id)
+            .where("swiped_profile_id", "==", body.swiper_profile_id)
+            .where("direction", "==", "right")
+            .limit(1)
+            .stream()
+        )
+        
+        # If a reciprocal right swipe exists, create a match
+        has_reciprocal = False
+        for _ in reciprocal_docs:
+            has_reciprocal = True
+            break
+            
+        if has_reciprocal:
+            sorted_ids = sorted([body.swiper_profile_id, body.swiped_profile_id])
+            match_id = f"match_{sorted_ids[0]}_{sorted_ids[1]}"
+            match_data = {
+                "match_id": match_id,
+                "profiles": sorted_ids,
+                "created_at": now,
+            }
+            db.collection(MATCHES_COLLECTION).document(match_id).set(match_data)
+
     return SwipeOut(
         swipe_id=swipe_id,
         swiper_profile_id=body.swiper_profile_id,
         swiped_profile_id=body.swiped_profile_id,
         direction=body.direction,
         created_at=now_str,
+        match_id=match_id
+    )
+
+
+@app.get("/discovery/matches/{match_id}", response_model=MatchOut)
+async def get_match(match_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Fetch match metadata."""
+    doc = db.collection(MATCHES_COLLECTION).document(match_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Match not found")
+    
+    data = doc.to_dict()
+    return MatchOut(
+        match_id=data["match_id"],
+        profiles=data["profiles"],
+        created_at=data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"]
     )

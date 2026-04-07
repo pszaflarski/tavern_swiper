@@ -53,29 +53,8 @@ services:
     depends_on:
       profiles:
         condition: service_healthy
-      swipes:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/discovery/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  swipes:
-    build:
-      context: ./services/swipes
-    ports:
-      - "8004:8004"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
-      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
-    env_file: ./services/swipes/.env
-    volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
-    networks:
-      - tavern-net
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/swipes/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -94,7 +73,7 @@ services:
     networks:
       - tavern-net
     depends_on:
-      swipes:
+      profiles:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/messages/health')"]

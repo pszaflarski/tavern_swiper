@@ -80,7 +80,7 @@ for ENV in "${ENVIRONMENTS[@]}"; do
     USERS_URL=$(get_service_url "users${SUFFIX}")
     PROFILES_URL=$(get_service_url "profiles${SUFFIX}")
     DISCOVERY_URL=$(get_service_url "discovery${SUFFIX}")
-    SWIPES_URL=$(get_service_url "swipes${SUFFIX}")
+    SWIPES_URL=$DISCOVERY_URL
     MESSAGES_URL=$(get_service_url "messages${SUFFIX}")
 
     # Build Arguments

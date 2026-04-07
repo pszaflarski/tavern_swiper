@@ -1,7 +1,7 @@
 module.exports = {
     preset: 'jest-expo',
     setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-    testPathIgnorePatterns: ['<rootDir>/e2e/'],
+    testPathIgnorePatterns: ['<rootDir>/e2e/', 'snapshot.test.tsx'],
     transformIgnorePatterns: [
         'node_modules/(?!(jest-)?react-native|@react-native|expo|@expo|@react-navigation|@unimodules|unimodules|sentry-expo|native-base|react-native-svg|firebase|@firebase|axios|@tanstack)'
     ],

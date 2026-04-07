@@ -132,8 +132,12 @@ async def purge_all_users(_: bool = Depends(get_root_admin)):
     return None
 
 @app.delete("/users/{target_uid}", status_code=204)
-async def delete_user(target_uid: str, hard: bool = False, _: str = Depends(get_admin)):
+async def delete_user(target_uid: str, hard: bool = False, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Delete a user. Admin only. 'hard=True' deletes from Auth too."""
+    caller_uid, caller_role, _ = auth_data
+    if caller_role not in [UserType.ADMIN, UserType.ROOT_ADMIN]:
+        raise HTTPException(status_code=403, detail="Admin or Root Admin role required")
+
     ref = db.collection(COLLECTION).document(target_uid)
     doc = ref.get()
     if not doc.exists:
@@ -141,7 +145,11 @@ async def delete_user(target_uid: str, hard: bool = False, _: str = Depends(get_
     
     data = doc.to_dict()
     if data.get("user_type") == UserType.ROOT_ADMIN:
-        # Check if this is the last root admin
+        # 1. Permission Check: Only Root Admins can delete Root Admins
+        if caller_role != UserType.ROOT_ADMIN:
+            raise HTTPException(status_code=403, detail="Only a Root Admin can delete another Root Admin.")
+
+        # 2. Last Root Admin Check
         query = db.collection(COLLECTION).where(filter=FieldFilter("user_type", "==", UserType.ROOT_ADMIN)).stream()
         roots = [r for r in query if not r.to_dict().get("is_deleted")]
         if len(roots) <= 1:

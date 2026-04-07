@@ -71,4 +71,20 @@ describe('Profiles Screen', () => {
     const { getByText } = render(<ProfilesScreen />);
     expect(getByText('Consulting the Archives...')).toBeTruthy();
   });
+
+  it('renders forge identity button at the bottom', () => {
+    const { getByTestId, getByText } = render(<ProfilesScreen />);
+    
+    expect(getByTestId('add-profile-button')).toBeTruthy();
+    expect(getByText('Forge New Identity')).toBeTruthy();
+  });
+
+  it('shows forge your first hero when list is empty', () => {
+    (useProfiles as jest.Mock).mockReturnValue({ data: [], isLoading: false });
+
+    const { getByTestId, getByText } = render(<ProfilesScreen />);
+
+    expect(getByTestId('empty-state-add-profile-button')).toBeTruthy();
+    expect(getByText('Forge Your First Hero')).toBeTruthy();
+  });
 });

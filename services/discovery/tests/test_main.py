@@ -129,3 +129,109 @@ def test_health():
     response = client.get("/discovery/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+@pytest.mark.asyncio
+async def test_record_swipe_mutual_match(mock_auth_service):
+    respx_mock = mock_auth_service
+    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(
+        return_value=Response(200, json={"user_id": "u1"})
+    )
+    
+    payload = {
+        "swiper_profile_id": "p1",
+        "swiped_profile_id": "p2",
+        "direction": "right"
+    }
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    # Mock Firestore for:
+    # 1. Recording the swipe
+    # 2. Searching for reciprocal swipe (should return p2->p1 right swipe)
+    # 3. Recording the match
+    reciprocal_swipe = MagicMock()
+    reciprocal_swipe.to_dict.return_value = {
+        "swiper_profile_id": "p2",
+        "swiped_profile_id": "p1",
+        "direction": "right"
+    }
+    
+    with patch("main.db.collection") as mock_coll:
+        # Chain for reciprocal check: db.collection(SWI).where(...).where(...).where(...).limit(1).stream()
+        mock_coll.return_value.where.return_value.where.return_value.where.return_value.limit.return_value.stream.return_value = [reciprocal_swipe]
+        
+        response = client.post("/discovery/swipe/", json=payload, headers=headers)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["match_id"] == "match_p1_p2"
+        
+        # Verify firestore.set was called twice (once for swipe, once for match)
+        assert mock_coll.return_value.document.return_value.set.call_count == 2
+
+@pytest.mark.asyncio
+async def test_get_match_success():
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    # Mock Firestore
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    mock_doc.to_dict.return_value = {
+        "match_id": "match_p1_p2",
+        "profiles": ["p1", "p2"],
+        "created_at": now
+    }
+    
+    with patch("main.db.collection") as mock_coll:
+        mock_coll.return_value.document.return_value.get.return_value = mock_doc
+        
+        response = client.get("/discovery/matches/match_p1_p2", headers=headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["match_id"] == "match_p1_p2"
+        assert data["profiles"] == ["p1", "p2"]
+
+@pytest.mark.asyncio
+async def test_record_swipe_self(mock_auth_service):
+    respx_mock = mock_auth_service
+    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(return_value=Response(200, json={"user_id": "u1"}))
+    
+    payload = {"swiper_profile_id": "p1", "swiped_profile_id": "p1", "direction": "right"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    response = client.post("/discovery/swipe/", json=payload, headers=headers)
+    assert response.status_code == 400
+    assert "own profile" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_get_feed_service_failure(mock_auth_service):
+    respx_mock = mock_auth_service
+    # Mock Profiles service returning 500
+    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(return_value=Response(500))
+    
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    response = client.get("/discovery/feed/p1", headers=headers)
+    assert response.status_code == 502
+
+@pytest.mark.asyncio
+async def test_auth_expired_token():
+    # Sign a token that expired 10 minutes ago
+    exp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+    payload = {"sub": "u1", "role": "user", "iat": exp, "exp": exp}
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.get("/discovery/health", headers=headers) # Use health or any endpoint that uses auth
+    # Note: /discovery/health currently DOES NOT use get_current_user in the actual code 
+    # but the task.md says "Add Security Tests ... to each service's test_main.py where applicable"
+    # Actually, discovery/main.py:104 record_swipe uses auth_data.
+    response = client.post("/discovery/swipe/", json={}, headers=headers)
+    assert response.status_code == 401
+
+@pytest.mark.asyncio
+async def test_auth_invalid_signature():
+    # Sign with WRONG secret
+    token = jwt.encode({"sub": "u1", "role": "user"}, "WRONG_SECRET", algorithm=JWT_ALGORITHM)
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.post("/discovery/swipe/", json={}, headers=headers)
+    assert response.status_code == 401

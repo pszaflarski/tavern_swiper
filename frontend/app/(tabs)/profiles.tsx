@@ -22,6 +22,10 @@ export default function ProfilesScreen() {
     } as any);
   };
 
+  const handleCreate = () => {
+    router.push('/profiles/create_and_edit');
+  };
+
   const handleDelete = (profileId: string, displayName: string) => {
     const title = 'Cast Into The Void';
     const message = `Are you certain you wish to erase the legend of ${displayName} forever?`;
@@ -116,6 +120,21 @@ export default function ProfilesScreen() {
     );
   };
 
+  const renderFooter = () => (
+    <TouchableOpacity 
+      style={styles.addProfileButton} 
+      onPress={handleCreate}
+      testID="add-profile-button"
+      accessibilityLabel="Forge new identity"
+      accessibilityRole="button"
+    >
+      <View style={styles.addIconContainer}>
+        <Ionicons name="add" size={32} color={Colors.primary} />
+      </View>
+      <Text style={styles.addProfileText}>Forge New Identity</Text>
+    </TouchableOpacity>
+  );
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -145,11 +164,20 @@ export default function ProfilesScreen() {
           keyExtractor={(item) => item.profile_id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={renderFooter}
         />
       ) : (
         <View style={styles.centered}>
           <Text style={styles.emptyIcon}>📜</Text>
           <Text style={styles.emptyText}>No heroes have been forged yet.</Text>
+          <TouchableOpacity 
+            style={[styles.addProfileButton, { marginTop: Spacing[6], width: 'auto', paddingHorizontal: Spacing[8] }]} 
+            onPress={handleCreate}
+            testID="empty-state-add-profile-button"
+          >
+            <Ionicons name="flash" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+            <Text style={styles.addProfileText}>Forge Your First Hero</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -280,5 +308,32 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.scribe,
     fontSize: 16,
     color: Colors.outline,
+  },
+  addProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing[4],
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderStyle: 'dashed',
+    marginTop: Spacing[2],
+    marginBottom: Spacing[10],
+  },
+  addIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.surfaceContainerLow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing[4],
+  },
+  addProfileText: {
+    fontFamily: Fonts.heroic,
+    fontSize: 18,
+    color: Colors.primary,
   }
 });
