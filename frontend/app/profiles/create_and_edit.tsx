@@ -16,14 +16,15 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { useCreateProfile, useUpdateProfile, useProfile } from '../../hooks/useProfiles';
+import { useCreateProfile, useUpdateProfile, useProfile, useUploadProfileImage } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const GRID_SPACING = Spacing[3];
-const ITEM_WIDTH = (width - Spacing[6] * 2 - GRID_SPACING * 2) / 3;
-const ITEM_HEIGHT = ITEM_WIDTH * (16 / 9); // Tall 9:16 vertical thumbnails
+const MAX_ITEM_WIDTH = 150; // Cap width to keep thumbnails small
+const ITEM_WIDTH = Math.min((width - Spacing[6] * 2 - GRID_SPACING * 3) / 3, MAX_ITEM_WIDTH);
+const ITEM_HEIGHT = ITEM_WIDTH * (16 / 9); // Portrait 9:16 thumbnails
 
 export default function CreateAndEditProfileScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -59,7 +60,7 @@ export default function CreateAndEditProfileScreen() {
     }
 
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
       Alert.alert('Vision Denied', 'The camera roll requires your permission to reveal its secrets.');
       return;
@@ -83,6 +84,28 @@ export default function CreateAndEditProfileScreen() {
     setImageUrls(newImages);
   };
 
+  const uploadImage = useUploadProfileImage();
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Helper to convert local URIs to Blobs for upload
+  const uriToBlob = async (uri: string): Promise<Blob> => {
+    // 1. If it's already a web Blob URI, fetch it
+    if (uri.startsWith('blob:')) {
+      const resp = await fetch(uri);
+      return await resp.blob();
+    }
+    
+    // 2. If it's a native file URI (or anything else), we'll try to fetch it too
+    // React Native's fetch handles file:// URIs in many cases if they are in standard paths
+    try {
+      const resp = await fetch(uri);
+      return await resp.blob();
+    } catch (e) {
+      console.warn('Failed to fetch blob directly, might need native FS read', e);
+      throw e;
+    }
+  };
+
   const handleSave = async () => {
     if (!displayName.trim()) {
       const msg = 'Your hero must have a name to be remembered.';
@@ -94,6 +117,13 @@ export default function CreateAndEditProfileScreen() {
       return;
     }
 
+    // Identify which images need uploading (those that are local URIs)
+    // We assume anything starting with 'http' (and NOT 'blob:') is already permanent
+    const newImagesToUpload = imageUrls.map((uri, index) => ({ uri, index }))
+      .filter(({ uri }) => uri && (uri.startsWith('blob:') || uri.startsWith('file:') || !uri.startsWith('http')));
+
+    // Build the initial payload (metadata and existing permanent URLs)
+    // For slots that will be uploaded, we can leave them for now or send the temp URI
     const payload = {
       display_name: displayName,
       tagline,
@@ -103,13 +133,37 @@ export default function CreateAndEditProfileScreen() {
     };
 
     try {
+      let profileId = id;
+      
+      // 1. Create or Update Metadata
       if (isEditing && id) {
         await updateProfile.mutateAsync({ profileId: id, data: payload });
       } else {
-        await createProfile.mutateAsync(payload);
+        const newProfile = await createProfile.mutateAsync(payload);
+        profileId = newProfile.profile_id;
       }
+
+      // 2. Handle Image Uploads if any
+      if (newImagesToUpload.length > 0 && profileId) {
+        setIsUploading(true);
+        for (const { uri, index } of newImagesToUpload) {
+          try {
+            const blob = await uriToBlob(uri);
+            // Append a filename so the backend doesn't crash on missing metadata
+            const filename = `ritual_${index}_${Date.now()}.jpg`;
+            const file = new File([blob], filename, { type: 'image/jpeg' });
+            
+            await uploadImage.mutateAsync({ profileId, index, file });
+          } catch (uploadErr) {
+            console.error(`Failed to upload vision at index ${index}`, uploadErr);
+          }
+        }
+        setIsUploading(false);
+      }
+
       router.back();
     } catch (err) {
+      setIsUploading(false);
       const msg = 'The summoning spell could not be completed. Try again.';
       if (Platform.OS === 'web') {
         window.alert(`Magic Failed\n\n${msg}`);
@@ -150,8 +204,8 @@ export default function CreateAndEditProfileScreen() {
             </TouchableOpacity>
           ),
           headerRight: () => (
-            <TouchableOpacity 
-              onPress={handleSave} 
+            <TouchableOpacity
+              onPress={handleSave}
               disabled={isPending}
               style={styles.headerButton}
               testID="profile-header-save-button"
@@ -179,13 +233,13 @@ export default function CreateAndEditProfileScreen() {
                 <View key={index} style={styles.gridSlotContainer} testID={`profile-image-slot-${index}`}>
                   {uri ? (
                     <View style={styles.filledSlot} testID={`profile-image-filled-${index}`}>
-                      <Image 
-                        source={{ uri }} 
-                        style={styles.gridImage} 
+                      <Image
+                        source={{ uri }}
+                        style={styles.gridImage}
                         resizeMode="cover"
                       />
-                      <TouchableOpacity 
-                        style={styles.removeSeal} 
+                      <TouchableOpacity
+                        style={styles.removeSeal}
                         onPress={() => removeImage(index)}
                         testID={`profile-image-remove-${index}`}
                         accessibilityLabel={`Remove image ${index + 1}`}
@@ -195,8 +249,8 @@ export default function CreateAndEditProfileScreen() {
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    <TouchableOpacity 
-                      style={styles.emptySlot} 
+                    <TouchableOpacity
+                      style={styles.emptySlot}
                       onPress={pickImage}
                       testID={`profile-image-add-button-${index}`}
                       accessibilityLabel={`Add image to slot ${index + 1}`}
@@ -218,17 +272,17 @@ export default function CreateAndEditProfileScreen() {
         {/* Identity Section */}
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Identity</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>True Name</Text>
-              <TextInput
-                style={styles.input}
-                value={displayName}
-                testID="profile-name-input"
-                onChangeText={setDisplayName}
-                placeholder="e.g. Elara Brightsoul"
-                placeholderTextColor={Colors.surfaceVariant}
-              />
+            <TextInput
+              style={styles.input}
+              value={displayName}
+              testID="profile-name-input"
+              onChangeText={setDisplayName}
+              placeholder="e.g. Elara Brightsoul"
+              placeholderTextColor={Colors.surfaceVariant}
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -261,7 +315,7 @@ export default function CreateAndEditProfileScreen() {
         {/* Attributes Section */}
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Attributes</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Gender / Essence</Text>
             <View style={styles.choiceRow}>
@@ -281,13 +335,13 @@ export default function CreateAndEditProfileScreen() {
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={[styles.forgeButton, isPending && styles.forgeButtonDisabled]} 
+        <TouchableOpacity
+          style={[styles.forgeButton, isPending && styles.forgeButtonDisabled]}
           onPress={handleSave}
           testID="profile-forge-button"
           disabled={isPending}
         >
-          {isPending ? (
+          {isPending || isUploading ? (
             <ActivityIndicator color={Colors.onPrimary} />
           ) : (
             <>
@@ -298,7 +352,7 @@ export default function CreateAndEditProfileScreen() {
             </>
           )}
         </TouchableOpacity>
-        
+
         {Platform.OS === 'web' && (
           <input
             type="file"

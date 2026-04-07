@@ -191,3 +191,28 @@ export function useDeleteProfile() {
     },
   });
 }
+
+/**
+ * Upload a profile image for a specific index.
+ */
+export function useUploadProfileImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ profileId, index, file }: { profileId: string; index: number; file: Blob | File }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await profilesApi.post(`/profiles/${profileId}/image?index=${index}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return res.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'id', variables.profileId] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'me', 'active'] });
+    },
+  });
+}

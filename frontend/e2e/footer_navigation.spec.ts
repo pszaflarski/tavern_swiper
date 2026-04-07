@@ -34,7 +34,7 @@ test.describe('Footer Navigation', () => {
     await context.close();
   });
 
-  test('should navigate between Tavern, Profiles, and Account using the footer tabs', async () => {
+  test('should navigate between Tavern, Profiles, Messages, and Account using the footer tabs', async () => {
     // 1. We are already on Tavern (verified in beforeEach)
     
     // 2. Click on Profiles tab in footer
@@ -44,19 +44,26 @@ test.describe('Footer Navigation', () => {
     // 3. Verify Profiles screen is visible
     // Rule 66: Use unique testID Sentinel for transitions
     await expect(page.getByTestId('profiles-screen').first()).toBeVisible();
+
+    // 4. Click on Messages tab in footer
+    const messagesTab = page.getByTestId('tab-bar-messages');
+    await messagesTab.click();
+
+    // 5. Verify Messages screen is visible
+    await expect(page.getByTestId('messages-screen').first()).toBeVisible();
     
-    // 4. Click on Account tab in footer
+    // 6. Click on Account tab in footer
     const accountTab = page.getByTestId('tab-bar-account');
     await accountTab.click();
     
-    // 5. Verify Account screen is visible
+    // 7. Verify Account screen is visible
     await expect(page.getByTestId('account-screen').first()).toBeVisible();
     
-    // 6. Click back to Tavern tab in footer
+    // 8. Click back to Tavern tab in footer
     const tavernTab = page.getByTestId('tab-bar-tavern');
     await tavernTab.click();
     
-    // 7. Verify Tavern screen is visible
+    // 9. Verify Tavern screen is visible
     await expect(page.getByTestId('tavern-screen').first()).toBeVisible();
     
     console.log('Successfully navigated between all footer tabs.');
