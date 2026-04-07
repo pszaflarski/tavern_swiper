@@ -1,0 +1,1303 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`UI Snapshots renders AuthScreen correctly 1`] = `
+<View
+  onLayout={[Function]}
+  style={
+    [
+      {
+        "backgroundColor": "#001a11",
+        "flex": 1,
+        "justifyContent": "center",
+        "padding": 24,
+      },
+      {
+        "paddingBottom": 0,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#0d110f",
+        "borderColor": "#3f4945",
+        "borderRadius": 24,
+        "borderWidth": 1,
+        "boxShadow": [
+          {
+            "blur": 24,
+            "color": "rgba(31, 28, 11, 0.06)",
+            "offsetX": 0,
+            "offsetY": 8,
+          },
+        ],
+        "elevation": 4,
+        "padding": 32,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#006d4e",
+          "fontFamily": "NotoSerif",
+          "fontSize": 32,
+          "marginBottom": 8,
+          "textAlign": "center",
+        }
+      }
+    >
+      Sign In
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#89938f",
+          "fontFamily": "Manrope",
+          "fontSize": 14,
+          "marginBottom": 32,
+          "textAlign": "center",
+        }
+      }
+    >
+      Enter the tavern to continue your journey.
+    </Text>
+    <View
+      style={
+        {
+          "marginBottom": 16,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#006d4e",
+            "fontFamily": "Manrope",
+            "fontSize": 12,
+            "letterSpacing": 1,
+            "marginBottom": 4,
+            "marginLeft": 4,
+            "textTransform": "uppercase",
+          }
+        }
+      >
+        Email Address
+      </Text>
+      <TextInput
+        autoCapitalize="none"
+        keyboardType="email-address"
+        onChangeText={[Function]}
+        placeholder="hero@realm.com"
+        placeholderTextColor="#3f4945"
+        style={
+          {
+            "backgroundColor": "#161d1a",
+            "borderColor": "#3f4945",
+            "borderRadius": 12,
+            "borderWidth": 1,
+            "color": "#e4e1e9",
+            "fontFamily": "Manrope",
+            "fontSize": 16,
+            "padding": 16,
+          }
+        }
+        testID="auth-email-input"
+        value=""
+      />
+    </View>
+    <View
+      style={
+        {
+          "marginBottom": 16,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#006d4e",
+            "fontFamily": "Manrope",
+            "fontSize": 12,
+            "letterSpacing": 1,
+            "marginBottom": 4,
+            "marginLeft": 4,
+            "textTransform": "uppercase",
+          }
+        }
+      >
+        Password
+      </Text>
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "backgroundColor": "#161d1a",
+            "borderColor": "#3f4945",
+            "borderRadius": 12,
+            "borderWidth": 1,
+            "flexDirection": "row",
+          }
+        }
+      >
+        <TextInput
+          onChangeText={[Function]}
+          placeholder="••••••••"
+          placeholderTextColor="#3f4945"
+          secureTextEntry={true}
+          style={
+            [
+              {
+                "backgroundColor": "#161d1a",
+                "borderColor": "#3f4945",
+                "borderRadius": 12,
+                "borderWidth": 1,
+                "color": "#e4e1e9",
+                "fontFamily": "Manrope",
+                "fontSize": 16,
+                "padding": 16,
+              },
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+                "flex": 1,
+              },
+            ]
+          }
+          testID="auth-password-input"
+          value=""
+        />
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onClick={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            {
+              "opacity": 1,
+              "paddingHorizontal": 12,
+            }
+          }
+          testID="auth-password-toggle"
+        >
+          <Ionicons
+            color="#006d4e"
+            name="eye-outline"
+            size={20}
+          />
+        </View>
+      </View>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onClick={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#006d4e",
+          "borderRadius": 9999,
+          "marginTop": 16,
+          "opacity": 1,
+          "padding": 16,
+          "shadowColor": "#006d4e",
+          "shadowOffset": {
+            "height": 4,
+            "width": 0,
+          },
+          "shadowOpacity": 0.3,
+          "shadowRadius": 8,
+        }
+      }
+      testID="auth-submit-button"
+    >
+      <Text
+        style={
+          {
+            "color": "#ffffff",
+            "fontFamily": "Manrope",
+            "fontSize": 16,
+            "fontWeight": "700",
+            "letterSpacing": 1,
+            "textTransform": "uppercase",
+          }
+        }
+      >
+        Enter Tavern
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onClick={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "marginTop": 24,
+          "opacity": 1,
+        }
+      }
+      testID="auth-toggle-link"
+    >
+      <Text
+        style={
+          {
+            "color": "#823bc5",
+            "fontFamily": "Manrope",
+            "fontSize": 14,
+            "fontWeight": "600",
+          }
+        }
+      >
+        New to the realm? Sign up instead
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`UI Snapshots renders ProfilesScreen correctly 1`] = `
+<View
+  style={
+    {
+      "backgroundColor": "#001a11",
+      "flex": 1,
+    }
+  }
+  testID="profiles-screen"
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#0d110f",
+        "padding": 24,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#e4e1e9",
+          "fontFamily": "NotoSerif",
+          "fontSize": 24,
+          "marginBottom": 8,
+        }
+      }
+    >
+      Choose Your Avatar
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#89938f",
+          "fontFamily": "Manrope",
+          "fontSize": 14,
+          "lineHeight": 20,
+        }
+      }
+    >
+      Select the identity you wish to wear as you journey through the realm.
+    </Text>
+  </View>
+  <RCTScrollView
+    contentContainerStyle={
+      {
+        "gap": 16,
+        "padding": 16,
+      }
+    }
+    data={
+      [
+        {
+          "bio": "Bio 1",
+          "display_name": "Hero 1",
+          "profile_id": "p1",
+        },
+        {
+          "bio": "Bio 2",
+          "display_name": "Hero 2",
+          "profile_id": "p2",
+        },
+      ]
+    }
+    getItem={[Function]}
+    getItemCount={[Function]}
+    keyExtractor={[Function]}
+    onContentSizeChange={[Function]}
+    onLayout={[Function]}
+    onMomentumScrollBegin={[Function]}
+    onMomentumScrollEnd={[Function]}
+    onScroll={[Function]}
+    onScrollBeginDrag={[Function]}
+    onScrollEndDrag={[Function]}
+    removeClippedSubviews={false}
+    renderItem={[Function]}
+    scrollEventThrottle={0.0001}
+    showsVerticalScrollIndicator={false}
+    stickyHeaderIndices={[]}
+    viewabilityConfigCallbackPairs={[]}
+  >
+    <View>
+      <View
+        onFocusCapture={[Function]}
+        onLayout={[Function]}
+        style={null}
+      >
+        <View
+          style={
+            {
+              "marginBottom": 8,
+            }
+          }
+        >
+          <View
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": undefined,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={true}
+            onClick={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#161d1a",
+                "borderColor": "#3f4945",
+                "borderRadius": 12,
+                "borderWidth": 1,
+                "boxShadow": [
+                  {
+                    "blur": 24,
+                    "color": "rgba(31, 28, 11, 0.06)",
+                    "offsetX": 0,
+                    "offsetY": 8,
+                  },
+                ],
+                "elevation": 4,
+                "flexDirection": "row",
+                "opacity": 1,
+                "padding": 16,
+              }
+            }
+            testID="profile-item-p1"
+          >
+            <View
+              style={
+                {
+                  "marginRight": 16,
+                  "position": "relative",
+                }
+              }
+            >
+              <View
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3f4945",
+                    "borderRadius": 30,
+                    "height": 60,
+                    "justifyContent": "center",
+                    "width": 60,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "fontSize": 24,
+                    }
+                  }
+                >
+                  🎭
+                </Text>
+              </View>
+            </View>
+            <View
+              style={
+                {
+                  "flex": 1,
+                }
+              }
+            >
+              <Text
+                style={
+                  {
+                    "color": "#e4e1e9",
+                    "fontFamily": "NotoSerif",
+                    "fontSize": 18,
+                    "marginBottom": 2,
+                  }
+                }
+                testID="profile-name-Hero 1"
+              >
+                Hero 1
+              </Text>
+              <Text
+                numberOfLines={2}
+                style={
+                  {
+                    "color": "#89938f",
+                    "fontFamily": "Manrope",
+                    "fontSize": 13,
+                    "fontStyle": "italic",
+                    "marginTop": 4,
+                  }
+                }
+              >
+                Bio 1
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "gap": 8,
+                }
+              }
+            >
+              <View
+                accessibilityLabel="Edit Hero 1 profile"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": undefined,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                onClick={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "opacity": 1,
+                    "padding": 8,
+                  }
+                }
+                testID="edit-profile-p1"
+              >
+                <Ionicons
+                  color="#89938f"
+                  name="pencil"
+                  size={20}
+                />
+              </View>
+              <View
+                accessibilityLabel="Delete Hero 1 profile"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": undefined,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                onClick={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "opacity": 1,
+                    "padding": 8,
+                  }
+                }
+                testID="delete-profile-p1"
+              >
+                <Ionicons
+                  color="#ffb4ab"
+                  name="trash-outline"
+                  size={20}
+                />
+              </View>
+              <View
+                style={
+                  {
+                    "marginLeft": 4,
+                  }
+                }
+              >
+                <Ionicons
+                  color="#3f4945"
+                  name="radio-button-off"
+                  size={22}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+      <View
+        onFocusCapture={[Function]}
+        onLayout={[Function]}
+        style={null}
+      >
+        <View
+          style={
+            {
+              "marginBottom": 8,
+            }
+          }
+        >
+          <View
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": undefined,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={true}
+            onClick={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#161d1a",
+                "borderColor": "#3f4945",
+                "borderRadius": 12,
+                "borderWidth": 1,
+                "boxShadow": [
+                  {
+                    "blur": 24,
+                    "color": "rgba(31, 28, 11, 0.06)",
+                    "offsetX": 0,
+                    "offsetY": 8,
+                  },
+                ],
+                "elevation": 4,
+                "flexDirection": "row",
+                "opacity": 1,
+                "padding": 16,
+              }
+            }
+            testID="profile-item-p2"
+          >
+            <View
+              style={
+                {
+                  "marginRight": 16,
+                  "position": "relative",
+                }
+              }
+            >
+              <View
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3f4945",
+                    "borderRadius": 30,
+                    "height": 60,
+                    "justifyContent": "center",
+                    "width": 60,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "fontSize": 24,
+                    }
+                  }
+                >
+                  🎭
+                </Text>
+              </View>
+            </View>
+            <View
+              style={
+                {
+                  "flex": 1,
+                }
+              }
+            >
+              <Text
+                style={
+                  {
+                    "color": "#e4e1e9",
+                    "fontFamily": "NotoSerif",
+                    "fontSize": 18,
+                    "marginBottom": 2,
+                  }
+                }
+                testID="profile-name-Hero 2"
+              >
+                Hero 2
+              </Text>
+              <Text
+                numberOfLines={2}
+                style={
+                  {
+                    "color": "#89938f",
+                    "fontFamily": "Manrope",
+                    "fontSize": 13,
+                    "fontStyle": "italic",
+                    "marginTop": 4,
+                  }
+                }
+              >
+                Bio 2
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "gap": 8,
+                }
+              }
+            >
+              <View
+                accessibilityLabel="Edit Hero 2 profile"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": undefined,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                onClick={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "opacity": 1,
+                    "padding": 8,
+                  }
+                }
+                testID="edit-profile-p2"
+              >
+                <Ionicons
+                  color="#89938f"
+                  name="pencil"
+                  size={20}
+                />
+              </View>
+              <View
+                accessibilityLabel="Delete Hero 2 profile"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": undefined,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                onClick={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "opacity": 1,
+                    "padding": 8,
+                  }
+                }
+                testID="delete-profile-p2"
+              >
+                <Ionicons
+                  color="#ffb4ab"
+                  name="trash-outline"
+                  size={20}
+                />
+              </View>
+              <View
+                style={
+                  {
+                    "marginLeft": 4,
+                  }
+                }
+              >
+                <Ionicons
+                  color="#3f4945"
+                  name="radio-button-off"
+                  size={22}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    </View>
+  </RCTScrollView>
+</View>
+`;
+
+exports[`UI Snapshots renders TavernScreen correctly 1`] = `
+<View
+  style={
+    {
+      "backgroundColor": "#001a11",
+      "flex": 1,
+    }
+  }
+  testID="tavern-screen"
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "#0d110f",
+        "paddingBottom": 16,
+        "paddingHorizontal": 24,
+        "paddingTop": 64,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#006d4e",
+          "fontFamily": "NotoSerif",
+          "fontSize": 28,
+          "fontWeight": "700",
+          "letterSpacing": 1,
+        }
+      }
+    >
+      Tavern Swiper
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#89938f",
+          "fontFamily": "Manrope",
+          "fontSize": 12,
+          "letterSpacing": 2,
+          "marginTop": 8,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      The Hero's Quest
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "flex": 1,
+        }
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "flex": 1,
+            "justifyContent": "center",
+            "width": "100%",
+          }
+        }
+      >
+        <View
+          style={
+            [
+              {
+                "backgroundColor": "#0d110f",
+                "borderBottomLeftRadius": 12,
+                "borderBottomRightRadius": 24,
+                "borderRadius": 24,
+                "borderTopLeftRadius": 24,
+                "borderTopRightRadius": 12,
+                "boxShadow": [
+                  {
+                    "blur": 24,
+                    "color": "rgba(31, 28, 11, 0.06)",
+                    "offsetX": 0,
+                    "offsetY": 8,
+                  },
+                ],
+                "elevation": 4,
+                "overflow": "hidden",
+                "position": "absolute",
+                "width": 450,
+              },
+              {
+                "transform": [
+                  {
+                    "translateX": 0,
+                  },
+                  {
+                    "translateY": 0,
+                  },
+                  {
+                    "rotate": "undefineddeg",
+                  },
+                  {
+                    "scale": 1,
+                  },
+                ],
+              },
+            ]
+          }
+          testID="profile-card"
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#1a211e",
+                "height": 420,
+                "justifyContent": "center",
+                "width": "100%",
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "fontSize": 72,
+                }
+              }
+            >
+              ⚔️
+            </Text>
+          </View>
+          <View
+            style={
+              [
+                {
+                  "borderRadius": 8,
+                  "borderWidth": 3,
+                  "paddingHorizontal": 20,
+                  "paddingVertical": 8,
+                  "position": "absolute",
+                  "top": 40,
+                  "zIndex": 10,
+                },
+                {
+                  "borderColor": "#d4af37",
+                  "left": 20,
+                  "transform": [
+                    {
+                      "rotate": "-15deg",
+                    },
+                  ],
+                },
+                {
+                  "opacity": undefined,
+                },
+              ]
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#d4af37",
+                  "fontFamily": "NotoSerif",
+                  "fontSize": 28,
+                  "fontWeight": "700",
+                }
+              }
+            >
+              QUEST
+            </Text>
+          </View>
+          <View
+            style={
+              [
+                {
+                  "borderRadius": 8,
+                  "borderWidth": 3,
+                  "paddingHorizontal": 20,
+                  "paddingVertical": 8,
+                  "position": "absolute",
+                  "top": 40,
+                  "zIndex": 10,
+                },
+                {
+                  "borderColor": "#ffb4ab",
+                  "right": 20,
+                  "transform": [
+                    {
+                      "rotate": "15deg",
+                    },
+                  ],
+                },
+                {
+                  "opacity": undefined,
+                },
+              ]
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#ffb4ab",
+                  "fontFamily": "NotoSerif",
+                  "fontSize": 28,
+                  "fontWeight": "700",
+                }
+              }
+            >
+              PASS
+            </Text>
+          </View>
+          <View
+            style={
+              {
+                "backgroundColor": "#0d110f",
+                "gap": 8,
+                "padding": 20,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#e4e1e9",
+                  "fontFamily": "NotoSerif",
+                  "fontSize": 24,
+                  "fontWeight": "700",
+                }
+              }
+              testID="profile-card-name"
+            >
+              Hero 1
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#001a11",
+          "flexDirection": "row",
+          "gap": 40,
+          "justifyContent": "center",
+          "paddingBottom": 40,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": false,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "backgroundColor": "#0d110f",
+            "borderColor": "#ffb4ab",
+            "borderRadius": 32,
+            "borderWidth": 2,
+            "boxShadow": [
+              {
+                "blur": 24,
+                "color": "rgba(31, 28, 11, 0.06)",
+                "offsetX": 0,
+                "offsetY": 8,
+              },
+            ],
+            "elevation": 4,
+            "height": 64,
+            "justifyContent": "center",
+            "opacity": 1,
+            "width": 64,
+          }
+        }
+        testID="swipe-left-button"
+      >
+        <Text
+          style={
+            [
+              {
+                "fontSize": 24,
+                "fontWeight": "bold",
+              },
+              {
+                "color": "#ffb4ab",
+              },
+            ]
+          }
+        >
+          ✕
+        </Text>
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": false,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "backgroundColor": "#0d110f",
+            "borderColor": "#d4af37",
+            "borderRadius": 32,
+            "borderWidth": 2,
+            "boxShadow": [
+              {
+                "blur": 24,
+                "color": "rgba(31, 28, 11, 0.06)",
+                "offsetX": 0,
+                "offsetY": 8,
+              },
+            ],
+            "elevation": 4,
+            "height": 64,
+            "justifyContent": "center",
+            "opacity": 1,
+            "transform": [
+              {
+                "scale": 1.2,
+              },
+            ],
+            "width": 64,
+          }
+        }
+        testID="swipe-right-button"
+      >
+        <Text
+          style={
+            [
+              {
+                "fontSize": 24,
+                "fontWeight": "bold",
+              },
+              {
+                "color": "#d4af37",
+              },
+            ]
+          }
+        >
+          ❤️
+        </Text>
+      </View>
+    </View>
+  </View>
+</View>
+`;

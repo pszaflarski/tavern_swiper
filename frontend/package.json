@@ -7,8 +7,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "jest --runInBand",
-    "test:jest": "jest --runInBand",
+    "test": "jest --runInBand --testPathIgnorePatterns snapshot.test.tsx",
+    "test:jest": "jest --runInBand --testPathIgnorePatterns snapshot.test.tsx",
+    "test:logic": "jest --runInBand --testPathIgnorePatterns snapshot.test.tsx",
+    "test:snapshots": "jest --runInBand --testPathPattern snapshot.test.tsx",
     "test:e2e": "npx playwright test",
     "test:playwright": "npx playwright test"
   },

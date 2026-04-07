@@ -23,6 +23,23 @@ jest.mock('expo-router', () => ({
   Link: jest.fn(({ children }) => children),
 }));
 
+jest.mock('./hooks/useProfiles', () => ({
+  useProfiles: jest.fn(() => ({ 
+    data: [
+        { profile_id: 'p1', display_name: 'Hero 1', bio: 'Bio 1' },
+        { profile_id: 'p2', display_name: 'Hero 2', bio: 'Bio 2' },
+    ], 
+    isLoading: false 
+  })),
+  useDiscoveryFeed: jest.fn(() => ({
+    data: [{ profile_id: 'p1', display_name: 'Hero 1' }],
+    isLoading: false,
+  })),
+  useDeleteProfile: jest.fn(() => ({ mutate: jest.fn() })),
+  useCreateProfile: jest.fn(() => ({ mutate: jest.fn() })),
+  useUpdateProfile: jest.fn(() => ({ mutate: jest.fn() })),
+}));
+
 // Mock Firebase
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({
@@ -69,13 +86,20 @@ jest.mock('react-native-gesture-handler', () => {
         BaseButton: 'BaseButton',
         RectButton: 'RectButton',
         GestureHandlerRootView: 'GestureHandlerRootView',
+        GestureDetector: ({ children }) => children,
         Gesture: {
-            Pan: () => ({
-                onBegin: jest.fn().mockReturnThis(),
-                onUpdate: jest.fn().mockReturnThis(),
-                onEnd: jest.fn().mockReturnThis(),
-                onFinalize: jest.fn().mockReturnThis(),
-            }),
+            Pan: () => {
+                const mock = {
+                    onBegin: jest.fn().mockReturnThis(),
+                    onUpdate: jest.fn().mockReturnThis(),
+                    onEnd: jest.fn().mockReturnThis(),
+                    onFinalize: jest.fn().mockReturnThis(),
+                    enabled: jest.fn().mockReturnThis(),
+                    activeCursor: jest.fn().mockReturnThis(),
+                    activateAfterLongPress: jest.fn().mockReturnThis(),
+                };
+                return mock;
+            },
         },
     };
 });
@@ -86,6 +110,21 @@ jest.mock('expo-image-picker', () => ({
     MediaTypeOptions: {
         Images: 'Images',
     },
+}));
+
+// Mock @expo/vector-icons
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+  MaterialIcons: 'MaterialIcons',
+  MaterialCommunityIcons: 'MaterialCommunityIcons',
+  FontAwesome: 'FontAwesome',
+  Feather: 'Feather',
+}));
+
+// Mock expo-font
+jest.mock('expo-font', () => ({
+  isLoaded: jest.fn(() => true),
+  loadAsync: jest.fn(() => Promise.resolve()),
 }));
 
 // Silence the warning: Animated: `useNativeDriver` is not supported because the native animated module is missing
