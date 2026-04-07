@@ -109,15 +109,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   header: {
-    paddingTop: Spacing[16],
-    paddingBottom: Spacing[4],
+    paddingTop: Spacing[8],
+    paddingBottom: Spacing[2],
     paddingHorizontal: Spacing[6],
     backgroundColor: Colors.surfaceContainerLowest,
     alignItems: 'center',
   },
   headerTitle: {
     fontFamily: Fonts.heroic,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: Colors.primary,
     letterSpacing: 1,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     color: Colors.outline,
     textTransform: 'uppercase',
     letterSpacing: 2,
-    marginTop: Spacing[2],
+    marginTop: Spacing[1],
   },
   profileTabsContainer: {
     backgroundColor: Colors.surfaceContainerLowest,

@@ -152,9 +152,9 @@ export default function ProfilesScreen() {
         }} 
       />
       
-      <View style={styles.headerSection}>
-        <Text style={styles.title}>Choose Your Avatar</Text>
-        <Text style={styles.subtitle}>Select the identity you wish to wear as you journey through the realm.</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profiles</Text>
+        <Text style={styles.headerSub}>Choose Your Avatar</Text>
       </View>
 
       {profiles && profiles.length > 0 ? (
@@ -201,21 +201,27 @@ const styles = StyleSheet.create({
     color: Colors.outline,
     letterSpacing: 1,
   },
-  headerSection: {
-    padding: Spacing[6],
+  header: {
+    paddingTop: Spacing[8],
+    paddingBottom: Spacing[2],
+    paddingHorizontal: Spacing[6],
     backgroundColor: Colors.surfaceContainerLowest,
+    alignItems: 'center',
   },
-  title: {
+  headerTitle: {
     fontFamily: Fonts.heroic,
     fontSize: 24,
-    color: Colors.onSurface,
-    marginBottom: Spacing[2],
+    fontWeight: '700',
+    color: Colors.primary,
+    letterSpacing: 1,
   },
-  subtitle: {
+  headerSub: {
     fontFamily: Fonts.scribe,
-    fontSize: 14,
+    fontSize: 12,
     color: Colors.outline,
-    lineHeight: 20,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginTop: Spacing[1],
   },
   listContent: {
     padding: Spacing[4],
