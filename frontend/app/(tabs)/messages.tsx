@@ -1,33 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { Ionicons } from '@expo/vector-icons';
+import { useProfileContext } from '../../context/ProfileContext';
+import { useProfiles } from '../../hooks/useProfiles';
+import { useUser } from '../../hooks/useUser';
+import { useInvolvedMatches } from '../../hooks/useMessages';
 
-// Mock Data
-const MOCK_MY_PROFILES = [
-  { id: '1', name: 'Alaric the Brave', image: require('../../assets/images/placeholder/hero1.jpeg') },
-  { id: '2', name: 'Lyra Moonshadow', image: require('../../assets/images/placeholder/hero2.jpg') },
-  { id: '3', name: 'Valerius Darkheart', image: require('../../assets/images/placeholder/hero3.png') },
-];
-
-const MOCK_NEW_MATCHES = [
-  { id: 'm1', name: 'Elora', image: require('../../assets/images/placeholder/hero4.png') },
-  { id: 'm2', name: 'Kaelen', image: require('../../assets/images/placeholder/hero5.jpeg') },
-  { id: 'm3', name: 'Saria', image: require('../../assets/images/placeholder/hero6.jpeg') },
-  { id: 'm4', name: 'Bryn', image: require('../../assets/images/placeholder/hero1.jpeg') },
-  { id: 'm5', name: 'Lia', image: require('../../assets/images/placeholder/hero2.jpg') },
-];
-
-const MOCK_INBOX = [
-  { id: 'c1', name: 'Thorne', image: require('../../assets/images/placeholder/hero3.png'), lastMessage: 'The ancient caves are deep and dark, but we shall find the light.' },
-  { id: 'c2', name: 'Seraphina', image: require('../../assets/images/placeholder/hero4.png'), lastMessage: 'I have found the artifact you seek. Meet me at the crossroads at dusk.' },
-  { id: 'c3', name: 'Grommash', image: require('../../assets/images/placeholder/hero5.jpeg'), lastMessage: 'Prepare for battle. The orcs are gathering at the northern wall.' },
-  { id: 'c4', name: 'Isolde', image: require('../../assets/images/placeholder/hero6.jpeg'), lastMessage: 'Our fate is written in the stars, yet we must walk the earth.' },
-];
+const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
 
 export default function MessagesScreen() {
-  const [selectedProfileId, setSelectedProfileId] = useState(MOCK_MY_PROFILES[0].id);
-  const selectedProfile = MOCK_MY_PROFILES.find(p => p.id === selectedProfileId);
+  const { user } = useUser();
+  const { activeProfileId, setActiveProfileId } = useProfileContext();
+  const { data: myProfiles = [], isLoading: isLoadingMyProfiles } = useProfiles(user?.uid);
+  const { newMatches, inbox, isLoading: isLoadingContent } = useInvolvedMatches(activeProfileId);
+
+  const selectedProfile = myProfiles.find(p => p.profile_id === activeProfileId);
+
+  const renderProfileImage = (uri: string | undefined) => {
+    return uri ? { uri } : PLACEHOLDER_IMAGE;
+  };
 
   return (
     <View style={styles.container} testID="messages-screen">
@@ -39,62 +30,107 @@ export default function MessagesScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Tabs Section */}
         <View style={styles.profileTabsContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.profileTabsContent}>
-            {MOCK_MY_PROFILES.map((profile) => (
-              <TouchableOpacity 
-                key={profile.id} 
-                onPress={() => setSelectedProfileId(profile.id)}
-                style={[
-                  styles.profileTab, 
-                  selectedProfileId === profile.id && styles.activeProfileTab
-                ]}
-              >
-                <Image source={profile.image} style={styles.profileTabImage} />
-                <View style={[styles.profileTabOverlay, selectedProfileId === profile.id && styles.activeProfileTabOverlay]}>
-                  <Text 
-                    style={[styles.profileTabName, selectedProfileId === profile.id && styles.activeProfileTabName]}
-                    numberOfLines={1}
+          {isLoadingMyProfiles ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing[4] }} />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.profileTabsContent}>
+              {myProfiles.map((profile) => (
+                <TouchableOpacity 
+                  key={profile.profile_id} 
+                  testID={`profile-tab-${profile.profile_id}`}
+                  onPress={() => setActiveProfileId(profile.profile_id)}
+                  style={[
+                    styles.profileTab, 
+                    activeProfileId === profile.profile_id && styles.activeProfileTab
+                  ]}
+                >
+                  <Image 
+                    source={renderProfileImage(profile.image_urls?.[0])} 
+                    style={styles.profileTabImage} 
+                  />
+                  <View style={[styles.profileTabOverlay, activeProfileId === profile.profile_id && styles.activeProfileTabOverlay]}>
+                    <Text 
+                      style={[styles.profileTabName, activeProfileId === profile.profile_id && styles.activeProfileTabName]}
+                      numberOfLines={1}
+                    >
+                      {profile.display_name}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {myProfiles.length === 0 && (
+                <Text style={styles.emptyText}>No identities forged yet.</Text>
+              )}
+            </ScrollView>
+          )}
+        </View>
+
+        {isLoadingContent ? (
+          <View style={{ padding: Spacing[10], alignItems: 'center' }}>
+            <ActivityIndicator color={Colors.primary} size="large" />
+            <Text style={[styles.headerSub, { marginTop: Spacing[4] }]}>Consulting the Oracle...</Text>
+          </View>
+        ) : (
+          <>
+            {/* New Matches Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>New Visions for {selectedProfile?.display_name || '... '}</Text>
+            </View>
+            <View style={styles.newMatchesContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.newMatchesContent}>
+                {newMatches.map((match) => (
+                  <TouchableOpacity 
+                    key={match.id} 
+                    testID={`new-match-${match.id}`}
+                    style={styles.newMatchItem}
                   >
-                    {profile.name}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                    <Image 
+                      source={renderProfileImage(match.otherProfile?.image_urls?.[0])} 
+                      style={styles.newMatchImage} 
+                    />
+                    <Text style={styles.newMatchName} numberOfLines={1}>{match.otherProfile?.display_name || 'Mysterious Soul'}</Text>
+                  </TouchableOpacity>
+                ))}
+                {newMatches.length === 0 && (
+                  <Text style={styles.emptyText}>The stars reflect no new paths today.</Text>
+                )}
+              </ScrollView>
+            </View>
 
-        {/* New Matches Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>New Visions for {selectedProfile?.name}</Text>
-        </View>
-        <View style={styles.newMatchesContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.newMatchesContent}>
-            {MOCK_NEW_MATCHES.map((match) => (
-              <TouchableOpacity key={match.id} style={styles.newMatchItem}>
-                <Image source={match.image} style={styles.newMatchImage} />
-                <Text style={styles.newMatchName}>{match.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Inbox Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Inbox</Text>
-        </View>
-        <View style={styles.inboxContainer}>
-          {MOCK_INBOX.map((convo) => (
-            <TouchableOpacity key={convo.id} style={styles.inboxItem}>
-              <View style={styles.inboxContent}>
-                <Image source={convo.image} style={styles.inboxBanner} resizeMode="cover" />
-                <View style={styles.inboxTextContainer}>
-                  <Text style={styles.inboxName}>{convo.name}</Text>
-                  <Text style={styles.inboxLastMessage} numberOfLines={1}>{convo.lastMessage}</Text>
+            {/* Inbox Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Inbox</Text>
+            </View>
+            <View style={styles.inboxContainer}>
+              {inbox.map((convo) => (
+                <TouchableOpacity 
+                  key={convo.id} 
+                  testID={`inbox-item-${convo.id}`}
+                  style={styles.inboxItem}
+                >
+                  <View style={styles.inboxContent}>
+                    <Image 
+                      source={renderProfileImage(convo.otherProfile?.image_urls?.[0])} 
+                      style={styles.inboxBanner} 
+                      resizeMode="cover" 
+                    />
+                    <View style={styles.inboxTextContainer}>
+                      <Text style={styles.inboxName}>{convo.otherProfile?.display_name || 'Traveler'}</Text>
+                      <Text style={styles.inboxLastMessage} numberOfLines={1}>
+                        {convo.lastMessage?.content}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {inbox.length === 0 && (
+                <View style={{ paddingVertical: Spacing[10], alignItems: 'center' }}>
+                  <Text style={styles.emptyText}>Silence reigns in the tavern.</Text>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+              )}
+            </View>
+          </>
+        )}
         
         {/* Footer Padding */}
         <View style={{ height: Spacing[20] }} />
@@ -253,5 +289,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.outline,
     marginTop: 2,
+  },
+  emptyText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
+    textAlign: 'center',
+    marginTop: Spacing[4],
+    fontStyle: 'italic',
   },
 });
