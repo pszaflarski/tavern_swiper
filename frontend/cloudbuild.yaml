@@ -10,6 +10,7 @@ steps:
     dir: 'frontend'
 
   # 2. Fetch Backend URLs and Build Frontend Image
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'

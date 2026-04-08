@@ -6,7 +6,7 @@ steps:
       - '-c'
       - |
         pip install -r requirements.txt pytest pytest-asyncio httpx
-        pytest
+        PYTHONPATH=. pytest
     dir: 'services/$_SERVICE_NAME'
 
   # 2. Build the container image
