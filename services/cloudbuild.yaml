@@ -1,6 +1,6 @@
 steps:
   # 1. Run Unit Tests
-  - name: 'python:3.11-slim'
+  - name: 'python:3.12-slim'
     entrypoint: 'bash'
     args:
       - '-c'
