@@ -115,6 +115,7 @@ for ENV in "${ENVIRONMENTS[@]}"; do
         --service-account "${SERVICE_ACCOUNT}" \
         --memory 512Mi \
         --cpu 1 \
+        --execution-environment gen1 \
         --allow-unauthenticated \
         --project "${PROJECT_ID}" \
         --quiet

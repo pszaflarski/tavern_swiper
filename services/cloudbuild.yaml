@@ -1,0 +1,44 @@
+steps:
+  # 1. Run Unit Tests
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install -r requirements.txt pytest pytest-asyncio httpx
+        pytest
+    dir: 'services/$_SERVICE_NAME'
+
+  # 2. Build the container image
+
+  # 2. Push the image to GCR
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME']
+
+  # 3. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '$_SERVICE_NAME$_ENV_SUFFIX'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/$_SERVICE_NAME'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--service-account'
+      - 'tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--update-env-vars'
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=super-secret-tavern-key-123,GCS_BUCKET_NAME=$PROJECT_ID-media'
+      - '--cpu-boost'
+      - '--execution-environment'
+      - 'gen1'
+      - '--allow-unauthenticated'
+      - '--quiet'
+
+# NOTE: Inter-service URLs are handled by the microservices using internal discovery logic 
+# or by fetching them via the SDK if needed, but since we use stable names 
+# (e.g. auth-test.a.run.app), we keep them mostly static or updated via a global script.
+# For simplicity in this auto-deploy, we rely on the stable service names.

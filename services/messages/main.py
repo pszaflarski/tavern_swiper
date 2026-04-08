@@ -22,6 +22,7 @@ firebase_admin.initialize_app()
 db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
+DISCOVERY_SERVICE_URL = os.getenv("DISCOVERY_SERVICE_URL", "http://discovery:8003")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -64,11 +65,25 @@ async def send_message(body: MessageCreate, auth_data: tuple[str, str, str] = De
 
     message_id = str(uuid.uuid4())
     now = _now()
+    
+    # To enable conversation listing, we need to know participants.
+    # We fetch the match details from the Discovery service.
+    participants = []
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            match_resp = await client.get(f"{DISCOVERY_SERVICE_URL}/discovery/matches/{body.match_id}", headers=headers)
+            if match_resp.status_code == 200:
+                match_data = match_resp.json()
+                participants = match_data.get("profiles", [])
+        except Exception as e:
+            print(f"[WARNING] Failed to fetch match participants for conversation indexing: {e}")
+
     data = {
         "match_id": body.match_id,
         "sender_profile_id": body.sender_profile_id,
         "content": body.content,
         "sent_at": now,
+        "participant_profile_ids": participants
     }
     db.collection(COLLECTION).document(message_id).set(data)
     return MessageOut(message_id=message_id, sent_at=now, **body.model_dump())
@@ -98,6 +113,42 @@ async def get_messages(match_id: str, auth_data: tuple[str, str, str] = Depends(
             )
         )
     return result
+
+
+@app.get("/messages/conversations/{profile_id}")
+async def list_conversations(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """
+    List all conversations for a profile.
+    A conversation is the latest message per match_id.
+    """
+    uid, _, _ = auth_data
+    # FIXME: Production should verify ownership of profile_id.
+    
+    # Query messages where this profile is a participant.
+    # We order by sent_at DESC to get new messages first.
+    docs = (
+        db.collection(COLLECTION)
+        .where("participant_profile_ids", "array-contains", profile_id)
+        .order_by("sent_at", direction=firestore.Query.DESCENDING)
+        .stream()
+    )
+    
+    # Group by match_id to only return the latest message for each conversation
+    conversations = {}
+    for doc in docs:
+        d = doc.to_dict()
+        mid = d["match_id"]
+        if mid not in conversations:
+            conversations[mid] = {
+                "match_id": mid,
+                "last_message": {
+                    "content": d["content"],
+                    "sent_at": d["sent_at"].isoformat() if isinstance(d["sent_at"], datetime) else d["sent_at"],
+                    "sender_profile_id": d["sender_profile_id"]
+                }
+            }
+            
+    return list(conversations.values())
 
 
 @app.delete("/messages/", status_code=204)

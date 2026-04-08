@@ -141,7 +141,7 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
     db.collection(SWIPES_COLLECTION).document(swipe_id).set(swipe_data)
 
     # Check for mutual right swipe (Match Detection)
-    match_id = None
+    id = None
     if body.direction == "right":
         reciprocal_docs = (
             db.collection(SWIPES_COLLECTION)
@@ -160,13 +160,13 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
             
         if has_reciprocal:
             sorted_ids = sorted([body.swiper_profile_id, body.swiped_profile_id])
-            match_id = f"match_{sorted_ids[0]}_{sorted_ids[1]}"
+            id = f"match_{sorted_ids[0]}_{sorted_ids[1]}"
             match_data = {
-                "match_id": match_id,
+                "id": id,
                 "profiles": sorted_ids,
                 "created_at": now,
             }
-            db.collection(MATCHES_COLLECTION).document(match_id).set(match_data)
+            db.collection(MATCHES_COLLECTION).document(id).set(match_data)
 
     return SwipeOut(
         swipe_id=swipe_id,
@@ -174,20 +174,42 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
         swiped_profile_id=body.swiped_profile_id,
         direction=body.direction,
         created_at=now_str,
-        match_id=match_id
+        id=id
     )
 
 
-@app.get("/discovery/matches/{match_id}", response_model=MatchOut)
-async def get_match(match_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+@app.get("/discovery/matches/{id}", response_model=MatchOut)
+async def get_match(id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Fetch match metadata."""
-    doc = db.collection(MATCHES_COLLECTION).document(match_id).get()
+    doc = db.collection(MATCHES_COLLECTION).document(id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Match not found")
     
     data = doc.to_dict()
     return MatchOut(
-        match_id=data["match_id"],
+        id=data["id"],
         profiles=data["profiles"],
         created_at=data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"]
     )
+
+
+@app.get("/discovery/matches/profile/{profile_id}", response_model=list[MatchOut])
+async def list_matches_for_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Fetch all matches for a given profile."""
+    uid, _, _ = auth_data
+    # FIXME: In production, we should verify the user owns the profile_id. 
+    # For now, it's open to all logged-in users to allow for discovery.
+    docs = (
+        db.collection(MATCHES_COLLECTION)
+        .where("profiles", "array-contains", profile_id)
+        .stream()
+    )
+    result = []
+    for doc in docs:
+        data = doc.to_dict()
+        result.append(MatchOut(
+            id=data["id"],
+            profiles=data["profiles"],
+            created_at=data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"]
+        ))
+    return result

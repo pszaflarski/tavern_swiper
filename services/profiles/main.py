@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from dotenv import load_dotenv
 
 load_dotenv()
-from models import ProfileCreate, ProfileUpdate, ProfileOut
+from models import ProfileCreate, ProfileUpdate, ProfileOut, ProfileBatchRequest
 from auth_utils import get_current_user
 
 # ---------------------------------------------------------------------------
@@ -153,6 +153,23 @@ async def get_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Profile not found")
     return _doc_to_profile(doc)
+
+
+@app.post("/profiles/batch", response_model=list[ProfileOut])
+async def get_profiles_batch(body: ProfileBatchRequest, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+    """Fetch multiple profiles by ID in a single request."""
+    if not body.profile_ids:
+        return []
+    
+    # Firestore 'in' query has a limit of 30 items
+    results = []
+    for i in range(0, len(body.profile_ids), 30):
+        chunk = body.profile_ids[i:i + 30]
+        docs = db.collection(COLLECTION).where(firestore.FieldPath.document_id(), "in", chunk).stream()
+        for doc in docs:
+            results.append(_doc_to_profile(doc))
+    
+    return results
 
 
 @app.get("/profiles/user/me/active", response_model=ProfileOut)

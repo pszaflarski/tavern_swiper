@@ -72,6 +72,7 @@ for SERVICE in "${TARGET_SERVICES[@]}"; do
             --cpu "1" \
             --timeout "60" \
             --cpu-boost \
+            --execution-environment gen1 \
             --allow-unauthenticated \
             --project "${PROJECT_ID}" \
             --quiet

@@ -80,6 +80,7 @@ for SERVICE in "${SERVICES[@]}"; do
             --cpu "${CPU}" \
             --timeout "${TIMEOUT}" \
             --cpu-boost \
+            --execution-environment gen1 \
             --allow-unauthenticated \
             --project "${PROJECT_ID}" \
             --quiet
@@ -127,6 +128,7 @@ for ENV in "${ENVIRONMENTS[@]}"; do
             --platform managed \
             --region "${REGION}" \
             --update-env-vars "${ENV_VARS}" \
+            --execution-environment gen1 \
             --project "${PROJECT_ID}" \
             --quiet
     done

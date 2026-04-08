@@ -21,6 +21,10 @@ class ProfileUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class ProfileBatchRequest(BaseModel):
+    profile_ids: List[str]
+
+
 class ProfileOut(BaseModel):
     profile_id: str
     user_id: str

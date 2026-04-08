@@ -162,7 +162,7 @@ async def test_record_swipe_mutual_match(mock_auth_service):
         response = client.post("/discovery/swipe/", json=payload, headers=headers)
         assert response.status_code == 201
         data = response.json()
-        assert data["match_id"] == "match_p1_p2"
+        assert data["id"] == "match_p1_p2"
         
         # Verify firestore.set was called twice (once for swipe, once for match)
         assert mock_coll.return_value.document.return_value.set.call_count == 2
@@ -176,7 +176,7 @@ async def test_get_match_success():
     mock_doc.exists = True
     now = datetime.datetime.now(tz=datetime.timezone.utc)
     mock_doc.to_dict.return_value = {
-        "match_id": "match_p1_p2",
+        "id": "match_p1_p2",
         "profiles": ["p1", "p2"],
         "created_at": now
     }
@@ -187,7 +187,7 @@ async def test_get_match_success():
         response = client.get("/discovery/matches/match_p1_p2", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert data["match_id"] == "match_p1_p2"
+        assert data["id"] == "match_p1_p2"
         assert data["profiles"] == ["p1", "p2"]
 
 @pytest.mark.asyncio
