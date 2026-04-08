@@ -60,7 +60,7 @@ for SERVICE in "${SERVICES[@]}"; do
         # Determine resource allocation
         MEMORY="512Mi"
         CPU="1"
-        TIMEOUT="60"
+        TIMEOUT="300"
         
         if [ "$SERVICE" == "auth" ]; then
             MEMORY="1Gi"
