@@ -6,6 +6,9 @@ steps:
       - '-c'
       - |
         pip install -r requirements.txt pytest pytest-asyncio httpx
+        export FIREBASE_WEB_API_KEY="dummy-key-for-test"
+        export FIRESTORE_DATABASE_ID="dummy-db"
+        export USERS_DATABASE_ID="dummy-users-db"
         PYTHONPATH=. pytest
     dir: 'services/$_SERVICE_NAME'
 
