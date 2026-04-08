@@ -56,7 +56,7 @@ create_trigger() {
         --build-config="$CONFIG" \
         --included-files="$INCLUDE" \
         --substitutions="$SUBS" \
-        --service-account="projects/${PROJECT_ID}/serviceAccounts/tavern-swiper-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
+        --service-account="projects/${PROJECT_ID}/serviceAccounts/cicd-builder@${PROJECT_ID}.iam.gserviceaccount.com" \
         --project="$PROJECT_ID" \
         --quiet
 }

@@ -38,6 +38,9 @@ steps:
       - '--allow-unauthenticated'
       - '--quiet'
 
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 # NOTE: Inter-service URLs are handled by the microservices using internal discovery logic 
 # or by fetching them via the SDK if needed, but since we use stable names 
 # (e.g. auth-test.a.run.app), we keep them mostly static or updated via a global script.
