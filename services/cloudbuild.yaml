@@ -9,6 +9,7 @@ steps:
         export FIREBASE_WEB_API_KEY="dummy-key-for-test"
         export FIRESTORE_DATABASE_ID="dummy-db"
         export USERS_DATABASE_ID="dummy-users-db"
+        export GCS_BUCKET_NAME="dummy-bucket"
         PYTHONPATH=. pytest
     dir: 'services/$_SERVICE_NAME'
 
