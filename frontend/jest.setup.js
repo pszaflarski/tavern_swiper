@@ -88,18 +88,19 @@ jest.mock('react-native-gesture-handler', () => {
         GestureHandlerRootView: 'GestureHandlerRootView',
         GestureDetector: ({ children }) => children,
         Gesture: {
-            Pan: () => {
-                const mock = {
-                    onBegin: jest.fn().mockReturnThis(),
-                    onUpdate: jest.fn().mockReturnThis(),
-                    onEnd: jest.fn().mockReturnThis(),
-                    onFinalize: jest.fn().mockReturnThis(),
-                    enabled: jest.fn().mockReturnThis(),
-                    activeCursor: jest.fn().mockReturnThis(),
-                    activateAfterLongPress: jest.fn().mockReturnThis(),
-                };
-                return mock;
-            },
+            Pan: () => ({
+                onBegin: jest.fn().mockReturnThis(),
+                onUpdate: jest.fn().mockReturnThis(),
+                onEnd: jest.fn().mockReturnThis(),
+                onFinalize: jest.fn().mockReturnThis(),
+                enabled: jest.fn().mockReturnThis(),
+                minDistance: jest.fn().mockReturnThis(),
+            }),
+            Tap: () => ({
+                onFinalize: jest.fn().mockReturnThis(),
+                enabled: jest.fn().mockReturnThis(),
+            }),
+            Exclusive: jest.fn((...gestures) => gestures[0]), // Simulates the first gesture in the chain
         },
     };
 });

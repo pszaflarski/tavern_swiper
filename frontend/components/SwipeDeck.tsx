@@ -37,14 +37,11 @@ interface SwipeCardProps {
   index: number;
   onSwipeLeft: (profileId: string) => void;
   onSwipeRight: (profileId: string) => void;
+  currentIndex: number;
+  onIndexChange: (index: number) => void;
 }
 
-export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
-  useEffect(() => {
-    setCurrentImageIndex(0);
-  }, [profile.profile_id]);
+export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight, currentIndex, onIndexChange }: SwipeCardProps) {
 
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -76,14 +73,12 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
     .enabled(isTop)
     .onFinalize((e) => {
       const isRight = e.x > SCREEN_W / 2;
-      runOnJS(setCurrentImageIndex)((prev) => {
-        const total = profile.image_urls?.length ?? 1;
-        if (isRight) {
-          return Math.min(prev + 1, total - 1);
-        } else {
-          return Math.max(prev - 1, 0);
-        }
-      });
+      const total = profile.image_urls?.length ?? 1;
+      runOnJS(onIndexChange)(
+        isRight 
+          ? Math.min(currentIndex + 1, total - 1)
+          : Math.max(currentIndex - 1, 0)
+      );
     });
 
   const combinedGesture = Gesture.Exclusive(gesture, tapGesture);
@@ -118,9 +113,9 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
     <GestureDetector gesture={combinedGesture}>
       <Animated.View style={[styles.card, animatedStyle]} testID="profile-card">
         <>
-          {profile.image_urls && profile.image_urls[currentImageIndex] ? (
+          {profile.image_urls && profile.image_urls[currentIndex] ? (
             <Image 
-              source={{ uri: profile.image_urls[currentImageIndex] }} 
+              source={{ uri: profile.image_urls[currentIndex] }} 
               style={styles.image} 
             />
           ) : (
@@ -129,28 +124,10 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
             </View>
           )}
 
-          {profile.image_urls && profile.image_urls.length >= 1 && (
-            <View style={styles.indicatorContainer}>
-              {profile.image_urls.map((_, i) => (
-                <View 
-                  key={i} 
-                  style={[
-                    styles.indicator, 
-                    { 
-                      backgroundColor: i === currentImageIndex 
-                        ? Colors.tertiary 
-                        : 'rgba(255, 255, 255, 0.5)' 
-                    }
-                  ]} 
-                />
-              ))}
-            </View>
-          )}
-
           <View style={styles.heroInfo}>
-            <Text style={styles.heroName}>{profile.display_name}</Text>
+            <Text style={styles.heroName} testID="hero-name">{profile.display_name}</Text>
             {profile.bio && (
-              <Text style={styles.heroTagline}>{profile.bio}</Text>
+              <Text style={styles.heroTagline} testID="hero-tagline">{profile.bio}</Text>
             )}
           </View>
 
@@ -174,6 +151,14 @@ interface SwipeDeckProps {
 }
 
 export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight }: SwipeDeckProps) {
+  const [topImageIndex, setTopImageIndex] = useState(0);
+
+  // Reset index when the top character changes
+  const topProfileId = profiles[0]?.profile_id;
+  useEffect(() => {
+    setTopImageIndex(0);
+  }, [topProfileId]);
+
   if (profiles.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -182,6 +167,8 @@ export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight }: Swipe
       </View>
     );
   }
+
+  const topProfile = profiles[0];
 
   return (
     <View style={styles.deckContainer}>
@@ -193,11 +180,33 @@ export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight }: Swipe
             profile={profile}
             isTop={index === 0}
             index={index}
+            currentIndex={index === 0 ? topImageIndex : 0}
+            onIndexChange={setTopImageIndex}
             onSwipeLeft={onSwipeLeft}
             onSwipeRight={onSwipeRight}
           />
         ))
         .reverse()}
+
+      {/* Static Indicators anchored to the "header" area */}
+      {topProfile && topProfile.image_urls && topProfile.image_urls.length >= 1 && (
+        <View style={styles.indicatorContainer} pointerEvents="none" testID="indicator-container">
+          {topProfile.image_urls.map((_, i) => (
+            <View 
+              key={i} 
+              testID={`indicator-segment-${i}`}
+              style={[
+                styles.indicator, 
+                { 
+                  backgroundColor: i === topImageIndex 
+                    ? Colors.tertiary 
+                    : 'rgba(255, 255, 255, 0.5)' 
+                }
+              ]} 
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
