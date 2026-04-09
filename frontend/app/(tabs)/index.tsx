@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SwipeDeck from '../../components/SwipeDeck';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { useDiscoveryFeed, useProfiles } from '../../hooks/useProfiles';
+import { useDiscoveryFeed, useProfiles, Profile } from '../../hooks/useProfiles';
 import { useSwipe } from '../../hooks/useSwipe';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
@@ -12,48 +12,68 @@ import { useProfileContext } from '../../context/ProfileContext';
 export default function TavernScreen() {
   const { user, isAuthenticated, isLoading: isLoadingUser } = useUser();
   const { activeProfileId, isLoadingActiveProfile } = useProfileContext();
-  const { data: allProfiles, isLoading: isLoadingFeed, refetch } = useDiscoveryFeed(activeProfileId, isAuthenticated, 5);
-  const { data: myProfiles } = useProfiles(user?.uid);
-  
   const swipeMutation = useSwipe();
   const router = useRouter();
-
-  // Show all profiles (including user's own) as requested
-  const activeProfiles = useMemo(() => {
-    return allProfiles ?? [];
-  }, [allProfiles]);
-
+  const [deck, setDeck] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const WATERMARK = 3;
 
-  // Reset the index ONLY when the feed is initially loaded or transitions from empty to having data
-  const lastProfileCount = React.useRef(0);
+  const { data: batch, isFetching, refetch } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
+
+  const isInitialLoad = !deck.length && isFetching;
+
+  // Append new batches to our local deck with deduplication
   useEffect(() => {
-    const currentCount = allProfiles?.length ?? 0;
-    if (lastProfileCount.current === 0 && currentCount > 0) {
-      setCurrentIndex(0);
+    if (batch && batch.length > 0) {
+      setDeck(prev => {
+        const existingIds = new Set(prev.map(p => p.profile_id));
+        const newUnique = batch.filter(p => !existingIds.has(p.profile_id));
+        
+        // If no new profiles were found and we're near the end, we might truly be out
+        return [...prev, ...newUnique];
+      });
     }
-    lastProfileCount.current = currentCount;
-  }, [allProfiles]);
+  }, [batch]);
 
-  const currentProfile = activeProfiles[currentIndex];
+  const currentProfile = deck[currentIndex];
 
   const handleSwipeLeft = (id: string) => {
-    if (!activeProfileId) return; // Cannot swipe without a profile
+    if (!activeProfileId) return;
     swipeMutation.mutate({ swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'left' });
-    setCurrentIndex(prev => prev + 1);
-    setShowDetails(false); // Close details on swipe
+    advanceIndex();
+    setShowDetails(false);
   };
 
   const handleSwipeRight = (id: string) => {
-    if (!activeProfileId) return; // Cannot swipe without a profile
+    if (!activeProfileId) return;
     swipeMutation.mutate({ swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'right' });
-    setCurrentIndex(prev => prev + 1);
-    setShowDetails(false); // Close details on swipe
+    advanceIndex();
+    setShowDetails(false);
+  };
+
+  const advanceIndex = () => {
+    setCurrentIndex(prev => {
+      const next = prev + 1;
+      // Watermark trigger: if we're running low on cards, summon more heroes
+      if (deck.length - next <= WATERMARK && !isFetching) {
+        refetch();
+      }
+      return next;
+    });
+  };
+
+  const handleRecast = () => {
+    // If we're at the end, clear session state to allow a fresh scry
+    if (deck.length === 0 || currentIndex >= deck.length) {
+      setDeck([]);
+      setCurrentIndex(0);
+    }
+    refetch();
   };
 
 
-  if (isLoadingUser || isLoadingActiveProfile || (isLoadingFeed && !allProfiles)) {
+  if (isLoadingUser || isLoadingActiveProfile || isInitialLoad) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -89,19 +109,25 @@ export default function TavernScreen() {
   return (
     <View style={styles.container} testID="tavern-screen">
       <View style={styles.deckWrapper}>
-        {activeProfiles.length === 0 || currentIndex >= activeProfiles.length ? (
+        {deck.length === 0 || currentIndex >= deck.length ? (
           <View style={styles.centered}>
-             <Text style={styles.emptyIcon}>🌪️</Text>
-             <Text style={styles.emptyTitle}>No Heroes Found</Text>
-             <Text style={styles.emptyDesc}>The realm is quiet tonight. Try again later.</Text>
-             <TouchableOpacity onPress={() => refetch()} style={{ marginTop: Spacing[4] }}>
-                <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
-             </TouchableOpacity>
+             <Text style={styles.emptyIcon}>{isFetching ? "🔮" : "🌪️"}</Text>
+             <Text style={styles.emptyTitle}>{isFetching ? "Scrying The Realm..." : "No Heroes Found"}</Text>
+             <Text style={styles.emptyDesc}>
+               {isFetching 
+                 ? "Searching distant lands for more companions..." 
+                 : "The realm is quiet tonight. Try again later."}
+             </Text>
+             {!isFetching && (
+               <TouchableOpacity onPress={handleRecast} style={{ marginTop: Spacing[4] }}>
+                  <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
+               </TouchableOpacity>
+             )}
           </View>
         ) : (
           <View style={{ flex: 1 }}>
             <SwipeDeck
-              profiles={activeProfiles.slice(currentIndex)}
+              profiles={deck.slice(currentIndex)}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
             />
@@ -114,7 +140,7 @@ export default function TavernScreen() {
         <Text style={styles.headerSub}>The Hero's Quest</Text>
       </View>
 
-      {activeProfiles.length > 0 && currentIndex < activeProfiles.length && (
+      {deck.length > 0 && currentIndex < deck.length && (
         <>
           {showDetails && (
             <View style={styles.detailsOverlay}>
