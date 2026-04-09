@@ -10,9 +10,7 @@
     "test": "jest --runInBand",
     "test:jest": "jest --runInBand",
     "test:logic": "jest --runInBand",
-    "test:snapshots": "jest --runInBand --testPathPattern snapshot.test.tsx",
-    "test:e2e": "npx playwright test",
-    "test:playwright": "npx playwright test"
+    "test:snapshots": "jest --runInBand --testPathPattern snapshot.test.tsx"
   },
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
@@ -43,7 +41,6 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",

@@ -11,9 +11,9 @@ A fantasy-themed dating app with a **strictly isolated, zero-trust microservice 
 This project follows a "Shared Nothing" microservice architecture. Each service is a completely self-contained unit with its own logic, dependencies, and **dedicated Firestore database instance**.
 
 ### Key Infrastructure
-- **Microservices**: 6 core services (Auth, Profiles, Discovery, Swipes, Messages, Users).
+- **Microservices**: 5 core services (Auth, Profiles, Discovery, Messages, Users).
 - **Dual Environments**: Every service supports **Dev** and **Test** deployments on Google Cloud Run.
-- **Database Isolation**: Targeted at **12 distinct Firestore databases** (6 for `dev`, 6 for `test`).
+- **Database Isolation**: Targeted at **10 distinct Firestore databases** (5 for `dev`, 5 for `test`).
 - **Truly Keyless**: Local development and Cloud Run deployments use **IAM Impersonation** instead of static service account keys.
 
 ---
@@ -66,7 +66,7 @@ gcloud auth application-default login --impersonate-service-account=tavern-swipe
 **Inside Docker Compose**:
 The `docker-compose.yml` is configured to mount your host's `~/.config/gcloud` directory. The containers use your impersonated ADC to authenticate with Google Cloud services (Firestore, GCS).
 
-### 3. Start the Backend (Docker)
+### 4. Start the Backend (Docker)
 From the root directory:
 ```bash
 docker compose up --build
@@ -98,34 +98,16 @@ This project maintains a robust, multi-layered testing strategy to ensure the in
 ### 1. Frontend Unit & Hook Tests (Jest)
 Tests individual React hooks and logic in isolation using mocked API responses.
 - **What it does**: Validates UI state transitions, error handling, and business logic without a running backend.
+- **Test coverage**: Login, profile creation, swiping, messages, navigation, optimistic updates, portfolio navigation, and UI snapshots.
 - **Run**:
   ```bash
   cd frontend
   npm test
   ```
 
-### 2. Frontend Web Integration (Playwright) — [RECOMMENDED]
-True end-to-end tests that run the frontend in a browser against **Cloud services** (to avoid OOM errors on local development machines).
-- **What it does**: 
-    - Executes real user flows (Signup, Profile Forge) in the web browser.
-    - Captures the session token and **verifies results directly via backend REST APIs** to ensure frontend-backend synchronization.
-    - Targets the `*-test` services on Cloud Run for reliable environment consistency.
-
-  > **Note on E2E Stability**: To ensure a clean test run, always restart the Expo/Metro bundler on port 8081 before starting the suite.
-  
-  ```bash
-  # Recommended: Restart Expo and run tests against Cloud Run
-  bash scripts/restart-expo-and-test.sh
-  ```
-  Or for a manual run (assuming `test` environment is set via `switch_env.sh`):
-  ```bash
-  cd frontend
-  npm run test:e2e
-  ```
-
-### 3. System Integration Tests (Python/Pytest)
+### 2. System Integration Tests (Python/Pytest)
 Service-to-service integration tests targeting the backend REST APIs.
-- **What it does**: Validates complex backend workflows like mutual matching, discovery filtering, and cross-service data consistency.
+- **What it does**: Validates complex backend workflows like discovery filtering and cross-service data consistency.
 - **Run (Local)**:
   ```bash
   bash tests/run_integration_tests.sh
@@ -135,26 +117,46 @@ Service-to-service integration tests targeting the backend REST APIs.
   bash tests/run_cloud_integration_tests.sh
   ```
 
-### 4. Mobile UI Integration (Maestro)
+### 3. Mobile UI Integration (Maestro) — *Planned / Future*
 Native mobile automation for React Native.
-- **What it does**: Simulates real touch interactions on an Android/iOS emulator and verifies UI elements.
-- **Status**: Currently legacy/fallback due to stability issues in some environments.
-- **Run (Local)**:
-  ```bash
-  bash tests/run_maestro_tests.sh
-  ```
-- **Run (Cloud)**:
-  ```bash
-  bash tests/run_cloud_maestro_tests.sh
-  ```
+- **What it will do**: Simulate real touch interactions on an Android/iOS emulator and verify UI elements.
+- **Status**: Planned for future implementation.
+
+---
+
+## CI/CD (Cloud Build)
+
+Automated build and deployment is managed via **Google Cloud Build** triggers.
+
+### Backend Services
+Each backend service uses a shared Cloud Build config at [`services/cloudbuild.yaml`](services/cloudbuild.yaml):
+1. Runs unit tests (`pytest`) inside a Python 3.12 container.
+2. Builds and pushes a Docker image to GCR.
+3. Deploys to Cloud Run with the appropriate environment suffix (`-dev` or `-test`).
+
+### Frontend
+The frontend uses its own Cloud Build config at [`frontend/cloudbuild.yaml`](frontend/cloudbuild.yaml):
+1. Runs Jest unit tests.
+2. Fetches backend Cloud Run URLs for the target environment.
+3. Builds an Expo web bundle inside a Docker image with injected env vars.
+4. Deploys the containerized frontend to Cloud Run.
 
 ---
 
 ## Cloud Deployment
 
+### Automated (Recommended)
+Push to `main` to trigger Cloud Build pipelines for both backend and frontend.
+
+### Manual
 Deploy the entire microservice fleet (both `dev` and `test` environments) to Cloud Run:
 ```bash
 bash scripts/deploy_to_cloud_run.sh
+```
+
+Deploy the frontend:
+```bash
+bash scripts/deploy_frontend.sh
 ```
 
 ---

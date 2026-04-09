@@ -24,11 +24,10 @@ Run tests designed to verify cross-service communication in the cloud environmen
 ./tests/run_integration_tests.sh
 ```
 
-### 4. Test Frontend E2E (Baseline)
-Run frontend E2E tests against current configuration.
+### 4. Test Frontend (Jest)
+Run frontend unit and hook tests to validate UI logic.
 ```bash
-./scripts/switch_env.sh <test|dev>
-cd frontend && npx playwright test && cd ..
+cd frontend && npm test && cd ..
 ```
 
 ### 5. Deploy Frontend
@@ -37,20 +36,3 @@ Deploy the latest frontend build.
 ./scripts/deploy_frontend.sh
 ```
 
-### 6. Final Validation (E2E vs Cloud)
-Perform final E2E verification against deployed cloud assets in the current environment.
-```bash
-./scripts/switch_env.sh <test|dev>
-cd frontend && npx playwright test && cd ..
-```
-
----
-
-## ⚡ Speed Tip: Rapid Iteration & Debugging
-To minimize cycle time when debugging:
-1.  **Point local frontend to cloud backend**: Run `./scripts/switch_env.sh <test|dev>` to point your **local** app to the cloud environment.
-2.  **Use Playwright UI**: Instead of running silent tests, run:
-    ```bash
-    cd frontend && npx playwright test --ui
-    ```
-3.  **Debug**: Watch the test run in the UI, identify failures, fix your **local** code, and click "Rerun" in the UI for instant feedback without waiting for a full cloud redeploy.

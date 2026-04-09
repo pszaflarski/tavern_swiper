@@ -12,7 +12,6 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
   - `auth` -> `auth`
   - `profiles` -> `profiles`
   - `discovery` -> `discovery`
-  - `swipes` -> `swipes`
   - `messages` -> `messages`
   - `users` -> `users`
 
@@ -20,7 +19,6 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
   - Auth: 8001
   - Profiles: 8002
   - Discovery: 8003
-  - Swipes: 8004
   - Messages: 8005
   - Users: 8006
 
@@ -41,10 +39,6 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 - **NO DIRECT FIRESTORE ACCESS**: The frontend must never call Firestore directly. All data must be fetched through the microservice APIs.
 - Centralized `.env` in `frontend/` maps localhost ports to the microservice fleet.
 
-## ⚙️ Python Usage: VIRTUAL ENVIRONMENT ONLY
-> [!IMPORTANT]
-> **NEVER** run Python commands using the system interpreter. You **MUST** use the project's virtual environment at `.venv/bin/python3`. Failure to do so will pollute the system and cause inconsistencies in the development environment.
-
 ### 🧪 Development Workflow
 - **Venv First**: Always prefix python commands with `.venv/bin/python3`.
 - **Testing**: Always run `bash services/run_tests.sh` after backend changes to ensure zero-trust boundaries are intact.
@@ -52,18 +46,6 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
   1. Update microservice `main.py` and `models.py`.
   2. Update its local `.env`.
   3. Verify with `run_tests.sh`.
-
-## 🧪 E2E Stability & Testing Guidelines
-- **Resilient Async Transitions**: **NEVER** use `page.waitForTimeout()` or fixed `sleep` commands for wait-and-reload flows. They are brittle and cause race conditions.
-- **Use `toPass()`**: Always prefer Playwright's `expect(...).toPass()` for polling state changes that involve backend propagation or page reloads.
-- **Zero-Trust Browser Context Isolation**: For multi-user E2E tests (e.g., matching or messaging), **NEVER** use the default `page` fixture. Instantiate strictly isolated environments using `await browser.newContext()` for each simulated user to prevent Expo/Firebase session leakage.
-- **Declarative Web-First Assertions**: Prefer native assertions like `expect(locator).toBeVisible()`, `expect(locator).toBeAttached()`, and `expect(locator).toContainText()`. Do not use manual `locator.waitFor({ state: 'attached' })` or manually extract text to assert against.
-- **Session Persistence**: On web reloads, account for Firebase Auth persistence delays by waiting for the dashboard component or re-navigating to the protected route if a redirect occurs.
-- **Visibility Assertions**: Never use `filter({ visible: true })` if you are going to follow it with a `.toBeVisible()` assertion. This is a Playwright anti-pattern. Instead, let Playwright locate the element in the DOM first and allow `toBeVisible()` to handle the waiting and visibility checking natively.
-- **Selective Selectors**: Use `filter({ visible: true })` ONLY when you need to distinguish between multiple matching elements where some are permanently hidden and you are NOT using a visibility assertion (e.g. within a `.click()` or `.fill()` on an element that is already assumed stable).
-- **Eventual Consistency**: Avoid unnecessary `page.reload()` in loops. If synchronization is required, reload once after a confirmed network event, then poll with declarative assertions.
-- **Stacked UI / Card Decks**: When interacting with swiping cards or stacked elements, **NEVER** use `getByText()` to locate the active card, as it will match hidden elements deeper in the deck. **ALWAYS** use `getByTestId('profile-card-name').first().textContent()` to evaluate the top-most visible element before triggering actions.
-- **Sentinel-Based Transitions**: In E2E tests, **AVOID** broad text-based or URL-based visibility checks for "landing" transitions (e.g., waiting for "Tavern"). Instead, use unique `data-testid` Sentinels (e.g., `testID="tavern-screen"`) to differentiate between the active foreground screen and background "shadow" copies preserved by Expo Router.
 
 ## 🃏 Jest Unit Testing Guidelines
 - **Provider Mocking**: Components relying on global state (e.g., `useQueryClient` or `ActiveProfileContext`) must be rendered with a custom wrapper providing fresh instances of those contexts (e.g., `<QueryClientProvider>`) to avoid cross-test cache pollution.
@@ -73,3 +55,4 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 - When asked to create a new service, follow the existing pattern in `services/`.
 - Ensure new services have their own `.env` and Firestore DB ID.
 - Maintain the fantasy-themed nomenclature ("Tavern", "Swiper", "Tavern Swiper", etc.).
+

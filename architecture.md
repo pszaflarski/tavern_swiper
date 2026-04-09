@@ -4,7 +4,7 @@ This document provides a technical overview of the Tavern Swiper application, co
 
 ## 1. System Overview
 
-Tavern Swiper is a hero-discovery application where users "forge" identities and discover other heroes (swipe). It consists of a **React Native (Expo)** frontend and a **Python (FastAPI)** backend composed of six microservices.
+Tavern Swiper is a hero-discovery application where users "forge" identities and discover other heroes (swipe). It consists of a **React Native (Expo)** frontend and a **Python (FastAPI)** backend composed of five microservices.
 
 ### Backend Microservices
 All services are built with Python and FastAPI, utilizing Firestore for persistent storage.
@@ -13,8 +13,7 @@ All services are built with Python and FastAPI, utilizing Firestore for persiste
 | :--- | :--- | :--- |
 | **Auth** | 8001 | Identity provider, Firebase account integration, and token verification. |
 | **Profiles** | 8002 | Stores hero identities, attributes (Strength, Charisma, Spark), and portraits. |
-| **Discovery** | 8003 | Logic for hero "feeds". Filters profiles based on matches and swipes. |
-| **Swipes** | 8004 | Persistent storage for swipe actions (left/right) and match detection. |
+| **Discovery** | 8003 | Logic for hero "feeds". Filters profiles based on matches and swipes. Handles swipe actions and match detection. |
 | **Messages** | 8005 | Real-time messaging and chat history between matched heroes. |
 | **Users** | 8006 | General user metadata (premium status, active profile ID, roles). |
 
@@ -23,8 +22,8 @@ All services are built with Python and FastAPI, utilizing Firestore for persiste
 ## 2. Infrastructure & Data Persistence
 
 ### Database: Cloud Firestore
+- **Dedicated Instances**: Each microservice has its own dedicated Firestore database instance, enforcing strict data isolation across the system.
 - **NoSQL Schema**: High flexibility for profile attributes and changing game mechanics.
-- **Shared Access**: All microservices connect to the same Firestore project but are logically separated by collections (`profiles`, `users`, `swipes`, `messages`).
 - **Media**: Profile portraits are stored in **Google Cloud Storage** (GCS), managed by the `profiles` service.
 
 ### Orchestration: Docker Compose
@@ -55,18 +54,16 @@ All services are built with Python and FastAPI, utilizing Firestore for persiste
 
 ---
 
-## 5. Proposed Cleanup & Next Steps
+## 5. Future Improvements
 
-### Phase 1: Environment & Service Standardization (Completed)
-- [x] **Isolated Environment Profiles**: Each service maintains its own `.env` file, ensuring complete isolation while following a standardized internal layout (SERVICE_NAME, SERVICE_PORT, etc.).
-- [x] **Fixed Internal Connectivity**: All services now consistently point to `http://auth:8001` for internal authentication verification, resolving previous "localhost" vs "auth" inconsistencies.
-- [x] **Surfaced Infrastructure Config**: Variables like `USERS_DATABASE_ID` are now explicitly defined in the relevant `.env` files rather than being injected by external scripts.
-
-### Phase 2: Configuration & Admin (Completed)
-- [x] **Modernize Admin Tooling**: Retired the standalone `admin.html` and integrated admin-only routes directly into the React Native app.
-- [x] **Nexus Admin Panel**: Implemented a protected `/admin` route with role-based access control (`admin`, `root_admin`).
-- [x] **System Initialization**: Ported the "Claim the Root" initialization flow to the mobile experience for fresh environments.
-
-### Phase 3: Performance & Robustness (Long Term)
-- [ ] **Asynchronous Matching**: Move match detection (currently in the Swipes service) to an asynchronous worker to reduce latency during a swipe.
+- [ ] **Asynchronous Matching**: Move match detection to an asynchronous worker to reduce latency during a swipe.
 - [ ] **API Gateway**: Introduce a lightweight API gateway (like Kong or Nginx) to handle cors, rate limiting, and centralized logging.
+- [ ] **Mobile UI Testing (Maestro)**: Automated native mobile testing via Maestro for Android/iOS emulator flows.
+
+---
+
+## Changelog
+
+- **Phase 1 — Environment & Service Standardization**: Isolated environment profiles per service, fixed internal connectivity (`http://auth:8001`), surfaced infrastructure config into `.env` files.
+- **Phase 2 — Configuration & Admin**: Retired standalone `admin.html`, implemented Nexus Admin Panel with role-based access control, ported "Claim the Root" initialization to mobile.
+

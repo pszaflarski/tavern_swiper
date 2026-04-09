@@ -34,7 +34,6 @@ export AUTH_SERVICE_URL="http://localhost:8001"
 export USERS_URL="http://localhost:8006"
 export PROFILES_URL="http://localhost:8002"
 export DISCOVERY_URL="http://localhost:8003"
-export SWIPES_URL="http://localhost:8004"
 export MESSAGES_URL="http://localhost:8005"
 
 # For the Auth service client initialization

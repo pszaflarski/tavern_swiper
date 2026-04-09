@@ -38,11 +38,7 @@ Thumbs.db
 *.log
 *_log.txt
 
-# Testing (Playwright / Jest)
-frontend/test-results/
-frontend/playwright-report/
-frontend/blob-report/
-frontend/playwright/.cache/
+# Testing (Jest)
 **/__mocks__/
 
 # macOS
