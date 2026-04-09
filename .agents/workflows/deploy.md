@@ -1,38 +1,34 @@
 # Deployment Workflow
 
-Follow this procedure to ensure stable, zero-trust deployments. Always perform these steps sequentially per environment, starting with `test`, and then repeating the process for `dev`.
+All deployments are automated via Google Cloud Build pipelines linked to GitHub. Follow this pre-push checklist to ensure stable, zero-trust deployments.
 
-## Deployment Cycle (Repeat per Environment: test -> dev)
+## Pre-Push Checklist
 
 ### 1. Test Backend (Local)
-Ensure all services pass tests locally before cloud deployment.
+Ensure all services pass tests locally before pushing.
 ```bash
 ./services/run_tests.sh
 ```
 
-### 2. Deploy Backend
-Deploy latest backend changes.
+### 2. Test Backend Integration
+Run integration tests to verify cross-service communication.
 ```bash
-# Deploys both test- and dev- prefixed services
-./scripts/deploy_to_cloud_run.sh 
-```
-
-### 3. Test Backend Integration
-Run tests designed to verify cross-service communication in the cloud environment.
-```bash
-# Note: ensure internal test runners are configured for the target environment
 ./tests/run_integration_tests.sh
 ```
 
-### 4. Test Frontend (Jest)
+### 3. Test Frontend (Jest)
 Run frontend unit and hook tests to validate UI logic.
 ```bash
 cd frontend && npm test && cd ..
 ```
 
-### 5. Deploy Frontend
-Deploy the latest frontend build.
+### 4. Push to GitHub
+Push to `main` to trigger Cloud Build pipelines for both backend and frontend.
 ```bash
-./scripts/deploy_frontend.sh
+git push origin main
 ```
 
+Cloud Build will automatically:
+1. Run unit tests for each changed service.
+2. Build and push Docker images to GCR.
+3. Deploy to Cloud Run with the appropriate environment suffix.

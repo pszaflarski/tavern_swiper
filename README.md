@@ -143,21 +143,9 @@ The frontend uses its own Cloud Build config at [`frontend/cloudbuild.yaml`](fro
 
 ---
 
-## Cloud Deployment
+## Deployment
 
-### Automated (Recommended)
-Push to `main` to trigger Cloud Build pipelines for both backend and frontend.
-
-### Manual
-Deploy the entire microservice fleet (both `dev` and `test` environments) to Cloud Run:
-```bash
-bash scripts/deploy_to_cloud_run.sh
-```
-
-Deploy the frontend:
-```bash
-bash scripts/deploy_frontend.sh
-```
+All deployments are automated via **Google Cloud Build** pipelines linked to GitHub. Push to `main` to trigger builds for both backend services and the frontend.
 
 ---
 
