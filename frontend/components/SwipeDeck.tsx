@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,8 +19,8 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../theme';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const CARD_W = Math.min(SCREEN_W - Spacing[8] * 2, 450);
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const CARD_W = SCREEN_W;
 const SWIPE_THRESHOLD = SCREEN_W * 0.35;
 const ROTATION_FACTOR = 15;
 
@@ -40,6 +40,12 @@ interface SwipeCardProps {
 }
 
 export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [profile.profile_id]);
+
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
 
@@ -48,6 +54,7 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
 
   const gesture = Gesture.Pan()
     .enabled(isTop)
+    .minDistance(10)
     .onUpdate((e) => {
       translateX.value = e.translationX;
       translateY.value = e.translationY * 0.3;
@@ -64,6 +71,22 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
         translateY.value = withSpring(0, { damping: 15 });
       }
     });
+  
+  const tapGesture = Gesture.Tap()
+    .enabled(isTop)
+    .onFinalize((e) => {
+      const isRight = e.x > SCREEN_W / 2;
+      runOnJS(setCurrentImageIndex)((prev) => {
+        const total = profile.image_urls?.length ?? 1;
+        if (isRight) {
+          return Math.min(prev + 1, total - 1);
+        } else {
+          return Math.max(prev - 1, 0);
+        }
+      });
+    });
+
+  const combinedGesture = Gesture.Exclusive(gesture, tapGesture);
 
   const animatedStyle = useAnimatedStyle(() => {
     const rotate = interpolate(
@@ -92,33 +115,53 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight }: 
   }));
 
   return (
-    <GestureDetector gesture={gesture}>
+    <GestureDetector gesture={combinedGesture}>
       <Animated.View style={[styles.card, animatedStyle]} testID="profile-card">
-        {profile.image_urls && profile.image_urls[0] ? (
-          <Image 
-            source={{ uri: profile.image_urls[0] }} 
-            style={styles.image} 
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderText}>⚔️</Text>
-          </View>
-        )}
-
-        <Animated.View style={[styles.overlayLabel, styles.overlayRight, likeOpacity]}>
-          <Text style={styles.overlayTextRight}>QUEST</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.overlayLabel, styles.overlayLeft, nopeOpacity]}>
-          <Text style={styles.overlayTextLeft}>BANISH</Text>
-        </Animated.View>
-
-        <View style={styles.info}>
-          <Text style={styles.name} testID="profile-card-name">{profile.display_name}</Text>
-          {profile.bio && (
-            <Text style={styles.tagline}>{profile.bio}</Text>
+        <>
+          {profile.image_urls && profile.image_urls[currentImageIndex] ? (
+            <Image 
+              source={{ uri: profile.image_urls[currentImageIndex] }} 
+              style={styles.image} 
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imagePlaceholderText}>⚔️</Text>
+            </View>
           )}
-        </View>
+
+          {profile.image_urls && profile.image_urls.length >= 1 && (
+            <View style={styles.indicatorContainer}>
+              {profile.image_urls.map((_, i) => (
+                <View 
+                  key={i} 
+                  style={[
+                    styles.indicator, 
+                    { 
+                      backgroundColor: i === currentImageIndex 
+                        ? Colors.tertiary 
+                        : 'rgba(255, 255, 255, 0.5)' 
+                    }
+                  ]} 
+                />
+              ))}
+            </View>
+          )}
+
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroName}>{profile.display_name}</Text>
+            {profile.bio && (
+              <Text style={styles.heroTagline}>{profile.bio}</Text>
+            )}
+          </View>
+
+          <Animated.View style={[styles.overlayLabel, styles.overlayRight, likeOpacity]}>
+            <Text style={styles.overlayTextRight}>QUEST</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.overlayLabel, styles.overlayLeft, nopeOpacity]}>
+            <Text style={styles.overlayTextLeft}>BANISH</Text>
+          </Animated.View>
+        </>
       </Animated.View>
     </GestureDetector>
   );
@@ -169,23 +212,18 @@ const styles = StyleSheet.create({
   card: {
     position: 'absolute',
     width: CARD_W,
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.xl,
+    height: '100%',
+    backgroundColor: Colors.background,
     overflow: 'hidden',
-    ...Shadow.waxSeal,
-    borderTopLeftRadius: Radius.cardTL,
-    borderTopRightRadius: Radius.cardTR,
-    borderBottomLeftRadius: Radius.cardBL,
-    borderBottomRightRadius: Radius.cardBR,
   },
   image: {
     width: '100%',
-    height: 420,
-    resizeMode: 'cover',
+    height: '100%',
+    resizeMode: 'contain',
   },
   imagePlaceholder: {
     width: '100%',
-    height: 420,
+    height: '100%',
     backgroundColor: Colors.surfaceContainer,
     alignItems: 'center',
     justifyContent: 'center',
@@ -193,14 +231,54 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     fontSize: 72,
   },
+  indicatorContainer: {
+    position: 'absolute',
+    top: 110,
+    left: Spacing[4],
+    right: Spacing[4],
+    flexDirection: 'row',
+    gap: Spacing[1],
+    zIndex: 100,
+  },
+  indicator: {
+    flex: 1,
+    height: 3,
+    borderRadius: Radius.full,
+  },
   overlayLabel: {
     position: 'absolute',
-    top: Spacing[10],
+    top: 200,
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[2],
     borderWidth: 3,
     borderRadius: Radius.sm,
     zIndex: 10,
+  },
+  heroInfo: {
+    position: 'absolute',
+    bottom: 150,
+    left: Spacing[6],
+    right: Spacing[6],
+    zIndex: 20,
+  },
+  heroName: {
+    fontFamily: Fonts.heroic,
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  heroTagline: {
+    fontFamily: Fonts.scribe,
+    fontSize: 18,
+    fontStyle: 'italic',
+    color: '#FFFFFF',
+    marginTop: Spacing[1],
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   overlayRight: {
     left: Spacing[5],

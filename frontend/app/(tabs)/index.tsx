@@ -84,11 +84,6 @@ export default function TavernScreen() {
 
   return (
     <View style={styles.container} testID="tavern-screen">
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tavern Swiper</Text>
-        <Text style={styles.headerSub}>The Hero's Quest</Text>
-      </View>
-
       <View style={styles.deckWrapper}>
         {activeProfiles.length === 0 || currentIndex >= activeProfiles.length ? (
           <View style={styles.centered}>
@@ -100,35 +95,41 @@ export default function TavernScreen() {
              </TouchableOpacity>
           </View>
         ) : (
-          <>
-             <View style={{ flex: 1 }}>
-              <SwipeDeck
-                profiles={activeProfiles.slice(currentIndex)}
-                onSwipeLeft={handleSwipeLeft}
-                onSwipeRight={handleSwipeRight}
-              />
-            </View>
-             <View style={styles.actionRow}>
-              <TouchableOpacity 
-                style={[styles.roundButton, { borderColor: Colors.error }]} 
-                onPress={() => currentProfile && handleSwipeLeft(currentProfile.profile_id)}
-                testID="swipe-left-button"
-                disabled={!activeProfileId}
-              >
-                <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
-                onPress={() => currentProfile && handleSwipeRight(currentProfile.profile_id)}
-                testID="swipe-right-button"
-                disabled={!activeProfileId}
-              >
-                <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
-              </TouchableOpacity>
-            </View>
-          </>
+          <View style={{ flex: 1 }}>
+            <SwipeDeck
+              profiles={activeProfiles.slice(currentIndex)}
+              onSwipeLeft={handleSwipeLeft}
+              onSwipeRight={handleSwipeRight}
+            />
+          </View>
         )}
       </View>
+
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Tavern Swiper</Text>
+        <Text style={styles.headerSub}>The Hero's Quest</Text>
+      </View>
+
+      {activeProfiles.length > 0 && currentIndex < activeProfiles.length && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity 
+            style={[styles.roundButton, { borderColor: Colors.error }]} 
+            onPress={() => currentProfile && handleSwipeLeft(currentProfile.profile_id)}
+            testID="swipe-left-button"
+            disabled={!activeProfileId}
+          >
+            <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
+            onPress={() => currentProfile && handleSwipeRight(currentProfile.profile_id)}
+            testID="swipe-right-button"
+            disabled={!activeProfileId}
+          >
+            <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -139,11 +140,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   header: {
-    paddingTop: Spacing[8],
-    paddingBottom: Spacing[2],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: Spacing[10], // Increased for status bar space
+    paddingBottom: Spacing[4],
     paddingHorizontal: Spacing[6],
-    backgroundColor: Colors.surfaceContainerLowest,
+    backgroundColor: 'rgba(13, 17, 15, 0.7)', // Frosted glass effect
     alignItems: 'center',
+    zIndex: 10,
   },
   headerTitle: {
     fontFamily: Fonts.heroic,
@@ -161,7 +167,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing[1],
   },
   deckWrapper: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
   },
   centered: {
     flex: 1,
@@ -188,12 +195,18 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[8],
   },
   actionRow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing[10],
+    paddingTop: Spacing[6],
     paddingBottom: Spacing[10],
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent', // Overlay on top of image
+    zIndex: 10,
   },
   roundButton: {
     width: 64,
