@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SwipeDeck from '../../components/SwipeDeck';
@@ -24,6 +24,7 @@ export default function TavernScreen() {
   }, [allProfiles]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Reset the index ONLY when the feed is initially loaded or transitions from empty to having data
   const lastProfileCount = React.useRef(0);
@@ -41,12 +42,14 @@ export default function TavernScreen() {
     if (!activeProfileId) return; // Cannot swipe without a profile
     swipeMutation.mutate({ swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'left' });
     setCurrentIndex(prev => prev + 1);
+    setShowDetails(false); // Close details on swipe
   };
 
   const handleSwipeRight = (id: string) => {
     if (!activeProfileId) return; // Cannot swipe without a profile
     swipeMutation.mutate({ swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'right' });
     setCurrentIndex(prev => prev + 1);
+    setShowDetails(false); // Close details on swipe
   };
 
 
@@ -113,13 +116,46 @@ export default function TavernScreen() {
 
       {activeProfiles.length > 0 && currentIndex < activeProfiles.length && (
         <>
+          {showDetails && (
+            <View style={styles.detailsOverlay}>
+              <ScrollView 
+                style={styles.detailsScroll}
+                contentContainerStyle={styles.detailsContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.detailsName}>{currentProfile?.display_name}</Text>
+                {currentProfile?.tagline && (
+                  <Text style={styles.detailsTagline}>"{currentProfile.tagline}"</Text>
+                )}
+                <View style={styles.divider} />
+                <Text style={styles.detailsLabel}>The Legend</Text>
+                <Text style={styles.detailsBio}>
+                  {currentProfile?.bio || "This hero's story is yet to be written in the annals of the realm."}
+                </Text>
+                {currentProfile?.gender && (
+                   <>
+                    <View style={styles.divider} />
+                    <Text style={styles.detailsLabel}>Attributes</Text>
+                    <Text style={styles.detailsBio}>Gender: {currentProfile.gender}</Text>
+                   </>
+                )}
+                {/* Spacer for the footer area to ensure text isn't cut off by buttons */}
+                <View style={{ height: 160 }} />
+              </ScrollView>
+            </View>
+          )}
+
           <TouchableOpacity 
             style={styles.infoButton} 
-            onPress={() => {}} 
+            onPress={() => setShowDetails(!showDetails)} 
             testID="profile-info-button"
             activeOpacity={0.7}
           >
-            <Ionicons name="information-circle-outline" size={28} color={Colors.onSurface} />
+            <Ionicons 
+              name={showDetails ? "close-circle-outline" : "information-circle-outline"} 
+              size={28} 
+              color={Colors.onSurface} 
+            />
           </TouchableOpacity>
           <View style={styles.actionRow}>
             <TouchableOpacity 
@@ -244,5 +280,53 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  detailsOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13, 17, 15, 0.9)', // Deep dark grimoire tint
+    zIndex: 5,
+    paddingTop: 120, // Respect header height
+  },
+  detailsScroll: {
+    flex: 1,
+  },
+  detailsContent: {
+    paddingHorizontal: Spacing[6],
+    paddingBottom: Spacing[10],
+  },
+  detailsName: {
+    fontFamily: Fonts.heroic,
+    fontSize: 32,
+    color: Colors.primary,
+    marginBottom: Spacing[1],
+  },
+  detailsTagline: {
+    fontFamily: Fonts.scribe,
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: Colors.tertiary,
+    marginBottom: Spacing[6],
+  },
+  detailsLabel: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    color: Colors.outline,
+    marginBottom: Spacing[2],
+  },
+  detailsBio: {
+    fontFamily: Fonts.scribe,
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.onSurface,
+    marginBottom: Spacing[6],
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.outlineVariant,
+    width: '100%',
+    marginVertical: Spacing[6],
+    opacity: 0.3,
   },
 });
