@@ -44,6 +44,8 @@ describe('Optimistic UI Updates', () => {
         { profile_id: 'p2', display_name: 'Hero 2' },
       ],
       isLoading: false,
+      isFetching: false,
+      refetch: jest.fn(),
     });
     (useSwipe as jest.Mock).mockReturnValue({ mutate: mockSwipeMutate });
 
