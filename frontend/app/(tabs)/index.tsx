@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import SwipeDeck from '../../components/SwipeDeck';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useDiscoveryFeed, useProfiles } from '../../hooks/useProfiles';
@@ -111,24 +112,34 @@ export default function TavernScreen() {
       </View>
 
       {activeProfiles.length > 0 && currentIndex < activeProfiles.length && (
-        <View style={styles.actionRow}>
+        <>
           <TouchableOpacity 
-            style={[styles.roundButton, { borderColor: Colors.error }]} 
-            onPress={() => currentProfile && handleSwipeLeft(currentProfile.profile_id)}
-            testID="swipe-left-button"
-            disabled={!activeProfileId}
+            style={styles.infoButton} 
+            onPress={() => {}} 
+            testID="profile-info-button"
+            activeOpacity={0.7}
           >
-            <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
+            <Ionicons name="information-circle-outline" size={28} color={Colors.onSurface} />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
-            onPress={() => currentProfile && handleSwipeRight(currentProfile.profile_id)}
-            testID="swipe-right-button"
-            disabled={!activeProfileId}
-          >
-            <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.actionRow}>
+            <TouchableOpacity 
+              style={[styles.roundButton, { borderColor: Colors.error }]} 
+              onPress={() => currentProfile && handleSwipeLeft(currentProfile.profile_id)}
+              testID="swipe-left-button"
+              disabled={!activeProfileId}
+            >
+              <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
+              onPress={() => currentProfile && handleSwipeRight(currentProfile.profile_id)}
+              testID="swipe-right-button"
+              disabled={!activeProfileId}
+            >
+              <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
     </View>
   );
@@ -221,5 +232,17 @@ const styles = StyleSheet.create({
   roundButtonText: {
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  infoButton: {
+    position: 'absolute',
+    bottom: 44, // Moved down to align with the bottom edge of the action buttons
+    right: Spacing[6],
+    zIndex: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Subtle background for the icon
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
