@@ -43,6 +43,7 @@ export function useUser() {
       }
     },
     enabled: !!firebaseUser,
+    staleTime: 900000, // 15 minutes
     retry: false,
   });
 

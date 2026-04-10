@@ -34,6 +34,7 @@ export function useMatches(profileId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!profileId,
+    staleTime: 30000, // 30 seconds
   });
 }
 
@@ -49,6 +50,7 @@ export function useConversations(profileId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!profileId,
+    staleTime: 30000, // 30 seconds
   });
 }
 
@@ -74,6 +76,7 @@ export function useInvolvedMatches(profileId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: otherProfileIds.length > 0,
+    staleTime: 120000, // 2 minutes
   });
 
   const isLoading = isLoadingMatches || isLoadingConvos || isLoadingProfiles;

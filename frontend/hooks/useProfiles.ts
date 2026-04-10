@@ -26,6 +26,7 @@ export function useDiscoveryFeed(profileId: string | undefined, enabled: boolean
       return Array.isArray(res.data?.profiles) ? res.data.profiles : [];
     },
     enabled: enabled && !!profileId,
+    staleTime: 120000, // 2 minutes
   });
 }
 
@@ -40,6 +41,7 @@ export function useProfiles(userId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!userId,
+    staleTime: 300000, // 5 minutes
   });
 }
 
@@ -54,6 +56,7 @@ export function useActiveProfile(enabled: boolean = true) {
       return res.data;
     },
     enabled,
+    staleTime: 300000, // 5 minutes
     retry: false, // If no active profile, 404 is expected, don't spam retries
   });
 }
@@ -103,6 +106,7 @@ export function useProfile(profileId: string | undefined) {
       return res.data;
     },
     enabled: !!profileId,
+    staleTime: 120000, // 2 minutes
   });
 }
 
