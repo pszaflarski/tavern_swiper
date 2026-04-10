@@ -7,10 +7,10 @@ from firebase_admin import auth, credentials
 # Configuration for environment
 PROJECT_ID = "tavern-swiper-dev"
 EMAIL = "peter@gmail.com"
-USERS_DB_ID = sys.argv[1] if len(sys.argv) > 1 else "users"
-
-def sync_root():
-    print(f"🔄 Syncing Root Admin for {EMAIL} in project {PROJECT_ID} (DB: {USERS_DB_ID})...")
+def sync_root(env="dev"):
+    suffix = "-test" if env == "test" else ""
+    db_id = f"users{suffix}"
+    print(f"🔄 Syncing Root Admin for {EMAIL} in project {PROJECT_ID} (DB: {db_id})...")
     
     # 1. Initialize Firebase Admin to get UID
     try:
@@ -27,7 +27,7 @@ def sync_root():
         return
 
     # 2. Update Users Firestore Database
-    db = firestore.Client(project=PROJECT_ID, database=USERS_DB_ID)
+    db = firestore.Client(project=PROJECT_ID, database=db_id)
     user_ref = db.collection("users").document(uid)
     
     user_data = {
@@ -45,4 +45,8 @@ def sync_root():
         print(f"❌ Error updating Firestore: {e}")
 
 if __name__ == "__main__":
-    sync_root()
+    env = "dev"
+    if len(sys.argv) > 1:
+        env = sys.argv[1]
+        
+    sync_root(env)

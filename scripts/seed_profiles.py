@@ -165,10 +165,9 @@ def seed_system():
     print("\n✅ Multi-user seeding complete!")
 
 if __name__ == "__main__":
-    env = "local"
+    env = "dev"
     if len(sys.argv) > 1:
-        if sys.argv[1] in ["test", "dev"]:
-            env = sys.argv[1]
+        env = sys.argv[1]
     
     print(f"🚀 Seeding profiles in {env} environment...")
     

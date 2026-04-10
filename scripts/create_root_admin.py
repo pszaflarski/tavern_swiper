@@ -112,10 +112,9 @@ def create_root(env="local", email="admin@example.com", password="Password123!")
     print("="*50)
 
 if __name__ == "__main__":
-    env = "local"
+    env = "dev"
     if len(sys.argv) > 1:
-        if sys.argv[1] in ["test", "dev"]:
-            env = sys.argv[1]
+        env = sys.argv[1]
     
     email = os.getenv("ROOT_EMAIL", "root@example.com")
     password = os.getenv("ROOT_PASSWORD", "Password123!")
