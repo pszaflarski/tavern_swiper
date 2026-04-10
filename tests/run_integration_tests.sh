@@ -5,6 +5,13 @@ cd "$(dirname "$0")/.."
 TEST_COMPOSE_FILE="docker-compose-test.yml"
 TESTS_DIR="tests/integration"
 
+echo "🧹 Purging Test Environment Data..."
+if [ -d ".venv" ]; then
+    .venv/bin/python3 scripts/clear_system.py test
+else
+    python3 scripts/clear_system.py test
+fi
+
 echo "🚀 Starting Test Environment..."
 docker compose -f $TEST_COMPOSE_FILE up -d --build
 
@@ -17,7 +24,7 @@ MAX_RETRIES=12
 RETRY_INTERVAL=5
 RETRIES=0
 
-services=("auth:8001" "profiles:8002" "users:8006")
+services=("auth:8001" "profiles:8002" "discovery:8003" "messages:8005" "users:8006")
 
 wait_for_service() {
     local service=$1

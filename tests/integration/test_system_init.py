@@ -10,7 +10,6 @@ import os
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 PROFILES_URL = os.getenv("PROFILES_URL", "http://localhost:8002")
 DISCOVERY_URL = os.getenv("DISCOVERY_URL", "http://localhost:8003")
-SWIPES_URL = os.getenv("SWIPES_URL", "http://localhost:8004")
 USERS_URL = os.getenv("USERS_URL", "http://localhost:8006")
 
 TEST_EMAIL = f"root-test-{uuid.uuid4().hex[:8]}@example.com"
@@ -188,7 +187,7 @@ async def test_multi_profile_discovery_and_matching():
 
         # Swipe RIGHT
         swipe_a_resp = await client.post(
-            f"{SWIPES_URL}/swipes/",
+            f"{DISCOVERY_URL}/discovery/swipe/",
             headers=headers_a,
             json={"swiper_profile_id": p_a1_id, "swiped_profile_id": p_b1_id, "direction": "right"}
         )
@@ -197,7 +196,7 @@ async def test_multi_profile_discovery_and_matching():
         # --- 4. User B (B1) Swipes RIGHT on A1 ---
         # Swipe RIGHT
         swipe_b_resp = await client.post(
-            f"{SWIPES_URL}/swipes/",
+            f"{DISCOVERY_URL}/discovery/swipe/",
             headers=headers_b,
             json={"swiper_profile_id": p_b1_id, "swiped_profile_id": p_a1_id, "direction": "right"}
         )
@@ -205,15 +204,22 @@ async def test_multi_profile_discovery_and_matching():
 
         # --- 5. Verify Match ---
         # Check matches for A1
-        matches_a1 = await client.get(f"{SWIPES_URL}/swipes/matches/{p_a1_id}", headers=headers_a)
+        matches_a1 = await client.get(f"{DISCOVERY_URL}/discovery/matches/profile/{p_a1_id}", headers=headers_a)
         assert matches_a1.status_code == 200
-        match_profiles_a1 = [m["profile_id_b"] if m["profile_id_a"] == p_a1_id else m["profile_id_a"] for m in matches_a1.json()]
+        # In current Discovery, matches are returned as MatchOut: { id, profiles, created_at }
+        matches_a1_data = matches_a1.json()
+        match_profiles_a1 = []
+        for m in matches_a1_data:
+            match_profiles_a1.extend([p for p in m["profiles"] if p != p_a1_id])
         assert p_b1_id in match_profiles_a1
 
         # Check matches for B1
-        matches_b1 = await client.get(f"{SWIPES_URL}/swipes/matches/{p_b1_id}", headers=headers_b)
+        matches_b1 = await client.get(f"{DISCOVERY_URL}/discovery/matches/profile/{p_b1_id}", headers=headers_b)
         assert matches_b1.status_code == 200
-        match_profiles_b1 = [m["profile_id_b"] if m["profile_id_a"] == p_b1_id else m["profile_id_a"] for m in matches_b1.json()]
+        matches_b1_data = matches_b1.json()
+        match_profiles_b1 = []
+        for m in matches_b1_data:
+            match_profiles_b1.extend([p for p in m["profiles"] if p != p_b1_id])
         assert p_a1_id in match_profiles_b1
         
         print(f"\nSuccessfully matched {p_a1_id} and {p_b1_id}")

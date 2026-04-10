@@ -47,8 +47,6 @@ services:
       - "8003:8003"
     environment:
       - FIRESTORE_DATABASE_ID=discovery-test
-      - PROFILES_SERVICE_URL=http://profiles:8002
-      - SWIPES_SERVICE_URL=http://swipes:8004
       - AUTH_SERVICE_URL=http://auth:8001
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
@@ -59,30 +57,8 @@ services:
     depends_on:
       profiles:
         condition: service_healthy
-      swipes:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/discovery/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  swipes:
-    build:
-      context: ./services/swipes
-    ports:
-      - "8004:8004"
-    environment:
-      - FIRESTORE_DATABASE_ID=swipes-test
-      - PROFILES_SERVICE_URL=http://profiles:8002
-      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
-      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
-    volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
-    networks:
-      - tavern-net
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/swipes/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -101,7 +77,7 @@ services:
     networks:
       - tavern-net
     depends_on:
-      swipes:
+      profiles:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/messages/health')"]

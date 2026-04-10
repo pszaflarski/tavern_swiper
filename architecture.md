@@ -39,6 +39,56 @@ All services are built with Python and FastAPI, utilizing Firestore for persiste
 - **Service Hub**: The frontend communicates with services via a unified API client in `frontend/lib/api.ts` using configured base URLs.
 
 ### Service to Service
+
+```mermaid
+graph TD
+    subgraph "Frontend Layer"
+        FE[React Native / Expo]
+    end
+
+    subgraph "Service Layer"
+        Auth[Auth Service :8001]
+        Profiles[Profiles Service :8002]
+        Discovery[Discovery Service :8003]
+        Messages[Messages Service :8005]
+        Users[Users Service :8006]
+    end
+
+    subgraph "Data Layer"
+        DB_A[(Firestore: auth)]
+        DB_P[(Firestore: profiles)]
+        DB_D[(Firestore: discovery)]
+        DB_M[(Firestore: messages)]
+        DB_U[(Firestore: users)]
+        GCS[Cloud Storage: Media]
+    end
+
+    %% Auth flows
+    FE --> Auth
+    Profiles --> Auth
+    Discovery --> Auth
+    Messages --> Auth
+    Users --> Auth
+
+    %% Business flows
+    FE --> Profiles
+    FE --> Discovery
+    FE --> Messages
+    FE --> Users
+
+    Discovery -.-> Profiles
+    Messages -.-> Profiles
+    Messages -.-> Discovery
+
+    %% Storage flows
+    Auth --- DB_A
+    Profiles --- DB_P
+    Discovery --- DB_D
+    Messages --- DB_M
+    Users --- DB_U
+    Profiles --> GCS
+```
+
 - **Token Verification**: Downstream services (e.g., Discovery) call `GET /auth/verify` to validate credentials.
 - **Synchronous REST**: Services use `httpx` for inter-service communication (e.g., Discovery calls Profiles for hero data).
 

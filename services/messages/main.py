@@ -20,7 +20,6 @@ from auth_utils import get_current_user
 # ---------------------------------------------------------------------------
 firebase_admin.initialize_app()
 db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
-db = firestore.Client(database=os.environ["FIRESTORE_DATABASE_ID"])
 PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 DISCOVERY_SERVICE_URL = os.getenv("DISCOVERY_SERVICE_URL", "http://discovery:8003")
 
@@ -71,6 +70,7 @@ async def send_message(body: MessageCreate, auth_data: tuple[str, str, str] = De
     participants = []
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
+            headers = {"Authorization": f"Bearer {token}"}
             match_resp = await client.get(f"{DISCOVERY_SERVICE_URL}/discovery/matches/{body.match_id}", headers=headers)
             if match_resp.status_code == 200:
                 match_data = match_resp.json()
