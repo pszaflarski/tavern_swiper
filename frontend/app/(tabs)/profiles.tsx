@@ -7,6 +7,7 @@ import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
+import ScreenHeader from '../../components/ScreenHeader';
 
 export default function ProfilesScreen() {
   const { user } = useUser();
@@ -152,10 +153,7 @@ export default function ProfilesScreen() {
         }} 
       />
       
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profiles</Text>
-        <Text style={styles.headerSub}>Choose Your Avatar</Text>
-      </View>
+      <ScreenHeader title="Profiles" />
 
       {profiles && profiles.length > 0 ? (
         <FlatList
@@ -200,28 +198,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.scribe,
     color: Colors.outline,
     letterSpacing: 1,
-  },
-  header: {
-    paddingTop: Spacing[8],
-    paddingBottom: Spacing[2],
-    paddingHorizontal: Spacing[6],
-    backgroundColor: Colors.surfaceContainerLowest,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontFamily: Fonts.heroic,
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 1,
-  },
-  headerSub: {
-    fontFamily: Fonts.scribe,
-    fontSize: 12,
-    color: Colors.outline,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginTop: Spacing[1],
   },
   listContent: {
     padding: Spacing[4],

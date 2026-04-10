@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SwipeDeck from '../../components/SwipeDeck';
+import ScreenHeader from '../../components/ScreenHeader';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useDiscoveryFeed, useProfiles, Profile } from '../../hooks/useProfiles';
 import { useSwipe } from '../../hooks/useSwipe';
@@ -135,10 +136,7 @@ export default function TavernScreen() {
         )}
       </View>
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tavern Swiper</Text>
-        <Text style={styles.headerSub}>The Hero's Quest</Text>
-      </View>
+      <ScreenHeader title="Tavern Swiper" isAbsolute />
 
       {deck.length > 0 && currentIndex < deck.length && (
         <>
@@ -212,33 +210,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.surface,
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingTop: Spacing[10], // Increased for status bar space
-    paddingBottom: Spacing[4],
-    paddingHorizontal: Spacing[6],
-    backgroundColor: 'rgba(13, 17, 15, 0.7)', // Frosted glass effect
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  headerTitle: {
-    fontFamily: Fonts.heroic,
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 1,
-  },
-  headerSub: {
-    fontFamily: Fonts.scribe,
-    fontSize: 12,
-    color: Colors.outline,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginTop: Spacing[1],
-  },
   deckWrapper: {
     ...StyleSheet.absoluteFillObject,
     bottom: 0,
@@ -311,7 +282,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(13, 17, 15, 0.9)', // Deep dark grimoire tint
     zIndex: 5,
-    paddingTop: 120, // Respect header height
+    paddingTop: 80, // Respect header height
   },
   detailsScroll: {
     flex: 1,

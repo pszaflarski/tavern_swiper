@@ -5,6 +5,7 @@ import { useProfileContext } from '../../context/ProfileContext';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useInvolvedMatches } from '../../hooks/useMessages';
+import ScreenHeader from '../../components/ScreenHeader';
 
 const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
 
@@ -22,10 +23,7 @@ export default function MessagesScreen() {
 
   return (
     <View style={styles.container} testID="messages-screen">
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <Text style={styles.headerSub}>Scrolls & Missives</Text>
-      </View>
+      <ScreenHeader title="Messages" />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Tabs Section */}
@@ -143,28 +141,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.surface,
-  },
-  header: {
-    paddingTop: Spacing[8],
-    paddingBottom: Spacing[2],
-    paddingHorizontal: Spacing[6],
-    backgroundColor: Colors.surfaceContainerLowest,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontFamily: Fonts.heroic,
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 1,
-  },
-  headerSub: {
-    fontFamily: Fonts.scribe,
-    fontSize: 12,
-    color: Colors.outline,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginTop: Spacing[1],
   },
   profileTabsContainer: {
     backgroundColor: Colors.surfaceContainerLowest,

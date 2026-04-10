@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   indicatorContainer: {
     position: 'absolute',
-    top: 110,
+    top: 60,
     left: Spacing[4],
     right: Spacing[4],
     flexDirection: 'row',
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   },
   overlayLabel: {
     position: 'absolute',
-    top: 200,
+    top: 150,
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[2],
     borderWidth: 3,
