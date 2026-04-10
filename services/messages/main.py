@@ -128,7 +128,7 @@ async def list_conversations(profile_id: str, auth_data: tuple[str, str, str] = 
     # We order by sent_at DESC to get new messages first.
     docs = (
         db.collection(COLLECTION)
-        .where("participant_profile_ids", "array-contains", profile_id)
+        .where("participant_profile_ids", "array_contains", profile_id)
         .order_by("sent_at", direction=firestore.Query.DESCENDING)
         .stream()
     )

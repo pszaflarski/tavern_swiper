@@ -84,3 +84,17 @@ async def test_auth_invalid_signature():
     payload = {"match_id": "m1", "sender_profile_id": "p1", "content": "Fake!"}
     response = client.post("/messages/", json=payload, headers=headers)
     assert response.status_code == 401
+
+@pytest.mark.asyncio
+async def test_list_conversations_query_building():
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    with patch("main.db.collection") as mock_coll:
+        # Mock the stream to return an empty list
+        mock_coll.return_value.where.return_value.order_by.return_value.stream.return_value = []
+        
+        response = client.get("/messages/conversations/p1", headers=headers)
+        
+        assert response.status_code == 200
+        # Verify that the where clause was called with the correct operator
+        mock_coll.return_value.where.assert_called_once_with("participant_profile_ids", "array_contains", "p1")

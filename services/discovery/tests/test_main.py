@@ -235,3 +235,17 @@ async def test_auth_invalid_signature():
     headers = {"Authorization": f"Bearer {token}"}
     response = client.post("/discovery/swipe/", json={}, headers=headers)
     assert response.status_code == 401
+
+@pytest.mark.asyncio
+async def test_list_matches_for_profile_query_building():
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    with patch("main.db.collection") as mock_coll:
+        # Mock the stream to return an empty list
+        mock_coll.return_value.where.return_value.stream.return_value = []
+        
+        response = client.get("/discovery/matches/profile/p1", headers=headers)
+        
+        assert response.status_code == 200
+        # Verify that the where clause was called with the correct operator
+        mock_coll.return_value.where.assert_called_once_with("profiles", "array_contains", "p1")

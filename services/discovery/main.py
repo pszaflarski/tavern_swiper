@@ -201,7 +201,7 @@ async def list_matches_for_profile(profile_id: str, auth_data: tuple[str, str, s
     # For now, it's open to all logged-in users to allow for discovery.
     docs = (
         db.collection(MATCHES_COLLECTION)
-        .where("profiles", "array-contains", profile_id)
+        .where("profiles", "array_contains", profile_id)
         .stream()
     )
     result = []
