@@ -62,3 +62,42 @@ This document outlines the Firestore collection schemas and data types used acro
 | `email` | `string` | User email. |
 | `role` | `string` | `user`, `admin`, or `root_admin`. |
 | `is_premium` | `boolean` | Subscription status. |
+| `user_type` | `string` | `user`, `admin`, or `root_admin`. |
+
+---
+
+## ⚙️ Firestore Index Requirements
+
+Firestore requires **Composite Indexes** for any query that combines multiple fields in `where()` and `order_by()`, or uses specific operators like `array-contains` with ordering.
+
+### Required Composite Indexes
+If you disable "In-Memory Sorting" in the services, you MUST provision these indexes manually or via `firestore.indexes.json`.
+
+| Service | Collection | Fields | Mode | Reason |
+| :--- | :--- | :--- | :--- | :--- |
+| `Messages` | `messages` | `match_id` (ASC), `sent_at` (ASC) | Composite | Historical history retrieval. |
+| `Messages` | `messages` | `participant_profile_ids` (ARRAY), `sent_at` (DESC) | Composite | Conversation list (Inbox). |
+
+> [!IMPORTANT]
+> **In-Memory Sorting Workaround**: To ensure immediate stability in fresh environments (like automated integration tests), some services have been configured to perform sorting in the application layer. This bypasses the need for index provisioning but should be reverted to server-side sorting for massive datasets.
+
+### Provisioning via gcloud
+To manually create the required index for testing history retrieval:
+```bash
+gcloud firestore indexes composite create \
+  --database=messages-test \
+  --collection-group=messages \
+  --field-config=field-path=match_id,order=ascending \
+  --field-config=field-path=sent_at,order=ascending
+```
+
+---
+
+## 📂 Database Isolation Pattern
+
+This project uses **Database-per-Service** isolation. In Google Cloud, this is achieved by creating multiple Firestore databases within the same project.
+
+- **Dev Suffix**: (none) e.g., `profiles`, `messages`.
+- **Test Suffix**: `-test` e.g., `profiles-test`, `messages-test`.
+
+Each service is injected with the `FIRESTORE_DATABASE_ID` environment variable at runtime.

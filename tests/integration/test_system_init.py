@@ -10,6 +10,7 @@ import os
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 PROFILES_URL = os.getenv("PROFILES_URL", "http://localhost:8002")
 DISCOVERY_URL = os.getenv("DISCOVERY_URL", "http://localhost:8003")
+MESSAGES_URL = os.getenv("MESSAGES_URL", "http://localhost:8005")
 USERS_URL = os.getenv("USERS_URL", "http://localhost:8006")
 
 TEST_EMAIL = f"root-test-{uuid.uuid4().hex[:8]}@example.com"
@@ -17,7 +18,7 @@ TEST_PASSWORD = "TestPassword123!"
 
 @pytest.fixture(scope="module")
 async def auth_token():
-    """Fixture to register a new user and return their custom Tavern token."""
+    """Fixture to register a new user, promote them to root_admin, and return their elevated token."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Register via Auth Service
         resp = await client.post(
@@ -28,15 +29,31 @@ async def auth_token():
         id_token = resp.json()["id_token"]
         uid = resp.json()["uid"]
 
-        # 2. Exchange for custom Tavern JWT
+        # 2. Exchange for initial Tavern JWT (role='user' by default)
         verify_resp = await client.post(
             f"{AUTH_URL}/auth/verify",
             json={"id_token": id_token}
         )
-        assert verify_resp.status_code == 200, f"Auth verification failed: {verify_resp.text}"
-        tavern_token = verify_resp.json()["token"]
+        assert verify_resp.status_code == 200
+        initial_token = verify_resp.json()["token"]
 
-        return {"token": tavern_token, "uid": uid}
+        # 3. Claim the Root Admin throne (promotion)
+        # Note: This is idempotent if already claimed.
+        await client.post(
+            f"{USERS_URL}/users/", 
+            headers={"Authorization": f"Bearer {initial_token}"},
+            json={"email": TEST_EMAIL, "user_type": "root_admin"}
+        )
+
+        # 4. Exchange for UPGRADED Tavern JWT (role='root_admin')
+        verify_resp_final = await client.post(
+            f"{AUTH_URL}/auth/verify",
+            json={"id_token": id_token}
+        )
+        assert verify_resp_final.status_code == 200
+        elevated_token = verify_resp_final.json()["token"]
+
+        return {"token": elevated_token, "uid": uid}
 
 @pytest.mark.asyncio
 async def test_root_initialization_flow(auth_token):
@@ -281,3 +298,273 @@ async def test_discovery_feed_limit():
         assert len(feed_5.json()["profiles"]) <= 5
         
         print(f"\nSuccessfully verified discovery limit for {profile_id}")
+
+@pytest.mark.asyncio
+async def test_messaging_and_conversation_flow():
+    """
+    Integration Test: Full Messaging Flow
+    1. Setup User A (A1) and User B (B1)
+    2. Setup Match between A1 and B1
+    3. User A sends a message to User B
+    4. User B replies to User A
+    5. Verify both messages appear in chronological order
+    6. Verify Inbox for both users
+    """
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # --- 1. Setup Match ---
+        # User A
+        email_a = f"msg-a-{uuid.uuid4().hex[:8]}@example.com"
+        reg_a = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_a, "password": TEST_PASSWORD})
+        token_a = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_a.json()["id_token"]})).json()["token"]
+        headers_a = {"Authorization": f"Bearer {token_a}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers_a, json={"email": email_a})
+        p_a1_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "MsgA1"})).json()["profile_id"]
+
+        # User B
+        email_b = f"msg-b-{uuid.uuid4().hex[:8]}@example.com"
+        reg_b = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
+        token_b = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_b.json()["id_token"]})).json()["token"]
+        headers_b = {"Authorization": f"Bearer {token_b}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers_b, json={"email": email_b})
+        p_b1_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_b, json={"display_name": "MsgB1"})).json()["profile_id"]
+
+        # Mutual Swipe
+        await client.post(f"{DISCOVERY_URL}/discovery/swipe/", headers=headers_a, json={"swiper_profile_id": p_a1_id, "swiped_profile_id": p_b1_id, "direction": "right"})
+        swipe_b = await client.post(f"{DISCOVERY_URL}/discovery/swipe/", headers=headers_b, json={"swiper_profile_id": p_b1_id, "swiped_profile_id": p_a1_id, "direction": "right"})
+        match_id = swipe_b.json()["id"]
+        assert match_id is not None
+
+        # --- 2. Verify Match Metadata ---
+        match_resp = await client.get(f"{DISCOVERY_URL}/discovery/matches/{match_id}", headers=headers_a)
+        assert match_resp.status_code == 200
+        assert p_a1_id in match_resp.json()["profiles"]
+        assert p_b1_id in match_resp.json()["profiles"]
+
+        # --- 3. User A Sends Message ---
+        content_a = "Greetings from the high tower!"
+        msg_a_resp = await client.post(
+            f"{MESSAGES_URL}/messages/",
+            headers=headers_a,
+            json={"match_id": match_id, "sender_profile_id": p_a1_id, "content": content_a}
+        )
+        assert msg_a_resp.status_code == 201
+        
+        # --- 4. User B Replies ---
+        content_b = "And a low bow from the valley."
+        msg_b_resp = await client.post(
+            f"{MESSAGES_URL}/messages/",
+            headers=headers_b,
+            json={"match_id": match_id, "sender_profile_id": p_b1_id, "content": content_b}
+        )
+        assert msg_b_resp.status_code == 201
+
+        # --- 5. Verify History ---
+        history_resp = await client.get(f"{MESSAGES_URL}/messages/{match_id}", headers=headers_a)
+        assert history_resp.status_code == 200
+        history = history_resp.json()
+        assert len(history) == 2
+        assert history[0]["content"] == content_a
+        assert history[1]["content"] == content_b
+
+        # --- 6. Verify Inbox (Conversations) ---
+        inbox_a_resp = await client.get(f"{MESSAGES_URL}/messages/conversations/{p_a1_id}", headers=headers_a)
+        assert inbox_a_resp.status_code == 200
+        inbox_a = inbox_a_resp.json()
+        assert len(inbox_a) >= 1
+        # The latest message for this match should be content_b
+        conv_a = next(c for c in inbox_a if c["match_id"] == match_id)
+        assert conv_a["last_message"]["content"] == content_b
+
+        print(f"\nSuccessfully verified messaging flow for match {match_id}")
+
+@pytest.mark.asyncio
+async def test_login_flow():
+    """Verify registration followed by login returns a valid token."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        email = f"login-{uuid.uuid4().hex[:8]}@example.com"
+        # 1. Register
+        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
+        assert reg.status_code == 200
+        
+        # 2. Login
+        log = await client.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": TEST_PASSWORD})
+        assert log.status_code == 200
+        assert "id_token" in log.json()
+        print(f"\nSuccessfully verified login flow for {email}")
+
+@pytest.mark.asyncio
+async def test_profile_lifecycle():
+    """Verify profile creation, update, and deletion."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Auth setup
+        email = f"profile-lc-{uuid.uuid4().hex[:8]}@example.com"
+        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
+        token = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})).json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+
+        # 1. Create
+        resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Initial Name"})
+        assert resp.status_code == 201
+        pid = resp.json()["profile_id"]
+
+        # 2. Update
+        resp = await client.put(f"{PROFILES_URL}/profiles/{pid}", headers=headers, json={"display_name": "Updated Name"})
+        assert resp.status_code == 200
+        assert resp.json()["display_name"] == "Updated Name"
+
+        # 3. Delete
+        resp = await client.delete(f"{PROFILES_URL}/profiles/{pid}", headers=headers)
+        assert resp.status_code == 204
+
+        # 4. Verify 404
+        resp = await client.get(f"{PROFILES_URL}/profiles/{pid}", headers=headers)
+        assert resp.status_code == 404
+        print(f"\nSuccessfully verified profile lifecycle for {pid}")
+
+@pytest.mark.asyncio
+async def test_left_swipe_exclusion():
+    """Verify that profiles swiped LEFT are excluded from future discovery feeds."""
+    async with httpx.AsyncClient(timeout=35.0) as client:
+        # Setup User A
+        email_a = f"swiper-{uuid.uuid4().hex[:8]}@example.com"
+        reg_a = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_a, "password": TEST_PASSWORD})
+        token_a = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_a.json()["id_token"]})).json()["token"]
+        headers_a = {"Authorization": f"Bearer {token_a}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers_a, json={"email": email_a})
+        p_a_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "SwiperA"})).json()["profile_id"]
+
+        # Setup User B
+        email_b = f"swiped-{uuid.uuid4().hex[:8]}@example.com"
+        reg_b = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
+        token_b = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_b.json()["id_token"]})).json()["token"]
+        headers_b = {"Authorization": f"Bearer {token_b}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers_b, json={"email": email_b})
+        p_b_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_b, json={"display_name": "SwiperB"})).json()["profile_id"]
+
+        # 1. Verify B is in A's feed initially
+        feed_init = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}", headers=headers_a)
+        p_ids = [p["profile_id"] for p in feed_init.json()["profiles"]]
+        assert p_b_id in p_ids
+
+        # 2. A swipes LEFT on B
+        await client.post(f"{DISCOVERY_URL}/discovery/swipe/", headers=headers_a, 
+                         json={"swiper_profile_id": p_a_id, "swiped_profile_id": p_b_id, "direction": "left"})
+
+        # 3. Verify B is NOT in A's feed anymore
+        feed_after = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}", headers=headers_a)
+        p_ids_after = [p["profile_id"] for p in feed_after.json()["profiles"]]
+        assert p_b_id not in p_ids_after
+        print(f"\nSuccessfully verified left-swipe exclusion for profile {p_b_id}")
+
+@pytest.mark.asyncio
+async def test_user_account_management():
+    """Verify GET /users/me and PUT /users/me."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        email = f"user-mgmt-{uuid.uuid4().hex[:8]}@example.com"
+        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
+        token = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})).json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+
+        # 1. Fetch account info
+        resp = await client.get(f"{USERS_URL}/users/me", headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["email"] == email
+        assert resp.json()["is_premium"] is False
+
+        # 2. Update account info (Premium status)
+        resp = await client.put(f"{USERS_URL}/users/me", headers=headers, json={"is_premium": True})
+        assert resp.status_code == 200
+        assert resp.json()["is_premium"] is True
+        print(f"\nSuccessfully verified user account management for {email}")
+
+@pytest.mark.asyncio
+async def test_active_profile_switching():
+    """Verify profile auto-activation and manual switching."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        email = f"switcher-{uuid.uuid4().hex[:8]}@example.com"
+        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
+        token = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})).json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+
+        # 1. Create P1 (will be active)
+        p1_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "P1"})).json()["profile_id"]
+        p1 = (await client.get(f"{PROFILES_URL}/profiles/{p1_id}", headers=headers)).json()
+        assert p1["is_active"] is True
+
+        # 2. Create P2 (will become active, deactivating P1)
+        p2_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "P2"})).json()["profile_id"]
+        
+        # Verify P2 is active, P1 is inactive
+        p2 = (await client.get(f"{PROFILES_URL}/profiles/{p2_id}", headers=headers)).json()
+        p1_after = (await client.get(f"{PROFILES_URL}/profiles/{p1_id}", headers=headers)).json()
+        assert p2["is_active"] is True
+        assert p1_after["is_active"] is False
+
+        # 3. Manually switch back to P1
+        await client.post(f"{PROFILES_URL}/profiles/{p1_id}/set_active", headers=headers)
+        
+        # Verify P1 is active, P2 is inactive
+        p1_final = (await client.get(f"{PROFILES_URL}/profiles/{p1_id}", headers=headers)).json()
+        p2_final = (await client.get(f"{PROFILES_URL}/profiles/{p2_id}", headers=headers)).json()
+        assert p1_final["is_active"] is True
+        assert p2_final["is_active"] is False
+        print(f"\nSuccessfully verified profile switching for user {email}")
+
+@pytest.mark.asyncio
+async def test_user_profiles_listing():
+    """Verify GET /profiles/user/{user_id}."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        email = f"listing-{uuid.uuid4().hex[:8]}@example.com"
+        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
+        resp_verify = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})
+        token = resp_verify.json()["token"]
+        uid = resp_verify.json()["uid"]
+        headers = {"Authorization": f"Bearer {token}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+
+        # Create two profiles
+        await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Profile 1"})
+        await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Profile 2"})
+
+        # Verify listing
+        resp = await client.get(f"{PROFILES_URL}/profiles/user/{uid}", headers=headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
+        print(f"\nSuccessfully verified user profiles listing for {uid}")
+
+@pytest.mark.asyncio
+async def test_user_soft_delete_and_restore(auth_token):
+    """Verify Admin-level soft-delete and restoration of users."""
+    # Use 'auth_token' fixture for Root Admin context
+    headers_admin = {"Authorization": f"Bearer {auth_token['token']}"}
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # 1. Setup a Target User
+        target_email = f"softdelete-{uuid.uuid4().hex[:8]}@example.com"
+        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": target_email, "password": TEST_PASSWORD})
+        target_uid = reg.json()["uid"]
+        # Create record in Users service
+        await client.post(f"{USERS_URL}/users/", headers=headers_admin, json={"email": target_email, "uid": target_uid})
+
+        # 2. Soft-delete the user
+        resp_del = await client.delete(f"{USERS_URL}/users/{target_uid}?hard=false", headers=headers_admin)
+        assert resp_del.status_code == 204
+
+        # 3. Verify user is excluded from default list
+        resp_list = await client.get(f"{USERS_URL}/users/", headers=headers_admin)
+        uids = [u["uid"] for u in resp_list.json()]
+        assert target_uid not in uids
+
+        # 4. Restore the user
+        resp_rest = await client.patch(f"{USERS_URL}/users/{target_uid}/restore", headers=headers_admin)
+        assert resp_rest.status_code == 200
+        assert resp_rest.json()["is_deleted"] is False
+
+        # 5. Verify user is back in list
+        resp_list_final = await client.get(f"{USERS_URL}/users/", headers=headers_admin)
+        uids_final = [u["uid"] for u in resp_list_final.json()]
+        assert target_uid in uids_final
+        print(f"\nSuccessfully verified soft-delete and restore for user {target_uid}")

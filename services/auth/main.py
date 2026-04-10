@@ -137,9 +137,11 @@ async def register_user(body: LoginRequest):
         "returnSecureToken": True
     }
     
-    import httpx
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, json=payload)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=503, detail="External identity provider unavailable")
         
     if response.status_code != 200:
         error_data = response.json().get("error", {})
@@ -163,9 +165,11 @@ async def login_user(body: LoginRequest):
         "returnSecureToken": True
     }
     
-    import httpx
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, json=payload)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=503, detail="External identity provider unavailable")
         
     if response.status_code != 200:
         error_data = response.json().get("error", {})

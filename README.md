@@ -18,6 +18,15 @@ This project follows a "Shared Nothing" microservice architecture. Each service 
 
 ---
 
+## ⚙️ Firestore Indexing
+
+This project uses advanced Firestore queries (e.g., matching + time-based sorting) that require **Composite Indexes**.
+
+- **Automatic Workaround**: The services currently use in-memory sorting for testing and development to avoid immediate index requirements.
+- **Production Requirement**: For large-scale data, you must provision composite indexes as documented in [docs/data_model.md](docs/data_model.md#️-firestore-index-requirements).
+
+---
+
 ## Local Setup & Identity
 
 ### 1. Prerequisites

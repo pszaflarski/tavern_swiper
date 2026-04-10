@@ -97,7 +97,6 @@ async def get_messages(match_id: str, auth_data: tuple[str, str, str] = Depends(
     docs = (
         db.collection(COLLECTION)
         .where("match_id", "==", match_id)
-        .order_by("sent_at")
         .stream()
     )
     result = []
@@ -112,6 +111,8 @@ async def get_messages(match_id: str, auth_data: tuple[str, str, str] = Depends(
                 sent_at=d["sent_at"],
             )
         )
+    # Sort in-memory to avoid Firestore index requirement
+    result.sort(key=lambda x: x.sent_at)
     return result
 
 
@@ -129,13 +130,15 @@ async def list_conversations(profile_id: str, auth_data: tuple[str, str, str] = 
     docs = (
         db.collection(COLLECTION)
         .where("participant_profile_ids", "array_contains", profile_id)
-        .order_by("sent_at", direction=firestore.Query.DESCENDING)
         .stream()
     )
     
+    # Sort in-memory to avoid Firestore index requirement
+    all_docs = sorted(docs, key=lambda d: d.to_dict().get("sent_at"), reverse=True)
+    
     # Group by match_id to only return the latest message for each conversation
     conversations = {}
-    for doc in docs:
+    for doc in all_docs:
         d = doc.to_dict()
         mid = d["match_id"]
         if mid not in conversations:
