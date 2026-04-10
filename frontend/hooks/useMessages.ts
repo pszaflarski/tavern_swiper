@@ -31,7 +31,7 @@ export function useMatches(profileId: string | undefined) {
     queryFn: async () => {
       if (!profileId) return [];
       const res = await discoveryApi.get(`/discovery/matches/profile/${profileId}`);
-      return res.data;
+      return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!profileId,
   });
@@ -46,7 +46,7 @@ export function useConversations(profileId: string | undefined) {
     queryFn: async () => {
       if (!profileId) return [];
       const res = await messagesApi.get(`/messages/conversations/${profileId}`);
-      return res.data;
+      return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!profileId,
   });
@@ -71,7 +71,7 @@ export function useInvolvedMatches(profileId: string | undefined) {
     queryFn: async () => {
       if (otherProfileIds.length === 0) return [];
       const res = await profilesApi.post('/profiles/batch', { profile_ids: otherProfileIds });
-      return res.data;
+      return Array.isArray(res.data) ? res.data : [];
     },
     enabled: otherProfileIds.length > 0,
   });
@@ -80,9 +80,9 @@ export function useInvolvedMatches(profileId: string | undefined) {
 
   // Combine data
   const combined = matches.map(match => {
-    const otherId = match.profiles.find(pid => pid !== profileId);
-    const otherProfile = profiles.find(p => p.profile_id === otherId) || null;
-    const convo = conversations.find(c => c.match_id === match.id);
+    const otherId = match.profiles?.find(pid => pid !== profileId);
+    const otherProfile = Array.isArray(profiles) ? profiles.find(p => p.profile_id === otherId) : null;
+    const convo = Array.isArray(conversations) ? conversations.find(c => c.match_id === match.id) : undefined;
     
     return {
       ...match,

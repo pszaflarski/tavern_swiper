@@ -136,4 +136,18 @@ describe('Messages Screen', () => {
     expect(getByText('The stars reflect no new paths today.')).toBeTruthy();
     expect(getByText('Silence reigns in the tavern.')).toBeTruthy();
   });
+
+  it('does not crash when data is malformed (not an array)', () => {
+    (useProfiles as jest.Mock).mockReturnValue({ data: null, isLoading: false });
+    (useInvolvedMatches as jest.Mock).mockReturnValue({
+      newMatches: null as any,
+      inbox: null as any,
+      isLoading: false,
+    });
+
+    const { getByText } = render(<MessagesScreen />);
+    
+    // Should render without crashing, even if it shows empty/error state
+    expect(getByText('Messages')).toBeTruthy();
+  });
 });

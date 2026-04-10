@@ -15,7 +15,7 @@ export default function MessagesScreen() {
   const { data: myProfiles = [], isLoading: isLoadingMyProfiles } = useProfiles(user?.uid);
   const { newMatches, inbox, isLoading: isLoadingContent } = useInvolvedMatches(activeProfileId);
 
-  const selectedProfile = myProfiles.find(p => p.profile_id === activeProfileId);
+  const selectedProfile = Array.isArray(myProfiles) ? myProfiles.find(p => p.profile_id === activeProfileId) : undefined;
 
   const renderProfileImage = (uri: string | undefined) => {
     return uri ? { uri } : PLACEHOLDER_IMAGE;
@@ -32,7 +32,7 @@ export default function MessagesScreen() {
             <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing[4] }} />
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.profileTabsContent}>
-              {myProfiles.map((profile) => (
+              {(myProfiles || []).map((profile) => (
                 <TouchableOpacity 
                   key={profile.profile_id} 
                   testID={`profile-tab-${profile.profile_id}`}
@@ -56,7 +56,7 @@ export default function MessagesScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
-              {myProfiles.length === 0 && (
+               {(!myProfiles || myProfiles.length === 0) && (
                 <Text style={styles.emptyText}>No identities forged yet.</Text>
               )}
             </ScrollView>
@@ -76,7 +76,7 @@ export default function MessagesScreen() {
             </View>
             <View style={styles.newMatchesContainer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.newMatchesContent}>
-                {newMatches.map((match) => (
+                {(newMatches || []).map((match) => (
                   <TouchableOpacity 
                     key={match.id} 
                     testID={`new-match-${match.id}`}
@@ -89,7 +89,7 @@ export default function MessagesScreen() {
                     <Text style={styles.newMatchName} numberOfLines={1}>{match.otherProfile?.display_name || 'Mysterious Soul'}</Text>
                   </TouchableOpacity>
                 ))}
-                {newMatches.length === 0 && (
+                {(!newMatches || newMatches.length === 0) && (
                   <Text style={styles.emptyText}>The stars reflect no new paths today.</Text>
                 )}
               </ScrollView>
@@ -100,7 +100,7 @@ export default function MessagesScreen() {
               <Text style={styles.sectionTitle}>Inbox</Text>
             </View>
             <View style={styles.inboxContainer}>
-              {inbox.map((convo) => (
+              {(inbox || []).map((convo) => (
                 <TouchableOpacity 
                   key={convo.id} 
                   testID={`inbox-item-${convo.id}`}
@@ -121,7 +121,7 @@ export default function MessagesScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
-              {inbox.length === 0 && (
+              {(!inbox || inbox.length === 0) && (
                 <View style={{ paddingVertical: Spacing[10], alignItems: 'center' }}>
                   <Text style={styles.emptyText}>Silence reigns in the tavern.</Text>
                 </View>

@@ -23,7 +23,7 @@ export function useDiscoveryFeed(profileId: string | undefined, enabled: boolean
       if (!profileId) return [];
       const res = await discoveryApi.get(`/discovery/feed/${profileId}?limit=${limit}`);
       // Discovery service returns { "profiles": [...] }
-      return res.data.profiles;
+      return Array.isArray(res.data?.profiles) ? res.data.profiles : [];
     },
     enabled: enabled && !!profileId,
   });
@@ -37,7 +37,7 @@ export function useProfiles(userId: string | undefined) {
     queryKey: ['profiles', 'user', userId],
     queryFn: async () => {
       const res = await profilesApi.get(`/profiles/user/${userId}`);
-      return res.data;
+      return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!userId,
   });
