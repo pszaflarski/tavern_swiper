@@ -65,8 +65,16 @@ export default function AuthScreen() {
         });
       }
     } catch (error: any) {
+      console.error('Authentication error details:', {
+        code: error.code,
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+
       let errorMessage = error.message || 'An identification error occurred.';
 
+      // Map specific Firebase/Auth error codes
       if (error.code === 'auth/wrong-password') {
         errorMessage = 'Wrong password. Please try again.';
       } else if (error.code === 'auth/user-not-found') {
@@ -77,6 +85,10 @@ export default function AuthScreen() {
         errorMessage = 'Password should be at least 6 characters.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'auth/invalid-api-key' || error.code === 'auth/api-key-not-valid') {
+        errorMessage = 'The authentication service configuration is invalid (API Key).';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Email/Password authentication is not enabled for this realm.';
       } else if (errorMessage.toLowerCase().includes('firebase')) {
         errorMessage = 'The authentication service encountered an error. Please try again.';
       }
