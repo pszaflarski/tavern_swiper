@@ -47,7 +47,13 @@ describe('Profile Creation & Editing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
-    (useUser as jest.Mock).mockReturnValue({ user: { uid: 'test-user' } });
+    (useUser as jest.Mock).mockReturnValue({ 
+      user: { uid: 'test-user' }, 
+      uid: 'test-user', 
+      isAuthenticated: true, 
+      isLoading: false,
+      logout: jest.fn(),
+    });
     (useCreateProfile as jest.Mock).mockReturnValue({ mutateAsync: mockCreateMutate.mockResolvedValue({ profile_id: 'new-profile-id' }), isPending: false });
     (useUpdateProfile as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateMutate, isPending: false });
     (useUploadProfileImage as jest.Mock).mockReturnValue({ mutateAsync: mockUploadMutate, isPending: false });

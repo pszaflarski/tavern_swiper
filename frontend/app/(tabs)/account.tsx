@@ -4,10 +4,14 @@ import { auth } from '../../lib/firebase';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import ScreenHeader from '../../components/ScreenHeader';
 
+import { useUser } from '../../hooks/useUser';
+
 export default function AccountScreen() {
+  const { logout } = useUser();
+
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      await logout();
     } catch (error) {
       console.error('Error signing out:', error);
     }

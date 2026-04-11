@@ -39,7 +39,13 @@ describe('Profiles Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useUser as jest.Mock).mockReturnValue({ user: { uid: 'test-user' } });
+    (useUser as jest.Mock).mockReturnValue({ 
+      user: { uid: 'test-user' }, 
+      uid: 'test-user', 
+      isAuthenticated: true, 
+      isLoading: false,
+      logout: jest.fn(),
+    });
     (useProfiles as jest.Mock).mockReturnValue({ data: mockProfiles, isLoading: false, isPending: false });
     (useProfileContext as jest.Mock).mockReturnValue({
       activeProfileId: '1',
@@ -66,10 +72,10 @@ describe('Profiles Screen', () => {
   });
 
   it('shows loading state', () => {
-    (useProfiles as jest.Mock).mockReturnValue({ data: [], isLoading: true, isPending: true });
+    (useProfiles as jest.Mock).mockReturnValue({ data: undefined, isLoading: true, isPending: true });
     
     const { getByText } = render(<ProfilesScreen />);
-    expect(getByText('Consulting the Archives...')).toBeTruthy();
+    expect(getByText('Awakening the Archive...')).toBeTruthy();
   });
 
   it('renders forge identity button at the bottom', () => {

@@ -10,13 +10,13 @@ import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 
 export default function ProfilesScreen() {
-  const { user, isLoading: isLoadingUser } = useUser();
-  const { data: profiles, isPending: isPendingProfiles } = useProfiles(user?.uid);
+  const { uid, isLoading: isLoadingUser } = useUser();
+  const { data: profiles, isPending: isPendingProfiles } = useProfiles(uid);
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const deleteProfileMutation = useDeleteProfile();
   const router = useRouter();
 
-  const isActuallyLoading = isLoadingUser || (!!user && isPendingProfiles);
+  const isActuallyLoading = isLoadingUser && !profiles;
 
   const handleEdit = (profileId: string) => {
     router.push({

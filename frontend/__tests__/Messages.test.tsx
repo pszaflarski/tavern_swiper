@@ -54,7 +54,13 @@ describe('Messages Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useUser as jest.Mock).mockReturnValue({ user: { uid: 'test-user' } });
+    (useUser as jest.Mock).mockReturnValue({ 
+      user: { uid: 'test-user' }, 
+      uid: 'test-user', 
+      isAuthenticated: true, 
+      isLoading: false,
+      logout: jest.fn(),
+    });
     (useProfiles as jest.Mock).mockReturnValue({ data: mockMyProfiles, isLoading: false });
     (useProfileContext as jest.Mock).mockReturnValue({
       activeProfileId: 'p1',

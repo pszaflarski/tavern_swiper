@@ -11,14 +11,14 @@ interface ProfileContextType {
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useUser();
+  const { uid, isAuthenticated } = useUser();
   const { data: activeProfile, isLoading: isLoadingActiveProfile } = useActiveProfile(isAuthenticated);
   
-  // Pre-fetch all profiles for the user as soon as they are identified.
-  // This populates the React Query cache globaly.
-  const { isFetching: isFetchingProfiles } = useProfiles(user?.uid);
+  // Pre-fetch all profiles for the user as soon as they are identified (even from storage).
+  // This populates the React Query cache globally and instantly.
+  const { isFetching: isFetchingProfiles } = useProfiles(uid);
   
-  const activateProfileMutation = useActivateProfile(user?.uid);
+  const activateProfileMutation = useActivateProfile(uid);
 
   const activeProfileId = React.useMemo(() => {
     return activeProfile?.profile_id;

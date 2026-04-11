@@ -10,9 +10,21 @@ jest.mock('../lib/firebase', () => ({
   },
 }));
 
+// Mock useUser
+jest.mock('../hooks/useUser', () => ({
+  useUser: jest.fn(),
+}));
+
+import { useUser } from '../hooks/useUser';
+
 describe('Account Screen', () => {
+  const mockLogout = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useUser as jest.Mock).mockReturnValue({
+      logout: mockLogout,
+    });
   });
 
   it('renders account screen', () => {
@@ -27,6 +39,6 @@ describe('Account Screen', () => {
     
     fireEvent.press(logoutBtn);
     
-    expect(auth.signOut).toHaveBeenCalled();
+    expect(mockLogout).toHaveBeenCalled();
   });
 });

@@ -38,10 +38,17 @@ jest.mock('../lib/firebase', () => ({
 describe('Login Screen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     (useUser as jest.Mock).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
+      uid: null,
+      logout: jest.fn(),
     });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('renders login screen by default', () => {

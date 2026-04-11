@@ -16,6 +16,7 @@ const BASE_URLS = {
 
 const TAVERN_TOKEN_KEY = 'tavern_jwt_token';
 const TAVERN_TOKEN_EXPIRY = 'tavern_jwt_expiry';
+const TAVERN_UID_KEY = 'tavern_uid';
 
 /**
  * Helper to wait for Firebase Auth to initialize.
@@ -48,6 +49,27 @@ export async function getIdToken(): Promise<string | null> {
     return await user.getIdToken();
   } catch (error) {
     console.error('Error fetching ID token:', error);
+    return null;
+  }
+}
+
+/**
+ * Session Management
+ */
+export async function clearTavernSession(): Promise<void> {
+  cachedTavernToken = null;
+  tokenExpiryTime = 0;
+  try {
+    await AsyncStorage.multiRemove([TAVERN_TOKEN_KEY, TAVERN_TOKEN_EXPIRY, TAVERN_UID_KEY]);
+  } catch (e) {
+    console.error('Failed to clear Tavern session:', e);
+  }
+}
+
+export async function getPersistedUid(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(TAVERN_UID_KEY);
+  } catch (e) {
     return null;
   }
 }
@@ -107,14 +129,18 @@ export async function getTavernToken(): Promise<string | null> {
 
       if (res.status === 200 && res.data.token) {
         const token = res.data.token;
+        const uid = res.data.uid; // Extract UID from verification response
         const expiry = Date.now() + (28 * 60 * 1000); // 28m locally for 30m server expiry
         
         // Update both caches
         cachedTavernToken = token;
         tokenExpiryTime = expiry;
         
-        await AsyncStorage.setItem(TAVERN_TOKEN_KEY, token);
-        await AsyncStorage.setItem(TAVERN_TOKEN_EXPIRY, expiry.toString());
+        await AsyncStorage.multiSet([
+          [TAVERN_TOKEN_KEY, token],
+          [TAVERN_TOKEN_EXPIRY, expiry.toString()],
+          [TAVERN_UID_KEY, uid]
+        ]);
         
         return token;
       }

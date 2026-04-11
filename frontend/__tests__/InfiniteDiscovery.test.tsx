@@ -59,7 +59,13 @@ describe('Infinite Discovery Logic', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useUser as jest.Mock).mockReturnValue({ user: { uid: 'u1' }, isAuthenticated: true, isLoading: false });
+    (useUser as jest.Mock).mockReturnValue({ 
+      user: { uid: 'u1' }, 
+      uid: 'u1', 
+      isAuthenticated: true, 
+      isLoading: false,
+      logout: jest.fn(),
+    });
     (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: 'ap1', isLoadingActiveProfile: false });
     (useSwipe as jest.Mock).mockReturnValue({ mutate: mockSwipeMutate });
     

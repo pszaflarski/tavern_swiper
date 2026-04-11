@@ -18,9 +18,18 @@ export interface UserMetadata {
 export function useUser() {
   const queryClient = useQueryClient();
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
+  const [persistedUid, setPersistedUid] = useState<string | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
+    // 1. Initial hydration from AsyncStorage
+    import('../lib/api').then(({ getPersistedUid }) => {
+      getPersistedUid().then((uid) => {
+        if (uid) setPersistedUid(uid);
+      });
+    });
+
+    // 2. Firebase Auth listener
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
       setAuthInitialized(true);
@@ -30,6 +39,8 @@ export function useUser() {
     });
     return unsubscribe;
   }, [queryClient]);
+
+  const activeUid = firebaseUser?.uid || persistedUid;
 
   const userQuery = useQuery<UserMetadata | null>({
     queryKey: ['user', 'me'],
@@ -42,15 +53,30 @@ export function useUser() {
         throw error;
       }
     },
-    enabled: !!firebaseUser,
+    enabled: !!activeUid,
     staleTime: 900000, // 15 minutes
     retry: false,
   });
 
+  const logout = async () => {
+    const { clearTavernSession } = await import('../lib/api');
+    try {
+      await auth.signOut();
+      await clearTavernSession();
+      queryClient.setQueryData(['user', 'me'], null);
+      setFirebaseUser(null);
+      setPersistedUid(null);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return {
     user: userQuery.data,
-    isLoading: !authInitialized || userQuery.isLoading,
+    uid: activeUid,
+    isLoading: !authInitialized || (!!activeUid && userQuery.isLoading && !userQuery.data),
     firebaseUser,
-    isAuthenticated: !!firebaseUser,
+    isAuthenticated: !!firebaseUser || !!persistedUid,
+    logout,
   };
 }
