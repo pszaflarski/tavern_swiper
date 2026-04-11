@@ -20,12 +20,16 @@ const TAVERN_TOKEN_EXPIRY = 'tavern_jwt_expiry';
 /**
  * Helper to wait for Firebase Auth to initialize.
  */
+let authInitialized = false;
 let authInitializedPromise: Promise<void> | null = null;
+
 export function waitForAuth(): Promise<void> {
+  if (authInitialized) return Promise.resolve();
   if (authInitializedPromise) return authInitializedPromise;
   
   authInitializedPromise = new Promise((resolve) => {
     const unsubscribe = auth.onAuthStateChanged(() => {
+      authInitialized = true;
       unsubscribe();
       resolve();
     });
@@ -92,9 +96,14 @@ export async function getTavernToken(): Promise<string | null> {
       const firebaseToken = await getIdToken();
       if (!firebaseToken) return null;
 
+      // Call Auth service directly for the exchange
+      // We use a raw axios call here to avoid circular interceptors
       const res = await axios.post(`${BASE_URLS.auth}/auth/verify`, {
         id_token: firebaseToken
-      }, { timeout: 10_000 });
+      }, { 
+        timeout: 10_000,
+        validateStatus: (status) => status < 500 // Don't throw for 401/403, we want to handle it
+      });
 
       if (res.status === 200 && res.data.token) {
         const token = res.data.token;
@@ -109,6 +118,8 @@ export async function getTavernToken(): Promise<string | null> {
         
         return token;
       }
+      
+      console.error(`Tavern token exchange failed with status ${res.status}:`, res.data);
       return null;
     } catch (error) {
       console.error('Error exchanging Tavern token:', error);

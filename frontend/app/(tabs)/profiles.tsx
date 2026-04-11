@@ -157,7 +157,12 @@ export default function ProfilesScreen() {
       
       <ScreenHeader title="Profiles" />
 
-      {profiles === undefined ? null : profiles.length > 0 ? (
+      {profiles === undefined ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Awakening the Archive...</Text>
+        </View>
+      ) : profiles.length > 0 ? (
         <FlatList
           data={profiles}
           renderItem={renderProfileItem}
