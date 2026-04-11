@@ -11,12 +11,12 @@ import ScreenHeader from '../../components/ScreenHeader';
 
 export default function ProfilesScreen() {
   const { user, isLoading: isLoadingUser } = useUser();
-  const { data: profiles, isLoading: isLoadingProfiles } = useProfiles(user?.uid);
+  const { data: profiles, isPending: isPendingProfiles } = useProfiles(user?.uid);
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const deleteProfileMutation = useDeleteProfile();
   const router = useRouter();
 
-  const isActuallyLoading = isLoadingUser || (!!user && isLoadingProfiles);
+  const isActuallyLoading = isLoadingUser || (!!user && isPendingProfiles);
 
   const handleEdit = (profileId: string) => {
     router.push({
@@ -157,7 +157,7 @@ export default function ProfilesScreen() {
       
       <ScreenHeader title="Profiles" />
 
-      {profiles && profiles.length > 0 ? (
+      {profiles === undefined ? null : profiles.length > 0 ? (
         <FlatList
           data={profiles}
           renderItem={renderProfileItem}

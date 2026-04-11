@@ -35,8 +35,9 @@ All services are built with Python and FastAPI, utilizing Firestore for persiste
 ## 3. Communication Patterns
 
 ### Frontend to Backend
-- **Bearer Authentication**: The frontend obtains an ID token from Firebase directly and injects it into every request header.
-- **Service Hub**: The frontend communicates with services via a unified API client in `frontend/lib/api.ts` using configured base URLs.
+- **Tavern JWT Authentication**: The frontend initially identifies with Firebase, then exchanges the Firebase ID token for a custom **Tavern JWT**. 
+- **Persistence & Hydration**: This JWT is persisted via `AsyncStorage`, allowing for instant authentication on app reloads without waiting for Firebase initialization or re-verification.
+- **Service Hub**: The frontend communicates with services via a unified API client in `frontend/lib/api.ts`, which automatically handles token injection and deduplicated refreshing.
 
 ### Service to Service
 
@@ -89,7 +90,7 @@ graph TD
     Profiles --> GCS
 ```
 
-- **Token Verification**: Downstream services (e.g., Discovery) call `GET /auth/verify` to validate credentials.
+- **Local Verification**: Downstream services (e.g., Discovery, Profiles) verify the **Tavern JWT** locally using a shared secret, eliminating the need for per-request calls to the Auth service.
 - **Synchronous REST**: Services use `httpx` for inter-service communication (e.g., Discovery calls Profiles for hero data).
 
 ---
@@ -98,8 +99,8 @@ graph TD
 
 - **Navigation**: Filesystem-based routing via `Expo Router` with a tab-based primary layout.
 - **State Management**: 
-    - **React Query**: Handles server state, caching, and background synchronization for profiles and discovery feeds.
-    - **Context API**: Manages global UI states like the `ActiveProfileContext`.
+    - **React Query**: Handles server state, caching, and background synchronization. Profiles are "eagerly" loaded and cached globally upon login via the `ProfileProvider`.
+    - **Context API**: Manages global UI states like the `ProfileContext` and handles the active profile selection.
 - **Styling**: A centralized `theme` directory handles colors, typography, and spacing consistency.
 
 ---

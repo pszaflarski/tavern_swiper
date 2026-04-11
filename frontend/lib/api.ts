@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { auth } from './firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Service base URLs — configurable via EXPO_PUBLIC_ env vars.
@@ -13,11 +14,31 @@ const BASE_URLS = {
   users: process.env.EXPO_PUBLIC_USERS_URL ?? 'http://localhost:8006',
 };
 
+const TAVERN_TOKEN_KEY = 'tavern_jwt_token';
+const TAVERN_TOKEN_EXPIRY = 'tavern_jwt_expiry';
+
+/**
+ * Helper to wait for Firebase Auth to initialize.
+ */
+let authInitializedPromise: Promise<void> | null = null;
+export function waitForAuth(): Promise<void> {
+  if (authInitializedPromise) return authInitializedPromise;
+  
+  authInitializedPromise = new Promise((resolve) => {
+    const unsubscribe = auth.onAuthStateChanged(() => {
+      unsubscribe();
+      resolve();
+    });
+  });
+  return authInitializedPromise;
+}
+
 /**
  * Real Token Provider — fetches the current user's ID token from Firebase.
  */
 export async function getIdToken(): Promise<string | null> {
   try {
+    await waitForAuth();
     const user = auth.currentUser;
     if (!user) return null;
     return await user.getIdToken();
@@ -32,36 +53,72 @@ export async function getIdToken(): Promise<string | null> {
  */
 let cachedTavernToken: string | null = null;
 let tokenExpiryTime: number = 0; // ms
+let pendingTokenExchange: Promise<string | null> | null = null;
 
 export async function getTavernToken(): Promise<string | null> {
-  // 1. Return cached token if valid (with 30s buffer)
   const now = Date.now();
+  
+  // 1. Check in-memory cache first
   if (cachedTavernToken && now < tokenExpiryTime - 30_000) {
     return cachedTavernToken;
   }
 
-  // 2. Exchange Firebase token for a Tavern token
-  try {
-    const firebaseToken = await getIdToken();
-    if (!firebaseToken) return null;
-
-    // Call Auth service directly for the exchange
-    // We use a raw axios call here to avoid circular interceptors
-    const res = await axios.post(`${BASE_URLS.auth}/auth/verify`, {
-      id_token: firebaseToken
-    }, { timeout: 10_000 });
-
-    if (res.status === 200 && res.data.token) {
-      cachedTavernToken = res.data.token;
-      // We assume a 30m expiry from the backend; we'll set locally to 28m
-      tokenExpiryTime = now + (28 * 60 * 1000); 
-      return cachedTavernToken;
+  // 2. Check persistent storage if in-memory is empty (e.g. after reload)
+  if (!cachedTavernToken) {
+    try {
+      const storedToken = await AsyncStorage.getItem(TAVERN_TOKEN_KEY);
+      const storedExpiry = await AsyncStorage.getItem(TAVERN_TOKEN_EXPIRY);
+      if (storedToken && storedExpiry) {
+        const expiry = parseInt(storedExpiry, 10);
+        if (now < expiry - 30_000) {
+          cachedTavernToken = storedToken;
+          tokenExpiryTime = expiry;
+          return cachedTavernToken;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load Tavern token from storage:', e);
     }
-    return null;
-  } catch (error) {
-    console.error('Error exchanging Tavern token:', error);
-    return null;
   }
+
+  // 3. If we have a pending exchange, wait for it (deduplication)
+  if (pendingTokenExchange) {
+    return pendingTokenExchange;
+  }
+
+  // 4. Exchange Firebase token for a Tavern token
+  pendingTokenExchange = (async () => {
+    try {
+      const firebaseToken = await getIdToken();
+      if (!firebaseToken) return null;
+
+      const res = await axios.post(`${BASE_URLS.auth}/auth/verify`, {
+        id_token: firebaseToken
+      }, { timeout: 10_000 });
+
+      if (res.status === 200 && res.data.token) {
+        const token = res.data.token;
+        const expiry = Date.now() + (28 * 60 * 1000); // 28m locally for 30m server expiry
+        
+        // Update both caches
+        cachedTavernToken = token;
+        tokenExpiryTime = expiry;
+        
+        await AsyncStorage.setItem(TAVERN_TOKEN_KEY, token);
+        await AsyncStorage.setItem(TAVERN_TOKEN_EXPIRY, expiry.toString());
+        
+        return token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error exchanging Tavern token:', error);
+      return null;
+    } finally {
+      pendingTokenExchange = null;
+    }
+  })();
+
+  return pendingTokenExchange;
 }
 
 /**
