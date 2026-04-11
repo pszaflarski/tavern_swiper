@@ -7,3 +7,6 @@ google-cloud-storage
 python-multipart
 python-dotenv
 python-dotenv
+google-cloud-pubsub
+protobuf
+grpcio-tools

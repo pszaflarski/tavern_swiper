@@ -13,6 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 from models import ProfileCreate, ProfileUpdate, ProfileOut, ProfileBatchRequest
 from auth_utils import get_current_user
+from pubsub_utils import Publisher
+
+# ---------------------------------------------------------------------------
+# Pub/Sub Initialisation
+# ---------------------------------------------------------------------------
+publisher = Publisher()
 
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
@@ -187,7 +193,9 @@ async def create_profile(body: ProfileCreate, auth_data: tuple[str, str, str] = 
     _deactivate_other_profiles(target_uid, profile_id)
     
     doc = db.collection(COLLECTION).document(profile_id).get()
-    return _doc_to_profile(doc)
+    profile_out = _doc_to_profile(doc)
+    publisher.publish_upserted(profile_out)
+    return profile_out
     
 
 
@@ -275,7 +283,9 @@ async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[
         _deactivate_other_profiles(target_uid, profile_id)
     
     ref.update(updates)
-    return _doc_to_profile(ref.get())
+    profile_out = _doc_to_profile(ref.get())
+    publisher.publish_upserted(profile_out)
+    return profile_out
 
 
 @app.post("/profiles/{profile_id}/set_active", response_model=ProfileOut)
@@ -295,7 +305,9 @@ async def set_profile_active(profile_id: str, auth_data: tuple[str, str, str] = 
     ref.update({"is_active": True})
     _deactivate_other_profiles(profile_data.get("user_id"), profile_id)
     
-    return _doc_to_profile(ref.get())
+    profile_out = _doc_to_profile(ref.get())
+    publisher.publish_upserted(profile_out)
+    return profile_out
 
 
 @app.delete("/profiles/{profile_id}", status_code=204)
@@ -310,6 +322,7 @@ async def delete_profile(profile_id: str, auth_data: tuple[str, str, str] = Depe
         raise HTTPException(status_code=403, detail="Not authorized to delete this profile")
         
     ref.delete()
+    publisher.publish_deleted(profile_id)
 
 
 @app.post("/profiles/{profile_id}/image", response_model=ProfileOut)
@@ -346,7 +359,9 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     updates = {"image_urls": image_urls}
     
     ref.update(updates)
-    return _doc_to_profile(ref.get())
+    profile_out = _doc_to_profile(ref.get())
+    publisher.publish_upserted(profile_out)
+    return profile_out
 
 
 @app.delete("/profiles/", status_code=204)
@@ -387,3 +402,4 @@ async def delete_all_profiles(auth_data: tuple[str, str, str] = Depends(get_curr
         
         batch.commit()
     print(f"[DEBUG] Firestore: Cleared {total_deleted} profiles")
+    publisher.publish_all_deleted(uid)

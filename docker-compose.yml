@@ -26,12 +26,17 @@ services:
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
     env_file: ./services/profiles/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
+    depends_on:
+      pubsub:
+        condition: service_started
     healthcheck:
+
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/profiles/health')"]
       interval: 10s
       timeout: 5s
@@ -98,6 +103,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    command: gcloud beta emulators pubsub start --hostport=0.0.0.0:8085 --project=tavern-swiper-dev
+    ports:
+      - "8085:8085"
+    networks:
+      - tavern-net
+
+  pubsub-init:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    depends_on:
+      - pubsub
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+    command: >
+      bash -c "
+        sleep 5;
+        gcloud pubsub topics create profile-updates --project=tavern-swiper-dev;
+        gcloud pubsub subscriptions create profile-updates-sub --topic=profile-updates --project=tavern-swiper-dev;
+        echo 'Pub/Sub initialized'
+      "
+    networks:
+      - tavern-net
 
 networks:
   tavern-net:
