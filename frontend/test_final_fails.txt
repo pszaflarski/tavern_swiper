@@ -1,0 +1,40 @@
+bash: cannot set terminal process group (22549): Inappropriate ioctl for device
+bash: no job control in this shell
+
+> frontend_new@1.0.0 test:jest
+> NODE_OPTIONS="--max-old-space-size=2048" jest --runInBand --forceExit __tests__/Swiping.test.tsx __tests__/InfiniteDiscovery.test.tsx
+
+FAIL __tests__/InfiniteDiscovery.test.tsx
+  ● Infinite Discovery Logic › triggers watermark refetch when running low (threshold = 3)
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 3
+
+    1: called with 0 arguments
+    2: called with 0 arguments
+    3: called with 0 arguments
+
+       98 |     // Swipe 1 (p1): next=1. 6 - 1 = 5 (No trigger)
+       99 |     fireEvent.press(rightBtn);
+    > 100 |     expect(mockRefetch).not.toHaveBeenCalled();
+          |                             ^
+      101 |
+      102 |     // Swipe 2 (p2): next=2. 6 - 2 = 4 (No trigger)
+      103 |     fireEvent.press(rightBtn);
+
+      at Object.toHaveBeenCalled (__tests__/InfiniteDiscovery.test.tsx:100:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+PASS __tests__/Swiping.test.tsx
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 9 passed, 10 total
+Snapshots:   0 total
+Time:        2.733 s
+Ran all test suites matching /__tests__\/Swiping.test.tsx|__tests__\/InfiniteDiscovery.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

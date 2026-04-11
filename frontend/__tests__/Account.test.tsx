@@ -24,6 +24,7 @@ describe('Account Screen', () => {
     jest.clearAllMocks();
     (useUser as jest.Mock).mockReturnValue({
       logout: mockLogout,
+      refetch: jest.fn(),
     });
   });
 

@@ -6,17 +6,20 @@ interface ProfileContextType {
   activeProfileId: string | undefined;
   setActiveProfileId: (id: string) => void;
   isLoadingActiveProfile: boolean;
+  refetchActiveProfile: () => void;
+  refetchProfiles: () => void;
+  profiles: Profile[];
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { uid, isAuthenticated } = useUser();
-  const { data: activeProfile, isLoading: isLoadingActiveProfile } = useActiveProfile(isAuthenticated);
+  const { data: activeProfile, isLoading: isLoadingActiveProfile, refetch: refetchActiveProfile } = useActiveProfile(isAuthenticated);
   
   // Pre-fetch all profiles for the user as soon as they are identified (even from storage).
   // This populates the React Query cache globally and instantly.
-  const { isFetching: isFetchingProfiles } = useProfiles(uid);
+  const { data: profiles = [], isFetching: isFetchingProfiles, refetch: refetchProfiles } = useProfiles(uid);
   
   const activateProfileMutation = useActivateProfile(uid);
 
@@ -29,7 +32,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ProfileContext.Provider value={{ activeProfileId, setActiveProfileId, isLoadingActiveProfile }}>
+    <ProfileContext.Provider value={{ 
+      activeProfileId, 
+      setActiveProfileId, 
+      isLoadingActiveProfile,
+      refetchActiveProfile,
+      refetchProfiles,
+      profiles
+    }}>
       {children}
     </ProfileContext.Provider>
   );

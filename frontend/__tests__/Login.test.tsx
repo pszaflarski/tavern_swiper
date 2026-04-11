@@ -43,6 +43,7 @@ describe('Login Screen', () => {
       isAuthenticated: false,
       isLoading: false,
       uid: null,
+      refetch: jest.fn(),
       logout: jest.fn(),
     });
   });

@@ -14,6 +14,7 @@ jest.mock('../hooks/useUser', () => ({
     isAuthenticated: false,
     isLoading: false,
     user: null,
+    refetch: jest.fn(),
   })),
 }));
 
@@ -23,11 +24,14 @@ jest.mock('../hooks/useProfiles', () => ({
         { profile_id: 'p1', display_name: 'Hero 1', bio: 'Bio 1' },
         { profile_id: 'p2', display_name: 'Hero 2', bio: 'Bio 2' },
     ], 
-    isLoading: false 
+    isLoading: false,
+    refetch: jest.fn(),
+    isPending: false,
   })),
   useDiscoveryFeed: jest.fn(() => ({
     data: [{ profile_id: 'p1', display_name: 'Hero 1' }],
     isLoading: false,
+    refetch: jest.fn(),
   })),
   useDeleteProfile: jest.fn(() => ({ mutate: jest.fn() })),
   useCreateProfile: jest.fn(() => ({ mutate: jest.fn() })),
@@ -42,6 +46,11 @@ jest.mock('../context/ProfileContext', () => ({
   useProfileContext: jest.fn(() => ({
     activeProfileId: 'active-1',
     isLoadingActiveProfile: false,
+    refetchActiveProfile: jest.fn(),
+    refetchProfiles: jest.fn(),
+    profiles: [
+        { profile_id: 'active-1', display_name: 'Hero 1' },
+    ],
   })),
 }));
 

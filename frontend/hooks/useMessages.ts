@@ -59,8 +59,8 @@ export function useConversations(profileId: string | undefined) {
  * Splits them into "New Matches" (no messages) and "Inbox" (with messages).
  */
 export function useInvolvedMatches(profileId: string | undefined) {
-  const { data: matches = [], isLoading: isLoadingMatches } = useMatches(profileId);
-  const { data: conversations = [], isLoading: isLoadingConvos } = useConversations(profileId);
+  const { data: matches = [], isLoading: isLoadingMatches, refetch: refetchMatches } = useMatches(profileId);
+  const { data: conversations = [], isLoading: isLoadingConvos, refetch: refetchConvos } = useConversations(profileId);
 
   // Fetch all "other" profile IDs
   const otherProfileIds = matches.map(m => 
@@ -68,7 +68,7 @@ export function useInvolvedMatches(profileId: string | undefined) {
   ).filter(Boolean) as string[];
 
   // Batch fetch profile details
-  const { data: profiles = [], isLoading: isLoadingProfiles } = useQuery<Profile[]>({
+  const { data: profiles = [], isLoading: isLoadingProfiles, refetch: refetchProfiles } = useQuery<Profile[]>({
     queryKey: ['profiles', 'batch', otherProfileIds],
     queryFn: async () => {
       if (otherProfileIds.length === 0) return [];
@@ -80,6 +80,14 @@ export function useInvolvedMatches(profileId: string | undefined) {
   });
 
   const isLoading = isLoadingMatches || isLoadingConvos || isLoadingProfiles;
+
+  const refetch = async () => {
+    await Promise.all([
+      refetchMatches(),
+      refetchConvos(),
+      refetchProfiles(),
+    ]);
+  };
 
   // Combine data
   const combined = matches.map(match => {
@@ -107,6 +115,7 @@ export function useInvolvedMatches(profileId: string | undefined) {
   return {
     newMatches,
     inbox,
-    isLoading
+    isLoading,
+    refetch
   };
 }

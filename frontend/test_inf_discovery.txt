@@ -1,0 +1,41 @@
+bash: cannot set terminal process group (23145): Inappropriate ioctl for device
+bash: no job control in this shell
+
+> frontend_new@1.0.0 test:jest
+> NODE_OPTIONS="--max-old-space-size=2048" jest --runInBand --forceExit __tests__/InfiniteDiscovery.test.tsx
+
+FAIL __tests__/InfiniteDiscovery.test.tsx
+  Infinite Discovery Logic
+    ✓ populates the deck on initial load (79 ms)
+    ✕ triggers watermark refetch when running low (threshold = 3) (21 ms)
+    ✓ deduplicates profiles when a new batch arrives (39 ms)
+    ✓ resets deck and index on RE-CAST when exhausted (19 ms)
+    ✓ shows scrying state when fetching more cards and deck is exhausted (65 ms)
+
+  ● Infinite Discovery Logic › triggers watermark refetch when running low (threshold = 3)
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 2
+
+       96 |
+       97 |     // Initial mount triggers 1 refetch due to focus effect
+    >  98 |     expect(mockRefetch).toHaveBeenCalledTimes(1);
+          |                         ^
+       99 |
+      100 |     // Currently 6 cards. Threshold is deck.length - next <= 3.
+      101 |     // Swipe 1 (p1): next=1. 6 - 1 = 5 (No trigger)
+
+      at Object.toHaveBeenCalledTimes (__tests__/InfiniteDiscovery.test.tsx:98:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        2.935 s
+Ran all test suites matching /__tests__\/InfiniteDiscovery.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

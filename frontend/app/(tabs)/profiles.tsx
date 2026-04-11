@@ -5,15 +5,18 @@ import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 
 export default function ProfilesScreen() {
   const { uid, isLoading: isLoadingUser } = useUser();
-  const { data: profiles, isPending: isPendingProfiles } = useProfiles(uid);
+  const { data: profiles, isPending: isPendingProfiles, refetch } = useProfiles(uid);
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const deleteProfileMutation = useDeleteProfile();
+
+  useRefreshOnFocus(refetch);
   const router = useRouter();
 
   const isActuallyLoading = isLoadingUser && !profiles;

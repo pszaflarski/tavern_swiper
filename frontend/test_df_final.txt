@@ -1,0 +1,38 @@
+bash: cannot set terminal process group (24248): Inappropriate ioctl for device
+bash: no job control in this shell
+
+> frontend_new@1.0.0 test:jest
+> NODE_OPTIONS="--max-old-space-size=2048" jest --runInBand --forceExit __tests__/DataFreshness.integration.test.tsx
+
+FAIL __tests__/DataFreshness.integration.test.tsx
+  DataFreshness Integration
+    ✕ discovery screen should trigger refetch on focus (56 ms)
+    ✓ discovery screen should gate content if no profiles exist (32 ms)
+
+  ● DataFreshness Integration › discovery screen should trigger refetch on focus
+
+    TypeError: Cannot cancel a stream that already has a reader
+
+    > 1 | import axios from 'axios';
+        | ^
+      2 | import { auth } from './firebase';
+      3 | import AsyncStorage from '@react-native-async-storage/async-storage';
+      4 |
+
+      at ReadableStream.cancel (node_modules/expo/virtual/streams.js:8:48847)
+      at node_modules/axios/lib/adapters/fetch.js:80:12
+      at test (node_modules/axios/lib/adapters/fetch.js:28:14)
+      at factory (node_modules/axios/lib/adapters/fetch.js:66:5)
+      at getFetch (node_modules/axios/lib/adapters/fetch.js:328:69)
+      at Object.<anonymous> (node_modules/axios/lib/adapters/fetch.js:336:17)
+      at Object.require (lib/api.ts:1:1)
+      at Object.require (hooks/useSwipe.ts:2:1)
+      at Object.require (/home/peter/Documents/tavern_swiper/frontend/app/(tabs)../../../../../index.tsx:10:1)
+      at Object.require (__tests__/DataFreshness.integration.test.tsx:2:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        2.539 s, estimated 3 s
+Ran all test suites matching /__tests__\/DataFreshness.integration.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

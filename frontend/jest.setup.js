@@ -34,6 +34,11 @@ jest.mock('expo-router', () => ({
   }),
   useLocalSearchParams: () => ({}),
   usePathname: () => '/',
+  useFocusEffect: jest.fn((cb) => {
+    // In tests, we often just want it to run once on mount or when specifically triggered.
+    // Use require('react') inside the mock to avoid out-of-scope variable errors.
+    require('react').useEffect(cb, []);
+  }),
   Stack: {
     Screen: jest.fn(() => null),
   },
@@ -55,10 +60,37 @@ jest.mock('./hooks/useProfiles', () => ({
     data: [{ profile_id: 'p1', display_name: 'Hero 1' }],
     isLoading: false,
   })),
+  useActiveProfile: jest.fn(() => ({
+    data: { profile_id: 'p1', display_name: 'Hero 1' },
+    isLoading: false,
+  })),
+  useActivateProfile: jest.fn(() => ({
+    mutate: jest.fn(),
+    isLoading: false,
+  })),
   useDeleteProfile: jest.fn(() => ({ mutate: jest.fn() })),
   useCreateProfile: jest.fn(() => ({ mutate: jest.fn() })),
   useUpdateProfile: jest.fn(() => ({ mutate: jest.fn() })),
 }));
+
+// Mock axios globally to prevent stream reader errors in tests
+jest.mock('axios', () => ({
+  create: jest.fn(() => ({
+    interceptors: {
+      request: { use: jest.fn(), eject: jest.fn() },
+      response: { use: jest.fn(), eject: jest.fn() },
+    },
+    get: jest.fn(() => Promise.resolve({ data: {} })),
+    post: jest.fn(() => Promise.resolve({ data: {} })),
+    put: jest.fn(() => Promise.resolve({ data: {} })),
+    delete: jest.fn(() => Promise.resolve({ data: {} })),
+  })),
+  get: jest.fn(() => Promise.resolve({ data: {} })),
+  post: jest.fn(() => Promise.resolve({ data: {} })),
+  put: jest.fn(() => Promise.resolve({ data: {} })),
+  delete: jest.fn(() => Promise.resolve({ data: {} })),
+}));
+
 
 // Mock Firebase
 jest.mock('firebase/auth', () => ({

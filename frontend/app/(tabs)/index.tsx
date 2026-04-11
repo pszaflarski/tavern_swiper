@@ -10,10 +10,17 @@ import { useDiscoveryFeed, useProfiles, Profile } from '../../hooks/useProfiles'
 import { useSwipe } from '../../hooks/useSwipe';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 
 export default function TavernScreen() {
   const { user, isAuthenticated, isLoading: isLoadingUser } = useUser();
-  const { activeProfileId, isLoadingActiveProfile } = useProfileContext();
+  const { 
+    activeProfileId, 
+    isLoadingActiveProfile, 
+    refetchActiveProfile,
+    profiles,
+    refetchProfiles
+  } = useProfileContext();
   const swipeMutation = useSwipe();
   const router = useRouter();
   const [deck, setDeck] = useState<Profile[]>([]);
@@ -21,7 +28,15 @@ export default function TavernScreen() {
   const [showDetails, setShowDetails] = useState(false);
   const WATERMARK = 3;
 
-  const { data: batch, isFetching, refetch } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
+  const { data: batch, isFetching, refetch: refetchDiscovery } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
+  
+  // Refresh data whenever screen gains focus
+  useRefreshOnFocus(React.useCallback(() => {
+    refetchActiveProfile();
+    refetchProfiles();
+    refetchDiscovery();
+  }, [refetchActiveProfile, refetchProfiles, refetchDiscovery]));
+
   const queryClient = useQueryClient();
 
   const isInitialLoad = !deck.length && isFetching;
@@ -65,22 +80,22 @@ export default function TavernScreen() {
   };
 
   const advanceIndex = () => {
-    setCurrentIndex(prev => {
-      const next = prev + 1;
-      // Watermark trigger: if we're running low on cards, summon more heroes
-      if (deck.length - next <= WATERMARK && !isFetching) {
-        refetch();
-      }
-      return next;
-    });
+    setCurrentIndex(prev => prev + 1);
   };
+
+  // Watermark trigger: if we're running low on cards, summon more heroes in the background
+  useEffect(() => {
+    if (deck.length > 0 && deck.length - currentIndex <= WATERMARK && !isFetching) {
+      refetchDiscovery();
+    }
+  }, [currentIndex, deck.length, isFetching, refetchDiscovery]);
 
   const handleRecast = () => {
     // Clear state and force a fresh cache-busting scry
     setDeck([]);
     setCurrentIndex(0);
     queryClient.invalidateQueries({ queryKey: ['discovery'] });
-    refetch();
+    refetchDiscovery();
   };
 
 
@@ -93,8 +108,9 @@ export default function TavernScreen() {
     );
   }
 
-  // If authenticated but no active profile, we can't show a feed
-  if (isAuthenticated && !activeProfileId && !isLoadingUser) {
+  // If authenticated but no active profile (or no profiles at all), we can't show a feed
+  const hasNoProfiles = profiles && profiles.length === 0;
+  if (isAuthenticated && (hasNoProfiles || !activeProfileId) && !isLoadingUser) {
     return (
       <View style={styles.container} testID="tavern-screen-no-profile">
         <View style={styles.header}>
@@ -103,14 +119,20 @@ export default function TavernScreen() {
         </View>
         <View style={styles.centered}>
           <Text style={styles.emptyIcon}>🛡️</Text>
-          <Text style={styles.emptyTitle}>Create Your Hero</Text>
-          <Text style={styles.emptyDesc}>You must have an active profile to discover other heroes in the realm.</Text>
+          <Text style={styles.emptyTitle}>{hasNoProfiles ? "Forge Your First Identity" : "Choose Your Hero"}</Text>
+          <Text style={styles.emptyDesc}>
+            {hasNoProfiles 
+              ? "You must forge an identity to discover other heroes in the realm." 
+              : "You must select an active profile to discover other heroes in the realm."}
+          </Text>
           <TouchableOpacity 
             style={[styles.roundButton, { width: 'auto', paddingHorizontal: Spacing[6], borderRadius: Radius.md }]} 
-            onPress={() => router.push('/profiles/create_and_edit')}
+            onPress={() => router.push(hasNoProfiles ? '/profiles/create_and_edit' : '/profiles')}
             testID="forge-identity-button"
           >
-            <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>FORGE NEW IDENTITY</Text>
+            <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>
+              {hasNoProfiles ? "FORGE NEW IDENTITY" : "SELECT ACTIVE HERO"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

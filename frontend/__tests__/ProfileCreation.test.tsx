@@ -52,12 +52,13 @@ describe('Profile Creation & Editing', () => {
       uid: 'test-user', 
       isAuthenticated: true, 
       isLoading: false,
+      refetch: jest.fn(),
       logout: jest.fn(),
     });
-    (useCreateProfile as jest.Mock).mockReturnValue({ mutateAsync: mockCreateMutate.mockResolvedValue({ profile_id: 'new-profile-id' }), isPending: false });
-    (useUpdateProfile as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateMutate, isPending: false });
-    (useUploadProfileImage as jest.Mock).mockReturnValue({ mutateAsync: mockUploadMutate, isPending: false });
-    (useProfile as jest.Mock).mockReturnValue({ data: null, isLoading: false });
+    (useCreateProfile as jest.Mock).mockReturnValue({ mutateAsync: mockCreateMutate.mockResolvedValue({ profile_id: 'new-profile-id' }), isPending: false, refetch: jest.fn() });
+    (useUpdateProfile as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateMutate, isPending: false, refetch: jest.fn() });
+    (useUploadProfileImage as jest.Mock).mockReturnValue({ mutateAsync: mockUploadMutate, isPending: false, refetch: jest.fn() });
+    (useProfile as jest.Mock).mockReturnValue({ data: null, isLoading: false, refetch: jest.fn() });
     (useLocalSearchParams as jest.Mock).mockReturnValue({});
     
     // Default fetch mock returning a simple blob-like object

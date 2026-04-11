@@ -45,9 +45,16 @@ describe('Tavern (Swiping) Screen', () => {
       uid: 'test-user', 
       isAuthenticated: true, 
       isLoading: false,
+      refetch: jest.fn(),
       logout: jest.fn(),
     });
-    (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: 'active-1', isLoadingActiveProfile: false });
+    (useProfileContext as jest.Mock).mockReturnValue({ 
+      activeProfileId: 'active-1', 
+      isLoadingActiveProfile: false,
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: [{ profile_id: 'active-1', display_name: 'Hero 1' }],
+    });
     (useDiscoveryFeed as jest.Mock).mockReturnValue({
       data: [
         { profile_id: 'p1', display_name: 'Hero 1' },
@@ -101,7 +108,13 @@ describe('Tavern (Swiping) Screen', () => {
   });
 
   it('requires an active profile to swipe', () => {
-    (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: null, isLoadingActiveProfile: false });
+    (useProfileContext as jest.Mock).mockReturnValue({ 
+      activeProfileId: null, 
+      isLoadingActiveProfile: false,
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: [],
+    });
     
     const { getByTestId } = render(<TavernScreen />);
     expect(getByTestId('tavern-screen-no-profile')).toBeTruthy();

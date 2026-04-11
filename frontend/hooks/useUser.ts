@@ -74,5 +74,6 @@ export function useUser() {
     firebaseUser,
     isAuthenticated: !!firebaseUser || !!persistedUid,
     logout,
+    refetch: userQuery.refetch,
   };
 }

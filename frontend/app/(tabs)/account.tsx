@@ -5,9 +5,12 @@ import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import ScreenHeader from '../../components/ScreenHeader';
 
 import { useUser } from '../../hooks/useUser';
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 
 export default function AccountScreen() {
-  const { logout } = useUser();
+  const { logout, refetch } = useUser();
+
+  useRefreshOnFocus(refetch);
 
   const handleLogout = async () => {
     try {

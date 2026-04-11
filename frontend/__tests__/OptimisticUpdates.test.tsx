@@ -36,8 +36,19 @@ jest.mock('../components/SwipeDeck', () => {
 describe('Optimistic UI Updates', () => {
   it('updates the tavern feed index immediately upon swiping', async () => {
     const mockSwipeMutate = jest.fn();
-    (useUser as jest.Mock).mockReturnValue({ isAuthenticated: true, isLoading: false });
-    (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: 'a1', isLoadingActiveProfile: false });
+    (useUser as jest.Mock).mockReturnValue({ 
+      isAuthenticated: true, 
+      isLoading: false, 
+      refetch: jest.fn(), 
+      uid: 'u1' 
+    });
+    (useProfileContext as jest.Mock).mockReturnValue({ 
+      activeProfileId: 'a1', 
+      isLoadingActiveProfile: false,
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: [{ profile_id: 'a1', display_name: 'Hero 1' }],
+    });
     (useDiscoveryFeed as jest.Mock).mockReturnValue({
       data: [
         { profile_id: 'p1', display_name: 'Hero 1' },

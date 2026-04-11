@@ -5,6 +5,7 @@ import { useProfileContext } from '../../context/ProfileContext';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useInvolvedMatches } from '../../hooks/useMessages';
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import ScreenHeader from '../../components/ScreenHeader';
 
 const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
@@ -12,8 +13,13 @@ const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
 export default function MessagesScreen() {
   const { uid } = useUser();
   const { activeProfileId, setActiveProfileId } = useProfileContext();
-  const { data: myProfiles = [], isLoading: isLoadingMyProfiles } = useProfiles(uid);
-  const { newMatches, inbox, isLoading: isLoadingContent } = useInvolvedMatches(activeProfileId);
+  const { data: myProfiles = [], isLoading: isLoadingMyProfiles, refetch: refetchProfiles } = useProfiles(uid);
+  const { newMatches, inbox, isLoading: isLoadingContent, refetch: refetchMatches } = useInvolvedMatches(activeProfileId);
+
+  useRefreshOnFocus(React.useCallback(() => {
+    refetchProfiles();
+    refetchMatches();
+  }, [refetchProfiles, refetchMatches]));
 
   const selectedProfile = Array.isArray(myProfiles) ? myProfiles.find(p => p.profile_id === activeProfileId) : undefined;
 

@@ -59,17 +59,26 @@ describe('Messages Screen', () => {
       uid: 'test-user', 
       isAuthenticated: true, 
       isLoading: false,
+      refetch: jest.fn(),
       logout: jest.fn(),
     });
-    (useProfiles as jest.Mock).mockReturnValue({ data: mockMyProfiles, isLoading: false });
+    (useProfiles as jest.Mock).mockReturnValue({ 
+      data: mockMyProfiles, 
+      isLoading: false,
+      refetch: jest.fn(),
+    });
     (useProfileContext as jest.Mock).mockReturnValue({
       activeProfileId: 'p1',
       setActiveProfileId: jest.fn(),
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: mockMyProfiles,
     });
     (useInvolvedMatches as jest.Mock).mockReturnValue({
       newMatches: mockNewMatches,
       inbox: mockInbox,
       isLoading: false,
+      refetch: jest.fn(),
     });
   });
 
@@ -125,6 +134,7 @@ describe('Messages Screen', () => {
       newMatches: [],
       inbox: [],
       isLoading: true,
+      refetch: jest.fn(),
     });
 
     const { getByText } = render(<MessagesScreen />);
@@ -136,6 +146,7 @@ describe('Messages Screen', () => {
       newMatches: [],
       inbox: [],
       isLoading: false,
+      refetch: jest.fn(),
     });
 
     const { getByText } = render(<MessagesScreen />);
@@ -144,11 +155,12 @@ describe('Messages Screen', () => {
   });
 
   it('does not crash when data is malformed (not an array)', () => {
-    (useProfiles as jest.Mock).mockReturnValue({ data: null, isLoading: false });
+    (useProfiles as jest.Mock).mockReturnValue({ data: null, isLoading: false, refetch: jest.fn() });
     (useInvolvedMatches as jest.Mock).mockReturnValue({
       newMatches: null as any,
       inbox: null as any,
       isLoading: false,
+      refetch: jest.fn(),
     });
 
     const { getByText } = render(<MessagesScreen />);

@@ -6,10 +6,24 @@ import { useSwipe } from '../hooks/useSwipe';
 import { useUser } from '../hooks/useUser';
 import { useProfileContext } from '../context/ProfileContext';
 
+// Mock axios since it causes stream issues in RN/Jest env
+jest.mock('axios', () => ({
+  create: jest.fn(() => ({
+    interceptors: {
+      request: { use: jest.fn(), eject: jest.fn() },
+      response: { use: jest.fn(), eject: jest.fn() },
+    },
+  })),
+  post: jest.fn(),
+  get: jest.fn(),
+}));
+
 // Mock everything
 jest.mock('../hooks/useProfiles', () => ({
   useDiscoveryFeed: jest.fn(),
   useProfiles: jest.fn(() => ({ data: [] })),
+  useActiveProfile: jest.fn(() => ({ data: null, isLoading: false })),
+  useActivateProfile: jest.fn(() => ({ mutate: jest.fn() })),
 }));
 
 jest.mock('../hooks/useSwipe', () => ({
@@ -41,6 +55,8 @@ jest.mock('../components/SwipeDeck', () => {
 describe('Infinite Discovery Logic', () => {
   const mockSwipeMutate = jest.fn();
   const mockRefetch = jest.fn();
+  const mockRefetchActiveProfile = jest.fn();
+  const mockRefetchProfiles = jest.fn();
 
   const mockProfilesBatch1 = [
     { profile_id: 'p1', display_name: 'Hero 1' },
@@ -64,9 +80,16 @@ describe('Infinite Discovery Logic', () => {
       uid: 'u1', 
       isAuthenticated: true, 
       isLoading: false,
+      refetch: jest.fn(),
       logout: jest.fn(),
     });
-    (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: 'ap1', isLoadingActiveProfile: false });
+    (useProfileContext as jest.Mock).mockReturnValue({ 
+      activeProfileId: 'ap1', 
+      isLoadingActiveProfile: false,
+      refetchActiveProfile: mockRefetchActiveProfile,
+      refetchProfiles: mockRefetchProfiles,
+      profiles: mockProfilesBatch1,
+    });
     (useSwipe as jest.Mock).mockReturnValue({ mutate: mockSwipeMutate });
     
     // Default mock behavior
@@ -87,6 +110,10 @@ describe('Infinite Discovery Logic', () => {
     const { getByTestId } = render(<TavernScreen />);
     const rightBtn = getByTestId('swipe-right-button');
 
+    // Initial mount triggers refetch(es) due to focus effect and state settlement
+    // We clear them to test the watermark logic specifically
+    mockRefetch.mockClear();
+
     // Currently 6 cards. Threshold is deck.length - next <= 3.
     // Swipe 1 (p1): next=1. 6 - 1 = 5 (No trigger)
     fireEvent.press(rightBtn);
@@ -98,7 +125,7 @@ describe('Infinite Discovery Logic', () => {
 
     // Swipe 3 (p3): next=3. 6 - 3 = 3 (TRIGGER!)
     fireEvent.press(rightBtn);
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockRefetch).toHaveBeenCalledTimes(1));
   });
 
   it('deduplicates profiles when a new batch arrives', async () => {
@@ -138,7 +165,7 @@ describe('Infinite Discovery Logic', () => {
     fireEvent.press(recastBtn);
 
     // Should call refetch
-    expect(mockRefetch).toHaveBeenCalled();
+    await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
   });
 
   it('shows scrying state when fetching more cards and deck is exhausted', () => {

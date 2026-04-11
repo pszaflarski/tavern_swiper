@@ -168,6 +168,9 @@ npm install
 npx expo start
 ```
 
+> [!IMPORTANT]
+> **Directory Context**: All `npm`, `npx`, and `jest` commands MUST be executed from within the `frontend/` directory. Running these from the project root will fail.
+
 ### No Direct Firestore Access
 The frontend must never call Firestore directly. All data must be fetched through the microservice APIs. The client SDK is only authorized to use the Firebase Authentication module.
 

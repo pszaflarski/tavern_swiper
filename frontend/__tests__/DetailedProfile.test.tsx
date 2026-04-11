@@ -45,9 +45,16 @@ describe('Detailed Profile View Edge Cases', () => {
       uid: 'test-user', 
       isAuthenticated: true, 
       isLoading: false,
+      refetch: jest.fn(),
       logout: jest.fn(),
     });
-    (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: 'active-1', isLoadingActiveProfile: false });
+    (useProfileContext as jest.Mock).mockReturnValue({ 
+      activeProfileId: 'active-1', 
+      isLoadingActiveProfile: false,
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: [{ profile_id: 'active-1', display_name: 'Hero 1' }],
+    });
     (useSwipe as jest.Mock).mockReturnValue({ mutate: mockSwipeMutate });
   });
 
