@@ -7,10 +7,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "jest --runInBand",
-    "test:jest": "jest --runInBand",
-    "test:logic": "jest --runInBand",
-    "test:snapshots": "jest --runInBand --testPathPattern snapshot.test.tsx"
+    "test": "NODE_OPTIONS=\"--max-old-space-size=2048\" jest --runInBand --forceExit",
+    "test:jest": "NODE_OPTIONS=\"--max-old-space-size=2048\" jest --runInBand --forceExit",
+    "test:logic": "NODE_OPTIONS=\"--max-old-space-size=2048\" jest --runInBand --forceExit",
+    "test:snapshots": "NODE_OPTIONS=\"--max-old-space-size=2048\" jest --runInBand --forceExit --testPathPattern snapshot.test.tsx"
   },
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",

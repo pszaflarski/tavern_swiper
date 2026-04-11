@@ -1,17 +1,24 @@
 import '@testing-library/jest-native/extend-expect';
 
 // Mock react-query
+const mockQueryClient = {
+  invalidateQueries: jest.fn(),
+  setQueryData: jest.fn(),
+  getQueryData: jest.fn(),
+};
+
 jest.mock('@tanstack/react-query', () => {
   const actual = jest.requireActual('@tanstack/react-query');
   return {
     ...actual,
-    useQueryClient: jest.fn(() => ({
-      invalidateQueries: jest.fn(),
-      setQueryData: jest.fn(),
-      getQueryData: jest.fn(),
-    })),
+    useQueryClient: jest.fn(() => mockQueryClient),
   };
 });
+
+// Disable React Query default listeners to prevent open handles during tests
+import { focusManager, onlineManager } from '@tanstack/react-query';
+focusManager.setEventListener(() => () => {});
+onlineManager.setEventListener(() => () => {});
 
 // Mock Async Storage
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -143,3 +150,13 @@ jest.mock('expo-font', () => ({
 
 // Silence the warning: Animated: `useNativeDriver` is not supported because the native animated module is missing
 // jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+
+import { deleteApp, getApps } from 'firebase/app';
+afterAll(async () => {
+  await Promise.all(getApps().map(app => deleteApp(app)));
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+  jest.useRealTimers();
+});

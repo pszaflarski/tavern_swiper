@@ -10,9 +10,9 @@ import ScreenHeader from '../../components/ScreenHeader';
 const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
 
 export default function MessagesScreen() {
-  const { user } = useUser();
+  const { uid } = useUser();
   const { activeProfileId, setActiveProfileId } = useProfileContext();
-  const { data: myProfiles = [], isLoading: isLoadingMyProfiles } = useProfiles(user?.uid);
+  const { data: myProfiles = [], isLoading: isLoadingMyProfiles } = useProfiles(uid);
   const { newMatches, inbox, isLoading: isLoadingContent } = useInvolvedMatches(activeProfileId);
 
   const selectedProfile = Array.isArray(myProfiles) ? myProfiles.find(p => p.profile_id === activeProfileId) : undefined;

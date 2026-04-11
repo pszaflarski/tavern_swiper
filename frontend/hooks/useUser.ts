@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi } from '../lib/api';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { useEffect, useState } from 'react';
+import { usersApi, clearTavernSession, getPersistedUid } from '../lib/api';
 
 export interface UserMetadata {
   uid: string;
@@ -14,7 +14,6 @@ export interface UserMetadata {
   active_profile_id?: string;
   created_at: string;
 }
-
 export function useUser() {
   const queryClient = useQueryClient();
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
@@ -23,10 +22,8 @@ export function useUser() {
 
   useEffect(() => {
     // 1. Initial hydration from AsyncStorage
-    import('../lib/api').then(({ getPersistedUid }) => {
-      getPersistedUid().then((uid) => {
-        if (uid) setPersistedUid(uid);
-      });
+    getPersistedUid().then((uid) => {
+      if (uid) setPersistedUid(uid);
     });
 
     // 2. Firebase Auth listener
@@ -59,7 +56,6 @@ export function useUser() {
   });
 
   const logout = async () => {
-    const { clearTavernSession } = await import('../lib/api');
     try {
       await auth.signOut();
       await clearTavernSession();
