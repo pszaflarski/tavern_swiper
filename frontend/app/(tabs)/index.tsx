@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -31,7 +31,16 @@ function TavernScreenInner() {
   const [loadTimedOut, setLoadTimedOut] = useState(false);
   const WATERMARK = 3;
 
-  const { data: batch, isFetching, refetch: refetchDiscovery } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
+  const [staleFetchCount, setStaleFetchCount] = useState(0);
+  const [isBackingOff, setIsBackingOff] = useState(false);
+  const deckRef = useRef<Profile[]>([]);
+
+  // Keep ref in sync with latest deck state
+  useEffect(() => {
+    deckRef.current = deck;
+  }, [deck]);
+
+  const { data: batch, isFetching, refetch: refetchDiscovery, dataUpdatedAt } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
   
   // Refresh data whenever screen gains focus
   useRefreshOnFocus(React.useCallback(() => {
@@ -68,31 +77,38 @@ function TavernScreenInner() {
   }, [isInitialLoad]);
 
   // Append new batches to our local deck with deduplication.
-  // Also detect when a batch yields zero new unique profiles — this means the
-  // API is returning only duplicates, so we should mark the realm as exhausted
-  // to prevent the watermark effect from looping forever.
+  // We use dataUpdatedAt to ensure this effect runs every time a fetch finishes,
+  // even if the data is identical (fixing the referential caching loop).
   useEffect(() => {
     if (batch && batch.length > 0) {
-      setDeck(prev => {
-        const existingIds = new Set(prev.map(p => p.profile_id));
-        const newUnique = batch.filter(p => !existingIds.has(p.profile_id));
+      // Use ref to avoid stale closure of 'deck' without triggering unnecessary effect runs
+      const existingIds = new Set(deckRef.current.map(p => p.profile_id));
+      const newUnique = batch.filter(p => !existingIds.has(p.profile_id));
+      const isUseless = deckRef.current.length > 0 && newUnique.length === 0;
 
-        // If the batch had profiles but none were new, the realm is exhausted.
-        if (prev.length > 0 && newUnique.length === 0) {
-          // We can't call setExhausted inside setDeck's updater (it would be
-          // a state update during another state update), so schedule it.
-          setTimeout(() => setExhausted(true), 0);
-          return prev;
+      if (isUseless) {
+        const nextCount = staleFetchCount + 1;
+        setStaleFetchCount(nextCount);
+        
+        if (nextCount >= 3) {
+          setExhausted(true);
+          setIsBackingOff(false);
+        } else {
+          setIsBackingOff(true);
+          const delay = nextCount === 1 ? 5000 : 30000;
+          setTimeout(() => setIsBackingOff(false), delay);
         }
+      } else {
+        // We found new heroes! Reset backoff and add them.
+        setStaleFetchCount(0);
+        setIsBackingOff(false);
         
-        // If we're at the beginning of a fresh deck (after profile switch or recast),
-        // we should just use the new unique entries.
-        if (prev.length === 0) return newUnique;
-        
-        return [...prev, ...newUnique];
-      });
+        if (newUnique.length > 0) {
+          setDeck(prev => prev.length === 0 ? newUnique : [...prev, ...newUnique]);
+        }
+      }
     }
-  }, [batch, activeProfileId]);
+  }, [batch, activeProfileId, dataUpdatedAt]);
 
   const currentProfile = deck[currentIndex];
 
@@ -114,18 +130,22 @@ function TavernScreenInner() {
     setCurrentIndex(prev => prev + 1);
   };
 
-  // Watermark trigger: if we're running low on cards, summon more heroes in the background
+  // Watermark trigger: if we're running low on cards, summon more heroes in the background.
+  // Added isBackingOff check to prevent spamming the API when we know the realm is quiet.
   useEffect(() => {
-    if (deck.length > 0 && deck.length - currentIndex <= WATERMARK && !isFetching && !exhausted) {
+    const isRunningLow = deck.length > 0 && deck.length - currentIndex <= WATERMARK;
+    if (isRunningLow && !isFetching && !exhausted && !isBackingOff) {
       refetchDiscovery();
     }
-  }, [currentIndex, deck.length, isFetching, refetchDiscovery, exhausted]);
+  }, [currentIndex, deck.length, isFetching, refetchDiscovery, exhausted, isBackingOff]);
 
   const handleRecast = () => {
     // Clear state and force a fresh cache-busting scry
     setDeck([]);
     setCurrentIndex(0);
     setExhausted(false);
+    setStaleFetchCount(0);
+    setIsBackingOff(false);
     queryClient.invalidateQueries({ queryKey: ['discovery'] });
     refetchDiscovery();
   };
