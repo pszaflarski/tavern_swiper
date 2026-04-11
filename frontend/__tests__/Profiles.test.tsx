@@ -40,7 +40,7 @@ describe('Profiles Screen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useUser as jest.Mock).mockReturnValue({ user: { uid: 'test-user' } });
-    (useProfiles as jest.Mock).mockReturnValue({ data: mockProfiles, isLoading: false });
+    (useProfiles as jest.Mock).mockReturnValue({ data: mockProfiles, isLoading: false, isPending: false });
     (useProfileContext as jest.Mock).mockReturnValue({
       activeProfileId: '1',
       setActiveProfileId: jest.fn(),
@@ -66,7 +66,7 @@ describe('Profiles Screen', () => {
   });
 
   it('shows loading state', () => {
-    (useProfiles as jest.Mock).mockReturnValue({ data: [], isLoading: true });
+    (useProfiles as jest.Mock).mockReturnValue({ data: [], isLoading: true, isPending: true });
     
     const { getByText } = render(<ProfilesScreen />);
     expect(getByText('Consulting the Archives...')).toBeTruthy();
@@ -80,7 +80,7 @@ describe('Profiles Screen', () => {
   });
 
   it('shows forge your first hero when list is empty', () => {
-    (useProfiles as jest.Mock).mockReturnValue({ data: [], isLoading: false });
+    (useProfiles as jest.Mock).mockReturnValue({ data: [], isLoading: false, isPending: false });
 
     const { getByTestId, getByText } = render(<ProfilesScreen />);
 
