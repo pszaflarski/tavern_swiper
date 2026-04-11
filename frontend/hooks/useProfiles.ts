@@ -75,6 +75,9 @@ export function useUpdateProfile() {
       // Invalidate both 'all' and user-specific profiles to refresh UI
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
     },
+    onError: (error) => {
+      console.error('Profile update failed:', error);
+    },
   });
 }
 
@@ -90,6 +93,9 @@ export function useCreateProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+    onError: (error) => {
+      console.error('Profile creation failed:', error);
     },
   });
 }
@@ -193,6 +199,9 @@ export function useDeleteProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
     },
+    onError: (error) => {
+      console.error('Profile deletion failed:', error);
+    },
   });
 }
 
@@ -217,6 +226,9 @@ export function useUploadProfileImage() {
       queryClient.invalidateQueries({ queryKey: ['profiles', 'id', variables.profileId] });
       queryClient.invalidateQueries({ queryKey: ['profiles', 'user'] });
       queryClient.invalidateQueries({ queryKey: ['profiles', 'me', 'active'] });
+    },
+    onError: (error, variables) => {
+      console.error(`Image upload failed for profile ${variables.profileId}, index ${variables.index}:`, error);
     },
   });
 }

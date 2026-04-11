@@ -33,5 +33,13 @@ export function useSwipe() {
       // Swiping actions are recorded on backend, but we don't need to force a full UI refresh
       // of the current deck to remain stable.
     },
+    onError: (error, variables) => {
+      console.error('Swipe failed:', {
+        error: error.message,
+        swiper: variables.swiperProfileId,
+        swiped: variables.swipedProfileId,
+        direction: variables.direction,
+      });
+    },
   });
 }

@@ -11,8 +11,9 @@ import { useSwipe } from '../../hooks/useSwipe';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
+import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 
-export default function TavernScreen() {
+function TavernScreenInner() {
   const { user, isAuthenticated, isLoading: isLoadingUser } = useUser();
   const { 
     activeProfileId, 
@@ -26,6 +27,8 @@ export default function TavernScreen() {
   const [deck, setDeck] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const [exhausted, setExhausted] = useState(false);
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
   const WATERMARK = 3;
 
   const { data: batch, isFetching, refetch: refetchDiscovery } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
@@ -45,7 +48,24 @@ export default function TavernScreen() {
   useEffect(() => {
     setDeck([]);
     setCurrentIndex(0);
+    setExhausted(false);
   }, [activeProfileId]);
+
+  // Detect when the realm is empty
+  useEffect(() => {
+    if (batch && batch.length === 0 && !isFetching) {
+      setExhausted(true);
+    }
+  }, [batch, isFetching]);
+
+  // Loading timeout effect
+  useEffect(() => {
+    if (isInitialLoad) {
+      const timer = setTimeout(() => setLoadTimedOut(true), 8000);
+      return () => clearTimeout(timer);
+    }
+    setLoadTimedOut(false);
+  }, [isInitialLoad]);
 
   // Append new batches to our local deck with deduplication
   useEffect(() => {
@@ -61,7 +81,7 @@ export default function TavernScreen() {
         return [...prev, ...newUnique];
       });
     }
-  }, [batch]);
+  }, [batch, activeProfileId]);
 
   const currentProfile = deck[currentIndex];
 
@@ -85,15 +105,16 @@ export default function TavernScreen() {
 
   // Watermark trigger: if we're running low on cards, summon more heroes in the background
   useEffect(() => {
-    if (deck.length > 0 && deck.length - currentIndex <= WATERMARK && !isFetching) {
+    if (deck.length > 0 && deck.length - currentIndex <= WATERMARK && !isFetching && !exhausted) {
       refetchDiscovery();
     }
-  }, [currentIndex, deck.length, isFetching, refetchDiscovery]);
+  }, [currentIndex, deck.length, isFetching, refetchDiscovery, exhausted]);
 
   const handleRecast = () => {
     // Clear state and force a fresh cache-busting scry
     setDeck([]);
     setCurrentIndex(0);
+    setExhausted(false);
     queryClient.invalidateQueries({ queryKey: ['discovery'] });
     refetchDiscovery();
   };
@@ -104,6 +125,17 @@ export default function TavernScreen() {
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.headerSub}>Summoning the realm...</Text>
+        {loadTimedOut && (
+          <>
+            <Text style={styles.emptyDesc}>The scrying spell is taking longer than expected.</Text>
+            <TouchableOpacity 
+              style={[styles.roundButton, { width: 'auto', paddingHorizontal: Spacing[4], height: 40, marginTop: Spacing[4] }]}
+              onPress={() => { refetchDiscovery(); setLoadTimedOut(false); }}
+            >
+              <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>TRY AGAIN</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     );
   }
@@ -233,7 +265,22 @@ export default function TavernScreen() {
           </View>
         </>
       )}
+      {swipeMutation.isError && (
+        <View style={styles.swipeErrorBanner}>
+          <Text style={styles.swipeErrorText}>
+            ⚠️ Last swipe wasn't recorded. The fates may not align.
+          </Text>
+        </View>
+      )}
     </View>
+  );
+}
+
+export default function TavernScreen() {
+  return (
+    <ScreenErrorBoundary fallbackMessage="The tavern is currently clouded by a mysterious fog.">
+      <TavernScreenInner />
+    </ScreenErrorBoundary>
   );
 }
 
@@ -251,6 +298,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.surface,
+  },
+  header: {
+    paddingTop: 60,
+    paddingHorizontal: Spacing[6],
+    paddingBottom: Spacing[4],
+  },
+  headerTitle: {
+    fontFamily: Fonts.heroic,
+    fontSize: 28,
+    color: Colors.onSurface,
+  },
+  headerSub: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
+    marginTop: Spacing[1],
   },
   emptyIcon: {
     fontSize: 64,
@@ -357,5 +420,25 @@ const styles = StyleSheet.create({
     width: '100%',
     marginVertical: Spacing[6],
     opacity: 0.3,
+  },
+  swipeErrorBanner: {
+    position: 'absolute',
+    top: 100,
+    left: Spacing[6],
+    right: Spacing[6],
+    backgroundColor: 'rgba(211, 47, 47, 0.9)',
+    padding: Spacing[3],
+    borderRadius: Radius.md,
+    zIndex: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.waxSeal,
+  },
+  swipeErrorText: {
+    color: '#FFFFFF',
+    fontFamily: Fonts.scribe,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

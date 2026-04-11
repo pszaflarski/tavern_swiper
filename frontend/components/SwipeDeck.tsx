@@ -6,6 +6,7 @@ import {
   Dimensions,
   Image,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -19,9 +20,6 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../theme';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const CARD_W = SCREEN_W;
-const SWIPE_THRESHOLD = SCREEN_W * 0.35;
 const ROTATION_FACTOR = 15;
 
 export interface SwipeProfile {
@@ -39,9 +37,12 @@ interface SwipeCardProps {
   onSwipeRight: (profileId: string) => void;
   currentIndex: number;
   onIndexChange: (index: number) => void;
+  cardWidth: number;
 }
 
-export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight, currentIndex, onIndexChange }: SwipeCardProps) {
+export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight, currentIndex, onIndexChange, cardWidth }: SwipeCardProps) {
+  const { width: SCREEN_W } = useWindowDimensions();
+  const SWIPE_THRESHOLD = SCREEN_W * 0.35;
 
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -111,7 +112,7 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight, cu
 
   return (
     <GestureDetector gesture={combinedGesture}>
-      <Animated.View style={[styles.card, animatedStyle]} testID="profile-card">
+      <Animated.View style={[styles.card, { width: cardWidth }, animatedStyle]} testID="profile-card">
         <>
           {profile.image_urls && profile.image_urls[currentIndex] ? (
             <Image 
@@ -151,6 +152,8 @@ interface SwipeDeckProps {
 }
 
 export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight }: SwipeDeckProps) {
+  const { width: SCREEN_W } = useWindowDimensions();
+  const CARD_W = SCREEN_W;
   const [topImageIndex, setTopImageIndex] = useState(0);
 
   // Reset index when the top character changes
@@ -184,6 +187,7 @@ export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight }: Swipe
             onIndexChange={setTopImageIndex}
             onSwipeLeft={onSwipeLeft}
             onSwipeRight={onSwipeRight}
+            cardWidth={CARD_W}
           />
         ))
         .reverse()}
@@ -220,7 +224,6 @@ const styles = StyleSheet.create({
   },
   card: {
     position: 'absolute',
-    width: CARD_W,
     height: '100%',
     backgroundColor: Colors.background,
     overflow: 'hidden',

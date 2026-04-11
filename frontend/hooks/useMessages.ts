@@ -68,14 +68,17 @@ export function useInvolvedMatches(profileId: string | undefined) {
   ).filter(Boolean) as string[];
 
   // Batch fetch profile details
+  const sortedOtherIds = [...otherProfileIds].sort();
+  const batchKey = sortedOtherIds.join(',');
+
   const { data: profiles = [], isLoading: isLoadingProfiles, refetch: refetchProfiles } = useQuery<Profile[]>({
-    queryKey: ['profiles', 'batch', otherProfileIds],
+    queryKey: ['profiles', 'batch', batchKey],
     queryFn: async () => {
-      if (otherProfileIds.length === 0) return [];
-      const res = await profilesApi.post('/profiles/batch', { profile_ids: otherProfileIds });
+      if (sortedOtherIds.length === 0) return [];
+      const res = await profilesApi.post('/profiles/batch', { profile_ids: sortedOtherIds });
       return Array.isArray(res.data) ? res.data : [];
     },
-    enabled: otherProfileIds.length > 0,
+    enabled: sortedOtherIds.length > 0,
     staleTime: 120000, // 2 minutes
   });
 

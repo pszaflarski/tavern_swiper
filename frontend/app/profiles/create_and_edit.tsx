@@ -12,6 +12,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,13 +21,14 @@ import { useCreateProfile, useUpdateProfile, useProfile, useUploadProfileImage }
 import { useUser } from '../../hooks/useUser';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
 const GRID_SPACING = Spacing[3];
 const MAX_ITEM_WIDTH = 150; // Cap width to keep thumbnails small
-const ITEM_WIDTH = Math.min((width - Spacing[6] * 2 - GRID_SPACING * 3) / 3, MAX_ITEM_WIDTH);
-const ITEM_HEIGHT = ITEM_WIDTH * (16 / 9); // Portrait 9:16 thumbnails
 
 export default function CreateAndEditProfileScreen() {
+  const { width } = useWindowDimensions();
+  const ITEM_WIDTH = Math.min((width - Spacing[6] * 2 - GRID_SPACING * 3) / 3, MAX_ITEM_WIDTH);
+  const ITEM_HEIGHT = ITEM_WIDTH * (16 / 9);
+  
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const { user } = useUser();
@@ -230,7 +232,7 @@ export default function CreateAndEditProfileScreen() {
             {[...Array(6)].map((_, index) => {
               const uri = imageUrls[index];
               return (
-                <View key={index} style={styles.gridSlotContainer} testID={`profile-image-slot-${index}`}>
+                <View key={index} style={{ width: ITEM_WIDTH, height: ITEM_HEIGHT }} testID={`profile-image-slot-${index}`}>
                   {uri ? (
                     <View style={styles.filledSlot} testID={`profile-image-filled-${index}`}>
                       <Image
@@ -408,10 +410,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: GRID_SPACING,
-  },
-  gridSlotContainer: {
-    width: ITEM_WIDTH,
-    height: ITEM_HEIGHT,
   },
   filledSlot: {
     width: '100%',

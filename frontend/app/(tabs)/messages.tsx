@@ -7,10 +7,11 @@ import { useUser } from '../../hooks/useUser';
 import { useInvolvedMatches } from '../../hooks/useMessages';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import ScreenHeader from '../../components/ScreenHeader';
+import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 
 const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
 
-export default function MessagesScreen() {
+function MessagesScreenInner() {
   const { uid } = useUser();
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const { data: myProfiles = [], isLoading: isLoadingMyProfiles, refetch: refetchProfiles } = useProfiles(uid);
@@ -140,6 +141,14 @@ export default function MessagesScreen() {
         <View style={{ height: Spacing[20] }} />
       </ScrollView>
     </View>
+  );
+}
+
+export default function MessagesScreen() {
+  return (
+    <ScreenErrorBoundary fallbackMessage="The raven could not deliver your messages.">
+      <MessagesScreenInner />
+    </ScreenErrorBoundary>
   );
 }
 
@@ -279,5 +288,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing[4],
     fontStyle: 'italic',
+  },
+  headerSub: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
   },
 });

@@ -6,8 +6,9 @@ import ScreenHeader from '../../components/ScreenHeader';
 
 import { useUser } from '../../hooks/useUser';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
+import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 
-export default function AccountScreen() {
+function AccountScreenInner() {
   const { logout, refetch } = useUser();
 
   useRefreshOnFocus(refetch);
@@ -34,6 +35,14 @@ export default function AccountScreen() {
         </TouchableOpacity>
       </View>
     </View>
+  );
+}
+
+export default function AccountScreen() {
+  return (
+    <ScreenErrorBoundary fallbackMessage="The account scroll could not be unfurled.">
+      <AccountScreenInner />
+    </ScreenErrorBoundary>
   );
 }
 

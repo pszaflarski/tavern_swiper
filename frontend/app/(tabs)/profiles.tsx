@@ -9,8 +9,9 @@ import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
+import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 
-export default function ProfilesScreen() {
+function ProfilesScreenInner() {
   const { uid, isLoading: isLoadingUser } = useUser();
   const { data: profiles, isPending: isPendingProfiles, refetch } = useProfiles(uid);
   const { activeProfileId, setActiveProfileId } = useProfileContext();
@@ -189,6 +190,14 @@ export default function ProfilesScreen() {
         </View>
       )}
     </View>
+  );
+}
+
+export default function ProfilesScreen() {
+  return (
+    <ScreenErrorBoundary fallbackMessage="The archives of legends are currently inaccessible.">
+      <ProfilesScreenInner />
+    </ScreenErrorBoundary>
   );
 }
 

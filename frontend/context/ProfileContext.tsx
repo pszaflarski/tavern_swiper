@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useProfiles, useActiveProfile, useActivateProfile } from '../hooks/useProfiles';
+import { useProfiles, useActiveProfile, useActivateProfile, Profile } from '../hooks/useProfiles';
 import { useUser } from '../hooks/useUser';
 
 interface ProfileContextType {

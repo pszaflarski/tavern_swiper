@@ -8,6 +8,7 @@ import { useUser } from '../hooks/useUser';
 import { Colors } from '../theme';
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Toast from 'react-native-toast-message';
 
 export {
   ErrorBoundary,
@@ -15,7 +16,24 @@ export {
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    },
+    mutations: {
+      onError: (error: any) => {
+        console.error('Mutation failed:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Magic Failed',
+          text2: error.message || 'The spell could not be completed at this time.',
+        });
+      },
+    },
+  },
+});
 
 import { ProfileProvider } from '../context/ProfileContext';
 
@@ -83,6 +101,7 @@ function RootLayoutNav() {
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+      <Toast />
     </Stack>
   );
 }
