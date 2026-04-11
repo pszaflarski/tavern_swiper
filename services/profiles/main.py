@@ -3,7 +3,11 @@ import uuid
 import firebase_admin
 from firebase_admin import credentials
 from google.cloud import firestore, storage
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+import logging
+import traceback
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,6 +45,38 @@ app.add_middleware(
 )
 COLLECTION = "profiles"
 
+# Configure Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("profiles")
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """
+    Ensure we catch all crashes and return a JSON response with CORS headers.
+    When an app crashes, the middleware chain (including CORSMiddleware) might 
+    not be fully executed, so we explicitly add 'Access-Control-Allow-Origin'.
+    """
+    error_msg = f"Unhandled Exception: {str(exc)}"
+    logger.error(f"{error_msg}\n{traceback.format_exc()}")
+    
+    # Return 500 with explicit CORS headers to stop browser 'CORS block' noise
+    return JSONResponse(
+        status_code=500,
+        content={"detail": error_msg, "type": "unhandled_exception"},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors explicitly with CORS headers."""
+    logger.warning(f"Validation Error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+
 
 def _deactivate_other_profiles(user_id: str, active_profile_id: str):
     """Sets is_active=False for all profiles owned by user_id except the specified active_profile_id."""
@@ -51,17 +87,27 @@ def _deactivate_other_profiles(user_id: str, active_profile_id: str):
 
 
 def _doc_to_profile(doc) -> ProfileOut:
+    """Safe mapping from Firestore doc to ProfileOut model."""
     d = doc.to_dict()
-    return ProfileOut(
-        profile_id=doc.id,
-        user_id=d["user_id"],
-        display_name=d["display_name"],
-        tagline=d.get("tagline"),
-        bio=d.get("bio"),
-        image_urls=d.get("image_urls", []),
-        gender=d.get("gender"),
-        is_active=d.get("is_active", False)
-    )
+    if not d:
+        raise HTTPException(status_code=500, detail=f"Document {doc.id} contains no data")
+    
+    # Required fields use .get() with early exit or sensible errors
+    try:
+        return ProfileOut(
+            profile_id=doc.id,
+            user_id=d.get("user_id", "unknown"),
+            display_name=d.get("display_name", "Anonymous Hero"),
+            tagline=d.get("tagline"),
+            bio=d.get("bio"),
+            image_urls=d.get("image_urls", []),
+            gender=d.get("gender"),
+            is_active=d.get("is_active", False)
+        )
+    except Exception as e:
+        logger.error(f"Error mapping document {doc.id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Data malformed in document {doc.id}")
+
 
 
 
@@ -158,16 +204,30 @@ async def get_profile(profile_id: str, auth_data: tuple[str, str, str] = Depends
 @app.post("/profiles/batch", response_model=list[ProfileOut])
 async def get_profiles_batch(body: ProfileBatchRequest, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Fetch multiple profiles by ID in a single request."""
-    if not body.profile_ids:
+    # 1. Clean IDs (remove blanks/nulls)
+    clean_ids = [pid for pid in body.profile_ids if pid and str(pid).strip()]
+    if not clean_ids:
         return []
     
-    # Firestore 'in' query has a limit of 30 items
+    # 2. Firestore 'in' query has a limit of 30 items
     results = []
-    for i in range(0, len(body.profile_ids), 30):
-        chunk = body.profile_ids[i:i + 30]
-        docs = db.collection(COLLECTION).where(firestore.FieldPath.document_id(), "in", chunk).stream()
-        for doc in docs:
-            results.append(_doc_to_profile(doc))
+    logger.info(f"Batch fetch requested for {len(clean_ids)} profiles.")
+    
+    try:
+        for i in range(0, len(clean_ids), 30):
+            chunk = clean_ids[i:i + 30]
+            # Use "__name__" for document ID filtering for maximize compatibility 
+            # with both local emulator and production Firestore.
+            docs = db.collection(COLLECTION).where("__name__", "in", chunk).stream()
+            for doc in docs:
+                try:
+                    results.append(_doc_to_profile(doc))
+                except Exception as e:
+                    logger.warning(f"Skipping malformed profile {doc.id}: {e}")
+    except Exception as e:
+        logger.error(f"Firestore batch query failed: {e}")
+        # Re-raise to trigger the global exception handler (with CORS support)
+        raise
     
     return results
 

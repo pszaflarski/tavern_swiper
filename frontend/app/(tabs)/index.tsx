@@ -51,7 +51,7 @@ function TavernScreenInner() {
     setExhausted(false);
   }, [activeProfileId]);
 
-  // Detect when the realm is empty
+  // Detect when the realm is empty (API returned nothing)
   useEffect(() => {
     if (batch && batch.length === 0 && !isFetching) {
       setExhausted(true);
@@ -67,12 +67,23 @@ function TavernScreenInner() {
     setLoadTimedOut(false);
   }, [isInitialLoad]);
 
-  // Append new batches to our local deck with deduplication
+  // Append new batches to our local deck with deduplication.
+  // Also detect when a batch yields zero new unique profiles — this means the
+  // API is returning only duplicates, so we should mark the realm as exhausted
+  // to prevent the watermark effect from looping forever.
   useEffect(() => {
     if (batch && batch.length > 0) {
       setDeck(prev => {
         const existingIds = new Set(prev.map(p => p.profile_id));
         const newUnique = batch.filter(p => !existingIds.has(p.profile_id));
+
+        // If the batch had profiles but none were new, the realm is exhausted.
+        if (prev.length > 0 && newUnique.length === 0) {
+          // We can't call setExhausted inside setDeck's updater (it would be
+          // a state update during another state update), so schedule it.
+          setTimeout(() => setExhausted(true), 0);
+          return prev;
+        }
         
         // If we're at the beginning of a fresh deck (after profile switch or recast),
         // we should just use the new unique entries.

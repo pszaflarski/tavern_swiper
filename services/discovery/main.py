@@ -2,9 +2,13 @@ import os
 import firebase_admin
 from firebase_admin import credentials
 from google.cloud import firestore
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
 import httpx
+import logging
+import traceback
 
 load_dotenv()
 import uuid
@@ -36,6 +40,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Configure Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("discovery")
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """Ensure crashes return a JSON response with CORS headers."""
+    error_msg = f"Unhandled Exception: {str(exc)}"
+    logger.error(f"{error_msg}\n{traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": error_msg, "type": "unhandled_exception"},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors explicitly with CORS headers."""
+    logger.warning(f"Validation Error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
 
 
 @app.get("/discovery/health")
