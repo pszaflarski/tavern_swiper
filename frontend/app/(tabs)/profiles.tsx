@@ -10,11 +10,13 @@ import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 
 export default function ProfilesScreen() {
-  const { user } = useUser();
-  const { data: profiles, isLoading } = useProfiles(user?.uid);
+  const { user, isLoading: isLoadingUser } = useUser();
+  const { data: profiles, isLoading: isLoadingProfiles } = useProfiles(user?.uid);
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const deleteProfileMutation = useDeleteProfile();
   const router = useRouter();
+
+  const isActuallyLoading = isLoadingUser || (!!user && isLoadingProfiles);
 
   const handleEdit = (profileId: string) => {
     router.push({
@@ -136,7 +138,7 @@ export default function ProfilesScreen() {
     </TouchableOpacity>
   );
 
-  if (isLoading) {
+  if (isActuallyLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />

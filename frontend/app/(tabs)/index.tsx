@@ -21,8 +21,15 @@ export default function TavernScreen() {
   const WATERMARK = 3;
 
   const { data: batch, isFetching, refetch } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
+  const queryClient = useQueryClient();
 
   const isInitialLoad = !deck.length && isFetching;
+
+  // Reset deck when current profile changes
+  useEffect(() => {
+    setDeck([]);
+    setCurrentIndex(0);
+  }, [activeProfileId]);
 
   // Append new batches to our local deck with deduplication
   useEffect(() => {
@@ -31,7 +38,10 @@ export default function TavernScreen() {
         const existingIds = new Set(prev.map(p => p.profile_id));
         const newUnique = batch.filter(p => !existingIds.has(p.profile_id));
         
-        // If no new profiles were found and we're near the end, we might truly be out
+        // If we're at the beginning of a fresh deck (after profile switch or recast),
+        // we should just use the new unique entries.
+        if (prev.length === 0) return newUnique;
+        
         return [...prev, ...newUnique];
       });
     }
@@ -65,11 +75,10 @@ export default function TavernScreen() {
   };
 
   const handleRecast = () => {
-    // If we're at the end, clear session state to allow a fresh scry
-    if (deck.length === 0 || currentIndex >= deck.length) {
-      setDeck([]);
-      setCurrentIndex(0);
-    }
+    // Clear state and force a fresh cache-busting scry
+    setDeck([]);
+    setCurrentIndex(0);
+    queryClient.invalidateQueries({ queryKey: ['discovery'] });
     refetch();
   };
 

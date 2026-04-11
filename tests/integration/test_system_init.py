@@ -568,3 +568,45 @@ async def test_user_soft_delete_and_restore(auth_token):
         uids_final = [u["uid"] for u in resp_list_final.json()]
         assert target_uid in uids_final
         print(f"\nSuccessfully verified soft-delete and restore for user {target_uid}")
+@pytest.mark.asyncio
+async def test_empty_match_appears_in_inbox():
+    """
+    Integration Test: Empty Match Visibility
+    1. Setup User A (A1) and User B (B1)
+    2. Setup Match between A1 and B1
+    3. Verify that A1's inbox shows the match with last_message=None
+    """
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # User A
+        email_a = f"empty-a-{uuid.uuid4().hex[:8]}@example.com"
+        reg_a = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_a, "password": TEST_PASSWORD})
+        token_a = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_a.json()["id_token"]})).json()["token"]
+        headers_a = {"Authorization": f"Bearer {token_a}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers_a, json={"email": email_a})
+        p_a1_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "EmptyA1"})).json()["profile_id"]
+
+        # User B
+        email_b = f"empty-b-{uuid.uuid4().hex[:8]}@example.com"
+        reg_b = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
+        token_b = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_b.json()["id_token"]})).json()["token"]
+        headers_b = {"Authorization": f"Bearer {token_b}"}
+        await client.post(f"{USERS_URL}/users/", headers=headers_b, json={"email": email_b})
+        p_b1_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_b, json={"display_name": "EmptyB1"})).json()["profile_id"]
+
+        # Mutual Swipe
+        await client.post(f"{DISCOVERY_URL}/discovery/swipe/", headers=headers_a, json={"swiper_profile_id": p_a1_id, "swiped_profile_id": p_b1_id, "direction": "right"})
+        swipe_b = await client.post(f"{DISCOVERY_URL}/discovery/swipe/", headers=headers_b, json={"swiper_profile_id": p_b1_id, "swiped_profile_id": p_a1_id, "direction": "right"})
+        match_id = swipe_b.json()["id"]
+        assert match_id is not None
+
+        # --- Verify Inbox shows empty match ---
+        inbox_a_resp = await client.get(f"{MESSAGES_URL}/messages/conversations/{p_a1_id}", headers=headers_a)
+        assert inbox_a_resp.status_code == 200
+        inbox_a = inbox_a_resp.json()
+        assert len(inbox_a) >= 1
+        
+        conv_a = next(c for c in inbox_a if c["match_id"] == match_id)
+        assert conv_a["last_message"] is None
+        assert conv_a["other_profile_id"] == p_b1_id
+        
+        print(f"\nSuccessfully verified empty match {match_id} appears in inbox for {p_a1_id}")

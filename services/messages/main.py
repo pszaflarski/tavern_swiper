@@ -120,13 +120,22 @@ async def get_messages(match_id: str, auth_data: tuple[str, str, str] = Depends(
 async def list_conversations(profile_id: str, auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """
     List all conversations for a profile.
-    A conversation is the latest message per match_id.
+    A conversation is either a match with messages, or a new match without messages.
     """
-    uid, _, _ = auth_data
-    # FIXME: Production should verify ownership of profile_id.
+    uid, _, token = auth_data
     
-    # Query messages where this profile is a participant.
-    # We order by sent_at DESC to get new messages first.
+    # 1. Fetch all matches for this profile from the Discovery service
+    all_matches = []
+    headers = {"Authorization": f"Bearer {token}"}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            match_resp = await client.get(f"{DISCOVERY_SERVICE_URL}/discovery/matches/profile/{profile_id}", headers=headers)
+            if match_resp.status_code == 200:
+                all_matches = match_resp.json()
+        except Exception as e:
+            print(f"[WARNING] Failed to fetch matches for conversation listing: {e}")
+
+    # 2. Query messages where this profile is a participant.
     docs = (
         db.collection(COLLECTION)
         .where("participant_profile_ids", "array_contains", profile_id)
@@ -150,6 +159,23 @@ async def list_conversations(profile_id: str, auth_data: tuple[str, str, str] = 
                     "sender_profile_id": d["sender_profile_id"]
                 }
             }
+            
+    # 3. Add matches that don't have messages yet
+    for match in all_matches:
+        mid = match["id"]
+        if mid not in conversations:
+            # Determine the other profile ID
+            other_id = next((p for p in match["profiles"] if p != profile_id), None)
+            conversations[mid] = {
+                "match_id": mid,
+                "other_profile_id": other_id,
+                "last_message": None, # Indicates a new match with no messages
+                "created_at": match["created_at"]
+            }
+        else:
+            # For existing conversations, also inject the other_profile_id if we have it from discovery
+            other_id = next((p for p in match["profiles"] if p != profile_id), None)
+            conversations[mid]["other_profile_id"] = other_id
             
     return list(conversations.values())
 
