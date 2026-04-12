@@ -72,7 +72,7 @@ export function useUser() {
     uid: activeUid,
     isLoading: !authInitialized || (!!activeUid && userQuery.isLoading && !userQuery.data),
     firebaseUser,
-    isAuthenticated: !!firebaseUser || !!persistedUid,
+    isAuthenticated: !!firebaseUser || (!authInitialized && !!persistedUid),
     logout,
     refetch: userQuery.refetch,
   };

@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { auth } from '../../lib/firebase';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import ScreenHeader from '../../components/ScreenHeader';
+import { useRouter } from 'expo-router';
+
 
 import { useUser } from '../../hooks/useUser';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
@@ -10,16 +12,20 @@ import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 
 function AccountScreenInner() {
   const { logout, refetch } = useUser();
+  const router = useRouter();
 
   useRefreshOnFocus(refetch);
+
 
   const handleLogout = async () => {
     try {
       await logout();
+      router.replace('/auth');
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
+
 
   return (
     <View style={styles.container} testID="account-screen">
