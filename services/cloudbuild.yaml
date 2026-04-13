@@ -38,28 +38,32 @@ steps:
     args:
       - '-c'
       - |
+        ENV_NAME="dev"
+        if [ "$_ENV_SUFFIX" == "-test" ]; then ENV_NAME="test"; fi
+        
         if [ "$_DEPLOY_TYPE" == "function" ]; then
-          echo "🚀 Deploying as Cloud Function..."
+          echo "🚀 Deploying as Cloud Function (Env: $ENV_NAME)..."
           gcloud functions deploy $_SERVICE_NAME \
             --gen2 \
             --runtime=go122 \
             --region=us-central1 \
             --source=services/discovery_subscriber \
             --entry-point=HandleProfileEvent \
-            --trigger-topic=$_ENV_NAME-profiles-profile-events-v1 \
+            --trigger-topic=$ENV_NAME-profiles-profile-events-v1 \
             --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
             --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID
         else
-          echo "☁️ Deploying as Cloud Run Service..."
+          echo "☁️ Deploying as Cloud Run Service (Env: $ENV_NAME)..."
           gcloud run deploy $_SERVICE_NAME$_ENV_SUFFIX \
             --image=gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest \
             --region=us-central1 \
             --allow-unauthenticated \
             --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-            --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=super-secret-tavern-key-123,GCS_BUCKET_NAME=$PROJECT_ID-media,PUBSUB_TOPIC_ID=$_ENV_NAME-profiles-profile-events-v1,PUBSUB_PROJECT_ID=$PROJECT_ID \
+            --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=super-secret-tavern-key-123,GCS_BUCKET_NAME=$PROJECT_ID-media,PUBSUB_TOPIC_ID=$ENV_NAME-profiles-profile-events-v1,PUBSUB_PROJECT_ID=$PROJECT_ID \
             --cpu-boost \
             --execution-environment=gen1
         fi
+
 
 options:
   logging: CLOUD_LOGGING_ONLY
