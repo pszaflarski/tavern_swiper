@@ -121,13 +121,32 @@ services:
     command: >
       bash -c "
         sleep 5;
-        gcloud pubsub topics create profile-updates --project=tavern-swiper-dev;
-        gcloud pubsub subscriptions create profile-updates-sub --topic=profile-updates --project=tavern-swiper-dev;
+        gcloud pubsub topics create dev-profiles-profile-events-v1 --project=tavern-swiper-dev;
+        gcloud pubsub subscriptions create dev-discovery-from-profiles-profile-events-v1-sub --topic=dev-profiles-profile-events-v1 --project=tavern-swiper-dev;
         echo 'Pub/Sub initialized'
       "
     networks:
       - tavern-net
 
+  discovery-subscriber:
+    build:
+      context: ./services/discovery_subscriber
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - FIRESTORE_DATABASE_ID=profiles
+      - PUBSUB_TOPIC_ID=dev-profiles-profile-events-v1
+      - PUBSUB_SUB_ID=dev-discovery-from-profiles-profile-events-v1-sub
+    volumes:
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - tavern-net
+    depends_on:
+      pubsub:
+        condition: service_started
+
 networks:
+
   tavern-net:
     driver: bridge

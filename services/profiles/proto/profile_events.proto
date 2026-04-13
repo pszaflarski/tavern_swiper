@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package profile;
+option go_package = "./proto";
 
 message ProfileUpserted {
     string profile_id = 1;

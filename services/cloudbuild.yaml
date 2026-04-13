@@ -22,28 +22,34 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME']
 
-  # 3. Deploy to Cloud Run
+  #  # Deploy to Cloud Run OR Cloud Functions
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: 'bash'
     args:
-      - 'run'
-      - 'deploy'
-      - '$_SERVICE_NAME$_ENV_SUFFIX'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/$_SERVICE_NAME'
-      - '--region'
-      - 'us-central1'
-      - '--platform'
-      - 'managed'
-      - '--service-account'
-      - 'tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com'
-      - '--update-env-vars'
-      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=super-secret-tavern-key-123,GCS_BUCKET_NAME=$PROJECT_ID-media'
-      - '--cpu-boost'
-      - '--execution-environment'
-      - 'gen1'
-      - '--allow-unauthenticated'
-      - '--quiet'
+      - '-c'
+      - |
+        if [ "$_DEPLOY_TYPE" == "function" ]; then
+          echo "🚀 Deploying as Cloud Function..."
+          gcloud functions deploy $_SERVICE_NAME \
+            --gen2 \
+            --runtime=go122 \
+            --region=us-central1 \
+            --source=services/discovery_subscriber \
+            --entry-point=HandleProfileEvent \
+            --trigger-topic=$_ENV_NAME-profiles-profile-events-v1 \
+            --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+            --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID
+        else
+          echo "☁️ Deploying as Cloud Run Service..."
+          gcloud run deploy $_SERVICE_NAME$_ENV_SUFFIX \
+            --image=gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest \
+            --region=us-central1 \
+            --allow-unauthenticated \
+            --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+            --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=super-secret-tavern-key-123,GCS_BUCKET_NAME=$PROJECT_ID-media,PUBSUB_TOPIC_ID=$_ENV_NAME-profiles-profile-events-v1,PUBSUB_PROJECT_ID=$PROJECT_ID \
+            --cpu-boost \
+            --execution-environment=gen1
+        fi
 
 options:
   logging: CLOUD_LOGGING_ONLY
