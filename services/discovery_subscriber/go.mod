@@ -1,4 +1,4 @@
-module discovery_subscriber
+module tavern-swiper.app/discovery_subscriber
 
 go 1.25.0
 
