@@ -1,0 +1,25 @@
+steps:
+  # Deploy to Cloud Functions
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Determine environment name for the topic
+        ENV_NAME="dev"
+        if [ "${_ENV_SUFFIX}" == "-test" ]; then ENV_NAME="test"; fi
+
+        echo "🚀 Deploying $_SERVICE_NAME to $ENV_NAME environment as a Cloud Function..."
+        
+        gcloud functions deploy $_SERVICE_NAME \
+          --gen2 \
+          --runtime=go122 \
+          --region=us-central1 \
+          --source=services/discovery_subscriber \
+          --entry-point=HandleProfileEvent \
+          --trigger-topic=$ENV_NAME-profiles-profile-events-v1 \
+          --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY
