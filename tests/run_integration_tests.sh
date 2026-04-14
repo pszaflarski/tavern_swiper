@@ -24,12 +24,14 @@ MAX_RETRIES=12
 RETRY_INTERVAL=5
 RETRIES=0
 
-services=("auth:8001" "profiles:8002" "discovery:8003" "messages:8005" "users:8006")
+services=("auth:8001:auth/health" "profiles:8002:profiles/health" "discovery:8003:discovery/health" "messages:8005:messages/health" "users:8006:users/health" "pubsub-emulator:8085:" "discovery-subscriber:8007:")
 
 wait_for_service() {
     local service=$1
     local port=$2
-    while ! curl -s http://localhost:$port/${service}/health | grep -q 'ok'; do
+    local path=$3
+    echo "⏳ Waiting for $service on port $port... ($path)"
+    while ! curl -s http://localhost:$port/$path > /dev/null; do
         if [ $RETRIES -eq $MAX_RETRIES ]; then
             echo "❌ Service $service failed to become healthy."
             exit 1
@@ -43,9 +45,23 @@ wait_for_service() {
 }
 
 for s in "${services[@]}"; do
-    IFS=":" read -r name port <<< "$s"
-    wait_for_service "$name" "$port"
+    IFS=":" read -r name port path <<< "$s"
+    wait_for_service "$name" "$port" "$path"
 done
+
+echo "🔧 Initializing Pub/Sub Emulator..."
+# Create Topic
+curl -s -X PUT "http://localhost:8085/v1/projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1"
+# Create Push Subscription
+curl -s -X PUT "http://localhost:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-discovery-subscriber-sub" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "topic": "projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1",
+           "pushConfig": {
+             "pushEndpoint": "http://discovery-subscriber:8007"
+           }
+         }'
+echo "✅ Emulator Initialized."
 
 echo "🧪 Running Integration Tests..."
 # Use the project's virtual environment if available

@@ -9,9 +9,9 @@ steps:
         
         gcloud functions deploy $_SERVICE_NAME \
           --gen2 \
-          --runtime=go122 \
+          --runtime=go125 \
           --region=us-central1 \
-          --source=services/discovery_subscriber \
+          --source=. \
           --entry-point=HandleProfileEvent \
           --trigger-topic=$_ENV_NAME-profiles-profile-events-v1 \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \

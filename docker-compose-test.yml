@@ -30,6 +30,8 @@ services:
       - GCS_BUCKET_NAME=tavern-swiper-dev-media
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PUBSUB_TOPIC_ID=dev-profiles-profile-events-v1
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -103,6 +105,35 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    ports:
+      - "8085:8085"
+    command: ["gcloud", "beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8085"]
+    networks:
+      - tavern-net
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:8085"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  discovery-subscriber:
+    build:
+      context: ./services/discovery_subscriber
+    environment:
+      - FIRESTORE_DATABASE_ID=discovery-test
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PORT=8007
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+    networks:
+      - tavern-net
+    ports:
+      - "8007:8007"
 
 networks:
   tavern-net:
