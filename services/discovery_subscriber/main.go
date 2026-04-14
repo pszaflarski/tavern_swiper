@@ -38,7 +38,7 @@ func getFirestoreClient(ctx context.Context) (*firestore.Client, error) {
 	var err error
 	fsOnce.Do(func() {
 		projectID := getEnv("GOOGLE_CLOUD_PROJECT", "tavern-swiper-dev")
-		firestoreDB = getEnv("FIRESTORE_DATABASE_ID", "profiles")
+		firestoreDB = getEnv("FIRESTORE_DATABASE_ID", "discovery")
 		fsClient, err = firestore.NewClientWithDatabase(ctx, projectID, firestoreDB)
 	})
 	return fsClient, err
