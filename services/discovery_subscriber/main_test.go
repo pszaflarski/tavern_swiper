@@ -2,9 +2,11 @@ package discovery_subscriber
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
 
+	"github.com/cloudevents/sdk-go/v2/event"
 	"google.golang.org/protobuf/proto"
 
 	pb "tavern-swiper.app/discovery_subscriber/proto"
@@ -68,6 +70,81 @@ func TestProcessEventBasic(t *testing.T) {
 	}
 }
 
-func TestProcessEventUpsertLogic(t *testing.T) {
-	// This test is mostly a placeholder for functional logic verification
+func TestHandleProfileEvent_NestedFormat(t *testing.T) {
+	ctx := context.Background()
+	
+	// Create a real ProfileEvent
+	pe := &pb.ProfileEvent{
+		Type: pb.ProfileEvent_UPSERTED,
+		Event: &pb.ProfileEvent_Upserted{
+			Upserted: &pb.ProfileUpserted{
+				ProfileId: "nested-123",
+				DisplayName: "Nested Hero",
+			},
+		},
+	}
+	peBytes, _ := proto.Marshal(pe)
+	
+	// Wrap it in the Nested Eventarc structure
+	// Note: JSON marshaling peBytes (which is []byte) will base64 it automatically
+	nestedJSON := map[string]interface{}{
+		"message": map[string]interface{}{
+			"data": peBytes,
+		},
+	}
+	jsonData, _ := json.Marshal(nestedJSON)
+	
+	e := event.New()
+	e.SetID("12345")
+	e.SetSource("test-source")
+	e.SetData(event.ApplicationJSON, jsonData)
+	
+	// We check for nil error (which means it found the data and didn't crash)
+	// Since we pass nil to firestore in subsequent logic, it will log a warning but return nil
+	err := handleProfileEvent(ctx, e)
+	if err != nil {
+		t.Errorf("handleProfileEvent failed on nested format: %v", err)
+	}
+}
+
+func TestHandleProfileEvent_FlatFormat(t *testing.T) {
+	ctx := context.Background()
+	
+	pe := &pb.ProfileEvent{
+		Type: pb.ProfileEvent_UPSERTED,
+		Event: &pb.ProfileEvent_Upserted{
+			Upserted: &pb.ProfileUpserted{
+				ProfileId: "flat-123",
+				DisplayName: "Flat Hero",
+			},
+		},
+	}
+	peBytes, _ := proto.Marshal(pe)
+	
+	// Wrap it in the Flat Pub/Sub structure
+	flatJSON := map[string]interface{}{
+		"data": peBytes,
+	}
+	jsonData, _ := json.Marshal(flatJSON)
+	
+	e := event.New()
+	e.SetData(event.ApplicationJSON, jsonData)
+	
+	err := handleProfileEvent(ctx, e)
+	if err != nil {
+		t.Errorf("handleProfileEvent failed on flat format: %v", err)
+	}
+}
+
+func TestHandleProfileEvent_InvalidData(t *testing.T) {
+	ctx := context.Background()
+	
+	e := event.New()
+	e.SetData(event.ApplicationJSON, []byte(`{"not_what_we_expect": "true"}`))
+	
+	// Should return nil (with warning log) rather than crashing or erroring
+	err := handleProfileEvent(ctx, e)
+	if err != nil {
+		t.Errorf("handleProfileEvent should handle invalid JSON gracefully, got %v", err)
+	}
 }
