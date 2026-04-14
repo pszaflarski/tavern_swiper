@@ -45,7 +45,7 @@ steps:
           echo "🚀 Deploying as Cloud Function (Env: $$ENV_NAME)..."
           gcloud functions deploy $_SERVICE_NAME \
             --gen2 \
-            --runtime=go122 \
+            --runtime=go125 \
             --region=us-central1 \
             --source=services/discovery_subscriber \
             --entry-point=HandleProfileEvent \
