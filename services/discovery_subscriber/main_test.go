@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "discovery_subscriber/proto"
+	pb "tavern-swiper.app/discovery_subscriber/proto"
 )
 
 func TestUnmarshalEvent(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	"google.golang.org/protobuf/proto"
 
-	pb "discovery_subscriber/proto"
+	pb "tavern-swiper.app/discovery_subscriber/proto"
 )
 
 // PubSubMessage is the payload of a Pub/Sub event.
