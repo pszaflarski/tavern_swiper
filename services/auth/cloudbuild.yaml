@@ -41,4 +41,4 @@ steps:
 
 options:
   logging: GCS_ONLY
-  logsBucket: "gs://tavern-swiper-build-logs-dev"
+logsBucket: "gs://tavern-swiper-build-logs-dev"

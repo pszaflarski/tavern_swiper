@@ -3,7 +3,7 @@ import subprocess
 import os
 
 triggers_dir = '.agents/triggers'
-region = 'us-central1'
+region = 'global'
 project = 'tavern-swiper-dev'
 
 for filename in os.listdir(triggers_dir):
