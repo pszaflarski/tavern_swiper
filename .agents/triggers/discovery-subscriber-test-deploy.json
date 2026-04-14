@@ -16,7 +16,7 @@
   "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/fcd4ae9c-b7d6-4fc0-9e22-206a35d255aa",
   "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
   "substitutions": {
-    "_DB_ID": "profiles-test",
+    "_DB_ID": "discovery-test",
     "_DEPLOY_TYPE": "function",
     "_ENV_NAME": "test",
     "_ENV_SUFFIX": "-test",
