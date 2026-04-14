@@ -2,6 +2,7 @@ package discovery_subscriber
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -53,18 +54,44 @@ func getEnv(key, fallback string) string {
 
 // handleProfileEvent consumes a CloudEvent message and updates the Firestore cache.
 func handleProfileEvent(ctx context.Context, e event.Event) error {
-	var msg PubSubMessage
-	if err := e.DataAs(&msg); err != nil {
-		return fmt.Errorf("event.DataAs: %v", err)
+	log.Printf("📥 CloudEvent Received! ID: %s, Source: %s", e.ID(), e.Source())
+	
+	// 1. Try to parse as the nested structure (Eventarc standard)
+	var nestedMsg struct {
+		Message struct {
+			Data []byte `json:"data"`
+		} `json:"message"`
+	}
+	
+	rawJSON := e.Data()
+	if err := json.Unmarshal(rawJSON, &nestedMsg); err == nil && len(nestedMsg.Message.Data) > 0 {
+		log.Printf("📦 Detected Nested Eventarc Format (found %d bytes)", len(nestedMsg.Message.Data))
+		return processSerializedEvent(ctx, nestedMsg.Message.Data)
 	}
 
+	// 2. Fallback: Try to parse as flat PubSubMessage (legacy/direct)
+	var flatMsg struct {
+		Data []byte `json:"data"`
+	}
+	if err := json.Unmarshal(rawJSON, &flatMsg); err == nil && len(flatMsg.Data) > 0 {
+		log.Printf("📦 Detected Flat Pub/Sub Format (found %d bytes)", len(flatMsg.Data))
+		return processSerializedEvent(ctx, flatMsg.Data)
+	}
+
+	log.Printf("🤔 Warning: Received event data but could not find 'data' field in expected structures. Raw: %s", string(rawJSON))
+	return nil
+}
+
+func processSerializedEvent(ctx context.Context, data []byte) error {
 	var event pb.ProfileEvent
-	if err := proto.Unmarshal(msg.Message.Data, &event); err != nil {
+	if err := proto.Unmarshal(data, &event); err != nil {
+		log.Printf("❌ proto.Unmarshal Error: %v", err)
 		return fmt.Errorf("proto.Unmarshal: %v", err)
 	}
 
 	client, err := getFirestoreClient(ctx)
 	if err != nil {
+		log.Printf("❌ Firestore Initialization Error: %v", err)
 		return fmt.Errorf("getFirestoreClient: %v", err)
 	}
 
