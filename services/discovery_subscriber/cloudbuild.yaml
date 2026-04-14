@@ -5,9 +5,9 @@ steps:
     args:
       - '-c'
       - |
-        echo "🚀 Deploying $_SERVICE_NAME to $_ENV_NAME environment as a Cloud Function..."
+        echo "🚀 Deploying $_SERVICE_NAME$_ENV_SUFFIX to $_ENV_NAME environment as a Cloud Function..."
         
-        gcloud functions deploy $_SERVICE_NAME \
+        gcloud functions deploy $_SERVICE_NAME$_ENV_SUFFIX \
           --gen2 \
           --runtime=go125 \
           --region=us-central1 \
