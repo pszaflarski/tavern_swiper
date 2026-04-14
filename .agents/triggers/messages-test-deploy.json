@@ -1,0 +1,24 @@
+{
+  "createTime": "2026-04-08T23:08:19.329936386Z",
+  "filename": "services/messages/cloudbuild.yaml",
+  "github": {
+    "name": "tavern_swiper",
+    "owner": "pszaflarski",
+    "push": {
+      "branch": "^test$"
+    }
+  },
+  "id": "13ec1ff0-9bfd-4876-bf55-418812cb23fc",
+  "includedFiles": [
+    "services/messages/**"
+  ],
+  "name": "messages-test-deploy",
+  "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/13ec1ff0-9bfd-4876-bf55-418812cb23fc",
+  "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+  "substitutions": {
+    "_DB_ID": "messages-test",
+    "_ENV_NAME": "test",
+    "_ENV_SUFFIX": "-test",
+    "_SERVICE_NAME": "messages"
+  }
+}

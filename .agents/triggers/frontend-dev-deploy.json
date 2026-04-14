@@ -1,0 +1,21 @@
+{
+  "createTime": "2026-04-08T23:08:20.907039404Z",
+  "filename": "frontend/cloudbuild.yaml",
+  "github": {
+    "name": "tavern_swiper",
+    "owner": "pszaflarski",
+    "push": {
+      "branch": "^main$"
+    }
+  },
+  "id": "61b1c225-e983-4472-8048-6c4ac1b50b29",
+  "includedFiles": [
+    "frontend/**"
+  ],
+  "name": "frontend-dev-deploy",
+  "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/61b1c225-e983-4472-8048-6c4ac1b50b29",
+  "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+  "substitutions": {
+    "_ENV_SUFFIX": ""
+  }
+}

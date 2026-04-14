@@ -1,0 +1,24 @@
+{
+  "createTime": "2026-04-08T23:08:08.332412615Z",
+  "filename": "services/users/cloudbuild.yaml",
+  "github": {
+    "name": "tavern_swiper",
+    "owner": "pszaflarski",
+    "push": {
+      "branch": "^main$"
+    }
+  },
+  "id": "d537bd80-aad4-4f6a-8292-7df89f87645d",
+  "includedFiles": [
+    "services/users/**"
+  ],
+  "name": "users-dev-deploy",
+  "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/d537bd80-aad4-4f6a-8292-7df89f87645d",
+  "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+  "substitutions": {
+    "_DB_ID": "users",
+    "_ENV_NAME": "dev",
+    "_ENV_SUFFIX": "",
+    "_SERVICE_NAME": "users"
+  }
+}

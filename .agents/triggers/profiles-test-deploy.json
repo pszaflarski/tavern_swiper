@@ -1,0 +1,24 @@
+{
+  "createTime": "2026-04-08T23:08:13.086290384Z",
+  "filename": "services/profiles/cloudbuild.yaml",
+  "github": {
+    "name": "tavern_swiper",
+    "owner": "pszaflarski",
+    "push": {
+      "branch": "^test$"
+    }
+  },
+  "id": "b30b1b9e-5638-4e83-95ef-f50ea99b659c",
+  "includedFiles": [
+    "services/profiles/**"
+  ],
+  "name": "profiles-test-deploy",
+  "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/b30b1b9e-5638-4e83-95ef-f50ea99b659c",
+  "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+  "substitutions": {
+    "_DB_ID": "profiles-test",
+    "_ENV_NAME": "test",
+    "_ENV_SUFFIX": "-test",
+    "_SERVICE_NAME": "profiles"
+  }
+}

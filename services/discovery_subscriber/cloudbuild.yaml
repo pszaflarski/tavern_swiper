@@ -18,4 +18,5 @@ steps:
           --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID
 
 options:
-  logging: CLOUD_LOGGING_ONLY
+  logging: GCS_ONLY
+  logsBucket: "gs://tavern-swiper-build-logs-dev"

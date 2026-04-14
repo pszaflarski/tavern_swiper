@@ -75,5 +75,6 @@ steps:
       - '--quiet'
 
 options:
-  logging: CLOUD_LOGGING_ONLY
+  logging: GCS_ONLY
+  logsBucket: "gs://tavern-swiper-build-logs-dev"
   machineType: 'E2_HIGHCPU_8'

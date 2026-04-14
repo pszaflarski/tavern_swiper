@@ -1,0 +1,24 @@
+{
+  "createTime": "2026-04-13T16:56:11.029690804Z",
+  "filename": "services/discovery_subscriber/cloudbuild.yaml",
+  "github": {
+    "name": "tavern_swiper",
+    "owner": "pszaflarski",
+    "push": {
+      "branch": "^main$"
+    }
+  },
+  "id": "362e4edd-f4de-4639-a893-6ec290fdcf98",
+  "includedFiles": [
+    "services/discovery_subscriber/**"
+  ],
+  "name": "discovery-subscriber-dev-deploy",
+  "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/362e4edd-f4de-4639-a893-6ec290fdcf98",
+  "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+  "substitutions": {
+    "_DB_ID": "profiles",
+    "_DEPLOY_TYPE": "function",
+    "_ENV_NAME": "dev",
+    "_SERVICE_NAME": "discovery-subscriber"
+  }
+}

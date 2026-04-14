@@ -1,0 +1,24 @@
+{
+  "createTime": "2026-04-08T23:08:04.859600976Z",
+  "filename": "services/auth/cloudbuild.yaml",
+  "github": {
+    "name": "tavern_swiper",
+    "owner": "pszaflarski",
+    "push": {
+      "branch": "^main$"
+    }
+  },
+  "id": "72e8db4d-7e79-4a52-bf7d-972e3cb128ac",
+  "includedFiles": [
+    "services/auth/**"
+  ],
+  "name": "auth-dev-deploy",
+  "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/72e8db4d-7e79-4a52-bf7d-972e3cb128ac",
+  "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+  "substitutions": {
+    "_DB_ID": "auth",
+    "_ENV_NAME": "dev",
+    "_ENV_SUFFIX": "",
+    "_SERVICE_NAME": "auth"
+  }
+}
