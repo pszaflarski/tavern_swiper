@@ -55,4 +55,5 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 - When asked to create a new service, follow the existing pattern in `services/`.
 - Ensure new services have their own `.env` and Firestore DB ID.
 - Maintain the fantasy-themed nomenclature ("Tavern", "Swiper", "Tavern Swiper", etc.).
+- **Strict Deployment Workflow**: **NEVER** use `gcloud run deploy` or `gcloud functions deploy` or any similar manual commands to deploy services to the cloud environment. You MUST only deploy by committing code to GitHub (e.g. `main` or `test` branches) and letting the existing Cloud Build CI/CD triggers handle the build. Wait for the triggering pipeline to finish rather than manually deploying.
 
