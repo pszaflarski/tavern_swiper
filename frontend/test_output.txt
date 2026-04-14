@@ -1,4 +1,0 @@
-
-> frontend_new@1.0.0 test:jest
-> NODE_OPTIONS="--max-old-space-size=2048" jest --runInBand --forceExit __tests__/Swiping.test.tsx
-

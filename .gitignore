@@ -37,6 +37,8 @@ Thumbs.db
 .env.*
 *.log
 *_log.txt
+test_clean.py
+scripts/pubsub_demo.py
 
 # Testing (Jest)
 **/__mocks__/
