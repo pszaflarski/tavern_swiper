@@ -76,10 +76,12 @@ func processEvent(ctx context.Context, client *firestore.Client, event *pb.Profi
 	}
 	collection := "profiles_profiles_cache"
 
+	log.Printf("📥 Received Event of type: %s", event.Type)
+
 	switch event.Type {
 	case pb.ProfileEvent_UPSERTED:
 		p := event.GetUpserted()
-		log.Printf("✨ Processing UPSERTED: [%s] %s", p.ProfileId, p.DisplayName)
+		log.Printf("✨ Processing UPSERTED for ProfileID: [%s], Name: %s", p.ProfileId, p.DisplayName)
 
 		data := map[string]interface{}{
 			"profile_id":   p.ProfileId,
