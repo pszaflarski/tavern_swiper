@@ -17,7 +17,9 @@ import (
 
 // PubSubMessage is the payload of a Pub/Sub event.
 type PubSubMessage struct {
-	Data []byte `json:"data"`
+	Message struct {
+		Data []byte `json:"data"`
+	} `json:"message"`
 }
 
 var (
@@ -57,7 +59,7 @@ func handleProfileEvent(ctx context.Context, e event.Event) error {
 	}
 
 	var event pb.ProfileEvent
-	if err := proto.Unmarshal(msg.Data, &event); err != nil {
+	if err := proto.Unmarshal(msg.Message.Data, &event); err != nil {
 		return fmt.Errorf("proto.Unmarshal: %v", err)
 	}
 
