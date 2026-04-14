@@ -44,7 +44,6 @@ func getFirestoreClient(ctx context.Context) (*firestore.Client, error) {
 	return fsClient, err
 }
 
-
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
@@ -55,14 +54,14 @@ func getEnv(key, fallback string) string {
 // handleProfileEvent consumes a CloudEvent message and updates the Firestore cache.
 func handleProfileEvent(ctx context.Context, e event.Event) error {
 	log.Printf("📥 CloudEvent Received! ID: %s, Source: %s", e.ID(), e.Source())
-	
+
 	// 1. Try to parse as the nested structure (Eventarc standard)
 	var nestedMsg struct {
 		Message struct {
 			Data []byte `json:"data"`
 		} `json:"message"`
 	}
-	
+
 	rawJSON := e.Data()
 	if err := json.Unmarshal(rawJSON, &nestedMsg); err == nil && len(nestedMsg.Message.Data) > 0 {
 		log.Printf("📦 Detected Nested Eventarc Format (found %d bytes)", len(nestedMsg.Message.Data))
@@ -137,7 +136,6 @@ func processEvent(ctx context.Context, client *firestore.Client, event *pb.Profi
 		if err != nil {
 			return fmt.Errorf("client.Delete: %w", err)
 		}
-
 
 	case pb.ProfileEvent_ALL_DELETED:
 		log.Printf("🚨 Processing ALL_DELETED from admin: %s", event.GetAllDeleted().AdminUserId)

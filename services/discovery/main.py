@@ -113,22 +113,40 @@ async def get_feed(profile_id: str, limit: int = 10, auth_data: tuple[str, str, 
             print(f"[ERROR] Failed to fetch swipe history: {e}")
             already_swiped = set()
 
-        # 2. All profiles (via discovery endpoint)
+        # 2. All profiles (from local cache)
+        # Note: 'profiles_profiles_cache' is populated by the discovery_subscriber
         try:
-            profiles_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/discovery?limit={limit + 10}", headers=headers)
-            profiles_resp.raise_for_status()
-            all_profiles = profiles_resp.json()
-        except httpx.HTTPError:
+            cached_profiles_docs = (
+                db.collection("profiles_profiles_cache")
+                .where("is_active", "==", True)
+                .limit(limit * 2) 
+                .stream()
+            )
+            candidate_ids = []
+            for doc in cached_profiles_docs:
+                p_data = doc.to_dict()
+                if p_data["profile_id"] != profile_id and p_data["profile_id"] not in already_swiped:
+                    candidate_ids.append(p_data["profile_id"])
+            
+            # 3. Hydrate via Batch
+            # Limit to actual request limit
+            candidate_ids = candidate_ids[:limit]
+            
+            p_resp = await client.post(
+                f"{PROFILES_SERVICE_URL}/profiles/batch",
+                json={"profile_ids": candidate_ids},
+                headers=headers
+            )
+            p_resp.raise_for_status()
+            candidates_data = p_resp.json()
+        except Exception as e:
+            logger.error(f"Failed to fetch/hydrate candidates: {e}")
             raise HTTPException(
                 status_code=502, detail="Required dependency unavailable"
             )
 
-    # 3. Filter
-    candidates = [
-        DiscoveryProfile(**p)
-        for p in all_profiles
-        if p["profile_id"] != profile_id and p["profile_id"] not in already_swiped
-    ][:limit]
+    # 4. Map to DiscoveryProfile
+    candidates = [DiscoveryProfile(**p) for p in candidates_data]
 
     return FeedResponse(profiles=candidates)
 
