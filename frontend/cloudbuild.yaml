@@ -19,12 +19,15 @@ steps:
         get_url() {
           gcloud run services describe "$1$_ENV_SUFFIX" --platform managed --region us-central1 --format 'value(status.url)'
         }
-        echo "EXPO_PUBLIC_AUTH_URL=$(get_url auth)" > /workspace/build.env
-        echo "EXPO_PUBLIC_USERS_URL=$(get_url users)" >> /workspace/build.env
-        echo "EXPO_PUBLIC_PROFILES_URL=$(get_url profiles)" >> /workspace/build.env
-        echo "EXPO_PUBLIC_DISCOVERY_URL=$(get_url discovery)" >> /workspace/build.env
-        echo "EXPO_PUBLIC_SWIPES_URL=$(get_url discovery)" >> /workspace/build.env
-        echo "EXPO_PUBLIC_MESSAGING_URL=$(get_url messages)" >> /workspace/build.env
+        echo "export EXPO_PUBLIC_AUTH_URL=$(get_url auth)" > /workspace/build.env
+        echo "export EXPO_PUBLIC_USERS_URL=$(get_url users)" >> /workspace/build.env
+        echo "export EXPO_PUBLIC_PROFILES_URL=$(get_url profiles)" >> /workspace/build.env
+        echo "export EXPO_PUBLIC_DISCOVERY_URL=$(get_url discovery)" >> /workspace/build.env
+        echo "export EXPO_PUBLIC_SWIPES_URL=$(get_url discovery)" >> /workspace/build.env
+        echo "export EXPO_PUBLIC_MESSAGES_URL=$(get_url messages)" >> /workspace/build.env
+        
+        echo "📊 Fetched URLs:"
+        cat /workspace/build.env
 
   # 3. Build Frontend Image
   - name: 'gcr.io/cloud-builders/docker'
@@ -35,12 +38,12 @@ steps:
         source /workspace/build.env
         docker build -t "gcr.io/$PROJECT_ID/app$_ENV_SUFFIX" \
           --platform linux/amd64 \
-          --build-arg EXPO_PUBLIC_AUTH_URL=$$EXPO_PUBLIC_AUTH_URL \
-          --build-arg EXPO_PUBLIC_USERS_URL=$$EXPO_PUBLIC_USERS_URL \
-          --build-arg EXPO_PUBLIC_PROFILES_URL=$$EXPO_PUBLIC_PROFILES_URL \
-          --build-arg EXPO_PUBLIC_DISCOVERY_URL=$$EXPO_PUBLIC_DISCOVERY_URL \
-          --build-arg EXPO_PUBLIC_SWIPES_URL=$$EXPO_PUBLIC_SWIPES_URL \
-          --build-arg EXPO_PUBLIC_MESSAGING_URL=$$EXPO_PUBLIC_MESSAGING_URL \
+          --build-arg EXPO_PUBLIC_AUTH_URL=$EXPO_PUBLIC_AUTH_URL \
+          --build-arg EXPO_PUBLIC_USERS_URL=$EXPO_PUBLIC_USERS_URL \
+          --build-arg EXPO_PUBLIC_PROFILES_URL=$EXPO_PUBLIC_PROFILES_URL \
+          --build-arg EXPO_PUBLIC_DISCOVERY_URL=$EXPO_PUBLIC_DISCOVERY_URL \
+          --build-arg EXPO_PUBLIC_SWIPES_URL=$EXPO_PUBLIC_SWIPES_URL \
+          --build-arg EXPO_PUBLIC_MESSAGES_URL=$EXPO_PUBLIC_MESSAGES_URL \
           --build-arg EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyCnKm4gayoO0C35CNeMJ7E82fFITvVpGAw \
           --build-arg EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=$PROJECT_ID.firebaseapp.com \
           --build-arg EXPO_PUBLIC_FIREBASE_PROJECT_ID=$PROJECT_ID \
