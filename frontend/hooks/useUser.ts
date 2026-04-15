@@ -59,6 +59,7 @@ export function useUser() {
     try {
       await auth.signOut();
       await clearTavernSession();
+      queryClient.clear(); // Wipe all cached data (profiles, discovery, etc.)
       queryClient.setQueryData(['user', 'me'], null);
       setFirebaseUser(null);
       setPersistedUid(null);

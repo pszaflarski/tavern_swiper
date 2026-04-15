@@ -15,7 +15,7 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { uid, isAuthenticated } = useUser();
-  const { data: activeProfile, isLoading: isLoadingActiveProfile, refetch: refetchActiveProfile } = useActiveProfile(isAuthenticated);
+  const { data: activeProfile, isLoading: isLoadingActiveProfile, refetch: refetchActiveProfile } = useActiveProfile(uid, isAuthenticated);
   
   // Pre-fetch all profiles for the user as soon as they are identified (even from storage).
   // This populates the React Query cache globally and instantly.

@@ -48,14 +48,14 @@ export function useProfiles(userId: string | undefined) {
 /**
  * Fetch the currently active profile for the authenticated user.
  */
-export function useActiveProfile(enabled: boolean = true) {
+export function useActiveProfile(userId: string | undefined, enabled: boolean = true) {
   return useQuery<Profile>({
-    queryKey: ['profiles', 'me', 'active'],
+    queryKey: ['profiles', 'me', 'active', userId],
     queryFn: async () => {
       const res = await profilesApi.get('/profiles/user/me/active');
       return res.data;
     },
-    enabled,
+    enabled: enabled && !!userId,
     staleTime: 300000, // 5 minutes
     retry: false, // If no active profile, 404 is expected, don't spam retries
   });
