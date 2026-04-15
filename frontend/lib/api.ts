@@ -192,23 +192,21 @@ export const usersApi = createClient(BASE_URLS.users, true);
 
 /**
  * Startup Resilience Check:
- * Ensure all required environment variables are present.
- * If missing, we log a critical warning. This helps debug production build issues.
+ * Verify all service URLs were injected at build time (not still on localhost fallbacks).
+ * Uses the resolved BASE_URLS object since dynamic process.env[key] access
+ * doesn't work in Expo web bundles (only static process.env.EXPO_PUBLIC_X is replaced).
  */
 function validateEnvironment() {
-  const required = [
-    'EXPO_PUBLIC_AUTH_URL',
-    'EXPO_PUBLIC_PROFILES_URL',
-    'EXPO_PUBLIC_DISCOVERY_URL',
-    'EXPO_PUBLIC_MESSAGES_URL',
-    'EXPO_PUBLIC_USERS_URL'
-  ];
-  
-  const missing = required.filter(key => !process.env[key]);
-  
-  if (missing.length > 0 && process.env.NODE_ENV !== 'test') {
-    console.error('🛡️ CRITICAL: Missing environment variables for Tavern Services:', missing.join(', '));
-    console.warn('The application may fail to connect to the realm services.');
+  if (process.env.NODE_ENV === 'test') return;
+
+  const entries = Object.entries(BASE_URLS) as [string, string][];
+  const onLocalhost = entries.filter(([, url]) => url.includes('localhost'));
+
+  if (onLocalhost.length > 0) {
+    console.warn(
+      '⚠️ Some service URLs are using localhost fallbacks (env vars were not set at build time):',
+      onLocalhost.map(([name]) => name).join(', ')
+    );
   }
 }
 

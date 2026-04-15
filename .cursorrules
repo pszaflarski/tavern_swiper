@@ -39,6 +39,15 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 - **NO DIRECT FIRESTORE ACCESS**: The frontend must never call Firestore directly. All data must be fetched through the microservice APIs.
 - Centralized `.env` in `frontend/` maps localhost ports to the microservice fleet.
 
+### ⚠️ Expo Web Environment Variable Gotcha
+> **CRITICAL**: The Expo/Metro bundler for web only replaces `process.env.EXPO_PUBLIC_X` when accessed as a **static, literal property** (e.g., `process.env.EXPO_PUBLIC_AUTH_URL`).
+> **Dynamic access** like `process.env[key]` or `process.env['EXPO_PUBLIC_' + name]` will **silently return `undefined`** in the browser bundle, even if the variable was correctly set at build time.
+>
+> **DO**: Access env vars statically: `process.env.EXPO_PUBLIC_AUTH_URL`
+> **DON'T**: Access env vars dynamically: `process.env[key]`, `Object.keys(process.env)`, etc.
+>
+> If you need to validate that env vars were injected, check the **resolved values** (e.g., the `BASE_URLS` object in `api.ts`) instead of re-reading `process.env`. See `validateEnvironment()` in `frontend/lib/api.ts` for the correct pattern.
+
 ### 🧪 Development Workflow
 - **Venv First**: Always prefix python commands with `.venv/bin/python3`.
 - **Testing**: Always run `bash services/run_tests.sh` after backend changes to ensure zero-trust boundaries are intact.
