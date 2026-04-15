@@ -98,10 +98,12 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+    <>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+      </Stack>
       <Toast />
-    </Stack>
+    </>
   );
 }
