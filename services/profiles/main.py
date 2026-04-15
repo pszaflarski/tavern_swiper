@@ -362,6 +362,7 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
 async def delete_all_profiles(auth_data: tuple[str, str, str] = Depends(get_current_user)):
     """Delete all profiles. Admin/Root Admin only."""
     _, role, _ = auth_data
+    uid, role, _ = auth_data
     if role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Admin or Root Admin authorization required")
     

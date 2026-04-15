@@ -113,6 +113,19 @@ graph TD
 
 ---
 
+## 6. Testing
+
+The Tavern Swiper project employs a multi-layered testing strategy. For detailed instructions, see [docs/testing.md](file:///home/peter/Documents/tavern_swiper/docs/testing.md).
+
+### Unit Tests
+- **Backend (Python)**: Run using `pytest` from the respective service directory or the root with `PYTHONPATH` correctly set.
+- **Frontend (Node/Jest)**: Run using `npm test` exclusively from within the `frontend/` directory.
+
+### Integration Tests
+- **System Lifecycle**: Located in `tests/integration/`, these tests verify cross-service workflows. They use the Cloud environment or local emulators to avoid resource exhaustion (OOM).
+
+---
+
 ## Changelog
 
 - **Phase 1 — Environment & Service Standardization**: Isolated environment profiles per service, fixed internal connectivity (`http://auth:8001`), surfaced infrastructure config into `.env` files.

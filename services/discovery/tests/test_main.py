@@ -49,34 +49,65 @@ async def test_get_feed_success(mock_auth_service, mock_profiles):
         return_value=Response(200, json={"user_id": "u1"})
     )
     
-    # Mock Profiles Service: returns all profiles via discovery endpoint
-    respx_mock.get(url__startswith=f"{PROFILES_SERVICE_URL}/profiles/discovery").mock(
-        return_value=Response(200, json=mock_profiles)
+    # Mock Profiles Service: returns hydrated data via batch endpoint (only p2, p3)
+    respx_mock.post(f"{PROFILES_SERVICE_URL}/profiles/batch").mock(
+        return_value=Response(200, json=mock_profiles[1:])
     )
     
-    # Firestore is mocked to return empty stream by default via the 'patch' above.
-    headers = {"Authorization": f"Bearer {sign_test_token()}"}
-    response = client.get("/discovery/feed/p1", headers=headers)
-    
-    assert response.status_code == 200
-    profiles = response.json()["profiles"]
-    # Expecting p2 and p3 (p1 excluded because it's the requester)
-    assert len(profiles) == 2
+    # Mock Firestore for profiles_profiles_cache
+    with patch("main.db.collection") as mock_coll:
+        # Mock swiped check (empty)
+        mock_coll.return_value.where.return_value.stream.return_value = []
+        # Mock cache stream (returns p1, p2, p3)
+        mock_p1 = MagicMock(); mock_p1.to_dict.return_value = {"profile_id": "p1"}
+        mock_p2 = MagicMock(); mock_p2.to_dict.return_value = {"profile_id": "p2"}
+        mock_p3 = MagicMock(); mock_p3.to_dict.return_value = {"profile_id": "p3"}
+        
+        # We need to distinguish between 'swipes' and 'profiles_profiles_cache' collections
+        def collection_side_effect(name):
+            m = MagicMock()
+            if name == "profiles_profiles_cache":
+                m.where.return_value.limit.return_value.stream.return_value = [mock_p1, mock_p2, mock_p3]
+            else:
+                m.where.return_value.stream.return_value = []
+            return m
+            
+        mock_coll.side_effect = collection_side_effect
+        
+        headers = {"Authorization": f"Bearer {sign_test_token()}"}
+        response = client.get("/discovery/feed/p1", headers=headers)
+        
+        assert response.status_code == 200
+        profiles = response.json()["profiles"]
+        # Expecting p2 and p3 (p1 excluded because it's the requester)
+        assert len(profiles) == 2
 
 @pytest.mark.asyncio
 async def test_get_feed_with_filtering(mock_auth_service, mock_profiles):
     respx_mock = mock_auth_service
     respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/p1").mock(return_value=Response(200, json={"user_id": "u1"}))
-    respx_mock.get(f"{PROFILES_SERVICE_URL}/profiles/discovery?limit=20").mock(return_value=Response(200, json=mock_profiles))
+    respx_mock.post(f"{PROFILES_SERVICE_URL}/profiles/batch").mock(return_value=Response(200, json=mock_profiles[2:]))
     
-    # Mock Firestore to say p2 was already swiped
-    mock_doc = MagicMock()
-    mock_doc.to_dict.return_value = {"swiped_profile_id": "p2"}
-    
-    # We need to reach into main.db and mock the query chain.
-    # This is a bit advanced, but let's try a direct patch for the filtering logic:
+    # Mock Firestore for both 'swipes' and 'profiles_profiles_cache'
     with patch("main.db.collection") as mock_coll:
-        mock_coll.return_value.where.return_value.stream.return_value = [mock_doc]
+        # Mock swiped p2
+        mock_swipe_doc = MagicMock()
+        mock_swipe_doc.to_dict.return_value = {"swiped_profile_id": "p2"}
+        
+        # Mock cache docs
+        mock_p1 = MagicMock(); mock_p1.to_dict.return_value = {"profile_id": "p1"}
+        mock_p2 = MagicMock(); mock_p2.to_dict.return_value = {"profile_id": "p2"}
+        mock_p3 = MagicMock(); mock_p3.to_dict.return_value = {"profile_id": "p3"}
+
+        def collection_side_effect(name):
+            m = MagicMock()
+            if name == "profiles_profiles_cache":
+                m.where.return_value.limit.return_value.stream.return_value = [mock_p1, mock_p2, mock_p3]
+            else:
+                m.where.return_value.stream.return_value = [mock_swipe_doc]
+            return m
+            
+        mock_coll.side_effect = collection_side_effect
         
         headers = {"Authorization": f"Bearer {sign_test_token()}"}
         response = client.get("/discovery/feed/p1", headers=headers)
