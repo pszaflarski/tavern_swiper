@@ -239,9 +239,28 @@ async def get_my_active_profile(auth_data: tuple[str, str, str] = Depends(get_cu
     """Fetch the currently active profile for the authenticated user."""
     uid, _, _ = auth_data
     docs = list(db.collection(COLLECTION).where("user_id", "==", uid).where("is_active", "==", True).limit(1).stream())
-    if not docs:
-        raise HTTPException(status_code=404, detail="No active profile found for user")
-    return _doc_to_profile(docs[0])
+    
+    if docs:
+        return _doc_to_profile(docs[0])
+
+    # AUTO-ACTIVATION: If no active profile, check if any exist and activate the first one
+    logger.info(f"No active profile for user {uid}. Attempting auto-activation.")
+    user_docs = list(db.collection(COLLECTION).where("user_id", "==", uid).limit(1).stream())
+    
+    if user_docs:
+        profile_id = user_docs[0].id
+        logger.info(f"Auto-activating profile {profile_id} for user {uid}")
+        
+        # Mark as active
+        user_docs[0].reference.update({"is_active": True})
+        
+        # Verify and return (refetching ensures we return the updated data)
+        doc = user_docs[0].reference.get()
+        profile_out = _doc_to_profile(doc)
+        publisher.publish_upserted(profile_out)
+        return profile_out
+
+    raise HTTPException(status_code=404, detail="No profiles found for user")
 
 
 @app.get("/profiles/user/{user_id}", response_model=list[ProfileOut])
@@ -261,9 +280,6 @@ async def update_profile(profile_id: str, body: ProfileUpdate, auth_data: tuple[
         raise HTTPException(status_code=404, detail="Profile not found")
     
     if doc.to_dict().get("user_id") != uid and role not in ["admin", "root_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized to update this profile")
-    
-    if doc.to_dict().get("user_id") != uid:
         raise HTTPException(status_code=403, detail="Not authorized to update this profile")
 
     updates = {k: v for k, v in body.model_dump().items() if v is not None}

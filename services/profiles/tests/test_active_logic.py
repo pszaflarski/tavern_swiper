@@ -113,3 +113,46 @@ def test_set_active_unauthorized(mock_firestore):
     response = client.post(f"/profiles/{profile_id}/set_active", headers=header)
     
     assert response.status_code == 403
+
+
+def test_get_my_active_profile_auto_activates(mock_firestore):
+    """Verify that get_my_active_profile auto-activates a profile if none are active."""
+    uid = "test-user-123"
+    token = sign_test_token(uid=uid)
+    
+    # Mocking for the first call (active=True search) -> returns empty
+    mock_stream_active = MagicMock()
+    mock_stream_active.return_value = []
+    
+    # Mocking for the second call (user_id only search) -> returns one inactive profile
+    mock_inactive_doc = MagicMock()
+    mock_inactive_doc.id = "inactive-id"
+    mock_inactive_doc.reference.update = MagicMock()
+    
+    # Mock the behavior for returning the updated doc after activation
+    mock_active_doc = MagicMock()
+    mock_active_doc.id = "inactive-id"
+    mock_active_doc.to_dict.return_value = {"user_id": uid, "display_name": "Recovered Hero", "is_active": True}
+    mock_inactive_doc.reference.get.return_value = mock_active_doc
+    
+    mock_stream_all = MagicMock()
+    mock_stream_all.return_value = [mock_inactive_doc]
+    
+    # Setup the sequence of stream outputs
+    # Call 1: .where("user_profile", "==", uid).where("is_active", "==", True).limit(1).stream()
+    # Call 2: .where("user_profile", "==", uid).limit(1).stream()
+    mock_firestore.collection.return_value.where.return_value.where.return_value.limit.return_value.stream.side_effect = mock_stream_active
+    mock_firestore.collection.return_value.where.return_value.limit.return_value.stream.side_effect = mock_stream_all
+    
+    header = {"Authorization": f"Bearer {token}"}
+    
+    # We need to be careful with patching the global 'publisher' as well to avoid errors
+    with patch("main.publisher"):
+        response = client.get("/profiles/user/me/active", headers=header)
+    
+    assert response.status_code == 200
+    assert response.json()["is_active"] is True
+    assert response.json()["profile_id"] == "inactive-id"
+    
+    # Verify update was called
+    mock_inactive_doc.reference.update.assert_called_with({"is_active": True})
