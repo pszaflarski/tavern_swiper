@@ -87,3 +87,37 @@ async def test_register_user_generic_error_mapping(mock_post):
     assert response.status_code == 400
     assert "unexpected authentication error" in response.json()["detail"].lower()
     assert "firebase" not in response.json()["detail"].lower()
+
+@patch("firebase_admin.auth.delete_user")
+def test_delete_auth_user_success(mock_delete):
+    mock_delete.return_value = None
+    response = client.delete("/auth/users/test-uid")
+    assert response.status_code == 204
+    mock_delete.assert_called_once_with("test-uid")
+
+@patch("firebase_admin.auth.delete_users")
+def test_delete_auth_users_bulk_success(mock_delete_bulk):
+    mock_result = MagicMock()
+    mock_result.errors = []
+    mock_delete_bulk.return_value = mock_result
+    
+    response = client.request("DELETE", "/auth/users/", json={"uids": ["u1", "u2"]})
+    assert response.status_code == 204
+    mock_delete_bulk.assert_called_once_with(["u1", "u2"])
+
+@patch("firebase_admin.auth.list_users")
+@patch("firebase_admin.auth.delete_users")
+def test_delete_all_auth_users_success(mock_delete_bulk, mock_list):
+    # Mock page 1
+    mock_user_1 = MagicMock(); mock_user_1.uid = "u1"
+    mock_page_1 = MagicMock()
+    mock_page_1.users = [mock_user_1]
+    
+    # Mock page 2 (empty)
+    mock_page_1.get_next_page.return_value = None
+    
+    mock_list.return_value = mock_page_1
+    
+    response = client.delete("/auth/all")
+    assert response.status_code == 204
+    mock_delete_bulk.assert_called_once_with(["u1"])

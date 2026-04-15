@@ -148,3 +148,40 @@ func TestHandleProfileEvent_InvalidData(t *testing.T) {
 		t.Errorf("handleProfileEvent should handle invalid JSON gracefully, got %v", err)
 	}
 }
+
+func TestProcessEvent_Upserted(t *testing.T) {
+	ctx := context.Background()
+	event := &pb.ProfileEvent{
+		Type: pb.ProfileEvent_UPSERTED,
+		Event: &pb.ProfileEvent_Upserted{
+			Upserted: &pb.ProfileUpserted{
+				ProfileId:   "p1",
+				DisplayName: "Hero",
+			},
+		},
+	}
+
+	// Passing nil client: should log and return nil (no crash)
+	err := processEvent(ctx, nil, event)
+	if err != nil {
+		t.Errorf("processEvent failed on UPSERTED with nil client: %v", err)
+	}
+}
+
+func TestProcessEvent_Deleted(t *testing.T) {
+	ctx := context.Background()
+	event := &pb.ProfileEvent{
+		Type: pb.ProfileEvent_DELETED,
+		Event: &pb.ProfileEvent_Deleted{
+			Deleted: &pb.ProfileDeleted{
+				ProfileId: "p1",
+			},
+		},
+	}
+
+	// Passing nil client: should log and return nil (no crash)
+	err := processEvent(ctx, nil, event)
+	if err != nil {
+		t.Errorf("processEvent failed on DELETED with nil client: %v", err)
+	}
+}

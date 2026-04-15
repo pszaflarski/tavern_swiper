@@ -24,7 +24,7 @@ def sign_test_token(uid="u1", role="user"):
 with patch("google.cloud.firestore.Client"):
     from main import app, PROFILES_SERVICE_URL, SWIPES_COLLECTION
 
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 
 @pytest.fixture
 def mock_profiles():
@@ -286,3 +286,51 @@ async def test_list_matches_for_profile_query_building():
         assert response.status_code == 200
         # Verify that the where clause was called with the correct operator
         mock_coll.return_value.where.assert_called_once_with("profiles", "array_contains", "p1")
+
+@pytest.mark.asyncio
+async def test_get_feed_swipe_history_failure_resilience(mock_auth_service):
+    # Mock Firestore: p1 belongs to u1, but swipes query FAILS
+    with patch("main.db.collection") as mock_coll:
+        mock_p1 = MagicMock(); mock_p1.exists = True; mock_p1.to_dict.return_value = {"profile_id": "p1", "user_id": "u1", "display_name": "Aragorn", "is_active": True, "image_urls": []}
+        
+        def side_effect(name):
+            m = MagicMock()
+            if name == "profiles_profiles_cache":
+                m.document.return_value.get.return_value = mock_p1
+                m.where.return_value.limit.return_value.stream.return_value = [mock_p1]
+            else:
+                m.where.return_value.stream.side_effect = Exception("Firestore Query Failed")
+            return m
+        mock_coll.side_effect = side_effect
+        
+        headers = {"Authorization": f"Bearer {sign_test_token()}"}
+        response = client.get("/discovery/feed/p1", headers=headers)
+        
+        # Should still succeed (returns empty list or unfiltered candidates depending on logic)
+        # In main.py, it returns an empty set for already_swiped on failure and continues.
+        assert response.status_code == 200
+
+@pytest.mark.asyncio
+async def test_record_swipe_match_creation_failure(mock_auth_service):
+    payload = {"swiper_profile_id": "p1", "swiped_profile_id": "p2", "direction": "right"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    with patch("main.db.collection") as mock_coll:
+        mock_p1 = MagicMock(); mock_p1.exists = True; mock_p1.to_dict.return_value = {"user_id": "u1"}
+        reciprocal_swipe = MagicMock(); reciprocal_swipe.to_dict.return_value = {"direction": "right"}
+        
+        def side_effect(name):
+            m = MagicMock()
+            if name == "profiles_profiles_cache":
+                m.document.return_value.get.return_value = mock_p1
+            elif name == SWIPES_COLLECTION:
+                m.where.return_value.where.return_value.where.return_value.limit.return_value.stream.return_value = [reciprocal_swipe]
+            elif name == "matches":
+                # Mock match creation FAILURE
+                m.document.return_value.set.side_effect = Exception("Match Creation Failed")
+            return m
+        mock_coll.side_effect = side_effect
+        
+        response = client.post("/discovery/swipe/", json=payload, headers=headers)
+        # In current main.py, it doesn't try-except the match creation, so it should 500
+        assert response.status_code == 500

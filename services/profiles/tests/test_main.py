@@ -265,4 +265,72 @@ def test_upload_image_invalid_file(mock_db, mock_storage, mock_profile_data):
     # But let's assume it should handle it or we are testing the endpoint exists.
     assert response.status_code in [200, 400] 
 
+def test_update_profile_success(mock_firestore, mock_profile_data):
+    mock_doc = MagicMock()
+    mock_doc.id = "test-id"
+    mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123"}
+    
+    mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
+    
+    payload = {"display_name": "Gimli Updated"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    with patch("main.publisher"):
+        response = client.put("/profiles/test-id", json=payload, headers=headers)
+    
+    assert response.status_code == 200
+    mock_firestore.collection.return_value.document.return_value.update.assert_called()
+
+def test_update_profile_unauthorized(mock_firestore, mock_profile_data):
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "other-user"}
+    
+    mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
+    
+    payload = {"display_name": "Hacked"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    response = client.put("/profiles/test-id", json=payload, headers=headers)
+    assert response.status_code == 403
+
+def test_delete_profile_success(mock_firestore, mock_profile_data):
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123"}
+    
+    mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
+    
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    with patch("main.publisher"):
+        response = client.delete("/profiles/test-id", headers=headers)
+    
+    assert response.status_code == 204
+    mock_firestore.collection.return_value.document.return_value.delete.assert_called()
+
+@patch("google.cloud.storage.Client")
+def test_delete_all_profiles_admin_success(mock_storage, mock_firestore):
+    # Mock admin user
+    headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
+    
+    # Mock Firestore batch deletion
+    mock_doc = MagicMock(); mock_doc.id = "p1"; mock_doc.reference = MagicMock()
+    # First call returns one doc, second call returns empty list to break the loop
+    mock_firestore.collection.return_value.limit.return_value.stream.side_effect = [[mock_doc], []]
+    
+    # Mock GCS
+    mock_bucket = mock_storage.return_value.bucket.return_value
+    mock_blob = MagicMock()
+    mock_bucket.list_blobs.return_value = [mock_blob]
+    
+    with patch("main.publisher"), patch("main.GCS_BUCKET", "test-bucket"):
+        response = client.delete("/profiles/", headers=headers)
+    
+    assert response.status_code == 204
+    mock_storage.return_value.bucket.return_value.delete_blobs.assert_called()
+    mock_firestore.batch().delete.assert_called()
+    mock_firestore.batch().commit.assert_called()
+
 

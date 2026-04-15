@@ -305,3 +305,74 @@ def test_auth_invalid_signature():
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/users/me", headers=headers)
     assert response.status_code == 401
+
+def test_update_me_success(mock_firestore, mock_auth_service):
+    # Mock user exists
+    mock_ref = MagicMock()
+    mock_ref.get().exists = True
+    mock_ref.get().to_dict.return_value = {
+        "email": "test@e.com",
+        "user_type": "user",
+        "is_premium": True,
+        "is_deleted": False,
+        "created_at": datetime.datetime.now(tz=datetime.timezone.utc)
+    }
+    
+    mock_firestore.collection().document.return_value = mock_ref
+    
+    payload = {"is_premium": True}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    response = client.put("/users/me", json=payload, headers=headers)
+    assert response.status_code == 200
+    mock_ref.update.assert_called()
+
+def test_restore_user_success(mock_firestore, mock_auth_service):
+    # Mock admin user
+    mock_admin_doc = MagicMock()
+    mock_admin_doc.exists = True
+    mock_admin_doc.to_dict.return_value = {"user_type": "admin"}
+    
+    # Mock target user exists
+    mock_target_ref = MagicMock()
+    mock_target_ref.get().exists = True
+    mock_target_ref.get().to_dict.return_value = {
+        "email": "u1@e.com",
+        "user_type": "user",
+        "is_premium": False,
+        "is_deleted": False,
+        "created_at": datetime.datetime.now(tz=datetime.timezone.utc)
+    }
+    
+    def side_effect(uid):
+        if uid == "admin-uid": return mock_admin_doc
+        return mock_target_ref
+        
+    mock_firestore.collection().document.side_effect = side_effect
+    
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-uid', role='admin')}"}
+    response = client.patch("/users/user1/restore", headers=headers)
+    
+    assert response.status_code == 200
+    mock_target_ref.update.assert_called_with({"is_deleted": False})
+
+@pytest.mark.asyncio
+async def test_purge_all_users_auth_failure_resilience(mock_firestore):
+    # Mock caller IS root_admin
+    mock_root_doc = MagicMock(); mock_root_doc.exists = True; mock_root_doc.to_dict.return_value = {"user_type": "root_admin"}
+    mock_firestore.collection().document.return_value = mock_root_doc
+    
+    # Mock some users
+    mock_doc = MagicMock(); mock_doc.id = "u1"; mock_doc.reference = MagicMock()
+    mock_firestore.collection().stream.return_value = [mock_doc]
+    
+    # Mock Auth service failure
+    with respx.mock:
+        respx.delete(f"{os.getenv('AUTH_SERVICE_URL', 'http://localhost:8001')}/auth/users/").mock(return_value=Response(500))
+        
+        headers = {"Authorization": f"Bearer {sign_test_token(role='root_admin')}"}
+        response = client.delete("/users/", headers=headers)
+        
+        # Should still succeed (returns 204) as Firestore purge continues
+        assert response.status_code == 204
+        mock_firestore.batch().delete.assert_called()

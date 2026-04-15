@@ -98,3 +98,52 @@ async def test_list_conversations_query_building():
         assert response.status_code == 200
         # Verify that the where clause was called with the correct operator
         mock_coll.return_value.where.assert_called_once_with("participant_profile_ids", "array_contains", "p1")
+
+@pytest.mark.asyncio
+@patch("main.db")
+async def test_get_messages_success(mock_db, mock_auth_service):
+    # Mock messages
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    mock_msg_1 = MagicMock(); mock_msg_1.id = "msg1"; mock_msg_1.to_dict.return_value = {"match_id": "m1", "sender_profile_id": "p1", "content": "Hi", "sent_at": now}
+    
+    # Mock firestore stream
+    mock_db.collection.return_value.where.return_value.stream.return_value = [mock_msg_1]
+    
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    response = client.get("/messages/m1", headers=headers)
+    
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["content"] == "Hi"
+
+@pytest.mark.asyncio
+@patch("main.db")
+async def test_delete_all_messages_admin_success(mock_db):
+    headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
+    
+    # Mock batch deletion
+    mock_doc = MagicMock(); mock_doc.reference = MagicMock()
+    mock_db.collection.return_value.limit.return_value.stream.side_effect = [[mock_doc], []]
+    
+    response = client.delete("/messages/", headers=headers)
+    assert response.status_code == 204
+    mock_db.batch().delete.assert_called()
+    mock_db.batch().commit.assert_called()
+
+@pytest.mark.asyncio
+@patch("main.db")
+async def test_send_message_discovery_failure_resilience(mock_db, mock_auth_service):
+    # Mock Discovery service failure (500)
+    respx_mock = mock_auth_service
+    respx_mock.get(f"{os.getenv('DISCOVERY_SERVICE_URL', 'http://discovery:8003')}/discovery/matches/m1").mock(return_value=Response(500))
+    
+    payload = {"match_id": "m1", "sender_profile_id": "p1", "content": "Still sending!"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    # Should still succeed indexing (with empty participants)
+    response = client.post("/messages/", json=payload, headers=headers)
+    assert response.status_code == 201
+    # Verify participants was empty in the stored data
+    mock_db.collection.return_value.document.return_value.set.assert_called()
+    args, _ = mock_db.collection.return_value.document.return_value.set.call_args
+    assert args[0]["participant_profile_ids"] == []
