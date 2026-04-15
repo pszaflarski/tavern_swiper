@@ -17,14 +17,32 @@ steps:
       - |
         echo "🔍 Fetching backend URLs for environment: $_ENV_SUFFIX..."
         get_url() {
-          gcloud run services describe "$1$_ENV_SUFFIX" --platform managed --region us-central1 --format 'value(status.url)'
+          local service_name="$1"
+          local suffix="$_ENV_SUFFIX"
+          local url=""
+          
+          # Try with suffix first
+          url=$(gcloud run services describe "${service_name}${suffix}" --platform managed --region us-central1 --format 'value(status.url)' 2>/dev/null || echo "")
+          
+          # If not found and suffix is not empty, try without suffix (common for 'dev' environment)
+          if [[ -z "$url" && -n "$suffix" ]]; then
+            url=$(gcloud run services describe "${service_name}" --platform managed --region us-central1 --format 'value(status.url)' 2>/dev/null || echo "")
+          fi
+          
+          if [[ -z "$url" ]]; then
+            echo "❌ ERROR: Could not find URL for service: ${service_name} (tried with suffix '${suffix}' and without)" >&2
+            return 1
+          fi
+          echo "$url"
         }
-        echo "export EXPO_PUBLIC_AUTH_URL=$(get_url auth)" > /workspace/build.env
-        echo "export EXPO_PUBLIC_USERS_URL=$(get_url users)" >> /workspace/build.env
-        echo "export EXPO_PUBLIC_PROFILES_URL=$(get_url profiles)" >> /workspace/build.env
-        echo "export EXPO_PUBLIC_DISCOVERY_URL=$(get_url discovery)" >> /workspace/build.env
-        echo "export EXPO_PUBLIC_SWIPES_URL=$(get_url discovery)" >> /workspace/build.env
-        echo "export EXPO_PUBLIC_MESSAGES_URL=$(get_url messages)" >> /workspace/build.env
+        {
+          echo "export EXPO_PUBLIC_AUTH_URL=$(get_url auth)"
+          echo "export EXPO_PUBLIC_USERS_URL=$(get_url users)"
+          echo "export EXPO_PUBLIC_PROFILES_URL=$(get_url profiles)"
+          echo "export EXPO_PUBLIC_DISCOVERY_URL=$(get_url discovery)"
+          echo "export EXPO_PUBLIC_SWIPES_URL=$(get_url discovery)"
+          echo "export EXPO_PUBLIC_MESSAGES_URL=$(get_url messages)"
+        } > /workspace/build.env || exit 1
         
         echo "📊 Fetched URLs:"
         cat /workspace/build.env
