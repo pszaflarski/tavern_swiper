@@ -191,10 +191,7 @@ export const messagesApi = createClient(BASE_URLS.messages, true);
 export const usersApi = createClient(BASE_URLS.users, true);
 
 /**
- * Startup Resilience Check:
- * Verify all service URLs were injected at build time (not still on localhost fallbacks).
- * Uses the resolved BASE_URLS object since dynamic process.env[key] access
- * doesn't work in Expo web bundles (only static process.env.EXPO_PUBLIC_X is replaced).
+ * Internal state check for development and reset for tests.
  */
 function validateEnvironment() {
   if (process.env.NODE_ENV === 'test') return;
@@ -207,6 +204,24 @@ function validateEnvironment() {
       '⚠️ Some service URLs are using localhost fallbacks (env vars were not set at build time):',
       onLocalhost.map(([name]) => name).join(', ')
     );
+  }
+}
+
+/**
+ * ONLY FOR TESTS: Resets all internal module state to ensure test isolation.
+ */
+export async function __resetInternalState() {
+  if (process.env.NODE_ENV !== 'test') return;
+  
+  cachedTavernToken = null;
+  tokenExpiryTime = 0;
+  pendingTokenExchange = null;
+  authInitialized = false;
+  authInitializedPromise = null;
+  try {
+    await AsyncStorage.clear();
+  } catch (e) {
+    // Ignore clear errors in tests
   }
 }
 
