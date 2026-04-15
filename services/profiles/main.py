@@ -384,12 +384,13 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
         raise HTTPException(status_code=403, detail="Not authorized to update this profile's image")
 
     # 1. Magic Byte Validation (JPEG: FF D8 FF)
-    # This ensures that even if the client bypasses the processing engine, 
-    # the server rejects non-standardized/malicious binary signatures.
+    # Regular users are strictly enforced. Admins can bypass to allow auto-correction
+    # of other formats (e.g. PNG) during the normalization ritual.
     file_content = await file.read()
     await file.seek(0)
     
-    if not file_content.startswith(b"\xff\xd8\xff"):
+    is_jpeg = file_content.startswith(b"\xff\xd8\xff")
+    if not is_jpeg and role not in ["admin", "root_admin"]:
         logger.warning(f"Rejected non-JPEG upload for profile {profile_id}.")
         raise HTTPException(
             status_code=400, 

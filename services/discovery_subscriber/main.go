@@ -111,13 +111,18 @@ func processEvent(ctx context.Context, client *firestore.Client, event *pb.Profi
 		p := event.GetUpserted()
 		log.Printf("✨ Processing UPSERTED for ProfileID: [%s], Name: %s", p.ProfileId, p.DisplayName)
 
+		imageUrls := p.ImageUrls
+		if imageUrls == nil {
+			imageUrls = []string{}
+		}
+
 		data := map[string]interface{}{
 			"profile_id":   p.ProfileId,
 			"user_id":      p.UserId,
 			"display_name": p.DisplayName,
 			"tagline":      p.Tagline,
 			"bio":          p.Bio,
-			"image_urls":   p.ImageUrls,
+			"image_urls":   imageUrls,
 			"gender":       p.Gender,
 			"is_active":    p.IsActive,
 			"updated_at":   firestore.ServerTimestamp,

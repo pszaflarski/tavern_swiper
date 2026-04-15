@@ -334,3 +334,20 @@ async def test_record_swipe_match_creation_failure(mock_auth_service):
         response = client.post("/discovery/swipe/", json=payload, headers=headers)
         # In current main.py, it doesn't try-except the match creation, so it should 500
         assert response.status_code == 500
+
+def test_discovery_profile_resilience_to_nulls():
+    """Verify that DiscoveryProfile coerces None/null fields to empty lists."""
+    from models import DiscoveryProfile
+    
+    data = {
+        "profile_id": "p_null",
+        "display_name": "Ghost Hero",
+        "image_urls": None,   # This caused the 500 crash previously
+        "talents": None,
+        "is_active": True
+    }
+    
+    profile = DiscoveryProfile(**data)
+    assert profile.image_urls == []
+    assert profile.talents == []
+    assert profile.profile_id == "p_null"

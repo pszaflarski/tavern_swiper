@@ -365,6 +365,34 @@ def test_upload_image_admin_upscale_too_small(mock_db, mock_storage, mock_profil
     processed_img = Image.open(io.BytesIO(processed_bytes))
     assert processed_img.size == (1080, 1350)
 
+@patch("google.cloud.storage.Client")
+@patch("main.db")
+def test_upload_image_admin_bypasses_magic_bytes(mock_db, mock_storage, mock_profile_data):
+    # Root Admin role
+    headers = {"Authorization": f"Bearer {sign_test_token(role='root_admin')}"}
+    mock_doc = MagicMock(); mock_doc.id = "p_admin"; mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "root-uid", "image_urls": []}
+    mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
+    mock_blob = MagicMock()
+    mock_blob.public_url = "http://gcs.com/bypass.jpg"
+    mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
+
+    # PNG Format
+    from PIL import Image
+    import io
+    img = Image.new('RGB', (100, 100), color='red')
+    buf = io.BytesIO(); img.save(buf, format="PNG"); file_content = buf.getvalue()
+
+    response = client.post("/profiles/p_admin/image", files={"file": ("admin.png", file_content, "image/png")}, headers=headers)
+    
+    # Assert Success (bypassed magic byte check)
+    assert response.status_code == 200
+    
+    # Verify it was normalized to JPEG in GCS
+    mock_blob.upload_from_string.assert_called()
+    call_args = mock_blob.upload_from_string.call_args
+    assert call_args[1]['content_type'] == "image/jpeg"
+
 def test_update_profile_success(mock_firestore, mock_profile_data):
     mock_doc = MagicMock()
     mock_doc.id = "test-id"

@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, field_validator
+from typing import Optional, List, Any
 
 
 # Minimal profile representation used only within this service.
@@ -12,10 +12,18 @@ class DiscoveryProfile(BaseModel):
     gender: Optional[str] = None
     image_urls: List[str] = []
     is_active: bool = False
+    
     # Fantasy-themed fields for future use
     character_class: Optional[str] = None
     realm: Optional[str] = None
     talents: List[str] = []
+
+    @field_validator('image_urls', 'talents', mode='before')
+    @classmethod
+    def coerce_none_to_list(cls, v: Any) -> Any:
+        if v is None:
+            return []
+        return v
 
 
 class FeedResponse(BaseModel):
