@@ -349,6 +349,18 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     if doc.to_dict().get("user_id") != uid and role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to update this profile's image")
 
+    # 1. Magic Byte Validation (JPEG: FF D8 FF)
+    # This ensures that even if the client bypasses the processing engine, 
+    # the server rejects non-standardized/malicious binary signatures.
+    header = await file.read(3)
+    await file.seek(0)
+    if header != b"\xff\xd8\xff":
+        logger.warning(f"Rejected non-JPEG upload for profile {profile_id}. Magic bytes: {header.hex()}")
+        raise HTTPException(
+            status_code=400, 
+            detail="Forbidden Essence: This vision does not match the required sacred JPEG signature (FF D8 FF)."
+        )
+
     client = storage.Client()
     bucket = client.bucket(GCS_BUCKET)
     blob_name = f"profiles/{profile_id}/{index}_{file.filename}"

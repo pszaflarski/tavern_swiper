@@ -66,13 +66,16 @@ describe('API Token Management', () => {
   });
 
   it('getTavernToken should handle Firebase token failure gracefully', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockGetIdToken.mockRejectedValue(new Error('Firebase Error'));
     
     const token = await getTavernToken();
     expect(token).toBeNull();
+    consoleSpy.mockRestore();
   });
 
   it('getTavernToken should handle Auth service 401 response', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockGetIdToken.mockResolvedValue('firebase-token');
     (axios.post as jest.Mock).mockResolvedValue({
       status: 401,
@@ -81,6 +84,7 @@ describe('API Token Management', () => {
 
     const token = await getTavernToken();
     expect(token).toBeNull();
+    consoleSpy.mockRestore();
   });
 
   it('axios instances should be initialized with correct base URLs', async () => {

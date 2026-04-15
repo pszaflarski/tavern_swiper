@@ -20,6 +20,9 @@ import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useCreateProfile, useUpdateProfile, useProfile, useUploadProfileImage } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { Ionicons } from '@expo/vector-icons';
+import { ImageCropperModal } from '../../components/ImageCropperModal';
+import { prepareImageUpload } from '../../lib/imageProcessing';
+import * as FileSystem from 'expo-file-system';
 
 const GRID_SPACING = Spacing[3];
 const MAX_ITEM_WIDTH = 150; // Cap width to keep thumbnails small
@@ -43,6 +46,11 @@ export default function CreateAndEditProfileScreen() {
   const [bio, setBio] = useState('');
   const [gender, setGender] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  
+  // Image Processing State
+  const [isCropperVisible, setIsCropperVisible] = useState(false);
+  const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+  const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
 
   // Initialise form if editing
   useEffect(() => {
@@ -55,8 +63,8 @@ export default function CreateAndEditProfileScreen() {
     }
   }, [existingProfile]);
 
-  const pickImage = async () => {
-    if (imageUrls.length >= 6) {
+  const pickImage = async (index: number) => {
+    if (imageUrls.length >= 6 && !imageUrls[index]) {
       Alert.alert('Full Arsenal', 'A hero can only carry six relics of their past.');
       return;
     }
@@ -70,14 +78,26 @@ export default function CreateAndEditProfileScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [9, 16],
-      quality: 0.8,
+      allowsEditing: Platform.OS !== 'web', // Native uses OS cropper, Web uses our modal
+      aspect: [4, 5], // Canonical 4:5 ratio
+      quality: 1, // Keep original quality for the cropper; we compress in the pipeline
     });
 
     if (!result.canceled) {
-      setImageUrls([...imageUrls, result.assets[0].uri]);
+      setPendingImageUri(result.assets[0].uri);
+      setActiveSlotIndex(index);
+      setIsCropperVisible(true);
     }
+  };
+
+  const handleCropComplete = (processedUri: string) => {
+    const newImages = [...imageUrls];
+    if (activeSlotIndex !== null) {
+      newImages[activeSlotIndex] = processedUri;
+    } else {
+      newImages.push(processedUri);
+    }
+    setImageUrls(newImages);
   };
 
   const removeImage = (index: number) => {
@@ -89,22 +109,18 @@ export default function CreateAndEditProfileScreen() {
   const uploadImage = useUploadProfileImage();
   const [isUploading, setIsUploading] = useState(false);
 
-  // Helper to convert local URIs to Blobs for upload
-  const uriToBlob = async (uri: string): Promise<Blob> => {
-    // 1. If it's already a web Blob URI, fetch it
-    if (uri.startsWith('blob:')) {
-      const resp = await fetch(uri);
-      return await resp.blob();
-    }
-    
-    // 2. If it's a native file URI (or anything else), we'll try to fetch it too
-    // React Native's fetch handles file:// URIs in many cases if they are in standard paths
-    try {
-      const resp = await fetch(uri);
-      return await resp.blob();
-    } catch (e) {
-      console.warn('Failed to fetch blob directly, might need native FS read', e);
-      throw e;
+  // Helper to convert local URIs to Blobs/Files for upload
+  // Now uses the unified imageProcessing service
+  const cleanupCache = async (uris: string[]) => {
+    if (Platform.OS === 'web') return;
+    for (const uri of uris) {
+      if (uri.startsWith('file://')) {
+        try {
+          await FileSystem.deleteAsync(uri, { idempotent: true });
+        } catch (e) {
+          console.warn('Failed to purge temporary vision:', uri);
+        }
+      }
     }
   };
 
@@ -148,18 +164,20 @@ export default function CreateAndEditProfileScreen() {
       // 2. Handle Image Uploads if any
       if (newImagesToUpload.length > 0 && profileId) {
         setIsUploading(true);
+        const uploadedUris: string[] = [];
+        
         for (const { uri, index } of newImagesToUpload) {
           try {
-            const blob = await uriToBlob(uri);
-            // Append a filename so the backend doesn't crash on missing metadata
-            const filename = `ritual_${index}_${Date.now()}.jpg`;
-            const file = new File([blob], filename, { type: 'image/jpeg' });
-            
-            await uploadImage.mutateAsync({ profileId, index, file });
+            const file = await prepareImageUpload(uri, index);
+            await uploadImage.mutateAsync({ profileId, index, file: file as any });
+            uploadedUris.push(uri);
           } catch (uploadErr) {
             console.error(`Failed to upload vision at index ${index}`, uploadErr);
           }
         }
+        
+        // Final Purge: Clean up transient mobile assets
+        await cleanupCache(uploadedUris);
         setIsUploading(false);
       }
 
@@ -253,7 +271,7 @@ export default function CreateAndEditProfileScreen() {
                   ) : (
                     <TouchableOpacity
                       style={styles.emptySlot}
-                      onPress={pickImage}
+                      onPress={() => pickImage(index)}
                       testID={`profile-image-add-button-${index}`}
                       accessibilityLabel={`Add image to slot ${index + 1}`}
                       accessibilityRole="button"
@@ -363,11 +381,23 @@ export default function CreateAndEditProfileScreen() {
             style={{ display: 'none' }}
             onChange={(e: any) => {
               const files = Array.from(e.target.files || []);
-              const uris = files.map(f => URL.createObjectURL(f as any));
-              setImageUrls(prev => [...prev, ...uris].slice(0, 6));
+              if (files.length > 0) {
+                const uri = URL.createObjectURL(files[0] as any);
+                setPendingImageUri(uri);
+                setActiveSlotIndex(imageUrls.length);
+                setIsCropperVisible(true);
+              }
             }}
           />
         )}
+        
+        <ImageCropperModal
+          isVisible={isCropperVisible}
+          imageUri={pendingImageUri}
+          onClose={() => setIsCropperVisible(false)}
+          onCropComplete={handleCropComplete}
+        />
+
         <View style={styles.footerPlaceholder} />
       </ScrollView>
     </KeyboardAvoidingView>

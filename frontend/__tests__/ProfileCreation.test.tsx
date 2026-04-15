@@ -32,6 +32,26 @@ jest.mock('expo-image-picker', () => ({
   MediaTypeOptions: { Images: 'images' },
 }));
 
+jest.mock('expo-file-system', () => ({
+  deleteAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../components/ImageCropperModal', () => ({
+  ImageCropperModal: ({ isVisible, onCropComplete, imageUri }: any) => {
+    // Automatically trigger completion for tests when modal appears
+    require('react').useEffect(() => {
+      if (isVisible && imageUri) {
+        onCropComplete('processed-uri-123');
+      }
+    }, [isVisible, imageUri]);
+    return null;
+  },
+}));
+
+jest.mock('../lib/imageProcessing', () => ({
+  prepareImageUpload: jest.fn().mockResolvedValue(new Blob(['test'], { type: 'image/jpeg' })),
+}));
+
 // Mock global fetch and File for image uploading logic
 (global as any).fetch = jest.fn();
 (global as any).File = class {
@@ -63,7 +83,7 @@ describe('Profile Creation & Editing', () => {
     
     // Default fetch mock returning a simple blob-like object
     (global.fetch as jest.Mock).mockResolvedValue({
-      blob: jest.fn().mockResolvedValue(new Blob(['test'], { type: 'image/jpeg' })),
+      blob: jest.fn().mockResolvedValue({}), // Blob content not used much in these mocks
     });
   });
 

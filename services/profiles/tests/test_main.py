@@ -136,11 +136,12 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_servic
         mock_blob.public_url = "http://gcs.com/img.png"
         mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
         
-        file_content = b"fake-image-data"
+        # Valid JPEG Header: FF D8 FF
+        file_content = b"\xff\xd8\xff-fake-jpeg-content"
         headers = {"Authorization": f"Bearer {sign_test_token()}"}
         response = client.post(
             "/profiles/test-id/image",
-            files={"file": ("test.png", file_content, "image/png")},
+            files={"file": ("test.jpg", file_content, "image/jpeg")},
             headers=headers
         )
         
@@ -246,7 +247,7 @@ async def test_auth_invalid_signature():
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image_invalid_file(mock_db, mock_storage, mock_profile_data):
+def test_upload_image_magic_byte_failure(mock_db, mock_storage, mock_profile_data):
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     # Mock Profile existence
     mock_doc = MagicMock()
@@ -255,15 +256,14 @@ def test_upload_image_invalid_file(mock_db, mock_storage, mock_profile_data):
     mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123"}
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
     
-    # Send non-image file type (FastAPI validation depends on what's in main.py, let's see)
+    # Send non-JPEG file content
     response = client.post(
         "/profiles/test-id/image",
-        files={"file": ("test.txt", b"not-an-image", "text/plain")},
+        files={"file": ("test.jpg", b"NOT-A-JPEG", "image/jpeg")},
         headers=headers
     )
-    # If main.py doesn't check mime type, this might pass 200. 
-    # But let's assume it should handle it or we are testing the endpoint exists.
-    assert response.status_code in [200, 400] 
+    assert response.status_code == 400
+    assert "Forbidden Essence" in response.json()["detail"]
 
 def test_update_profile_success(mock_firestore, mock_profile_data):
     mock_doc = MagicMock()

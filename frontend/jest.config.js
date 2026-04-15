@@ -9,5 +9,6 @@ module.exports = {
         '^firebase/app$': '<rootDir>/node_modules/firebase/app/dist/index.cjs.js',
         '^firebase/auth$': '<rootDir>/node_modules/firebase/auth/dist/index.cjs.js',
         '^@firebase/util$': '<rootDir>/node_modules/@firebase/util/dist/index.cjs.js',
+        '\\.(css|less|sass|scss)$': '<rootDir>/__mocks__/styleMock.js',
     }
 };
