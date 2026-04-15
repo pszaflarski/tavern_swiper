@@ -9,6 +9,42 @@ export interface CropData {
 }
 
 /**
+ * Map visual transformation (pan/zoom) back to the natural image pixel space.
+ * 
+ * @param imageDim Natural dimensions of the source image
+ * @param apertureDim Dimensions of the 4:5 viewing portal (UI space)
+ * @param scale Total zoom applied by user (where 1.0 is the center-fit-cover scale)
+ * @param translateX Horizontal offset in UI space
+ * @param translateY Vertical offset in UI space
+ */
+export function calculateTransformCrop(
+  imageDim: { width: number; height: number },
+  apertureDim: { width: number; height: number },
+  scale: number,
+  translateX: number,
+  translateY: number
+): CropData {
+  // 1. Calculate the 'natural' size of the viewing portal in image pixels
+  const awNatural = apertureDim.width / scale;
+  const ahNatural = apertureDim.height / scale;
+
+  // 2. Calculate offsets in natural pixel space
+  const offsetX = -translateX / scale;
+  const offsetY = -translateY / scale;
+
+  // 3. Project the center-relative offsets back to the image origin (top-left)
+  const x = (imageDim.width - awNatural) / 2 + offsetX;
+  const y = (imageDim.height - ahNatural) / 2 + offsetY;
+
+  return {
+    x: Math.max(0, Math.round(x)),
+    y: Math.max(0, Math.round(y)),
+    width: Math.round(awNatural),
+    height: Math.round(ahNatural),
+  };
+}
+
+/**
  * Normalizes user-selected imagery to the project's canonical profile specification.
  * Target: 1080x1350px, JPEG, 75% Quality.
  * 

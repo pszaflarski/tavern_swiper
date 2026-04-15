@@ -1,4 +1,4 @@
-import { processProfileAsset, prepareImageUpload } from '../lib/imageProcessing';
+import { processProfileAsset, prepareImageUpload, calculateTransformCrop } from '../lib/imageProcessing';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
@@ -20,6 +20,64 @@ global.fetch = jest.fn(() =>
 describe('ImageProcessing Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('calculateTransformCrop Math', () => {
+    const imageDim = { width: 2000, height: 1000 }; // 2:1 landscape
+    const apertureDim = { width: 400, height: 500 }; // 4:5 fixed portal
+
+    it('calculates correct crop for centered initial fit (cover)', () => {
+      // For a 2000x1000 image and 400x500 aperture:
+      // minScale to cover 500 height is 500/1000 = 0.5.
+      const scale = 0.5;
+      const tx = 0;
+      const ty = 0;
+
+      const result = calculateTransformCrop(imageDim, apertureDim, scale, tx, ty);
+
+      // awNatural = 400 / 0.5 = 800
+      // ahNatural = 500 / 0.5 = 1000
+      // x = (2000 - 800) / 2 = 600
+      // y = (1000 - 1000) / 2 = 0
+      expect(result).toEqual({
+        x: 600,
+        y: 0,
+        width: 800,
+        height: 1000,
+      });
+    });
+
+    it('calculates correct crop after panning left', () => {
+      const scale = 0.5;
+      const tx = -50; // Panned 50px visual units left
+      const ty = 0;
+
+      const result = calculateTransformCrop(imageDim, apertureDim, scale, tx, ty);
+
+      // offsetX = -(-50) / 0.5 = 100
+      // x = 600 + 100 = 700
+      expect(result.x).toBe(700);
+      expect(result.width).toBe(800);
+    });
+
+    it('calculates correct crop after zooming in 2x', () => {
+      const scale = 1.0; // 2x the 0.5 minScale
+      const tx = 0;
+      const ty = 0;
+
+      const result = calculateTransformCrop(imageDim, apertureDim, scale, tx, ty);
+
+      // awNatural = 400 / 1.0 = 400
+      // ahNatural = 500 / 1.0 = 500
+      // x = (2000 - 400) / 2 = 800
+      // y = (1000 - 500) / 2 = 250
+      expect(result).toEqual({
+        x: 800,
+        y: 250,
+        width: 400,
+        height: 500,
+      });
+    });
   });
 
   it('processProfileAsset should call manipulateAsync with correct parameters', async () => {

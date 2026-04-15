@@ -391,6 +391,18 @@ export default function CreateAndEditProfileScreen() {
           />
         )}
         
+        <TouchableOpacity 
+          style={{ backgroundColor: '#444', padding: 10, margin: 10, borderRadius: 5, alignItems: 'center' }}
+          onPress={() => {
+            setPendingImageUri('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1000');
+            setActiveSlotIndex(0);
+            setIsCropperVisible(true);
+          }}
+          testID="test-gesture-button"
+        >
+          <Text style={{ color: '#fff' }}>[DEBUG] Ritual Practice (Test Gestures)</Text>
+        </TouchableOpacity>
+
         <ImageCropperModal
           isVisible={isCropperVisible}
           imageUri={pendingImageUri}
