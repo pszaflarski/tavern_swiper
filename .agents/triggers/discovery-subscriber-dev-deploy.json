@@ -5,7 +5,7 @@
     "name": "tavern_swiper",
     "owner": "pszaflarski",
     "push": {
-      "branch": "main"
+      "branch": "^main$"
     }
   },
   "id": "3ca45ddf-aa4b-44eb-b972-6525f8fb5f60",
