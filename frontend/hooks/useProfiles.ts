@@ -131,13 +131,14 @@ export function useActivateProfile(userId: string | undefined) {
     // When mutate is called:
     onMutate: async (newProfileId: string) => {
       // 1. Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries({ queryKey: ['profiles', 'me', 'active'] });
+      // NOTE: Query key must include userId to match useActiveProfile's key exactly
+      await queryClient.cancelQueries({ queryKey: ['profiles', 'me', 'active', userId] });
       if (userId) {
         await queryClient.cancelQueries({ queryKey: ['profiles', 'user', userId] });
       }
 
       // 2. Snapshot the previous values
-      const previousActiveProfile = queryClient.getQueryData<Profile>(['profiles', 'me', 'active']);
+      const previousActiveProfile = queryClient.getQueryData<Profile>(['profiles', 'me', 'active', userId]);
       const previousUserProfiles = userId 
         ? queryClient.getQueryData<Profile[]>(['profiles', 'user', userId])
         : undefined;
@@ -148,7 +149,7 @@ export function useActivateProfile(userId: string | undefined) {
       if (previousUserProfiles) {
         const newActive = previousUserProfiles.find(p => p.profile_id === newProfileId);
         if (newActive) {
-          queryClient.setQueryData(['profiles', 'me', 'active'], { ...newActive, is_active: true });
+          queryClient.setQueryData(['profiles', 'me', 'active', userId], { ...newActive, is_active: true });
         }
       }
 
@@ -169,7 +170,7 @@ export function useActivateProfile(userId: string | undefined) {
     // If the mutation fails, use the context we returned above
     onError: (err, newProfileId, context) => {
       if (context?.previousActiveProfile) {
-        queryClient.setQueryData(['profiles', 'me', 'active'], context.previousActiveProfile);
+        queryClient.setQueryData(['profiles', 'me', 'active', userId], context.previousActiveProfile);
       }
       if (userId && context?.previousUserProfiles) {
         queryClient.setQueryData(['profiles', 'user', userId], context.previousUserProfiles);
@@ -177,7 +178,7 @@ export function useActivateProfile(userId: string | undefined) {
     },
     // Always refetch after error or success:
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['profiles', 'me', 'active'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'me', 'active', userId] });
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['profiles', 'user', userId] });
       }

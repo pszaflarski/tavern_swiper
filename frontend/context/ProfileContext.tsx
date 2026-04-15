@@ -14,12 +14,18 @@ interface ProfileContextType {
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { uid, isAuthenticated } = useUser();
-  const { data: activeProfile, isLoading: isLoadingActiveProfile, refetch: refetchActiveProfile } = useActiveProfile(uid, isAuthenticated);
+  const { uid, isAuthenticated, isLoading: isAuthLoading } = useUser();
   
-  // Pre-fetch all profiles for the user as soon as they are identified (even from storage).
+  // Wait for auth to be fully initialized before firing profile queries.
+  // Without this, a persisted UID triggers API calls before the Tavern JWT
+  // exchange completes, causing 401s on page load.
+  const authReady = isAuthenticated && !isAuthLoading;
+  
+  const { data: activeProfile, isLoading: isLoadingActiveProfile, refetch: refetchActiveProfile } = useActiveProfile(uid, authReady);
+  
+  // Pre-fetch all profiles for the user as soon as auth is ready.
   // This populates the React Query cache globally and instantly.
-  const { data: profiles = [], isFetching: isFetchingProfiles, refetch: refetchProfiles } = useProfiles(uid);
+  const { data: profiles = [], isFetching: isFetchingProfiles, refetch: refetchProfiles } = useProfiles(authReady ? uid : undefined);
   
   const activateProfileMutation = useActivateProfile(uid);
 
