@@ -14,6 +14,8 @@ load_dotenv()
 from models import ProfileCreate, ProfileUpdate, ProfileOut, ProfileBatchRequest
 from auth_utils import get_current_user
 from pubsub_utils import Publisher
+import io
+from PIL import Image
 
 # ---------------------------------------------------------------------------
 # Pub/Sub Initialisation
@@ -142,6 +144,38 @@ def _validate_data_for_firestore(data: any, path: str = ""):
         pass
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported data type '{type(data).__name__}' at path '{path}'. Simple types only.")
+
+
+def _normalize_image(file_content: bytes) -> bytes:
+    """
+    Performs 'Ritual Auto-Correction': Center-crops to 4:5 and resizes (stretches or shrinks)
+    to exactly 1080x1350. Returns the processed JPEG bytes.
+    """
+    img = Image.open(io.BytesIO(file_content))
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+        
+    w, h = img.size
+    target_ratio = 1080 / 1350
+    current_ratio = w / h
+    
+    if current_ratio > target_ratio:
+        # Too wide: crop horizontal sides
+        new_width = h * target_ratio
+        offset = (w - new_width) / 2
+        img = img.crop((offset, 0, w - offset, h))
+    else:
+        # Too tall: crop top/bottom
+        new_height = w / target_ratio
+        offset = (h - new_height) / 2
+        img = img.crop((0, offset, w, h - offset))
+
+    # Resize to exact standard (LANCZOS supports upscaling and downscaling)
+    img = img.resize((1080, 1350), Image.Resampling.LANCZOS)
+    
+    out_buf = io.BytesIO()
+    img.save(out_buf, format="JPEG", quality=75)
+    return out_buf.getvalue()
 
 
 @app.get("/profiles/health")
@@ -352,23 +386,46 @@ async def upload_profile_image(profile_id: str, index: int = 0, file: UploadFile
     # 1. Magic Byte Validation (JPEG: FF D8 FF)
     # This ensures that even if the client bypasses the processing engine, 
     # the server rejects non-standardized/malicious binary signatures.
-    header = await file.read(3)
+    file_content = await file.read()
     await file.seek(0)
-    if header != b"\xff\xd8\xff":
-        logger.warning(f"Rejected non-JPEG upload for profile {profile_id}. Magic bytes: {header.hex()}")
+    
+    if not file_content.startswith(b"\xff\xd8\xff"):
+        logger.warning(f"Rejected non-JPEG upload for profile {profile_id}.")
         raise HTTPException(
             status_code=400, 
             detail="Forbidden Essence: This vision does not match the required sacred JPEG signature (FF D8 FF)."
         )
+
+    # 2. Dimension & Resolution Enforcement
+    try:
+        img = Image.open(io.BytesIO(file_content))
+        width, height = img.size
+        
+        is_standard = (width == 1080 and height == 1350)
+        
+        if not is_standard:
+            if role in ["admin", "root_admin"]:
+                logger.info(f"Admin auto-correcting image dims ({width}x{height}) for profile {profile_id}")
+                file_content = _normalize_image(file_content)
+            else:
+                logger.warning(f"Rejected non-standard image size {width}x{height} for user {uid}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Imperfect Geometry: Your vision ({width}x{height}) does not match the sacred 1080x1350 standard. Admin intervention or client-side refining is required."
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Image validation crash: {e}")
+        raise HTTPException(status_code=400, detail="Corrupted Vision: The image data could not be parsed by the sacred internal logic.")
 
     client = storage.Client()
     bucket = client.bucket(GCS_BUCKET)
     blob_name = f"profiles/{profile_id}/{index}_{file.filename}"
     blob = bucket.blob(blob_name)
     
-    # Seek to the beginning and upload directly from the stream
-    await file.seek(0)
-    blob.upload_from_file(file.file, content_type=file.content_type)
+    # Upload the (possibly normalized) content
+    blob.upload_from_string(file_content, content_type="image/jpeg")
     blob.make_public()
 
     profile_dict = doc.to_dict()

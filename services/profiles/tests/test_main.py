@@ -136,8 +136,14 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_servic
         mock_blob.public_url = "http://gcs.com/img.png"
         mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
         
-        # Valid JPEG Header: FF D8 FF
-        file_content = b"\xff\xd8\xff-fake-jpeg-content"
+        # Create a valid 1080x1350 JPEG
+        from PIL import Image
+        import io
+        img = Image.new('RGB', (1080, 1350), color='green')
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        file_content = buf.getvalue()
+
         headers = {"Authorization": f"Bearer {sign_test_token()}"}
         response = client.post(
             "/profiles/test-id/image",
@@ -264,6 +270,100 @@ def test_upload_image_magic_byte_failure(mock_db, mock_storage, mock_profile_dat
     )
     assert response.status_code == 400
     assert "Forbidden Essence" in response.json()["detail"]
+
+@patch("google.cloud.storage.Client")
+@patch("main.db")
+def test_upload_image_dimension_failure_regular_user(mock_db, mock_storage, mock_profile_data):
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    mock_doc = MagicMock()
+    mock_doc.id = "p1"; mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123"}
+    mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
+
+    # Create a small valid JPEG (but wrong dimensions: 100x100)
+    from PIL import Image
+    import io
+    img = Image.new('RGB', (100, 100), color='red')
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    file_content = buf.getvalue()
+
+    response = client.post(
+        "/profiles/p1/image",
+        files={"file": ("test.jpg", file_content, "image/jpeg")},
+        headers=headers
+    )
+    assert response.status_code == 400
+    assert "Imperfect Geometry" in response.json()["detail"]
+
+@patch("google.cloud.storage.Client")
+@patch("main.db")
+def test_upload_image_admin_autocorrect_too_wide(mock_db, mock_storage, mock_profile_data):
+    headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
+    mock_doc = MagicMock(); mock_doc.id = "p1"; mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_urls": []}
+    mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
+    mock_blob = MagicMock()
+    mock_blob.public_url = "http://gcs.com/wide.jpg"
+    mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
+
+    # 4000x1000: Ultra wide, requires heavy horizontal center-cropping
+    from PIL import Image
+    import io
+    img = Image.new('RGB', (4000, 1000), color='cyan')
+    buf = io.BytesIO(); img.save(buf, format="JPEG"); file_content = buf.getvalue()
+
+    response = client.post("/profiles/p1/image", files={"file": ("wide.jpg", file_content, "image/jpeg")}, headers=headers)
+    assert response.status_code == 200
+    processed_bytes = mock_blob.upload_from_string.call_args[0][0]
+    processed_img = Image.open(io.BytesIO(processed_bytes))
+    assert processed_img.size == (1080, 1350)
+
+@patch("google.cloud.storage.Client")
+@patch("main.db")
+def test_upload_image_admin_autocorrect_too_tall(mock_db, mock_storage, mock_profile_data):
+    headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
+    mock_doc = MagicMock(); mock_doc.id = "p1"; mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_urls": []}
+    mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
+    mock_blob = MagicMock()
+    mock_blob.public_url = "http://gcs.com/tall.jpg"
+    mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
+
+    # 1000x4000: Ultra tall, requires vertical center-cropping
+    from PIL import Image
+    import io
+    img = Image.new('RGB', (1000, 4000), color='magenta')
+    buf = io.BytesIO(); img.save(buf, format="JPEG"); file_content = buf.getvalue()
+
+    response = client.post("/profiles/p1/image", files={"file": ("tall.jpg", file_content, "image/jpeg")}, headers=headers)
+    assert response.status_code == 200
+    processed_bytes = mock_blob.upload_from_string.call_args[0][0]
+    processed_img = Image.open(io.BytesIO(processed_bytes))
+    assert processed_img.size == (1080, 1350)
+
+@patch("google.cloud.storage.Client")
+@patch("main.db")
+def test_upload_image_admin_upscale_too_small(mock_db, mock_storage, mock_profile_data):
+    headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
+    mock_doc = MagicMock(); mock_doc.id = "p1"; mock_doc.exists = True
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_urls": []}
+    mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
+    mock_blob = MagicMock()
+    mock_blob.public_url = "http://gcs.com/small.jpg"
+    mock_storage.return_value.bucket.return_value.blob.return_value = mock_blob
+
+    # 100x125: Correct ratio (4:5) but tiny (requires 10x upscaling)
+    from PIL import Image
+    import io
+    img = Image.new('RGB', (100, 125), color='yellow')
+    buf = io.BytesIO(); img.save(buf, format="JPEG"); file_content = buf.getvalue()
+
+    response = client.post("/profiles/p1/image", files={"file": ("small.jpg", file_content, "image/jpeg")}, headers=headers)
+    assert response.status_code == 200
+    processed_bytes = mock_blob.upload_from_string.call_args[0][0]
+    processed_img = Image.open(io.BytesIO(processed_bytes))
+    assert processed_img.size == (1080, 1350)
 
 def test_update_profile_success(mock_firestore, mock_profile_data):
     mock_doc = MagicMock()

@@ -1,0 +1,11 @@
+ERROR: file or directory not found: services/profiles/tests/test_main.py
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.1.1, pluggy-1.6.0
+rootdir: /home/peter/Documents/tavern_swiper
+configfile: pytest.ini
+plugins: asyncio-0.23.6, respx-0.22.0, mock-3.15.1, anyio-4.13.0
+asyncio: mode=Mode.AUTO
+collected 0 items
+
+============================ no tests ran in 0.00s =============================

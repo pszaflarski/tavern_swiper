@@ -10,3 +10,4 @@ python-dotenv
 google-cloud-pubsub
 protobuf
 grpcio-tools
+Pillow==10.2.0
