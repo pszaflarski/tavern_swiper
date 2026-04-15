@@ -1,0 +1,204 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.1.1, pluggy-1.6.0
+rootdir: /home/peter/Documents/tavern_swiper
+configfile: pytest.ini
+plugins: asyncio-0.23.6, respx-0.22.0, anyio-4.13.0
+asyncio: mode=Mode.AUTO
+collected 1 item
+
+services/discovery/tests/test_main.py F                                  [100%]
+
+=================================== FAILURES ===================================
+________________________ test_record_swipe_mutual_match ________________________
+
+mock_auth_service = <respx.router.MockRouter object at 0x71ecd3ed50d0>
+
+    @pytest.mark.asyncio
+    async def test_record_swipe_mutual_match(mock_auth_service):
+        payload = {
+            "swiper_profile_id": "p1",
+            "swiped_profile_id": "p2",
+            "direction": "right"
+        }
+        headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+        # Mock Firestore for:
+        # 1. Recording the swipe
+        # 2. Searching for reciprocal swipe (should return p2->p1 right swipe)
+        # 3. Recording the match
+        # 4. Ownership check for p1
+        reciprocal_swipe = MagicMock()
+        reciprocal_swipe.to_dict.return_value = {
+            "swiper_profile_id": "p2",
+            "swiped_profile_id": "p1",
+            "direction": "right"
+        }
+    
+        mock_p1 = MagicMock()
+        mock_p1.exists = True
+        mock_p1.to_dict.return_value = {"user_id": "u1"}
+    
+        with patch("main.db.collection") as mock_coll:
+            def collection_side_effect(name):
+                m = MagicMock()
+                if name == "profiles_profiles_cache":
+                    m.document.return_value.get.return_value = mock_p1
+                elif name == SWIPES_COLLECTION:
+                    # Chain for reciprocal check: db.collection(SWI).where(...).where(...).where(...).limit(1).stream()
+                    m.where.return_value.where.return_value.where.return_value.limit.return_value.stream.return_value = [reciprocal_swipe]
+                return m
+            mock_coll.side_effect = collection_side_effect
+    
+>           response = client.post("/discovery/swipe/", json=payload, headers=headers)
+
+services/discovery/tests/test_main.py:196: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/starlette/testclient.py:546: in post
+    return super().post(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+.venv/lib/python3.12/site-packages/starlette/testclient.py:445: in request
+    return super().request(
+.venv/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+.venv/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+.venv/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+.venv/lib/python3.12/site-packages/starlette/testclient.py:348: in handle_request
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/testclient.py:345: in handle_request
+    portal.call(self.app, scope, receive, send)
+.venv/lib/python3.12/site-packages/anyio/from_thread.py:334: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/usr/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/anyio/from_thread.py:259: in _call_func
+    retval = await retval_or_awaitable
+.venv/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.12/site-packages/starlette/middleware/cors.py:88: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.12/site-packages/fastapi/routing.py:328: in run_endpoint_function
+    return await dependant.call(**values)
+services/discovery/main.py:167: in record_swipe
+    db.collection(SWIPES_COLLECTION).document(swipe_id).set(swipe_data)
+/usr/lib/python3.12/unittest/mock.py:1134: in __call__
+    return self._mock_call(*args, **kwargs)
+/usr/lib/python3.12/unittest/mock.py:1138: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+/usr/lib/python3.12/unittest/mock.py:1199: in _execute_mock_call
+    result = effect(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'swipes'
+
+    def collection_side_effect(name):
+        m = MagicMock()
+        if name == "profiles_profiles_cache":
+            m.document.return_value.get.return_value = mock_p1
+>       elif name == SWIPES_COLLECTION:
+E       NameError: name 'SWIPES_COLLECTION' is not defined
+
+services/discovery/tests/test_main.py:190: NameError
+------------------------------ Captured log call -------------------------------
+ERROR    discovery:main.py:52 Unhandled Exception: name 'SWIPES_COLLECTION' is not defined
+Traceback (most recent call last):
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 134, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 120, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 674, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/services/discovery/main.py", line 167, in record_swipe
+    db.collection(SWIPES_COLLECTION).document(swipe_id).set(swipe_data)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1199, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/peter/Documents/tavern_swiper/services/discovery/tests/test_main.py", line 190, in collection_side_effect
+    elif name == SWIPES_COLLECTION:
+                 ^^^^^^^^^^^^^^^^^
+NameError: name 'SWIPES_COLLECTION' is not defined
+=============================== warnings summary ===============================
+services/discovery/tests/test_main.py::test_record_swipe_mutual_match
+  /home/peter/Documents/tavern_swiper/services/discovery/tests/test_main.py:17: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "iat": datetime.datetime.utcnow(),
+
+services/discovery/tests/test_main.py::test_record_swipe_mutual_match
+  /home/peter/Documents/tavern_swiper/services/discovery/tests/test_main.py:18: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED services/discovery/tests/test_main.py::test_record_swipe_mutual_match
+======================== 1 failed, 2 warnings in 2.24s =========================

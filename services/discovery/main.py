@@ -87,63 +87,48 @@ async def get_feed(profile_id: str, limit: int = 10, auth_data: tuple[str, str, 
     uid, _, token = auth_data
     headers = {"Authorization": f"Bearer {token}"}
     
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        # 0. Verify ownership
-        try:
-            p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{profile_id}", headers=headers)
-            if p_resp.status_code == 404:
-                raise HTTPException(status_code=404, detail="Profile not found")
-            if p_resp.status_code != 200:
-                 raise HTTPException(status_code=502, detail="Required dependency returned an error")
-            p_data = p_resp.json()
-            if p_data.get("user_id") != uid:
-                raise HTTPException(status_code=403, detail="Not authorized for this profile")
-        except httpx.HTTPError:
-             raise HTTPException(status_code=502, detail="Required dependency unavailable")
+    # 0. Verify ownership using local cache
+    p_doc = db.collection("profiles_profiles_cache").document(profile_id).get()
+    if not p_doc.exists:
+        raise HTTPException(status_code=404, detail="Profile not found in discovery cache")
+    p_data = p_doc.to_dict()
+    if p_data.get("user_id") != uid:
+        raise HTTPException(status_code=403, detail="Not authorized for this profile")
 
-        # 1. Get already-swiped IDs from local Firestore
-        try:
-            swiped_docs = (
-                db.collection(SWIPES_COLLECTION)
-                .where("swiper_profile_id", "==", profile_id)
-                .stream()
-            )
-            already_swiped = {doc.to_dict()["swiped_profile_id"] for doc in swiped_docs}
-        except Exception as e:
-            print(f"[ERROR] Failed to fetch swipe history: {e}")
-            already_swiped = set()
+    # 1. Get already-swiped IDs from local Firestore
+    try:
+        swiped_docs = (
+            db.collection(SWIPES_COLLECTION)
+            .where("swiper_profile_id", "==", profile_id)
+            .stream()
+        )
+        already_swiped = {doc.to_dict()["swiped_profile_id"] for doc in swiped_docs}
+    except Exception as e:
+        logger.error(f"Failed to fetch swipe history: {e}")
+        already_swiped = set()
 
-        # 2. All profiles (from local cache)
+    # 2. Fetch candidates from local cache
+    try:
         # Note: 'profiles_profiles_cache' is populated by the discovery_subscriber
-        try:
-            cached_profiles_docs = (
-                db.collection("profiles_profiles_cache")
-                .where("is_active", "==", True)
-                .limit(limit * 2) 
-                .stream()
-            )
-            candidate_ids = []
-            for doc in cached_profiles_docs:
-                p_data = doc.to_dict()
-                if p_data["profile_id"] != profile_id and p_data["profile_id"] not in already_swiped:
-                    candidate_ids.append(p_data["profile_id"])
-            
-            # 3. Hydrate via Batch
-            # Limit to actual request limit
-            candidate_ids = candidate_ids[:limit]
-            
-            p_resp = await client.post(
-                f"{PROFILES_SERVICE_URL}/profiles/batch",
-                json={"profile_ids": candidate_ids},
-                headers=headers
-            )
-            p_resp.raise_for_status()
-            candidates_data = p_resp.json()
-        except Exception as e:
-            logger.error(f"Failed to fetch/hydrate candidates: {e}")
-            raise HTTPException(
-                status_code=502, detail="Required dependency unavailable"
-            )
+        # We overfetch slightly to account for the requesting profile and swiped profiles
+        cached_profiles_docs = (
+            db.collection("profiles_profiles_cache")
+            .where("is_active", "==", True)
+            .limit(limit * 5) 
+            .stream()
+        )
+        candidates_data = []
+        for doc in cached_profiles_docs:
+            p_data = doc.to_dict()
+            if p_data["profile_id"] != profile_id and p_data["profile_id"] not in already_swiped:
+                candidates_data.append(p_data)
+                if len(candidates_data) >= limit:
+                    break
+    except Exception as e:
+        logger.error(f"Failed to fetch candidates from cache: {e}")
+        raise HTTPException(
+            status_code=500, detail="Internal discovery error"
+        )
 
     # 4. Map to DiscoveryProfile
     candidates = [DiscoveryProfile(**p) for p in candidates_data]
@@ -157,19 +142,12 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
     uid, _, token = auth_data
     headers = {"Authorization": f"Bearer {token}"}
     
-    # 0. Verify ownership of the swiper profile
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        try:
-            p_resp = await client.get(f"{PROFILES_SERVICE_URL}/profiles/{body.swiper_profile_id}", headers=headers)
-            if p_resp.status_code == 404:
-                 raise HTTPException(status_code=404, detail="Swiper profile not found")
-            if p_resp.status_code != 200:
-                 raise HTTPException(status_code=502, detail="Required dependency returned an error")
-            p_data = p_resp.json()
-            if p_data.get("user_id") != uid:
-                 raise HTTPException(status_code=403, detail="Not authorized for this profile")
-        except httpx.HTTPError:
-             raise HTTPException(status_code=502, detail="Required dependency unavailable")
+    # 0. Verify ownership of the swiper profile using local cache
+    p_doc = db.collection("profiles_profiles_cache").document(body.swiper_profile_id).get()
+    if not p_doc.exists:
+        raise HTTPException(status_code=404, detail="Swiper profile not found in discovery cache")
+    if p_doc.to_dict().get("user_id") != uid:
+        raise HTTPException(status_code=403, detail="Not authorized for this profile")
 
     if body.swiper_profile_id == body.swiped_profile_id:
         raise HTTPException(status_code=400, detail="Cannot swipe on your own profile.")
