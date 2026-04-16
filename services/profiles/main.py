@@ -365,6 +365,22 @@ async def delete_profile(profile_id: str, auth_data: tuple[str, str, str] = Depe
     if doc.to_dict().get("user_id") != uid and role not in ["admin", "root_admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete this profile")
         
+    # 1. Delete associated images from GCS (Hard Delete)
+    if GCS_BUCKET:
+        try:
+            client = storage.Client()
+            bucket = client.bucket(GCS_BUCKET)
+            # Find all blobs for this profile
+            blobs = list(bucket.list_blobs(prefix=f"profiles/{profile_id}/"))
+            if blobs:
+                # Use batch delete
+                bucket.delete_blobs(blobs)
+                logger.info(f"GCS: Hard deleted {len(blobs)} images for profile {profile_id}")
+            else:
+                logger.info(f"GCS: No images found for profile {profile_id}")
+        except Exception as e:
+            logger.warning(f"GCS: Failed to hard delete images for profile {profile_id}: {e}")
+
     ref.delete()
     publisher.publish_deleted(profile_id)
 

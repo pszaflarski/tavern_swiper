@@ -84,6 +84,29 @@ def purge_system(env="dev"):
     except Exception as e:
         print(f"  ❌ Error purging Firebase Auth: {e}")
 
+    # 4. Clear GCS Buckets (Hard Delete everything in the environment's media bucket)
+    bucket_name = f"{PROJECT_ID}-media-{env}"
+    print(f"\n🌊 Clearing GCS Bucket: {bucket_name}...")
+    try:
+        from google.cloud import storage
+        # Use explicit project and credentials for reliability
+        client = storage.Client(project=PROJECT_ID, credentials=g_creds)
+        bucket = client.bucket(bucket_name)
+        
+        # Check if bucket exists first to avoid crashing if it hasn't been created yet
+        if bucket.exists():
+            blobs = list(bucket.list_blobs())
+            if blobs:
+                # Use batch delete (up to 1000 per call, bucket.delete_blobs handles this)
+                bucket.delete_blobs(blobs)
+                print(f"  ✅ {len(blobs)} blobs deleted from {bucket_name}.")
+            else:
+                print(f"  ✅ {bucket_name} is already empty.")
+        else:
+            print(f"  ⚠️ Warning: Bucket {bucket_name} does not exist. Skipping GCS purge.")
+    except Exception as e:
+        print(f"  ❌ Error clearing {bucket_name}: {e}")
+
     print("\n🏁 Direct system purge complete!")
 
 if __name__ == "__main__":

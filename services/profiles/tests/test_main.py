@@ -423,20 +423,30 @@ def test_update_profile_unauthorized(mock_firestore, mock_profile_data):
     response = client.put("/profiles/test-id", json=payload, headers=headers)
     assert response.status_code == 403
 
-def test_delete_profile_success(mock_firestore, mock_profile_data):
+@patch("google.cloud.storage.Client")
+def test_delete_profile_success(mock_storage, mock_firestore, mock_profile_data):
+    # Mock firestore doc
     mock_doc = MagicMock()
     mock_doc.exists = True
     mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123"}
-    
     mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
+    
+    # Mock GCS
+    mock_bucket = mock_storage.return_value.bucket.return_value
+    mock_blob = MagicMock()
+    mock_bucket.list_blobs.return_value = [mock_blob]
     
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     
-    with patch("main.publisher"):
+    with patch("main.publisher"), patch("main.GCS_BUCKET", "test-bucket"):
         response = client.delete("/profiles/test-id", headers=headers)
     
     assert response.status_code == 204
     mock_firestore.collection.return_value.document.return_value.delete.assert_called()
+    
+    # Verify GCS deletion
+    mock_bucket.list_blobs.assert_called_with(prefix="profiles/test-id/")
+    mock_bucket.delete_blobs.assert_called_with([mock_blob])
 
 @patch("google.cloud.storage.Client")
 def test_delete_all_profiles_admin_success(mock_storage, mock_firestore):
