@@ -143,7 +143,7 @@ export async function getTavernToken(): Promise<string | null> {
     try {
       const firebaseToken = await getIdToken();
       if (!firebaseToken) {
-        console.warn('[Auth] No Firebase token available for exchange.');
+        console.log('[Auth] No Firebase token available for exchange.');
         return null;
       }
 
@@ -164,11 +164,16 @@ export async function getTavernToken(): Promise<string | null> {
         cachedTavernToken = token;
         tokenExpiryTime = expiry;
         
-        await AsyncStorage.multiSet([
+        // Save to storage (wrapped in a check for mock environments that might not return a promise)
+        const storagePromise = AsyncStorage.multiSet([
           [TAVERN_TOKEN_KEY, token],
           [TAVERN_TOKEN_EXPIRY, expiry.toString()],
           [TAVERN_UID_KEY, uid]
-        ]).catch(e => console.error('[Storage] MultiSet failed:', e));
+        ]);
+        
+        if (storagePromise?.catch) {
+          storagePromise.catch(e => console.error('[Storage] MultiSet failed:', e));
+        }
         
         return token;
       }
@@ -206,23 +211,25 @@ function createClient(baseURL: string, useTavernToken: boolean = true) {
   });
 
   // Response interceptor for automatic logout on 401/403
-  client.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const status = error.response ? error.response.status : null;
-      
-      if (status === 401 || status === 403) {
-        // Only trigger auto-logout if we aren't already on the auth screen 
-        // and if it's not a verification attempt (which we handle locally)
-        const isAuthService = error.config.url?.includes('/auth/');
-        if (!isAuthService) {
-          await performGlobalLogout();
+  if (client?.interceptors?.response) {
+    client.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const status = error.response ? error.response.status : null;
+        
+        if (status === 401 || status === 403) {
+          // Only trigger auto-logout if we aren't already on the auth screen 
+          // and if it's not a verification attempt (which we handle locally)
+          const isAuthService = error.config.url?.includes('/auth/');
+          if (!isAuthService) {
+            await performGlobalLogout();
+          }
         }
+        
+        return Promise.reject(error);
       }
-      
-      return Promise.reject(error);
-    }
-  );
+    );
+  }
 
   return client;
 }

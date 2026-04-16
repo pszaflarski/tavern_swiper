@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { profilesApi, discoveryApi, messagesApi } from '../lib/api';
+import { profilesApi, discoveryApi } from '../lib/api';
 import { Profile } from './useProfiles';
 
 export interface Match {
@@ -9,18 +9,11 @@ export interface Match {
   created_at: string;
 }
 
-export interface Conversation {
-  match_id: string;
-  last_message: {
-    content: string;
-    sent_at: string;
-    sender_profile_id: string;
-  };
-}
+// Conversation interface removed as Messages service is being refactored.
 
 export interface UnifiedMatch extends Match {
   otherProfile: Profile | null;
-  lastMessage?: Conversation['last_message'];
+  lastMessage?: any; // Placeholder for future refactor
 }
 
 /**
@@ -39,36 +32,12 @@ export function useMatches(profileId: string | undefined) {
   });
 }
 
-/**
- * Hook to fetch all conversations for a profile.
- */
-export function useConversations(profileId: string | undefined) {
-  return useQuery<Conversation[]>({
-    queryKey: ['conversations', profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      const res = await messagesApi.get(`/messages/conversations/${profileId}`);
-      return Array.isArray(res.data) ? res.data : [];
-    },
-    enabled: !!profileId,
-    staleTime: 30000, // 30 seconds
-  });
-}
+// useConversations hook removed as Messages service is being refactored.
 
-/**
- * Orchestrator hook that combines matches, conversations, and profile details.
- * Splits them into "New Matches" (no messages) and "Inbox" (with messages).
- *
- * All derived values are memoized to prevent infinite re-render loops caused
- * by new array/object references on every render.
- */
 export function useInvolvedMatches(profileId: string | undefined) {
   const { data: matches = [], isLoading: isLoadingMatches, refetch: refetchMatches } = useMatches(profileId);
-  const { data: conversations = [], isLoading: isLoadingConvos, refetch: refetchConvos } = useConversations(profileId);
 
   // Memoize the batch key so it only changes when the actual match data changes.
-  // Without this, sortedOtherIds and batchKey are new values every render,
-  // which can cause the batch profile query to re-fire in a loop.
   const batchKey = useMemo(() => {
     const otherIds = matches
       .map(m => m.profiles.find(pid => pid !== profileId))
@@ -89,42 +58,34 @@ export function useInvolvedMatches(profileId: string | undefined) {
     staleTime: 120000, // 2 minutes
   });
 
-  const isLoading = isLoadingMatches || isLoadingConvos || (sortedOtherIds.length > 0 && isLoadingProfiles);
+  const isLoading = isLoadingMatches || (sortedOtherIds.length > 0 && isLoadingProfiles);
 
   const refetch = useCallback(async () => {
     await Promise.all([
       refetchMatches(),
-      refetchConvos(),
       refetchProfiles(),
     ]);
-  }, [refetchMatches, refetchConvos, refetchProfiles]);
+  }, [refetchMatches, refetchProfiles]);
 
-  // Memoize the combined data so downstream components receive stable references.
+  // Merge discovery matches with their full profiles.
+  // Inbox is temporarily disabled while Messages service is being refactored.
   const { newMatches, inbox } = useMemo(() => {
     const combined = matches.map(match => {
       const otherId = match.profiles?.find(pid => pid !== profileId);
       const otherProfile = Array.isArray(profiles) ? profiles.find(p => p.profile_id === otherId) ?? null : null;
-      const convo = Array.isArray(conversations) ? conversations.find(c => c.match_id === match.id) : undefined;
 
       return {
         ...match,
         otherProfile,
-        lastMessage: convo?.last_message
+        lastMessage: undefined // Messages disabled
       };
     });
 
-    // Split into New Matches (no message) and Inbox (has message)
-    const nm = combined.filter(m => !m.lastMessage);
-    const ib = combined
-      .filter(m => !!m.lastMessage)
-      .sort((a, b) => {
-        const timeA = new Date(a.lastMessage!.sent_at).getTime();
-        const timeB = new Date(b.lastMessage!.sent_at).getTime();
-        return timeB - timeA; // Newest first
-      });
-
-    return { newMatches: nm, inbox: ib };
-  }, [matches, conversations, profiles, profileId]);
+    return { 
+      newMatches: combined, 
+      inbox: [] 
+    };
+  }, [matches, profiles, profileId]);
 
   return {
     newMatches,
