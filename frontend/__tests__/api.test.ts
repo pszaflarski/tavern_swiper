@@ -5,41 +5,49 @@ import { auth } from '../lib/firebase';
 
 // Mock axios since it's used directly in getTavernToken
 jest.mock('axios', () => {
-  const mockAxios = {
-    post: jest.fn(),
-    create: jest.fn(() => ({
-      interceptors: {
-        request: { use: jest.fn(), eject: jest.fn() },
-        response: { use: jest.fn(), eject: jest.fn() },
-      },
-      post: jest.fn(),
-    })),
+  const mockInstance = {
+    interceptors: {
+      request: { use: jest.fn(), eject: jest.fn() },
+      response: { use: jest.fn(), eject: jest.fn() },
+    },
+    post: jest.fn(() => Promise.resolve({ data: {}, status: 200 })),
+    get: jest.fn(() => Promise.resolve({ data: {}, status: 200 })),
   };
-  return mockAxios;
+  return {
+    create: jest.fn(() => mockInstance),
+    post: jest.fn(() => Promise.resolve({ data: {}, status: 200 })),
+    get: jest.fn(() => Promise.resolve({ data: {}, status: 200 })),
+  };
 });
 
 const mockGetIdToken = jest.fn();
 const mockOnAuthStateChanged = jest.fn();
 
-// Mock Firebase Auth
 jest.mock('../lib/firebase', () => ({
   auth: {
-    currentUser: {
-      getIdToken: (...args: any[]) => mockGetIdToken(...args),
-    },
-    onAuthStateChanged: (...args: any[]) => mockOnAuthStateChanged(...args),
+    currentUser: null,
+    onAuthStateChanged: jest.fn(),
   },
 }));
 
 describe('API Token Management', () => {
   beforeEach(async () => {
     await __resetInternalState();
-    jest.resetAllMocks();
+    jest.clearAllMocks();
     
-    // Restore the default onAuthStateChanged implementation which is killed by resetAllMocks
-    // We use setImmediate to ensure the unsubscribe function is returned before the callback is called
-    mockOnAuthStateChanged.mockImplementation((callback) => {
-      setImmediate(() => callback({ uid: 'test-uid' }));
+    // Ensure AsyncStorage methods return promises to avoid .catch() errors
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.multiSet as jest.Mock).mockResolvedValue(undefined);
+    (AsyncStorage.multiRemove as jest.Mock).mockResolvedValue(undefined);
+    (AsyncStorage.clear as jest.Mock).mockResolvedValue(undefined);
+
+    // Mock onAuthStateChanged to simulate successful login
+    (auth.onAuthStateChanged as jest.Mock).mockImplementation((callback) => {
+      // Simulate user appearing in state
+      (auth as any).currentUser = {
+        getIdToken: mockGetIdToken,
+      };
+      setImmediate(() => callback(auth.currentUser));
       return jest.fn(); // Unsubscribe
     });
   });
