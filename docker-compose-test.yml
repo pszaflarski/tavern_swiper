@@ -93,7 +93,6 @@ services:
       - "8006:8006"
     environment:
       - FIRESTORE_DATABASE_ID=users-test
-      - GCS_BUCKET_NAME=tavern-swiper-dev-media-test
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:
