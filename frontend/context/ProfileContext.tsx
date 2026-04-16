@@ -16,10 +16,10 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { uid, isAuthenticated, isLoading: isAuthLoading } = useUser();
   
-  // Wait for auth to be fully initialized before firing profile queries.
-  // Without this, a persisted UID triggers API calls before the Tavern JWT
-  // exchange completes, causing 401s on page load.
-  const authReady = isAuthenticated && !isAuthLoading;
+  // Wait for auth to be fully initialized AND for the backend user record
+  // to be confirmed (or auto-created via our self-healing logic).
+  // This prevents 404s on downstream profile calls during registration.
+  const authReady = isAuthenticated && !isAuthLoading && !!uid;
   
   const { data: activeProfile, isLoading: isLoadingActiveProfile, refetch: refetchActiveProfile } = useActiveProfile(uid, authReady);
   

@@ -17,9 +17,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         uid = payload.get("sub")
         role = payload.get("role", "user")
+        email = payload.get("email", "")
         if not uid:
             raise HTTPException(status_code=401, detail="Invalid token payload")
-        return uid, role, token
+        return uid, role, email, token
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Tavern token has expired")
     except jwt.InvalidTokenError as e:

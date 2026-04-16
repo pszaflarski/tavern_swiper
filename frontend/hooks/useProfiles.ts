@@ -56,8 +56,14 @@ export function useActiveProfile(userId: string | undefined, enabled: boolean = 
       return res.data;
     },
     enabled: enabled && !!userId,
-    staleTime: 300000, // 5 minutes
-    retry: false, // If no active profile, 404 is expected, don't spam retries
+    staleTime: 60000, // 1 minute (reduced from 5m)
+    retry: (failureCount, error: any) => {
+      // Retry on 404s briefly (3 times) to handle auto-activation ritual delays
+      if (error.response?.status === 404 && failureCount < 3) return true;
+      if (failureCount < 2) return true; // Retry once for other errors
+      return false;
+    },
+    retryDelay: 1500,
   });
 }
 

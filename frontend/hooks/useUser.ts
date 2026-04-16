@@ -46,13 +46,19 @@ export function useUser() {
         const res = await usersApi.get('/users/me');
         return res.data;
       } catch (error: any) {
-        if (error.response?.status === 404) return null;
+        // If it's a 404, we throw the error to allow React Query to retry.
+        // The backend self-healing logic might be in the middle of creating the record.
         throw error;
       }
     },
     enabled: !!activeUid,
-    staleTime: 900000, // 15 minutes
-    retry: false,
+    staleTime: 60000, // 1 minute (reduced from 15m)
+    retry: (failureCount, error: any) => {
+      // Retry up to 3 times on 404s or network errors
+      if (failureCount < 3) return true;
+      return false;
+    },
+    retryDelay: 1000,
   });
 
   const logout = async () => {

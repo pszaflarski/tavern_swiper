@@ -79,6 +79,7 @@ async def verify_token(body: TokenRequest):
         raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
 
     uid = decoded["uid"]
+    email = decoded.get("email", "")
     
     # Fetch role from users database
     role = "user"
@@ -94,6 +95,7 @@ async def verify_token(body: TokenRequest):
     now = datetime.datetime.utcnow()
     payload = {
         "sub": uid,
+        "email": email,
         "role": role,
         "iat": now,
         "exp": now + datetime.timedelta(minutes=JWT_EXPIRY_MINUTES)

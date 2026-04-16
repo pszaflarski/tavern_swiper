@@ -35,16 +35,16 @@ app.add_middleware(
 def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
-async def get_admin(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+async def get_admin(auth_data: tuple[str, str, str, str] = Depends(get_current_user)):
     """Dependency to ensure the user has admin or root_admin role."""
-    uid, role, _ = auth_data
+    uid, role, _, _ = auth_data
     if role not in [UserType.ADMIN, UserType.ROOT_ADMIN]:
         raise HTTPException(status_code=403, detail="Admin or Root Admin role required")
     return uid
 
-async def get_root_admin(auth_data: tuple[str, str, str] = Depends(get_current_user)):
+async def get_root_admin(auth_data: tuple[str, str, str, str] = Depends(get_current_user)):
     """Dependency to ensure the user has root_admin role."""
-    _, role, _ = auth_data
+    _, role, _, _ = auth_data
     if role != UserType.ROOT_ADMIN:
         raise HTTPException(status_code=403, detail="Root Admin authority required")
     return True # Just returning success for the dependency
@@ -78,20 +78,33 @@ async def list_users(include_deleted: bool = False, _: str = Depends(get_admin))
     return users
 
 @app.get("/users/me", response_model=UserOut)
-async def get_me(auth_data: tuple[str, str, str] = Depends(get_current_user)):
-    """Fetch current user's account info."""
-    uid, _, _ = auth_data
-    doc = db.collection(COLLECTION).document(uid).get()
+async def get_me(auth_data: tuple[str, str, str, str] = Depends(get_current_user)):
+    """Fetch current user's account info. Implements self-healing for missing records."""
+    uid, role, email, _ = auth_data
+    doc_ref = db.collection(COLLECTION).document(uid)
+    doc = doc_ref.get()
+    
     if not doc.exists:
-        raise HTTPException(status_code=404, detail="User not found")
+        # SELF-HEALING: Auto-create the user record if it's missing but we have a valid JWT.
+        # This prevents 404 race conditions during registration.
+        print(f"[INFO] Auto-initializing user record for {uid} ({email})")
+        new_user = {
+            "email": email,
+            "user_type": role,
+            "is_premium": False,
+            "is_deleted": False,
+            "created_at": _now()
+        }
+        doc_ref.set(new_user)
+        return UserOut(uid=uid, **new_user)
     
     data = doc.to_dict()
     return UserOut(uid=uid, **data)
 
 @app.put("/users/me", response_model=UserOut)
-async def update_me(body: UserUpdate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+async def update_me(body: UserUpdate, auth_data: tuple[str, str, str, str] = Depends(get_current_user)):
     """Update user metadata."""
-    uid, _, _ = auth_data
+    uid, _, _, _ = auth_data
     ref = db.collection(COLLECTION).document(uid)
     if not ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -132,9 +145,9 @@ async def purge_all_users(_: bool = Depends(get_root_admin)):
     return None
 
 @app.delete("/users/{target_uid}", status_code=204)
-async def delete_user(target_uid: str, hard: bool = False, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+async def delete_user(target_uid: str, hard: bool = False, auth_data: tuple[str, str, str, str] = Depends(get_current_user)):
     """Delete a user. Admin only. 'hard=True' deletes from Auth too."""
-    caller_uid, caller_role, _ = auth_data
+    caller_uid, caller_role, _, _ = auth_data
     if caller_role not in [UserType.ADMIN, UserType.ROOT_ADMIN]:
         raise HTTPException(status_code=403, detail="Admin or Root Admin role required")
 
@@ -183,7 +196,7 @@ async def restore_user(target_uid: str, _: str = Depends(get_admin)):
     return UserOut(uid=target_uid, **updated_doc)
 
 @app.post("/users/", response_model=UserOut, status_code=201)
-async def create_user(body: UserCreate, auth_data: tuple[str, str, str] = Depends(get_current_user)):
+async def create_user(body: UserCreate, auth_data: tuple[str, str, str, str] = Depends(get_current_user)):
     """
     Consolidated user creation endpoint.
     
@@ -192,7 +205,7 @@ async def create_user(body: UserCreate, auth_data: tuple[str, str, str] = Depend
     2. Administrative Creation: body.uid is set, caller must be admin.
     3. Self Registration: body.uid is None, user creates their own record.
     """
-    caller_uid, caller_role, _ = auth_data
+    caller_uid, caller_role, _, _ = auth_data
     print(f"[DEBUG] create_user: Received body: {body.model_dump()}")
     # 1. Handle Root Admin Initialization (Singleton)
     if body.user_type == UserType.ROOT_ADMIN:
