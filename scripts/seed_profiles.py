@@ -60,28 +60,37 @@ SAMPLE_IMAGES_DIR = os.path.join(PROJECT_ROOT, "sample_profiles")
 def get_token(email, password):
     """Register or Login a user to get their token and UID."""
     # We verify the token after login to ensure it's a valid Tavern token
+    print(f"  Attempting login for {email}...")
     login_resp = requests.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": password})
     if login_resp.status_code == 200:
-        id_token = login_resp.json()["id_token"]
-        uid = login_resp.json()["uid"]
+        data = login_resp.json()
+        id_token = data.get("id_token")
+        uid = data.get("uid")
         
         # Exchange for Tavern token
         v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
         if v_resp.status_code == 200:
             return v_resp.json()["token"], uid
+        else:
+            print(f"  ⚠️ Tavern Verification Failed for {email}: {v_resp.status_code} - {v_resp.text}")
     
-    # Try register if login fails
+    # Try register if login fails or is rejected
+    print(f"  Sign-in failed for {email}. Attempting registration...")
     reg_resp = requests.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
     if reg_resp.status_code == 200:
-        id_token = reg_resp.json()["id_token"]
-        uid = reg_resp.json()["uid"]
+        data = reg_resp.json()
+        id_token = data.get("id_token")
+        uid = data.get("uid")
         
         # Exchange for Tavern token
         v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
         if v_resp.status_code == 200:
             return v_resp.json()["token"], uid
+        else:
+             print(f"  ⚠️ Tavern Verification Failed after Registration for {email}: {v_resp.status_code} - {v_resp.text}")
     
-    raise Exception(f"Failed to auth {email}.\n  Login Error: {login_resp.text}\n  Register Error: {reg_resp.text}")
+    msg = f"Failed to auth {email}.\n  Login status: {login_resp.status_code} | Body: {login_resp.text}\n  Register status: {reg_resp.status_code} | Body: {reg_resp.text}"
+    raise Exception(msg)
 
 def seed_system():
     # 1. Login as primary seeder (Existing Root Admin)

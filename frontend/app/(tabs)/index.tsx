@@ -82,8 +82,12 @@ function TavernScreenInner() {
   useEffect(() => {
     if (batch && batch.length > 0) {
       // Use ref to avoid stale closure of 'deck' without triggering unnecessary effect runs
-      const existingIds = new Set(deckRef.current.map(p => p.profile_id));
-      const newUnique = batch.filter(p => !existingIds.has(p.profile_id));
+      const existingIds = new Set(
+        (deckRef.current || [])
+          .filter(p => p && p.profile_id)
+          .map(p => p.profile_id)
+      );
+      const newUnique = (batch || []).filter(p => p && p.profile_id && !existingIds.has(p.profile_id));
       const isUseless = deckRef.current.length > 0 && newUnique.length === 0;
 
       if (isUseless) {

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { auth } from './firebase';
+import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -66,6 +67,31 @@ export async function clearTavernSession(): Promise<void> {
   }
 }
 
+/**
+ * Perform a full global logout — clears both Firebase AND Tavern sessions,
+ * then redirects to the auth screen.
+ */
+export async function performGlobalLogout() {
+  console.warn('[Auth] Triggering global logout due to session failure.');
+  try {
+    cachedTavernToken = null;
+    tokenExpiryTime = 0;
+    
+    // 1. Sign out from Firebase
+    await auth.signOut().catch(e => console.error('[Auth] Firebase signOut failed:', e));
+    
+    // 2. Clear local storage
+    await clearTavernSession();
+    
+    // 3. Redirect to auth screen
+    router.replace('/auth');
+  } catch (error) {
+    console.error('[Auth] Global logout failed:', error);
+    // Fallback redirect even if clearing fails
+    router.replace('/auth');
+  }
+}
+
 export async function getPersistedUid(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(TAVERN_UID_KEY);
@@ -103,7 +129,7 @@ export async function getTavernToken(): Promise<string | null> {
         }
       }
     } catch (e) {
-      console.warn('Failed to load Tavern token from storage:', e);
+      console.warn('[Session] Failed to load Tavern token from storage:', e);
     }
   }
 
@@ -116,23 +142,25 @@ export async function getTavernToken(): Promise<string | null> {
   pendingTokenExchange = (async () => {
     try {
       const firebaseToken = await getIdToken();
-      if (!firebaseToken) return null;
+      if (!firebaseToken) {
+        console.warn('[Auth] No Firebase token available for exchange.');
+        return null;
+      }
 
       // Call Auth service directly for the exchange
-      // We use a raw axios call here to avoid circular interceptors
       const res = await axios.post(`${BASE_URLS.auth}/auth/verify`, {
         id_token: firebaseToken
       }, { 
-        timeout: 10_000,
-        validateStatus: (status) => status < 500 // Don't throw for 401/403, we want to handle it
+        timeout: 15_000,
+        headers: { 'Content-Type': 'application/json' },
+        validateStatus: (status) => status < 500
       });
 
-      if (res.status === 200 && res.data.token) {
+      if (res.status === 200 && res.data?.token) {
         const token = res.data.token;
-        const uid = res.data.uid; // Extract UID from verification response
+        const uid = res.data.uid;
         const expiry = Date.now() + (28 * 60 * 1000); // 28m locally for 30m server expiry
         
-        // Update both caches
         cachedTavernToken = token;
         tokenExpiryTime = expiry;
         
@@ -140,15 +168,15 @@ export async function getTavernToken(): Promise<string | null> {
           [TAVERN_TOKEN_KEY, token],
           [TAVERN_TOKEN_EXPIRY, expiry.toString()],
           [TAVERN_UID_KEY, uid]
-        ]);
+        ]).catch(e => console.error('[Storage] MultiSet failed:', e));
         
         return token;
       }
       
-      console.error(`Tavern token exchange failed with status ${res.status}:`, res.data);
+      console.error(`[Auth] Tavern token exchange failed with status ${res.status}:`, res.data);
       return null;
-    } catch (error) {
-      console.error('Error exchanging Tavern token:', error);
+    } catch (error: any) {
+      console.error('[Auth] Error exchanging Tavern token:', error?.message || error);
       return null;
     } finally {
       pendingTokenExchange = null;
@@ -176,6 +204,25 @@ function createClient(baseURL: string, useTavernToken: boolean = true) {
     }
     return config;
   });
+
+  // Response interceptor for automatic logout on 401/403
+  client.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const status = error.response ? error.response.status : null;
+      
+      if (status === 401 || status === 403) {
+        // Only trigger auto-logout if we aren't already on the auth screen 
+        // and if it's not a verification attempt (which we handle locally)
+        const isAuthService = error.config.url?.includes('/auth/');
+        if (!isAuthService) {
+          await performGlobalLogout();
+        }
+      }
+      
+      return Promise.reject(error);
+    }
+  );
 
   return client;
 }

@@ -34,6 +34,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [activeProfile]);
 
   const setActiveProfileId = (id: string) => {
+    if (!id) return;
     activateProfileMutation.mutate(id);
   };
 
