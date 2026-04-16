@@ -2,7 +2,9 @@ fastapi
 uvicorn[standard]
 firebase-admin
 google-cloud-firestore
+google-cloud-pubsub
+protobuf
+grpcio-tools
 httpx
-python-dotenv
 python-dotenv
 PyJWT==2.10.1

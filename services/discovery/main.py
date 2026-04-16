@@ -15,6 +15,7 @@ import uuid
 from datetime import datetime, timezone
 from models import FeedResponse, DiscoveryProfile, SwipeCreate, SwipeOut, MatchOut
 from auth_utils import get_current_user
+from pubsub_utils import Publisher
 
 # ---------------------------------------------------------------------------
 # Firebase / Firestore initialisation
@@ -28,6 +29,9 @@ PROFILES_SERVICE_URL = os.getenv("PROFILES_SERVICE_URL", "http://profiles:8002")
 FEED_LIMIT = int(os.getenv("FEED_LIMIT", "20"))
 SWIPES_COLLECTION = "swipes"
 MATCHES_COLLECTION = "matches"
+
+# Initialize Pub/Sub Publisher
+publisher = Publisher()
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -193,6 +197,12 @@ async def record_swipe(body: SwipeCreate, auth_data: tuple[str, str, str] = Depe
                 "created_at": now,
             }
             db.collection(MATCHES_COLLECTION).document(id).set(match_data)
+            
+            # Publish Match Created Event
+            try:
+                publisher.publish_match_created(id, sorted_ids, now)
+            except Exception as e:
+                logger.error(f"Post-match publishing failed for {id}: {e}")
 
     return SwipeOut(
         swipe_id=swipe_id,
