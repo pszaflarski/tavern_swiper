@@ -12,6 +12,8 @@ This project follows a "Shared Nothing" microservice architecture. Each service 
 
 ### Key Infrastructure
 - **Microservices**: 5 core services (Auth, Profiles, Discovery, Messages, Users).
+- **Internal Workers**: Specialized subscribers (e.g., `discovery_subscriber`) that handle cross-service events.
+- **Event-Driven Resilience**: Services broadcast state changes (e.g., Profile Updates, Mutual Matches) via **Google Cloud Pub/Sub** using **Protobuf** serialization to maintain local read-caches in other services.
 - **Dual Environments**: Every service supports **Dev** and **Test** deployments on Google Cloud Run.
 - **Database Isolation**: Targeted at **10 distinct Firestore databases** (5 for `dev`, 5 for `test`).
 - **Truly Keyless**: Local development and Cloud Run deployments use **IAM Impersonation** instead of static service account keys.
