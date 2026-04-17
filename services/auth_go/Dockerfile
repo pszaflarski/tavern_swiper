@@ -18,8 +18,8 @@ FROM --platform=linux/amd64 debian:bookworm-slim
 
 WORKDIR /root/
 
-# Install CA certificates for Firestore/Firebase connection
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install CA certificates and curl for Firestore/Firebase connection and healthchecks
+RUN apt-get update && apt-get install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/auth-bin .

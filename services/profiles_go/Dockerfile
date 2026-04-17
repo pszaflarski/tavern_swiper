@@ -11,6 +11,9 @@ RUN go build -o main .
 
 FROM alpine:latest
 
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
 COPY --from=builder /app/main .
