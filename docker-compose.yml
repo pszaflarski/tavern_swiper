@@ -45,13 +45,14 @@ services:
 
   discovery:
     build:
-      context: ./services/discovery
+      context: ./services/discovery_go
     ports:
       - "8003:8003"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
-    env_file: ./services/discovery/.env
+      - PORT=8003
+    env_file: ./services/discovery_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -60,7 +61,7 @@ services:
       profiles:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/discovery/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8003/discovery/health"]
       interval: 10s
       timeout: 5s
       retries: 3
