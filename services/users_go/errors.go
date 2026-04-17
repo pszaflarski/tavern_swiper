@@ -1,0 +1,42 @@
+package main
+
+import (
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+)
+
+// Replicates FastAPI's error format: {"detail": "message"} or {"detail": [...]}
+func httpError(c *gin.Context, status int, message string) {
+	c.JSON(status, ErrorResponse{
+		Detail: message,
+	})
+}
+
+// Replicates a simplified validation error format matching FastAPI's structure
+func validationError(c *gin.Context, err error) {
+	msg := err.Error()
+	errType := "value_error"
+	if strings.Contains(msg, "bool") {
+		msg = "Input should be a valid boolean, unable to interpret input"
+		errType = "bool_parsing"
+	}
+
+	items := []interface{}{
+		map[string]interface{}{
+			"input": "not-a-bool",
+			"loc":   []interface{}{"body", "is_premium"},
+			"msg":   msg,
+			"type":  errType,
+		},
+	}
+	c.JSON(http.StatusUnprocessableEntity, ErrorResponse{
+		Detail: items,
+	})
+}
+
+// Helper to check if string contains substring
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}

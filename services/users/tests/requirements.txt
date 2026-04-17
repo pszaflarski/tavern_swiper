@@ -3,3 +3,4 @@ httpx
 respx
 pytest-asyncio
 PyJWT==2.10.1
+syrupy

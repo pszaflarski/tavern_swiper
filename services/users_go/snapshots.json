@@ -1,0 +1,138 @@
+{
+  "test_check_root_admin_exists": {
+    "exists": true
+  },
+  "test_check_root_admin_exists.1": {
+    "exists": false
+  },
+  "test_consolidated_admin_creation": {
+    "created_at": "2026-04-17T10:00:00Z",
+    "email": "newbie@e.com",
+    "is_deleted": false,
+    "is_premium": false,
+    "uid": "target-uid",
+    "user_type": "user"
+  },
+  "test_consolidated_create_root_admin": {
+    "created_at": "2026-04-17T10:00:00Z",
+    "email": "root@e.com",
+    "is_deleted": false,
+    "is_premium": false,
+    "uid": "test-user-123",
+    "user_type": "root_admin"
+  },
+  "test_consolidated_create_root_admin_fails_if_exists": {
+    "detail": "A root admin already exists."
+  },
+  "test_consolidated_self_registration": {
+    "created_at": "2026-04-17T10:00:00Z",
+    "email": "user@e.com",
+    "is_deleted": false,
+    "is_premium": false,
+    "uid": "test-user-123",
+    "user_type": "user"
+  },
+  "test_create_user_idempotency_self": {
+    "created_at": "2026-03-26T12:00:00Z",
+    "email": "existing@e.com",
+    "is_deleted": false,
+    "is_premium": false,
+    "uid": "test-user-123",
+    "user_type": "user"
+  },
+  "test_delete_last_root_admin_fails": {
+    "detail": "Cannot delete the last active root admin."
+  },
+  "test_delete_root_admin_unauthorized": {
+    "detail": "Only a Root Admin can delete another Root Admin."
+  },
+  "test_delete_user_not_found": {
+    "detail": "User not found"
+  },
+  "test_get_me": {
+    "created_at": "2026-03-26T12:00:00Z",
+    "email": "test@example.com",
+    "is_deleted": false,
+    "is_premium": true,
+    "uid": "test-user-123",
+    "user_type": "user"
+  },
+  "test_get_me_self_healing": {
+    "created_at": "2026-04-17T10:00:00Z",
+    "email": "new@e.com",
+    "is_deleted": false,
+    "is_premium": false,
+    "uid": "test-user-123",
+    "user_type": "user"
+  },
+  "test_health": {
+    "service": "users",
+    "status": "ok"
+  },
+  "test_list_users_admin": [
+    {
+      "created_at": "2026-03-26T12:00:00Z",
+      "email": "u1@e.com",
+      "is_deleted": false,
+      "is_premium": false,
+      "uid": "user1",
+      "user_type": "user"
+    }
+  ],
+  "test_list_users_include_deleted": [
+    {
+      "created_at": "2026-03-26T12:00:00Z",
+      "email": "u1@e.com",
+      "is_deleted": false,
+      "is_premium": false,
+      "uid": "u1",
+      "user_type": "user"
+    },
+    {
+      "created_at": "2026-03-26T12:00:00Z",
+      "email": "u2@e.com",
+      "is_deleted": true,
+      "is_premium": false,
+      "uid": "u2",
+      "user_type": "user"
+    }
+  ],
+  "test_list_users_unauthorized": {
+    "detail": "Admin or Root Admin role required"
+  },
+  "test_restore_user_not_found": {
+    "detail": "User not found"
+  },
+  "test_restore_user_success": {
+    "created_at": "2026-04-17T10:00:00Z",
+    "email": "u1@e.com",
+    "is_deleted": false,
+    "is_premium": false,
+    "uid": "user1",
+    "user_type": "user"
+  },
+  "test_update_me_not_found": {
+    "detail": "User not found"
+  },
+  "test_update_me_success": {
+    "created_at": "2026-04-17T10:00:00Z",
+    "email": "test@e.com",
+    "is_deleted": false,
+    "is_premium": true,
+    "uid": "test-user-123",
+    "user_type": "user"
+  },
+  "test_update_me_validation_error": {
+    "detail": [
+      {
+        "input": "not-a-bool",
+        "loc": [
+          "body",
+          "is_premium"
+        ],
+        "msg": "Input should be a valid boolean, unable to interpret input",
+        "type": "bool_parsing"
+      }
+    ]
+  }
+}

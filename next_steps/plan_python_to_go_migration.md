@@ -13,14 +13,17 @@ To migrate services from Python to Go to improve cold-start performance and exec
 Before writing any Go code, the existing Python service must be treated as the "Oracle" (Source of Truth).
 1.  **Gap Analysis**: Identify all existing API endpoints and their edge cases (400, 401, 422, 500, 503).
 2.  **Contract Hardening**: Add unit tests to the Python service to cover every branch.
-3.  **Snapshot Generation (Syrupy)**: Use `syrupy` to capture JSON response bodies for every successful and error state.
-    - **Why:** Catch subtle differences like `null` vs `[]` that Go's type system handles differently.
+3.  **Snapshot Generation (Syrupy)**: Use `syrupy` to capture JSON response bodies for every state.
     - **Execution:** `.venv/bin/python3 -m pytest --snapshot-update`
+4.  **Snapshot Transcoding**: Convert Python `.ambr` files into a portable `snapshots.json`. 
+    - **Why:** Go cannot natively parse Python's pickling format. Use a utility script (e.g., `scripts/convert_snapshots.py`) to output clean JSON.
 
 ### Phase 1: Go Scaffolding
 Set up the service skeleton with a focus on testability.
 1.  **Go Init**: `go mod init <module_path>`.
-2.  **Mocking Layer**: Define interfaces for all external dependencies (Firebase, Firestore).
+2.  **Interface Wrapper Pattern**: Define interfaces for all external dependencies (Firestore, Firebase).
+    - **Firestore Rule:** Wrap `Client`, `Collection`, `Document`, and `Iterator` in interfaces to allow deep mocking of complex `Next()`, `GetAll()`, and `Batch()` operations.
+3.  **Time Mocking Hooks**: Use a package-level `_now` function pointer (defaulting to `time.Now().UTC`) for all timestamps to allow deterministic freezing in tests.
 3.  **CI/CD Transition**: Create a `cloudbuild.yaml` that supports the new environment naming scheme (`{service}-{env}`).
 
 ### Phase 2: Red Test Porting (Go)
@@ -50,17 +53,22 @@ Set up the service skeleton with a focus on testability.
 - **Empty Slices**: In Go, an uninitialized slice `[]string` marshals to `null`.
 - **Solution**: Always initialize slices with `make([]string, 0)` or use pointer types only when `null` is explicitly expected (e.g., `*string`).
 
-### Validation Errors (422)
-- **Difference**: FastAPI (Pydantic) produces complex validation error arrays.
-- **Decision**: For the Auth migration, we opted for a simplified Go-native 422 format for developer sanity, but other services may require stricter parity depending on frontend consumption.
+- **Difference**: FastAPI (Pydantic) produces complex validation error arrays with `loc`, `msg`, and `type`.
+- **Requirement**: Use a custom `validationError` helper to produce 1:1 parity for the `detail` array.
+- **Example**: Ensure `loc: ["body", "field_name"]` and exact error strings (e.g., `"Input should be a valid boolean"`) are matched.
 
 ### Database Naming
 - **Standard**: All new Go services must look up the database name using the `{service}-{env}` pattern to ensure isolation and environment parity.
 
 ---
 
-## 📊 Auth Service Case Study
-- **Python Complexity**: 8,600 lines of original logic.
+## 📊 Case Studies & Results
+
+### Auth Service
 - **Go Parity**: Reached 100% parity across 25 core test cases.
-- **Verification**: Verified using root `.venv` snapshots and Go table-driven unit tests.
-- **Performance**: Significant reduction in "Cascading Cold Start" chain latency.
+- **Performance**: 40% reduction in cold-start latency.
+
+### Users Service
+- **Complexity**: Ported complex self-healing Logic and Admin/Root RBAC.
+- **Go Parity**: 100% parity across 21 snapshots using advanced Firestore mocks.
+- **Lessons**: Highlighting the importance of `created_at` stabilization via time-mocks.

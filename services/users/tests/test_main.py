@@ -11,12 +11,14 @@ import datetime
 JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-tavern-key-123")
 JWT_ALGORITHM = "HS256"
 
-def sign_test_token(uid="test-user-123", role="user"):
+def sign_test_token(uid="test-user-123", role="user", email="test@e.com", iat=None):
+    now = iat or datetime.datetime(2026, 4, 17, 10, 0, 0, tzinfo=datetime.timezone.utc)
     payload = {
         "sub": uid,
         "role": role,
-        "iat": datetime.datetime.utcnow(),
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        "email": email,
+        "iat": now,
+        "exp": now + datetime.timedelta(days=365)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -34,16 +36,22 @@ def mock_firestore():
         yield mock
 
 @pytest.fixture
+def mock_now():
+    fixed_now = datetime.datetime(2026, 4, 17, 10, 0, 0, tzinfo=datetime.timezone.utc)
+    with patch("main._now", return_value=fixed_now):
+        yield fixed_now
+
+@pytest.fixture
 def mock_auth_service():
     """No longer mocks network, just provides a standard fixture signature if needed."""
     yield None
 
-def test_health():
+def test_health(snapshot):
     response = client.get("/users/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.json() == snapshot
 
-def test_consolidated_create_root_admin(mock_firestore, mock_auth_service):
+def test_consolidated_create_root_admin(mock_firestore, mock_auth_service, mock_now, snapshot):
     # Mock no root admin exists
     mock_firestore.collection().where().limit().stream.return_value = []
     # Mock user doesn't exist
@@ -54,10 +62,10 @@ def test_consolidated_create_root_admin(mock_firestore, mock_auth_service):
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 201
-    assert response.json()["user_type"] == "root_admin"
+    assert response.json() == snapshot
 
 
-def test_consolidated_create_root_admin_fails_if_exists(mock_firestore, mock_auth_service):
+def test_consolidated_create_root_admin_fails_if_exists(mock_firestore, mock_auth_service, snapshot):
     # Mock root admin ALREADY exists
     mock_firestore.collection().where().limit().stream.return_value = [MagicMock()]
 
@@ -66,10 +74,10 @@ def test_consolidated_create_root_admin_fails_if_exists(mock_firestore, mock_aut
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 400
-    assert "already exists" in response.json()["detail"]
+    assert response.json() == snapshot
 
 
-def test_consolidated_self_registration(mock_firestore, mock_auth_service):
+def test_consolidated_self_registration(mock_firestore, mock_auth_service, mock_now, snapshot):
     # Mock user doesn't exist
     mock_firestore.collection().document().get().exists = False
 
@@ -78,7 +86,7 @@ def test_consolidated_self_registration(mock_firestore, mock_auth_service):
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 201
-    assert response.json()["uid"] == "test-user-123"
+    assert response.json() == snapshot
 
 
 def test_consolidated_self_registration_as_admin_fails(mock_firestore, mock_auth_service):
@@ -90,7 +98,7 @@ def test_consolidated_self_registration_as_admin_fails(mock_firestore, mock_auth
     assert "self-register as 'user' type" in response.json()["detail"]
 
 
-def test_consolidated_admin_creation(mock_firestore, mock_auth_service):
+def test_consolidated_admin_creation(mock_firestore, mock_auth_service, mock_now, snapshot):
     # Mock caller IS admin
     mock_admin_doc = MagicMock()
     mock_admin_doc.exists = True
@@ -117,10 +125,10 @@ def test_consolidated_admin_creation(mock_firestore, mock_auth_service):
     response = client.post("/users/", json=payload, headers=headers)
     
     assert response.status_code == 201
-    assert response.json()["uid"] == "target-uid"
+    assert response.json() == snapshot
     mock_target_doc.set.assert_called()
 
-def test_get_me(mock_firestore, mock_auth_service):
+def test_get_me(mock_firestore, mock_auth_service, snapshot):
     # Mock user exists
     mock_doc = MagicMock()
     mock_doc.exists = True
@@ -135,29 +143,28 @@ def test_get_me(mock_firestore, mock_auth_service):
     response = client.get("/users/me", headers=headers)
     
     assert response.status_code == 200
-    assert response.json()["uid"] == "test-user-123"
-    assert response.json()["is_premium"] is True
+    assert response.json() == snapshot
 
 def test_unauthorized():
     response = client.get("/users/me", headers={"Authorization": "Bearer invalid-jwt"})
     assert response.status_code == 401
 
 
-def test_check_root_admin_exists(mock_firestore):
+def test_check_root_admin_exists(mock_firestore, snapshot):
     # Mock exists
     mock_firestore.collection().where().stream.return_value = [MagicMock()]
     response = client.get("/users/root-admin-exists")
     assert response.status_code == 200
-    assert response.json()["exists"] is True
+    assert response.json() == snapshot
 
     # Mock not exists
     mock_firestore.collection().where().stream.return_value = []
     response = client.get("/users/root-admin-exists")
     assert response.status_code == 200
-    assert response.json()["exists"] is False
+    assert response.json() == snapshot
 
 
-def test_list_users_admin(mock_firestore, mock_auth_service):
+def test_list_users_admin(mock_firestore, mock_auth_service, snapshot):
     # Mock current user IS admin
     mock_admin_doc = MagicMock()
     mock_admin_doc.exists = True
@@ -174,8 +181,7 @@ def test_list_users_admin(mock_firestore, mock_auth_service):
     response = client.get("/users/", headers=headers)
     
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]["uid"] == "user1"
+    assert response.json() == snapshot
 
 
 def test_delete_user_admin(mock_firestore, mock_auth_service):
@@ -244,7 +250,7 @@ def test_purge_all_users_non_root_fails(mock_firestore, mock_auth_service):
     assert response.status_code == 403
     assert "Root Admin authority required" in response.json()["detail"]
 
-def test_delete_root_admin_unauthorized(mock_firestore):
+def test_delete_root_admin_unauthorized(mock_firestore, snapshot):
     # Mock caller is ADMIN
     mock_admin_doc = MagicMock()
     mock_admin_doc.exists = True
@@ -266,9 +272,9 @@ def test_delete_root_admin_unauthorized(mock_firestore):
     headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-uid', role='admin')}"}
     response = client.delete("/users/root-uid", headers=headers)
     assert response.status_code == 403
-    assert "Only a Root Admin can delete another Root Admin" in response.json()["detail"]
+    assert response.json() == snapshot
 
-def test_delete_last_root_admin_fails(mock_firestore):
+def test_delete_last_root_admin_fails(mock_firestore, snapshot):
     # Mock caller is ROOT_ADMIN
     mock_root_doc = MagicMock()
     mock_root_doc.exists = True
@@ -286,12 +292,7 @@ def test_delete_last_root_admin_fails(mock_firestore):
     headers = {"Authorization": f"Bearer {sign_test_token(uid='root-uid', role='root_admin')}"}
     response = client.delete("/users/root-uid", headers=headers)
     assert response.status_code == 400
-    assert "last active root admin" in response.json()["detail"]
-    
-    headers = {"Authorization": f"Bearer {sign_test_token(uid='root-uid', role='root_admin')}"}
-    response = client.delete("/users/root-uid", headers=headers)
-    assert response.status_code == 400
-    assert "last active root admin" in response.json()["detail"]
+    assert response.json() == snapshot
 
 def test_auth_expired_token():
     exp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
@@ -306,7 +307,7 @@ def test_auth_invalid_signature():
     response = client.get("/users/me", headers=headers)
     assert response.status_code == 401
 
-def test_update_me_success(mock_firestore, mock_auth_service):
+def test_update_me_success(mock_firestore, mock_auth_service, mock_now, snapshot):
     # Mock user exists
     mock_ref = MagicMock()
     mock_ref.get().exists = True
@@ -315,7 +316,7 @@ def test_update_me_success(mock_firestore, mock_auth_service):
         "user_type": "user",
         "is_premium": True,
         "is_deleted": False,
-        "created_at": datetime.datetime.now(tz=datetime.timezone.utc)
+        "created_at": mock_now
     }
     
     mock_firestore.collection().document.return_value = mock_ref
@@ -325,9 +326,10 @@ def test_update_me_success(mock_firestore, mock_auth_service):
     
     response = client.put("/users/me", json=payload, headers=headers)
     assert response.status_code == 200
+    assert response.json() == snapshot
     mock_ref.update.assert_called()
 
-def test_restore_user_success(mock_firestore, mock_auth_service):
+def test_restore_user_success(mock_firestore, mock_auth_service, mock_now, snapshot):
     # Mock admin user
     mock_admin_doc = MagicMock()
     mock_admin_doc.exists = True
@@ -341,7 +343,7 @@ def test_restore_user_success(mock_firestore, mock_auth_service):
         "user_type": "user",
         "is_premium": False,
         "is_deleted": False,
-        "created_at": datetime.datetime.now(tz=datetime.timezone.utc)
+        "created_at": mock_now
     }
     
     def side_effect(uid):
@@ -354,6 +356,7 @@ def test_restore_user_success(mock_firestore, mock_auth_service):
     response = client.patch("/users/user1/restore", headers=headers)
     
     assert response.status_code == 200
+    assert response.json() == snapshot
     mock_target_ref.update.assert_called_with({"is_deleted": False})
 
 @pytest.mark.asyncio
@@ -376,3 +379,155 @@ async def test_purge_all_users_auth_failure_resilience(mock_firestore):
         # Should still succeed (returns 204) as Firestore purge continues
         assert response.status_code == 204
         mock_firestore.batch().delete.assert_called()
+
+# --- New Bolstered Tests ---
+
+def test_get_me_self_healing(mock_firestore, mock_now, snapshot):
+    # Mock user DOES NOT exist
+    mock_ref = MagicMock()
+    mock_ref.get().exists = False
+    mock_firestore.collection().document.return_value = mock_ref
+
+    headers = {"Authorization": f"Bearer {sign_test_token(email='new@e.com')}"}
+    response = client.get("/users/me", headers=headers)
+    
+    assert response.status_code == 200
+    assert response.json() == snapshot
+    mock_ref.set.assert_called()
+
+def test_update_me_not_found(mock_firestore, snapshot):
+    mock_ref = MagicMock()
+    mock_ref.get().exists = False
+    mock_firestore.collection().document.return_value = mock_ref
+
+    payload = {"is_premium": True}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    response = client.put("/users/me", json=payload, headers=headers)
+    
+    assert response.status_code == 404
+    assert response.json() == snapshot
+
+def test_update_me_validation_error(snapshot):
+    payload = {"is_premium": "not-a-bool"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    response = client.put("/users/me", json=payload, headers=headers)
+    
+    assert response.status_code == 422
+    # Snapshot for 422 is useful to see FastAPI's default error structure
+    assert response.json() == snapshot
+
+def test_delete_user_not_found(mock_firestore, snapshot):
+    # Mock caller IS admin
+    mock_admin_doc = MagicMock()
+    mock_admin_doc.exists = True
+    mock_admin_doc.to_dict.return_value = {"user_type": "admin"}
+    mock_admin_doc.get.return_value = mock_admin_doc
+    
+    # Mock target NOT found
+    mock_target_ref = MagicMock()
+    mock_target_ref.get().exists = False
+    
+    def side_effect(uid):
+        if uid == "admin-uid": return mock_admin_doc
+        return mock_target_ref
+    
+    mock_firestore.collection().document.side_effect = side_effect
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-uid', role='admin')}"}
+    response = client.delete("/users/missing", headers=headers)
+    
+    assert response.status_code == 404
+    assert response.json() == snapshot
+
+def test_delete_user_hard_success(mock_firestore, mock_auth_service, snapshot):
+    # Mock caller IS admin
+    mock_admin_doc = MagicMock()
+    mock_admin_doc.exists = True
+    mock_admin_doc.to_dict.return_value = {"user_type": "admin"}
+    mock_admin_doc.get.return_value = mock_admin_doc
+    
+    # Mock target exists
+    mock_target_ref = MagicMock()
+    mock_target_ref.get().exists = True
+    mock_target_ref.get().to_dict.return_value = {"user_type": "user"}
+    
+    def side_effect(uid):
+        if uid == "admin-uid": return mock_admin_doc
+        return mock_target_ref
+    
+    mock_firestore.collection().document.side_effect = side_effect
+    
+    with respx.mock:
+        respx.delete(f"{os.getenv('AUTH_SERVICE_URL', 'http://localhost:8001')}/auth/users/u1").mock(return_value=Response(204))
+        
+        headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-uid', role='admin')}"}
+        response = client.delete("/users/u1?hard=True", headers=headers)
+        
+        assert response.status_code == 204
+        mock_target_ref.delete.assert_called()
+
+def test_restore_user_not_found(mock_firestore, snapshot):
+    # Mock admin caller
+    mock_admin_doc = MagicMock(); mock_admin_doc.exists = True; mock_admin_doc.to_dict.return_value = {"user_type": "admin"}
+    
+    # Mock target doc MISSING
+    mock_target_ref = MagicMock(); mock_target_ref.get().exists = False
+    
+    def side_effect(uid):
+        if uid == "admin-uid": return mock_admin_doc
+        return mock_target_ref
+        
+    mock_firestore.collection().document.side_effect = side_effect
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-uid', role='admin')}"}
+    response = client.patch("/users/missing/restore", headers=headers)
+    
+    assert response.status_code == 404
+    assert response.json() == snapshot
+
+def test_create_user_idempotency_self(mock_firestore, mock_now, snapshot):
+    # Mock user ALREADY exists
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    mock_doc.to_dict.return_value = {
+        "email": "existing@e.com",
+        "user_type": "user",
+        "is_premium": False,
+        "is_deleted": False,
+        "created_at": "2026-03-26T12:00:00Z"
+    }
+    mock_firestore.collection().document().get.return_value = mock_doc
+
+    payload = {"email": "existing@e.com", "user_type": "user"}
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    response = client.post("/users/", json=payload, headers=headers)
+    
+    # Should return existing record with 200/201 (App says 201 in return UserOut but existing check returns UserOut directly)
+    # Wait, main.py:250 returns UserOut(uid=target_uid, **existing_doc.to_dict())
+    assert response.status_code == 201
+    assert response.json() == snapshot
+
+def test_list_users_unauthorized(snapshot):
+    headers = {"Authorization": f"Bearer {sign_test_token(role='user')}"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 403
+    assert response.json() == snapshot
+
+def test_list_users_include_deleted(mock_firestore, snapshot):
+    # Mock admin caller
+    mock_admin_doc = MagicMock(); mock_admin_doc.exists = True; mock_admin_doc.to_dict.return_value = {"user_type": "admin"}
+    mock_firestore.collection().document().get.return_value = mock_admin_doc
+    
+    # Mock users: one active, one deleted
+    mock_u1 = MagicMock(); mock_u1.id = "u1"; mock_u1.to_dict.return_value = {"email": "u1@e.com", "is_deleted": False, "user_type": "user", "created_at": "2026-03-26T12:00:00Z"}
+    mock_u2 = MagicMock(); mock_u2.id = "u2"; mock_u2.to_dict.return_value = {"email": "u2@e.com", "is_deleted": True, "user_type": "user", "created_at": "2026-03-26T12:00:00Z"}
+    mock_firestore.collection().stream.return_value = [mock_u1, mock_u2]
+    
+    headers = {"Authorization": f"Bearer {sign_test_token(uid='admin-uid', role='admin')}"}
+    
+    # CASE 1: Default (include_deleted=False)
+    response = client.get("/users/", headers=headers)
+    assert len(response.json()) == 1
+    
+    # CASE 2: include_deleted=True
+    response = client.get("/users/?include_deleted=True", headers=headers)
+    assert len(response.json()) == 2
+    assert response.json() == snapshot
