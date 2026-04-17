@@ -3,3 +3,6 @@ httpx
 pytest-asyncio
 fastapi
 respx
+syrupy
+pytest-mock
+freezegun
