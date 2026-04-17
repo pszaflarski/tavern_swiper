@@ -35,12 +35,15 @@ if [[ "$ENV" == "local" ]]; then
     update_env_var "EXPO_PUBLIC_USERS_URL" "http://localhost:8006"
     echo "✅ Switched to local (localhost)."
 else
-    SERVICES=("auth" "users" "profiles" "discovery" "messages")
+    SERVICES=("auth" "users" "profiles" "discovery" "messages" "swipes")
     for SERVICE in "${SERVICES[@]}"; do
+        ACTUAL_SERVICE=$SERVICE
+        [[ "$SERVICE" == "swipes" ]] && ACTUAL_SERVICE="discovery"
+        
         if [[ "$ENV" == "dev" ]]; then
-            DEPLOY_NAME="${SERVICE}-dev"
+            DEPLOY_NAME="${ACTUAL_SERVICE}-dev"
         else
-            DEPLOY_NAME="${SERVICE}-test"
+            DEPLOY_NAME="${ACTUAL_SERVICE}-test"
         fi
         
         echo "Fetching URL for ${DEPLOY_NAME}..."
@@ -48,8 +51,8 @@ else
         
         # Fallback for 'dev' environment if suffixed service doesn't exist yet
         if [[ "$URL" == "NOT_FOUND" && "$ENV" == "dev" ]]; then
-            echo "⚠️  Suffixed service ${DEPLOY_NAME} not found. Falling back to unsuffixed name: ${SERVICE}"
-            DEPLOY_NAME="${SERVICE}"
+            echo "⚠️  Suffixed service ${DEPLOY_NAME} not found. Falling back to unsuffixed name: ${ACTUAL_SERVICE}"
+            DEPLOY_NAME="${ACTUAL_SERVICE}"
             URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
         fi
         
