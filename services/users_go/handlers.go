@@ -212,28 +212,10 @@ func createUserHandler(c *gin.Context) {
 	doc, err := docRef.Get(c.Request.Context())
 	
 	if err == nil && doc.Exists() {
-		// Idempotent upgrading to root_admin
-		if body.UserType == RootAdmin {
-			data := map[string]interface{}{
-				"email":      body.Email,
-				"user_type":  string(body.UserType),
-				"is_premium": body.IsPremium,
-				"is_deleted": body.IsDeleted,
-				"created_at": doc.Data()["created_at"],
-			}
-			docRef.Set(c.Request.Context(), data)
-			var u UserOut
-			mapToUserOut(targetUID, data, &u)
-			c.JSON(http.StatusCreated, u)
-			return
-		}
-		if body.UID == nil { // Self reg
-			var u UserOut
-			mapToUserOut(targetUID, doc.Data(), &u)
-			c.JSON(http.StatusCreated, u)
-			return
-		}
-		httpError(c, http.StatusBadRequest, "User record already exists")
+		log.Printf("[INFO] User record already exists for %s, returning existing record (Idempotent)", targetUID)
+		var u UserOut
+		mapToUserOut(targetUID, doc.Data(), &u)
+		c.JSON(http.StatusCreated, u)
 		return
 	}
 

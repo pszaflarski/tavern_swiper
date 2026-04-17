@@ -63,25 +63,24 @@ def purge_system(env="dev"):
     # 3. Clear Firebase Auth (Standard for the whole project)
     print("\n🔥 Purging Firebase Auth Users...")
     try:
-        # Initialize Firebase Admin if not already
+        # Initialize Firebase Admin explicitly for the target project
         if not firebase_admin._apps:
-            # We use the same gcloud credentials for Firebase Admin
-            # Note: firebase_admin usually needs a service account for full auth control,
-            # but for bulk-deleting users, an authorized user token might work depending on roles.
+            # We use an options dict to specify the project ID
+            options = {'projectId': PROJECT_ID}
             try:
-                firebase_admin.initialize_app()
-            except Exception:
-                # Fallback if ADC is broken
+                firebase_admin.initialize_app(options=options)
+            except Exception as e:
+                print(f"  ⚠️ Warning: Firebase Admin initialization failed: {e}")
                 pass
 
         # Fetch and delete users in batches
-        users = auth.list_users().iterate_all()
+        users = list(auth.list_users().iterate_all())
         uids = [user.uid for user in users]
         if uids:
             auth.delete_users(uids)
-            print(f"  ✅ {len(uids)} users deleted from Firebase Auth.")
+            print(f"  ✅ {len(uids)} users deleted from Firebase Auth ({PROJECT_ID}).")
         else:
-            print("  ✅ No users found in Firebase Auth.")
+            print(f"  ✅ No users found in Firebase Auth ({PROJECT_ID}).")
     except Exception as e:
         print(f"  ❌ Error purging Firebase Auth: {e}")
 
