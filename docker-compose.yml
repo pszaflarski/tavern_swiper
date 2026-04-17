@@ -20,14 +20,15 @@ services:
 
   profiles:
     build:
-      context: ./services/profiles
+      context: ./services/profiles_go
     ports:
       - "8002:8002"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-    env_file: ./services/profiles/.env
+      - PORT=8002
+    env_file: ./services/profiles_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -37,7 +38,7 @@ services:
         condition: service_started
     healthcheck:
 
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/profiles/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/profiles/health"]
       interval: 10s
       timeout: 5s
       retries: 3

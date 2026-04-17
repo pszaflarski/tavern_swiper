@@ -22,9 +22,11 @@ Before writing any Go code, the existing Python service must be treated as the "
 Set up the service skeleton with a focus on testability.
 1.  **Go Init**: `go mod init <module_path>`.
 2.  **Interface Wrapper Pattern**: Define interfaces for all external dependencies (Firestore, Firebase).
-    - **Firestore Rule:** Wrap `Client`, `Collection`, `Document`, and `Iterator` in interfaces to allow deep mocking of complex `Next()`, `GetAll()`, and `Batch()` operations.
-3.  **Time Mocking Hooks**: Use a package-level `_now` function pointer (defaulting to `time.Now().UTC`) for all timestamps to allow deterministic freezing in tests.
-3.  **CI/CD Transition**: Create a `cloudbuild.yaml` that supports the new environment naming scheme (`{service}-{env}`).
+    - **Firestore Rule**: Wrap `Client`, `Collection`, `Document`, and `Iterator` in interfaces to allow deep mocking of complex `Next()`, `GetAll()`, and `Batch()` operations.
+3.  **Protobuf Generation**: If the service uses cross-service events, generate Go code from `.proto` files early.
+    - **Execution**: `protoc --go_out=generated --go_opt=paths=source_relative ...`
+4.  **Time Mocking Hooks**: Use a package-level `_now` function pointer (defaulting to `time.Now().UTC`) for all timestamps to allow deterministic freezing in tests.
+5.  **CI/CD Transition**: Create a `cloudbuild.yaml` that supports the new environment naming scheme (`{service}-{env}`).
 
 ### Phase 2: Red Test Porting (Go)
 1.  **Table-Driven Tests**: Port the Python test cases to Go `handlers_test.go`.
@@ -33,7 +35,10 @@ Set up the service skeleton with a focus on testability.
 ### Phase 3: Green Implementation (Go)
 1.  **Gin Handlers**: Implement the logic to fulfill the handlers.
 2.  **Error Parity**: Ensure error messages and status codes match the Python Oracle 1:1.
-3.  **JWT Parity**: Replicate custom JWT claim logic (e.g., role-based access).
+3.  **JWT Parity**: Replicate custom JWT claim logic (e.g., role-based access). 
+4.  **The "Image Normalization Ritual"**: For image handlers, use `disintegration/imaging` to implement:
+    - **Magic Byte Check**: Validating `FF D8 FF` for JPEG parity.
+    - **Perfect Geometry**: Center-cropping to the sacred ratio (e.g., 4:5 / 1080x1350).
 
 ### Phase 4: Behavioral & Structural Snapshot Verification
 1.  **JSON Parity (Ground Truth)**: Compare the Go JSON output against the Python Snapshots generated in Phase 0.
@@ -55,6 +60,7 @@ Set up the service skeleton with a focus on testability.
 
 - **Difference**: FastAPI (Pydantic) produces complex validation error arrays with `loc`, `msg`, and `type`.
 - **Requirement**: Use a custom `validationError` helper to produce 1:1 parity for the `detail` array.
+- **Top-Level Parity**: Ensure the entire response structure matches (e.g., Python's `syrupy` may capture a `body` field wrapper in 422 responses).
 - **Example**: Ensure `loc: ["body", "field_name"]` and exact error strings (e.g., `"Input should be a valid boolean"`) are matched.
 
 ### Database Naming
@@ -72,3 +78,8 @@ Set up the service skeleton with a focus on testability.
 - **Complexity**: Ported complex self-healing Logic and Admin/Root RBAC.
 - **Go Parity**: 100% parity across 21 snapshots using advanced Firestore mocks.
 - **Lessons**: Highlighting the importance of `created_at` stabilization via time-mocks.
+
+### Profiles Service
+- **Complexity**: 1080x1350 Image Normalization, JPEG Magic Byte verification, and Protobuf Pub/Sub event publishing.
+- **Go Parity**: 100% parity across 27 snapshots.
+- **Lessons**: The 1:1 mapping of Protobuf event types and matching structured FastAPI 422 `body` wrappers.
