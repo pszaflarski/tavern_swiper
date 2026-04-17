@@ -31,35 +31,51 @@ echo "🌍 Running Integration Tests in mode: $MODE (Reset: $RESET)"
 # ---------------------------------------------------------------------------
 # 1. Setup Environment & URLs
 # ---------------------------------------------------------------------------
+PROJECT_ID="tavern-swiper-dev"
+REGION="us-central1"
+
+get_url() {
+    local service=$1
+    local env=$2
+    local deploy_name="${service}-${env}"
+    local url=$(gcloud run services describe "${deploy_name}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "")
+    if [[ -z "$url" && "$env" == "dev" ]]; then
+        url=$(gcloud run services describe "${service}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "")
+    fi
+    echo "$url"
+}
+
 if [[ "$MODE" == "local" ]]; then
     export AUTH_SERVICE_URL="http://localhost:8001"
     export PROFILES_URL="http://localhost:8002"
     export USERS_URL="http://localhost:8006"
-    export DISCOVERY_DB="discovery-test"
+    export DISCOVERY_DB="discovery-dev"
     export PUBSUB_EMULATOR_HOST="localhost:8085"
-    ENV_ARG="test"
-
-elif [[ "$MODE" == "cloud-dev" ]]; then
-    export AUTH_SERVICE_URL="https://auth-hhqol7siba-uc.a.run.app"
-    export PROFILES_URL="https://profiles-hhqol7siba-uc.a.run.app"
-    export USERS_URL="https://users-hhqol7siba-uc.a.run.app"
-    export DISCOVERY_URL="https://discovery-hhqol7siba-uc.a.run.app"
-    export MESSAGES_URL="https://messages-hhqol7siba-uc.a.run.app"
-    export APP_URL="https://app-hhqol7siba-uc.a.run.app"
-    export DISCOVERY_DB="discovery"
-    export PUBSUB_EMULATOR_HOST=""
     ENV_ARG="dev"
 
+elif [[ "$MODE" == "cloud-dev" ]]; then
+    ENV_ARG="dev"
+    echo "🔍 Fetching Cloud Run URLs for [dev] environment..."
+    export AUTH_SERVICE_URL=$(get_url "auth" "dev")
+    export PROFILES_URL=$(get_url "profiles" "dev")
+    export USERS_URL=$(get_url "users" "dev")
+    export DISCOVERY_URL=$(get_url "discovery" "dev")
+    export MESSAGES_URL=$(get_url "messages" "dev")
+    export APP_URL=$(get_url "app" "dev")
+    export DISCOVERY_DB="discovery-dev"
+    export PUBSUB_EMULATOR_HOST=""
+
 elif [[ "$MODE" == "cloud-test" ]]; then
-    export AUTH_SERVICE_URL="https://auth-test-hhqol7siba-uc.a.run.app"
-    export PROFILES_URL="https://profiles-test-hhqol7siba-uc.a.run.app"
-    export USERS_URL="https://users-test-hhqol7siba-uc.a.run.app"
-    export DISCOVERY_URL="https://discovery-test-hhqol7siba-uc.a.run.app"
-    export MESSAGES_URL="https://messages-test-hhqol7siba-uc.a.run.app"
-    export APP_URL="https://app-test-hhqol7siba-uc.a.run.app"
+    ENV_ARG="test"
+    echo "🔍 Fetching Cloud Run URLs for [test] environment..."
+    export AUTH_SERVICE_URL=$(get_url "auth" "test")
+    export PROFILES_URL=$(get_url "profiles" "test")
+    export USERS_URL=$(get_url "users" "test")
+    export DISCOVERY_URL=$(get_url "discovery" "test")
+    export MESSAGES_URL=$(get_url "messages" "test")
+    export APP_URL=$(get_url "app" "test")
     export DISCOVERY_DB="discovery-test"
     export PUBSUB_EMULATOR_HOST=""
-    ENV_ARG="test"
 fi
 
 # Use the project's virtual environment if available

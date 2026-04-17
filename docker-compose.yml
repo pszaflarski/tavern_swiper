@@ -12,6 +12,12 @@ services:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/auth/health"]
       interval: 10s
@@ -33,11 +39,16 @@ services:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M
     depends_on:
       pubsub:
         condition: service_started
     healthcheck:
-
       test: ["CMD", "curl", "-f", "http://localhost:8002/profiles/health"]
       interval: 10s
       timeout: 5s
@@ -57,6 +68,12 @@ services:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M
     depends_on:
       profiles:
         condition: service_healthy
@@ -80,6 +97,12 @@ services:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M
     depends_on:
       profiles:
         condition: service_healthy
@@ -90,19 +113,27 @@ services:
       retries: 3
 
   users:
-    build: ./services/users
+    build:
+      context: ./services/users_go
     ports:
       - "8006:8006"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
-    env_file: ./services/users/.env
+      - PORT=8006
+    env_file: ./services/users_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/users/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8006/users/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -110,10 +141,14 @@ services:
   pubsub:
     image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
     command: gcloud beta emulators pubsub start --hostport=0.0.0.0:8085 --project=tavern-swiper-dev
-    ports:
-      - "8085:8085"
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   pubsub-init:
     image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
@@ -130,6 +165,12 @@ services:
       "
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 
   discovery-subscriber:
     build:
@@ -138,13 +179,19 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-      - FIRESTORE_DATABASE_ID=profiles-dev
+      - FIRESTORE_DATABASE_ID=discovery-dev
       - PUBSUB_TOPIC_ID=dev-profiles-profile-events-v1
       - PUBSUB_SUB_ID=dev-discovery-from-profiles-profile-events-v1-sub
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M
     depends_on:
       pubsub:
         condition: service_started
