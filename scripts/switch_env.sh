@@ -38,7 +38,7 @@ else
     SERVICES=("auth" "users" "profiles" "discovery" "messages")
     for SERVICE in "${SERVICES[@]}"; do
         if [[ "$ENV" == "dev" ]]; then
-            DEPLOY_NAME="${SERVICE}"
+            DEPLOY_NAME="${SERVICE}-dev"
         else
             DEPLOY_NAME="${SERVICE}-test"
         fi
@@ -46,8 +46,15 @@ else
         echo "Fetching URL for ${DEPLOY_NAME}..."
         URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
         
+        # Fallback for 'dev' environment if suffixed service doesn't exist yet
+        if [[ "$URL" == "NOT_FOUND" && "$ENV" == "dev" ]]; then
+            echo "⚠️  Suffixed service ${DEPLOY_NAME} not found. Falling back to unsuffixed name: ${SERVICE}"
+            DEPLOY_NAME="${SERVICE}"
+            URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
+        fi
+        
         if [[ "$URL" == "NOT_FOUND" ]]; then
-            echo "⚠️ Warning: Service ${DEPLOY_NAME} not found on Cloud Run."
+            echo "❌ Error: Service ${DEPLOY_NAME} not found on Cloud Run."
             continue
         fi
 

@@ -1,0 +1,14 @@
+filename: frontend/cloudbuild.yaml
+github:
+  name: tavern_swiper
+  owner: pszaflarski
+  push:
+    branch: ^dev$
+includedFiles:
+- frontend/**
+name: frontend-dev
+serviceAccount: projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com
+substitutions:
+  _ENV_NAME: dev
+  _ENV_SUFFIX: -dev
+  _SERVICE_NAME: app

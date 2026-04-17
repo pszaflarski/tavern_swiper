@@ -37,14 +37,14 @@ The current naming convention uses **no suffix** for the `dev` environment and `
 | **Cloud Run: Users** | `users-dev` | `users-test` |
 | **Cloud Run: Frontend** | `app-dev` | `app-test` |
 | **Cloud Function: Subscriber** | `discovery_subscriber-dev` | `discovery_subscriber-test` |
-| **Firestore DBs** | **unchanged** — `auth`, `profiles`, `discovery`, `messages`, `users` | **unchanged** — `auth-test`, etc. |
+| **Firestore DBs** | `auth-dev`, `profiles-dev`, `discovery-dev`, `messages-dev`, `users-dev` | `auth-test`, `profiles-test`, etc. |
 | **Pub/Sub Topics** | **unchanged** — `dev-profiles-profile-events-v1` | **unchanged** |
 | **GCS Bucket** | **unchanged** — `tavern-swiper-dev-media` | **unchanged** |
 | **Cloud Build `_ENV_SUFFIX`** | `"-dev"` | `"-test"` (unchanged) |
 | **Cloud Build `_ENV_NAME`** | `"dev"` (unchanged) | `"test"` (unchanged) |
 
 > [!IMPORTANT]
-> **Firestore databases, Pub/Sub topics, and GCS buckets do NOT need renaming.** They already use consistent naming and are decoupled from Cloud Run service names. The renaming is purely for Cloud Run service names and the `_ENV_SUFFIX` substitution variable.
+> **Pub/Sub topics and GCS buckets do NOT need renaming.** They already use consistent naming and are decoupled from Cloud Run service names. However, **Firestore databases in dev will be renamed** from `service` to `service-dev` to align with the environment naming convention.
 
 ---
 
@@ -359,38 +359,7 @@ Wait for builds. Verify test services are still functioning (no change expected 
 
 ---
 
-## Phase 7: Cleanup — Delete Old Unsuffixed Services
-
-> [!CAUTION]
-> Only do this AFTER verifying all new `-dev` services are healthy and the frontend is working correctly with the new URLs.
-
-```bash
-# Delete old unsuffixed Cloud Run services
-OLD_SERVICES=("auth" "profiles" "discovery" "messages" "users" "app")
-for s in "${OLD_SERVICES[@]}"; do
-  echo "Deleting old service: $s"
-  gcloud run services delete "$s" --region us-central1 --quiet
-done
-
-# Delete old unsuffixed Cloud Function
-gcloud functions delete discovery_subscriber --region us-central1 --quiet
-```
-
-### 7.1 Clean Up Old GCR Images (Optional)
-
-The old container image tags under the unsuffixed names will remain in GCR. These can be cleaned up anytime:
-```bash
-for s in auth profiles discovery messages users app; do
-  gcloud container images list-tags "gcr.io/tavern-swiper-dev/$s" --format='get(digest)' | \
-    while read digest; do
-      gcloud container images delete "gcr.io/tavern-swiper-dev/$s@$digest" --quiet
-    done
-done
-```
-
----
-
-## Phase 8: Update Documentation
+## Phase 7: Update Documentation
 
 ### 8.1 `.cursorrules` — Update port assignment table comment
 
@@ -468,6 +437,5 @@ If anything goes wrong:
 | Phase 4: Frontend .env | 1 min | Automated via script |
 | Phase 5: Deploy & verify | 10 min | Wait for builds |
 | Phase 6: Push to test | 5 min | Verify no regression |
-| Phase 7: Delete old services | 5 min | After verification |
-| Phase 8: Update docs | 5 min | 2 files |
-| **Total** | **~45 min** | |
+| Phase 7: Update docs | 5 min | 2 files |
+| **Total** | **~40 min** | |

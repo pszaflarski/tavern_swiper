@@ -24,23 +24,34 @@ def get_url(service_name, env="local"):
         return f"http://localhost:{ports.get(service_name)}"
     
     # Fetch from Cloud Run
-    deploy_name = f"{service_name}-test" if env == "test" else service_name
-    # For 'dev', we use the service name directly. For 'test', we use the -test suffix.
-    # The logic above already handles this implicitly if env == 'dev', but I'll make it explicit.
     if env == "dev":
-        deploy_name = service_name
+        deploy_name = f"{service_name}-dev"
     elif env == "test":
         deploy_name = f"{service_name}-test"
+    else:
+        deploy_name = service_name
         
     try:
         url = subprocess.check_output([
             "gcloud", "run", "services", "describe", deploy_name,
             "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
             "--format", "value(status.url)"
-        ]).decode("utf-8").strip()
+        ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url
-    except Exception as e:
-        print(f"⚠️ Error fetching URL for {deploy_name}: {e}")
+    except Exception:
+        # Fallback for 'dev' if suffixed service not found
+        if env == "dev":
+            print(f"⚠️  Suffixed service {deploy_name} not found. Falling back to unsuffixed name: {service_name}")
+            try:
+                url = subprocess.check_output([
+                    "gcloud", "run", "services", "describe", service_name,
+                    "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+                    "--format", "value(status.url)"
+                ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+                return url
+            except Exception as e2:
+                print(f"❌ Error fetching URL for fallback {service_name}: {e2}")
+                return None
         return None
 
 def create_root(env="local", email="admin@example.com", password="Password123!"):
