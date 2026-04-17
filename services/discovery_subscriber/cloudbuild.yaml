@@ -11,7 +11,7 @@ steps:
           --gen2 \
           --runtime=go125 \
           --region=us-central1 \
-          --source=services/discovery_subscriber \
+          --source=services/$_DIR_NAME \
           --entry-point=HandleProfileEvent \
           --trigger-topic=$_ENV_NAME-profiles-profile-events-v1 \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
