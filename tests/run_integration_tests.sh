@@ -34,47 +34,50 @@ echo "🌍 Running Integration Tests in mode: $MODE (Reset: $RESET)"
 PROJECT_ID="tavern-swiper-dev"
 REGION="us-central1"
 
-get_url() {
-    local service=$1
-    local env=$2
-    local deploy_name="${service}-${env}"
-    local url=$(gcloud run services describe "${deploy_name}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "")
-    if [[ -z "$url" && "$env" == "dev" ]]; then
-        url=$(gcloud run services describe "${service}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "")
-    fi
-    echo "$url"
-}
-
 if [[ "$MODE" == "local" ]]; then
     export AUTH_SERVICE_URL="http://localhost:8001"
     export PROFILES_URL="http://localhost:8002"
+    export DISCOVERY_URL="http://localhost:8003"
+    export MESSAGES_URL="http://localhost:8005"
     export USERS_URL="http://localhost:8006"
     export DISCOVERY_DB="discovery-dev"
     export PUBSUB_EMULATOR_HOST="localhost:8085"
     ENV_ARG="dev"
+    echo "📍 Mode: LOCAL (pointing to localhost)"
 
-elif [[ "$MODE" == "cloud-dev" ]]; then
-    ENV_ARG="dev"
-    echo "🔍 Fetching Cloud Run URLs for [dev] environment..."
-    export AUTH_SERVICE_URL=$(get_url "auth" "dev")
-    export PROFILES_URL=$(get_url "profiles" "dev")
-    export USERS_URL=$(get_url "users" "dev")
-    export DISCOVERY_URL=$(get_url "discovery" "dev")
-    export MESSAGES_URL=$(get_url "messages" "dev")
-    export APP_URL=$(get_url "app" "dev")
-    export DISCOVERY_DB="discovery-dev"
-    export PUBSUB_EMULATOR_HOST=""
+else
+    ENV_NAME="dev"
+    [[ "$MODE" == "cloud-test" ]] && ENV_NAME="test"
+    ENV_ARG=$ENV_NAME
+    
+    echo "🔍 Fetching Cloud Run URLs for [$ENV_NAME] environment..."
+    SERVICES=("auth" "users" "profiles" "discovery" "messages")
+    for SERVICE in "${SERVICES[@]}"; do
+        DEPLOY_NAME="${SERVICE}-${ENV_NAME}"
+        URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
+        
+        # Fallback for 'dev' environment
+        if [[ "$URL" == "NOT_FOUND" && "$ENV_NAME" == "dev" ]]; then
+            URL=$(gcloud run services describe "${SERVICE}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
+        fi
+        
+        if [[ "$URL" == "NOT_FOUND" ]]; then
+            echo "⚠️  Warning: Service ${SERVICE} not found for $ENV_NAME"
+            continue
+        fi
 
-elif [[ "$MODE" == "cloud-test" ]]; then
-    ENV_ARG="test"
-    echo "🔍 Fetching Cloud Run URLs for [test] environment..."
-    export AUTH_SERVICE_URL=$(get_url "auth" "test")
-    export PROFILES_URL=$(get_url "profiles" "test")
-    export USERS_URL=$(get_url "users" "test")
-    export DISCOVERY_URL=$(get_url "discovery" "test")
-    export MESSAGES_URL=$(get_url "messages" "test")
-    export APP_URL=$(get_url "app" "test")
-    export DISCOVERY_DB="discovery-test"
+        # Map to environment variables
+        case $SERVICE in
+            auth) export AUTH_SERVICE_URL=$URL ;;
+            users) export USERS_URL=$URL ;;
+            profiles) export PROFILES_URL=$URL ;;
+            discovery) export DISCOVERY_URL=$URL ;;
+            messages) export MESSAGES_URL=$URL ;;
+        esac
+        echo "  ✅ ${SERVICE}: ${URL}"
+    done
+    
+    export DISCOVERY_DB="discovery-${ENV_NAME}"
     export PUBSUB_EMULATOR_HOST=""
 fi
 
