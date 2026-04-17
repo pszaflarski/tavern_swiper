@@ -38,7 +38,8 @@ def delete_collection(coll_ref, batch_size=500):
 
 def purge_system(env="dev"):
     print(f"🚀 Starting Direct Firestore Purge for environment: {env}\n")
-    suffix = "-test" if env == "test" else ""
+    # Map 'dev' and 'test' to their respective database/bucket suffixes
+    suffix = f"-{env}"
     
     # 1. Initialize Credentials
     g_creds = get_gcloud_credentials()
