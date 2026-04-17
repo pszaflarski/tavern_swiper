@@ -1,0 +1,73 @@
+# serializer version: 1
+# name: test_health
+  dict({
+    'service': 'auth',
+    'status': 'ok',
+  })
+# ---
+# name: test_login_user_invalid_password_mapping
+  dict({
+    'detail': 'Incorrect password. Please try again.',
+  })
+# ---
+# name: test_login_user_success
+  dict({
+    'id_token': 'fake-login-token',
+    'uid': 'fake-uid',
+  })
+# ---
+# name: test_register_user_email_exists_mapping
+  dict({
+    'detail': 'An account with this email address already exists.',
+  })
+# ---
+# name: test_register_user_external_down_503
+  dict({
+    'detail': 'External identity provider unavailable',
+  })
+# ---
+# name: test_register_user_generic_error_mapping
+  dict({
+    'detail': 'An unexpected authentication error occurred. Please try again.',
+  })
+# ---
+# name: test_register_user_missing_config_530
+  dict({
+    'detail': 'Authentication provider configuration error',
+  })
+# ---
+# name: test_register_user_success
+  dict({
+    'id_token': 'fake-id-token',
+    'uid': 'fake-uid',
+  })
+# ---
+# name: test_verify_token_expired
+  dict({
+    'detail': 'Token has expired',
+  })
+# ---
+# name: test_verify_token_invalid
+  dict({
+    'detail': 'Invalid authentication token',
+  })
+# ---
+# name: test_verify_token_role_fallback_success
+  dict({
+    'role': 'user',
+    'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1MSIsImVtYWlsIjoiZTEiLCJyb2xlIjoidXNlciIsImlhdCI6MTc3NjQzNjQzOSwiZXhwIjoxNzc2NDM4MjM5fQ.LKuopuhwUM_W1_aETobyIenOvffeY7j4rJ1Xuw_ciYs',
+    'uid': 'u1',
+  })
+# ---
+# name: test_verify_token_service_unavailable_503
+  dict({
+    'detail': 'Authentication service temporarily unavailable',
+  })
+# ---
+# name: test_verify_token_success
+  dict({
+    'role': 'user',
+    'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVpZC0xMjMiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc3NjQzNjQzOSwiZXhwIjoxNzc2NDM4MjM5fQ.N0mz0eShjHzNmKEEZfkKr6jfmBBYIrK_0USkHxWbK_Q',
+    'uid': 'test-uid-123',
+  })
+# ---

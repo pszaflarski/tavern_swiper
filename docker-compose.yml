@@ -1,19 +1,19 @@
 services:
   auth:
     build:
-      context: ./services/auth
+      context: ./services/auth_go
     ports:
       - "8001:8001"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
-    env_file: ./services/auth/.env
+    env_file: ./services/auth_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/auth/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/auth/health"]
       interval: 10s
       timeout: 5s
       retries: 3

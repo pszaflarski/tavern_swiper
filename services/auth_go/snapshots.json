@@ -1,0 +1,46 @@
+{
+  "test_health": {
+    "service": "auth",
+    "status": "ok"
+  },
+  "test_login_user_invalid_password_mapping": {
+    "detail": "Incorrect password. Please try again."
+  },
+  "test_login_user_success": {
+    "id_token": "fake-login-token",
+    "uid": "fake-uid"
+  },
+  "test_register_user_email_exists_mapping": {
+    "detail": "An account with this email address already exists."
+  },
+  "test_register_user_external_down_503": {
+    "detail": "External identity provider unavailable"
+  },
+  "test_register_user_generic_error_mapping": {
+    "detail": "An unexpected authentication error occurred. Please try again."
+  },
+  "test_register_user_missing_config_530": {
+    "detail": "Authentication provider configuration error"
+  },
+  "test_register_user_success": {
+    "id_token": "fake-id-token",
+    "uid": "fake-uid"
+  },
+  "test_verify_token_expired": {
+    "detail": "Token has expired"
+  },
+  "test_verify_token_invalid": {
+    "detail": "Invalid authentication token"
+  },
+  "test_verify_token_role_fallback_success": {
+    "role": "user",
+    "uid": "u1"
+  },
+  "test_verify_token_service_unavailable_503": {
+    "detail": "Authentication service temporarily unavailable"
+  },
+  "test_verify_token_success": {
+    "role": "user",
+    "uid": "test-uid-123"
+  }
+}
