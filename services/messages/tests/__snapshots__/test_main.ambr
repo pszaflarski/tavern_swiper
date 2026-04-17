@@ -1,0 +1,108 @@
+# serializer version: 1
+# name: test_auth_expired_token
+  dict({
+    'detail': 'Tavern token has expired',
+  })
+# ---
+# name: test_auth_invalid_signature
+  dict({
+    'detail': 'Invalid Tavern token: Signature verification failed',
+  })
+# ---
+# name: test_get_messages_success
+  list([
+    dict({
+      'content': 'Hi',
+      'match_id': 'm1',
+      'message_id': 'msg1',
+      'sender_profile_id': 'p1',
+      'sent_at': '2026-04-17T12:00:00Z',
+    }),
+    dict({
+      'content': 'Hello',
+      'match_id': 'm1',
+      'message_id': 'msg2',
+      'sender_profile_id': 'p2',
+      'sent_at': '2026-04-17T12:00:00Z',
+    }),
+  ])
+# ---
+# name: test_health
+  dict({
+    'service': 'messages',
+    'status': 'ok',
+  })
+# ---
+# name: test_list_conversations_success
+  list([
+    dict({
+      'last_message': dict({
+        'content': 'Hi to p2',
+        'sender_profile_id': 'p1',
+        'sent_at': '2026-04-17T12:00:00+00:00',
+      }),
+      'match_id': 'match_p1_p2',
+      'other_profile_id': 'p2',
+    }),
+    dict({
+      'created_at': '2026-04-17T12:00:00Z',
+      'last_message': None,
+      'match_id': 'match_p1_p3',
+      'other_profile_id': 'p3',
+    }),
+  ])
+# ---
+# name: test_send_message_current_behavior_no_verification
+  dict({
+    'content': 'Hack!',
+    'match_id': 'any_match',
+    'message_id': 'fixed-message-id-for-snapshot',
+    'sender_profile_id': 'p2',
+    'sent_at': '2026-04-17T12:00:00Z',
+  })
+# ---
+# name: test_send_message_discovery_failure_resilience
+  dict({
+    'content': 'Still sending!',
+    'match_id': 'm1',
+    'message_id': 'fixed-message-id-for-snapshot',
+    'sender_profile_id': 'p1',
+    'sent_at': '2026-04-17T12:00:00Z',
+  })
+# ---
+# name: test_send_message_success
+  dict({
+    'content': 'Hail!',
+    'match_id': 'm1',
+    'message_id': 'fixed-message-id-for-snapshot',
+    'sender_profile_id': 'p1',
+    'sent_at': '2026-04-17T12:00:00Z',
+  })
+# ---
+# name: test_send_message_unauthorized_match
+  dict({
+    'content': 'Spying!',
+    'match_id': 'not_my_match',
+    'message_id': 'fixed-message-id-for-snapshot',
+    'sender_profile_id': 'p1',
+    'sent_at': '2026-04-17T12:00:00Z',
+  })
+# ---
+# name: test_send_message_validation_error
+  dict({
+    'detail': list([
+      dict({
+        'input': dict({
+          'match_id': 'm1',
+          'sender_profile_id': 'p1',
+        }),
+        'loc': list([
+          'body',
+          'content',
+        ]),
+        'msg': 'Field required',
+        'type': 'missing',
+      }),
+    ]),
+  })
+# ---

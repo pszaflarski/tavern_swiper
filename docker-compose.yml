@@ -68,13 +68,14 @@ services:
 
   messages:
     build:
-      context: ./services/messages
+      context: ./services/messages_go
     ports:
       - "8005:8005"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
-    env_file: ./services/messages/.env
+      - PORT=8005
+    env_file: ./services/messages_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -83,7 +84,7 @@ services:
       profiles:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/messages/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8005/messages/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -137,7 +138,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-      - FIRESTORE_DATABASE_ID=profiles
+      - FIRESTORE_DATABASE_ID=profiles-dev
       - PUBSUB_TOPIC_ID=dev-profiles-profile-events-v1
       - PUBSUB_SUB_ID=dev-discovery-from-profiles-profile-events-v1-sub
     volumes:

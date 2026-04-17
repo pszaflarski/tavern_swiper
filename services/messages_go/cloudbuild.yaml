@@ -1,0 +1,40 @@
+steps:
+  # 1. Run Unit Tests
+  - name: 'golang:1.24'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        go mod download
+        go test -v ./...
+    dir: 'services/$_SERVICE_NAME'
+
+  # 2. Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME', '.']
+    dir: 'services/$_SERVICE_NAME'
+
+  # 3. Push the image to GCR
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME']
+
+  # 4. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🚀 Deploying $_SERVICE_NAME to $_ENV_NAME environment as a Cloud Run service..."
+
+        gcloud run deploy $_SERVICE_NAME$_ENV_SUFFIX \
+          --image=gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest \
+          --region=us-central1 \
+          --allow-unauthenticated \
+          --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=super-secret-tavern-key-123,GCS_BUCKET_NAME=$PROJECT_ID-media,DISCOVERY_SERVICE_URL=$_ENV_NAME-discovery-v1,PUBSUB_PROJECT_ID=$PROJECT_ID \
+          --cpu-boost \
+          --execution-environment=gen1
+
+options:
+  logging: GCS_ONLY
+logsBucket: "gs://tavern-swiper-build-logs-dev"
