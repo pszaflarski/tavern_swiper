@@ -15,37 +15,44 @@ def setup_bridge():
     subscription_path = subscriber.subscription_path(PROJECT_ID, SUBSCRIPTION_ID)
 
     # 1. Ensure temporary subscription exists
+    from google.api_core import exceptions
     try:
         subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
         print(f"✅ Created temporary subscription: {SUBSCRIPTION_ID}")
+    except exceptions.AlreadyExists:
+        print(f"ℹ️ Subscription {SUBSCRIPTION_ID} already exists. Using existing.")
     except Exception as e:
-        if "AlreadyExists" in str(e):
-            print(f"ℹ️ Subscription {SUBSCRIPTION_ID} already exists.")
-        else:
-            print(f"❌ Error creating subscription: {e}")
-            return
+        print(f"❌ Error creating subscription: {e}")
+        return
 
     def callback(message):
         print(f"📥 Received Pub/Sub message: {message.message_id}")
         
-        # Construct the CloudEvent-like JSON structure that HandleProfileEvent expects
-        # (Flat format based on my analysis of the Go code)
-        payload = {
-            "data": list(message.data) # Convert bytes to list/unquoted for JSON serialization? No, just raw bytes as base64 or similar.
-            # Actually, json.dumps on bytes usually fails, let's see how Go unmarshals it.
-        }
-        
-        # Based on HandleProfileEvent line 59, it expects: {"message": {"data": "..."}}
+        # Construct a Structured CloudEvent payload
         import base64
         encoded_data = base64.b64encode(message.data).decode('utf-8')
-        event_data = {
-            "message": {
-                "data": encoded_data
+        
+        ce_payload = {
+            "specversion": "1.0",
+            "type": "google.cloud.pubsub.topic.v1.messagePublished",
+            "source": f"//pubsub.googleapis.com/projects/{PROJECT_ID}/topics/{TOPIC_ID}",
+            "id": message.message_id,
+            "datacontenttype": "application/json",
+            "data": {
+                "message": {
+                    "data": encoded_data
+                }
             }
         }
 
         try:
-            resp = requests.post(LOCAL_URL, json=event_data, timeout=5)
+            # Send using the specific 'application/cloudevents+json' content type
+            resp = requests.post(
+                LOCAL_URL, 
+                json=ce_payload, 
+                headers={"Content-Type": "application/cloudevents+json"}, 
+                timeout=5
+            )
             print(f"  🚀 Forwarded to LOCAL. Response: {resp.status_code}")
             message.ack()
         except Exception as e:

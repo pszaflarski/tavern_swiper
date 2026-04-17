@@ -79,6 +79,13 @@ else
     
     export DISCOVERY_DB="discovery-${ENV_NAME}"
     export PUBSUB_EMULATOR_HOST=""
+
+    # Check for local subscriber bridge
+    if curl -s http://localhost:8080 > /dev/null; then
+        echo "  📡 Local Discovery Subscriber: http://localhost:8080 (ACTIVE)"
+    else
+        echo "  ⚠️  Note: Local Discovery Subscriber not detected. Using cloud-side processing."
+    fi
 fi
 
 # Use the project's virtual environment if available

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 
@@ -11,7 +10,6 @@ import (
 
 func main() {
 	// The HandleProfileEvent function is registered in the package's init() function
-	ctx := context.Background()
 	port := "8080"
 	if p := os.Getenv("PORT"); p != "" {
 		port = p
