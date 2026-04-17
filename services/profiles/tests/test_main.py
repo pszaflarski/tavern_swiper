@@ -57,12 +57,12 @@ def mock_firestore():
     with patch("main.db") as mock_db_fixture:
         yield mock_db_fixture
 
-def test_health():
+def test_health(snapshot):
     response = client.get("/profiles/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.json() == snapshot
 
-def test_create_profile(mock_firestore, mock_auth_service):
+def test_create_profile(mock_firestore, mock_auth_service, snapshot):
     # Mock firestore doc
     mock_doc = MagicMock()
     mock_doc.id = "new-profile-id"
@@ -75,12 +75,16 @@ def test_create_profile(mock_firestore, mock_auth_service):
         "realm": "Aethelgard",
         "talents": ["Smite", "Lay on Hands"],
         "attributes": {"strength": 18, "dexterity": 12, "intelligence": 10, "wisdom": 14, "charisma": 16},
+        "is_active": True
     }
     mock_doc.exists = True
 
     # Mock db.collection().document().set() and get()
     mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
     mock_firestore.collection.return_value.document.return_value.set.return_value = None # Mock set operation
+    
+    # Mock deactivation logic
+    mock_firestore.collection.return_value.where.return_value.where.return_value.stream.return_value = []
 
     payload = {
         "display_name": "Valerius the Bold",
@@ -89,15 +93,14 @@ def test_create_profile(mock_firestore, mock_auth_service):
     }
 
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
-    response = client.post("/profiles/", json=payload, headers=headers)
+    with patch("main.publisher"):
+        response = client.post("/profiles/", json=payload, headers=headers)
 
     assert response.status_code == 201
-    assert response.json()["display_name"] == "Valerius the Bold"
-    assert response.json()["user_id"] == "test-user-123"
-    assert response.json()["profile_id"] == "new-profile-id" # Ensure profile_id is returned
+    assert response.json() == snapshot
 
 @patch("main.db")
-def test_get_profile_success(mock_db, mock_profile_data, mock_auth_service):
+def test_get_profile_success(mock_db, mock_profile_data, mock_auth_service, snapshot):
     mock_doc = MagicMock()
     mock_doc.id = "test-id"
     mock_doc.to_dict.return_value = mock_profile_data
@@ -108,10 +111,10 @@ def test_get_profile_success(mock_db, mock_profile_data, mock_auth_service):
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/profiles/test-id", headers=headers)
     assert response.status_code == 200
-    assert response.json()["display_name"] == "Gimli"
+    assert response.json() == snapshot
 
 @patch("main.db")
-def test_get_profile_not_found(mock_db, mock_auth_service):
+def test_get_profile_not_found(mock_db, mock_auth_service, snapshot):
     mock_doc = MagicMock()
     mock_doc.exists = False
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
@@ -119,10 +122,11 @@ def test_get_profile_not_found(mock_db, mock_auth_service):
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     response = client.get("/profiles/missing", headers=headers)
     assert response.status_code == 404
+    assert response.json() == snapshot
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_service):
+def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_service, snapshot):
     with patch("main.GCS_BUCKET", "test-bucket"):
         # Mock Profile existence
         mock_doc = MagicMock()
@@ -145,17 +149,18 @@ def test_upload_image(mock_db, mock_storage, mock_profile_data, mock_auth_servic
         file_content = buf.getvalue()
 
         headers = {"Authorization": f"Bearer {sign_test_token()}"}
-        response = client.post(
-            "/profiles/test-id/image",
-            files={"file": ("test.jpg", file_content, "image/jpeg")},
-            headers=headers
-        )
+        with patch("main.publisher"):
+            response = client.post(
+                "/profiles/test-id/image",
+                files={"file": ("test.jpg", file_content, "image/jpeg")},
+                headers=headers
+            )
         
         assert response.status_code == 200
-        assert "http://gcs.com/img.png" in response.json()["image_urls"]
+        assert response.json() == snapshot
 
 
-def test_create_profile_validation_error_string_length(mock_firestore, mock_auth_service):
+def test_create_profile_validation_error_string_length(mock_firestore, mock_auth_service, snapshot):
     # Mock auth response to bypass dependency
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     
@@ -168,10 +173,10 @@ def test_create_profile_validation_error_string_length(mock_firestore, mock_auth
     
     response = client.post("/profiles/", json=payload, headers=headers)
     assert response.status_code == 400
-    assert "is too long" in response.json()["detail"]
+    assert response.json() == snapshot
 
 
-def test_create_profile_validation_error_array_length(mock_firestore, mock_auth_service):
+def test_create_profile_validation_error_array_length(mock_firestore, mock_auth_service, snapshot):
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     
     # Payload with too many image_urls (over 100)
@@ -183,16 +188,16 @@ def test_create_profile_validation_error_array_length(mock_firestore, mock_auth_
     
     response = client.post("/profiles/", json=payload, headers=headers)
     assert response.status_code == 400
-    assert "is too large" in response.json()["detail"]
+    assert response.json() == snapshot
 
 
-def test_list_all_profiles_admin_only(mock_firestore):
+def test_list_all_profiles_admin_only(mock_firestore, snapshot):
     # Test standard user (should be 403)
     standard_token = sign_test_token(uid="standard-user", role="user")
     headers = {"Authorization": f"Bearer {standard_token}"}
     response = client.get("/profiles/all", headers=headers)
     assert response.status_code == 403
-    assert "Admin or Root Admin authorization required" in response.json()["detail"]
+    assert response.json() == snapshot
 
     # Test admin user (should be 200)
     admin_token = sign_test_token(uid="admin-user", role="admin")
@@ -200,9 +205,10 @@ def test_list_all_profiles_admin_only(mock_firestore):
     mock_firestore.collection.return_value.stream.return_value = []
     response = client.get("/profiles/all", headers=headers)
     assert response.status_code == 200
+    assert response.json() == snapshot
 
 
-def test_list_profiles_for_user_public(mock_firestore, mock_profile_data):
+def test_list_profiles_for_user_public(mock_firestore, mock_profile_data, snapshot):
     # Any logged in user should be able to see profiles for another user
     caller_token = sign_test_token(uid="another-user", role="user")
     headers = {"Authorization": f"Bearer {caller_token}"}
@@ -214,11 +220,10 @@ def test_list_profiles_for_user_public(mock_firestore, mock_profile_data):
     
     response = client.get("/profiles/user/someone-else", headers=headers)
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]["display_name"] == "Gimli"
+    assert response.json() == snapshot
 
 
-def test_get_my_active_profile(mock_firestore, mock_profile_data):
+def test_get_my_active_profile(mock_firestore, mock_profile_data, snapshot):
     # Mock firestore doc
     mock_doc = MagicMock()
     mock_doc.id = "active-p1"
@@ -231,29 +236,29 @@ def test_get_my_active_profile(mock_firestore, mock_profile_data):
     response = client.get("/profiles/user/me/active", headers=headers)
     
     assert response.status_code == 200
-    assert response.json()["profile_id"] == "active-p1"
-    assert response.json()["is_active"] is True
+    assert response.json() == snapshot
 
 @pytest.mark.asyncio
-async def test_auth_expired_token():
+async def test_auth_expired_token(snapshot):
     exp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
     token = jwt.encode({"sub": "u1", "role": "user", "iat": exp, "exp": exp}, JWT_SECRET, algorithm=JWT_ALGORITHM)
     headers = {"Authorization": f"Bearer {token}"}
-    response = client.get("/profiles/health", headers=headers)
     # Health endpoint doesn't use auth, use something else
     response = client.get("/profiles/p1", headers=headers)
     assert response.status_code == 401
+    assert response.json() == snapshot
 
 @pytest.mark.asyncio
-async def test_auth_invalid_signature():
+async def test_auth_invalid_signature(snapshot):
     token = jwt.encode({"sub": "u1", "role": "user"}, "WRONG_SECRET", algorithm=JWT_ALGORITHM)
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/profiles/p1", headers=headers)
     assert response.status_code == 401
+    assert response.json() == snapshot
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image_magic_byte_failure(mock_db, mock_storage, mock_profile_data):
+def test_upload_image_magic_byte_failure(mock_db, mock_storage, mock_profile_data, snapshot):
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     # Mock Profile existence
     mock_doc = MagicMock()
@@ -269,11 +274,11 @@ def test_upload_image_magic_byte_failure(mock_db, mock_storage, mock_profile_dat
         headers=headers
     )
     assert response.status_code == 400
-    assert "Forbidden Essence" in response.json()["detail"]
+    assert response.json() == snapshot
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image_dimension_failure_regular_user(mock_db, mock_storage, mock_profile_data):
+def test_upload_image_dimension_failure_regular_user(mock_db, mock_storage, mock_profile_data, snapshot):
     headers = {"Authorization": f"Bearer {sign_test_token()}"}
     mock_doc = MagicMock()
     mock_doc.id = "p1"; mock_doc.exists = True
@@ -294,11 +299,11 @@ def test_upload_image_dimension_failure_regular_user(mock_db, mock_storage, mock
         headers=headers
     )
     assert response.status_code == 400
-    assert "Imperfect Geometry" in response.json()["detail"]
+    assert response.json() == snapshot
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image_admin_autocorrect_too_wide(mock_db, mock_storage, mock_profile_data):
+def test_upload_image_admin_autocorrect_too_wide(mock_db, mock_storage, mock_profile_data, snapshot):
     headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
     mock_doc = MagicMock(); mock_doc.id = "p1"; mock_doc.exists = True
     mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_urls": []}
@@ -313,15 +318,17 @@ def test_upload_image_admin_autocorrect_too_wide(mock_db, mock_storage, mock_pro
     img = Image.new('RGB', (4000, 1000), color='cyan')
     buf = io.BytesIO(); img.save(buf, format="JPEG"); file_content = buf.getvalue()
 
-    response = client.post("/profiles/p1/image", files={"file": ("wide.jpg", file_content, "image/jpeg")}, headers=headers)
+    with patch("main.publisher"):
+        response = client.post("/profiles/p1/image", files={"file": ("wide.jpg", file_content, "image/jpeg")}, headers=headers)
     assert response.status_code == 200
+    assert response.json() == snapshot
     processed_bytes = mock_blob.upload_from_string.call_args[0][0]
     processed_img = Image.open(io.BytesIO(processed_bytes))
     assert processed_img.size == (1080, 1350)
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image_admin_autocorrect_too_tall(mock_db, mock_storage, mock_profile_data):
+def test_upload_image_admin_autocorrect_too_tall(mock_db, mock_storage, mock_profile_data, snapshot):
     headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
     mock_doc = MagicMock(); mock_doc.id = "p1"; mock_doc.exists = True
     mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_urls": []}
@@ -336,15 +343,17 @@ def test_upload_image_admin_autocorrect_too_tall(mock_db, mock_storage, mock_pro
     img = Image.new('RGB', (1000, 4000), color='magenta')
     buf = io.BytesIO(); img.save(buf, format="JPEG"); file_content = buf.getvalue()
 
-    response = client.post("/profiles/p1/image", files={"file": ("tall.jpg", file_content, "image/jpeg")}, headers=headers)
+    with patch("main.publisher"):
+        response = client.post("/profiles/p1/image", files={"file": ("tall.jpg", file_content, "image/jpeg")}, headers=headers)
     assert response.status_code == 200
+    assert response.json() == snapshot
     processed_bytes = mock_blob.upload_from_string.call_args[0][0]
     processed_img = Image.open(io.BytesIO(processed_bytes))
     assert processed_img.size == (1080, 1350)
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image_admin_upscale_too_small(mock_db, mock_storage, mock_profile_data):
+def test_upload_image_admin_upscale_too_small(mock_db, mock_storage, mock_profile_data, snapshot):
     headers = {"Authorization": f"Bearer {sign_test_token(role='admin')}"}
     mock_doc = MagicMock(); mock_doc.id = "p1"; mock_doc.exists = True
     mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "test-user-123", "image_urls": []}
@@ -359,15 +368,17 @@ def test_upload_image_admin_upscale_too_small(mock_db, mock_storage, mock_profil
     img = Image.new('RGB', (100, 125), color='yellow')
     buf = io.BytesIO(); img.save(buf, format="JPEG"); file_content = buf.getvalue()
 
-    response = client.post("/profiles/p1/image", files={"file": ("small.jpg", file_content, "image/jpeg")}, headers=headers)
+    with patch("main.publisher"):
+        response = client.post("/profiles/p1/image", files={"file": ("small.jpg", file_content, "image/jpeg")}, headers=headers)
     assert response.status_code == 200
+    assert response.json() == snapshot
     processed_bytes = mock_blob.upload_from_string.call_args[0][0]
     processed_img = Image.open(io.BytesIO(processed_bytes))
     assert processed_img.size == (1080, 1350)
 
 @patch("google.cloud.storage.Client")
 @patch("main.db")
-def test_upload_image_admin_bypasses_magic_bytes(mock_db, mock_storage, mock_profile_data):
+def test_upload_image_admin_bypasses_magic_bytes(mock_db, mock_storage, mock_profile_data, snapshot):
     # Root Admin role
     headers = {"Authorization": f"Bearer {sign_test_token(role='root_admin')}"}
     mock_doc = MagicMock(); mock_doc.id = "p_admin"; mock_doc.exists = True
@@ -383,17 +394,19 @@ def test_upload_image_admin_bypasses_magic_bytes(mock_db, mock_storage, mock_pro
     img = Image.new('RGB', (100, 100), color='red')
     buf = io.BytesIO(); img.save(buf, format="PNG"); file_content = buf.getvalue()
 
-    response = client.post("/profiles/p_admin/image", files={"file": ("admin.png", file_content, "image/png")}, headers=headers)
+    with patch("main.publisher"):
+        response = client.post("/profiles/p_admin/image", files={"file": ("admin.png", file_content, "image/png")}, headers=headers)
     
     # Assert Success (bypassed magic byte check)
     assert response.status_code == 200
+    assert response.json() == snapshot
     
     # Verify it was normalized to JPEG in GCS
     mock_blob.upload_from_string.assert_called()
     call_args = mock_blob.upload_from_string.call_args
     assert call_args[1]['content_type'] == "image/jpeg"
 
-def test_update_profile_success(mock_firestore, mock_profile_data):
+def test_update_profile_success(mock_firestore, mock_profile_data, snapshot):
     mock_doc = MagicMock()
     mock_doc.id = "test-id"
     mock_doc.exists = True
@@ -408,9 +421,10 @@ def test_update_profile_success(mock_firestore, mock_profile_data):
         response = client.put("/profiles/test-id", json=payload, headers=headers)
     
     assert response.status_code == 200
+    assert response.json() == snapshot
     mock_firestore.collection.return_value.document.return_value.update.assert_called()
 
-def test_update_profile_unauthorized(mock_firestore, mock_profile_data):
+def test_update_profile_unauthorized(mock_firestore, mock_profile_data, snapshot):
     mock_doc = MagicMock()
     mock_doc.exists = True
     mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": "other-user"}
@@ -422,6 +436,7 @@ def test_update_profile_unauthorized(mock_firestore, mock_profile_data):
     
     response = client.put("/profiles/test-id", json=payload, headers=headers)
     assert response.status_code == 403
+    assert response.json() == snapshot
 
 @patch("google.cloud.storage.Client")
 def test_delete_profile_success(mock_storage, mock_firestore, mock_profile_data):
@@ -470,5 +485,76 @@ def test_delete_all_profiles_admin_success(mock_storage, mock_firestore):
     mock_storage.return_value.bucket.return_value.delete_blobs.assert_called()
     mock_firestore.batch().delete.assert_called()
     mock_firestore.batch().commit.assert_called()
+
+# --- New Test Cases ---
+
+def test_batch_profiles_success(mock_firestore, mock_profile_data, snapshot):
+    headers = {"Authorization": f"Bearer {sign_test_token()}"}
+    
+    mock_doc1 = MagicMock(); mock_doc1.id = "p1"; mock_doc1.to_dict.return_value = {**mock_profile_data, "display_name": "P1"}
+    mock_doc2 = MagicMock(); mock_doc2.id = "p2"; mock_doc2.to_dict.return_value = {**mock_profile_data, "display_name": "P2"}
+    
+    mock_firestore.collection.return_value.where.return_value.stream.return_value = [mock_doc1, mock_doc2]
+    
+    payload = {"profile_ids": ["p1", "p2", ""]}
+    response = client.post("/profiles/batch", json=payload, headers=headers)
+    
+    assert response.status_code == 200
+    assert response.json() == snapshot
+
+def test_get_my_active_profile_auto_activation(mock_firestore, mock_profile_data, snapshot):
+    """Test that if no active profile exists, the first one found is activated."""
+    uid = "test-user-123"
+    headers = {"Authorization": f"Bearer {sign_test_token(uid=uid)}"}
+    
+    # 1. First query (active=True) returns nothing
+    # 2. Second query (total user docs) returns one inactive doc
+    mock_inactive_doc = MagicMock()
+    mock_inactive_doc.id = "inactive-p1"
+    mock_inactive_doc.to_dict.return_value = {**mock_profile_data, "user_id": uid, "is_active": False}
+    
+    mock_active_doc = MagicMock()
+    mock_active_doc.id = "inactive-p1"
+    mock_active_doc.to_dict.return_value = {**mock_profile_data, "user_id": uid, "is_active": True}
+    
+    # Setup the stream responses
+    mock_firestore.collection.return_value.where.return_value.where.return_value.limit.return_value.stream.return_value = []
+    mock_firestore.collection.return_value.where.return_value.limit.return_value.stream.return_value = [mock_inactive_doc]
+    
+    # Mock the reference.get() after update
+    mock_inactive_doc.reference.get.return_value = mock_active_doc
+    
+    with patch("main.publisher"):
+        response = client.get("/profiles/user/me/active", headers=headers)
+    
+    assert response.status_code == 200
+    assert response.json()["is_active"] is True
+    assert response.json() == snapshot
+    mock_inactive_doc.reference.update.assert_called_with({"is_active": True})
+
+def test_set_profile_active_success(mock_firestore, mock_profile_data, snapshot):
+    uid = "test-user-123"
+    pid = "p1"
+    headers = {"Authorization": f"Bearer {sign_test_token(uid=uid)}"}
+    
+    mock_doc = MagicMock()
+    mock_doc.id = pid
+    mock_doc.to_dict.return_value = {**mock_profile_data, "user_id": uid, "is_active": False}
+    
+    mock_active_doc = MagicMock()
+    mock_active_doc.id = pid
+    mock_active_doc.to_dict.return_value = {**mock_profile_data, "user_id": uid, "is_active": True}
+    
+    mock_firestore.collection.return_value.document.return_value.get.side_effect = [mock_doc, mock_active_doc]
+    
+    # Mock deactivation of others
+    mock_firestore.collection.return_value.where.return_value.where.return_value.stream.return_value = []
+    
+    with patch("main.publisher"):
+        response = client.post(f"/profiles/{pid}/set_active", headers=headers)
+    
+    assert response.status_code == 200
+    assert response.json()["is_active"] is True
+    assert response.json() == snapshot
 
 

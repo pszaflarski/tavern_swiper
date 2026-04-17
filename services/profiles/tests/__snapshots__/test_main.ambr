@@ -1,0 +1,245 @@
+# serializer version: 1
+# name: test_auth_expired_token
+  dict({
+    'detail': 'Tavern token has expired',
+  })
+# ---
+# name: test_auth_invalid_signature
+  dict({
+    'detail': 'Invalid Tavern token: Signature verification failed',
+  })
+# ---
+# name: test_batch_profiles_success
+  list([
+    dict({
+      'bio': 'I like axes.',
+      'display_name': 'P1',
+      'gender': None,
+      'image_urls': list([
+      ]),
+      'is_active': False,
+      'profile_id': 'p1',
+      'tagline': 'A dwarf of the mountain',
+      'user_id': 'user-123',
+    }),
+    dict({
+      'bio': 'I like axes.',
+      'display_name': 'P2',
+      'gender': None,
+      'image_urls': list([
+      ]),
+      'is_active': False,
+      'profile_id': 'p2',
+      'tagline': 'A dwarf of the mountain',
+      'user_id': 'user-123',
+    }),
+  ])
+# ---
+# name: test_create_profile
+  dict({
+    'bio': 'Bio content',
+    'display_name': 'Valerius the Bold',
+    'gender': None,
+    'image_urls': list([
+    ]),
+    'is_active': True,
+    'profile_id': 'new-profile-id',
+    'tagline': 'A noble knight',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_create_profile_validation_error_array_length
+  dict({
+    'detail': "Array at path 'image_urls' is too large (101 items). Max is 100.",
+  })
+# ---
+# name: test_create_profile_validation_error_string_length
+  dict({
+    'detail': "String at path 'bio' is too long (16000 chars). Max is 15360. (Likely unintended base64 image data).",
+  })
+# ---
+# name: test_get_my_active_profile
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+    ]),
+    'is_active': True,
+    'profile_id': 'active-p1',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_get_my_active_profile_auto_activation
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+    ]),
+    'is_active': True,
+    'profile_id': 'inactive-p1',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_get_profile_not_found
+  dict({
+    'detail': 'Profile not found',
+  })
+# ---
+# name: test_get_profile_success
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+    ]),
+    'is_active': False,
+    'profile_id': 'test-id',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'user-123',
+  })
+# ---
+# name: test_health
+  dict({
+    'service': 'profiles',
+    'status': 'ok',
+  })
+# ---
+# name: test_list_all_profiles_admin_only
+  dict({
+    'detail': 'Admin or Root Admin authorization required',
+  })
+# ---
+# name: test_list_all_profiles_admin_only.1
+  list([
+  ])
+# ---
+# name: test_list_profiles_for_user_public
+  list([
+    dict({
+      'bio': 'I like axes.',
+      'display_name': 'Gimli',
+      'gender': None,
+      'image_urls': list([
+      ]),
+      'is_active': False,
+      'profile_id': 'p1',
+      'tagline': 'A dwarf of the mountain',
+      'user_id': 'user-123',
+    }),
+  ])
+# ---
+# name: test_set_profile_active_success
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+    ]),
+    'is_active': True,
+    'profile_id': 'p1',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_update_profile_success
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+    ]),
+    'is_active': False,
+    'profile_id': 'test-id',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_update_profile_unauthorized
+  dict({
+    'detail': 'Not authorized to update this profile',
+  })
+# ---
+# name: test_upload_image
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+      'http://gcs.com/img.png',
+    ]),
+    'is_active': False,
+    'profile_id': 'test-id',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_upload_image_admin_autocorrect_too_tall
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+      'http://gcs.com/tall.jpg',
+    ]),
+    'is_active': False,
+    'profile_id': 'p1',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_upload_image_admin_autocorrect_too_wide
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+      'http://gcs.com/wide.jpg',
+    ]),
+    'is_active': False,
+    'profile_id': 'p1',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_upload_image_admin_bypasses_magic_bytes
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+      'http://gcs.com/bypass.jpg',
+    ]),
+    'is_active': False,
+    'profile_id': 'p_admin',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'root-uid',
+  })
+# ---
+# name: test_upload_image_admin_upscale_too_small
+  dict({
+    'bio': 'I like axes.',
+    'display_name': 'Gimli',
+    'gender': None,
+    'image_urls': list([
+      'http://gcs.com/small.jpg',
+    ]),
+    'is_active': False,
+    'profile_id': 'p1',
+    'tagline': 'A dwarf of the mountain',
+    'user_id': 'test-user-123',
+  })
+# ---
+# name: test_upload_image_dimension_failure_regular_user
+  dict({
+    'detail': 'Imperfect Geometry: Your vision (100x100) does not match the sacred 1080x1350 standard. Admin intervention or client-side refining is required.',
+  })
+# ---
+# name: test_upload_image_magic_byte_failure
+  dict({
+    'detail': 'Forbidden Essence: This vision does not match the required sacred JPEG signature (FF D8 FF).',
+  })
+# ---
