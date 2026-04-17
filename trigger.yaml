@@ -1,0 +1,19 @@
+createTime: '2026-04-17T18:27:00.647201414Z'
+filename: services/discovery_subscriber/cloudbuild.yaml
+github:
+  name: tavern_swiper
+  owner: pszaflarski
+  push:
+    branch: ^dev$
+id: ff7e189f-811c-4180-b6a3-dc465e088d5e
+includedFiles:
+- services/discovery_subscriber/**
+name: discovery-subscriber-dev
+resourceName: projects/tavern-swiper-dev/locations/global/triggers/ff7e189f-811c-4180-b6a3-dc465e088d5e
+serviceAccount: projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com
+substitutions:
+  _DB_ID: discovery-dev
+  _DIR_NAME: discovery_subscriber
+  _ENV_NAME: dev
+  _ENV_SUFFIX: -dev
+  _SERVICE_NAME: discovery-subscriber

@@ -179,7 +179,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-      - FIRESTORE_DATABASE_ID=discovery-dev
+      - FIRESTORE_DATABASE_ID=discovery-dev # MUST be discovery-dev (this subscriber populates the discovery candidate cache)
       - PUBSUB_TOPIC_ID=dev-profiles-profile-events-v1
       - PUBSUB_SUB_ID=dev-discovery-from-profiles-profile-events-v1-sub
     volumes:
