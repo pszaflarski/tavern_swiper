@@ -29,7 +29,8 @@ type SwipeOut struct {
 	SwipedProfileID string  `json:"swiped_profile_id"`
 	Direction       string  `json:"direction"`
 	CreatedAt       string  `json:"created_at"`
-	ID              *string `json:"id"` // Match ID if created
+	ID              *string `json:"id"`             // Legacy field name
+	MatchID         *string `json:"match_id"`       // New explicit field name
 }
 
 type MatchOut struct {

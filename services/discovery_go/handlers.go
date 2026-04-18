@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"google.golang.org/api/iterator"
 )
 
 const (
@@ -54,9 +57,21 @@ func handleGetFeed(c *gin.Context) {
 	}
 
 	// 2. Fetch candidates
-	// In the real implementation, we overfetch as in Python (limit * 5)
-	// For now, let's just get active profiles.
-	candidatesIter := client.Collection(PROFILES_CACHE).Where("is_active", "==", true).Limit(50).Documents(ctx)
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		log.Printf("[DEBUG] Using default limit 10 (err or <=0: %v, str: %s)", err, limitStr)
+		limit = 10
+	}
+	log.Printf("[DEBUG] Profile %s requested feed with limit=%d", profileID, limit)
+
+	// Overfetch as in Python (limit * 5) to account for alreadySwiped and self
+	overfetchLimit := limit * 5
+	if overfetchLimit < 50 {
+		overfetchLimit = 50
+	}
+
+	candidatesIter := client.Collection(PROFILES_CACHE).Where("is_active", "==", true).Limit(overfetchLimit).Documents(ctx)
 	candidateDocs, err := candidatesIter.GetAll()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Internal discovery error"})
@@ -114,11 +129,13 @@ func handleGetFeed(c *gin.Context) {
 		}
 
 		profiles = append(profiles, p)
-		if len(profiles) >= 10 {
+		if len(profiles) >= limit {
+			log.Printf("[DEBUG] Reached limit %d, stopping candidate collection", limit)
 			break
 		}
 	}
 
+	log.Printf("[DEBUG] Returning %d profiles for %s", len(profiles), profileID)
 	c.JSON(http.StatusOK, FeedResponse{Profiles: profiles})
 }
 
@@ -177,8 +194,10 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 			Limit(1).
 			Documents(ctx)
 		
-		reciprocalDocs, _ := reciprocalIter.GetAll()
-		if len(reciprocalDocs) > 0 {
+		reciprocalDocs, err := reciprocalIter.GetAll()
+		if err != nil {
+			log.Printf("[ERROR] Failed to query reciprocal swipes: %v", err)
+		} else if len(reciprocalDocs) > 0 {
 			ids := []string{body.SwiperProfileID, body.SwipedProfileID}
 			sort.Strings(ids)
 			mID := fmt.Sprintf("match_%s_%s", ids[0], ids[1])
@@ -198,15 +217,18 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 		}
 	}
 
-	c.JSON(http.StatusCreated, SwipeOut{
-		SwipeID:         swipeID,
-		SwiperProfileID: body.SwiperProfileID,
-		SwipedProfileID: body.SwipedProfileID,
-		Direction:       body.Direction,
-		CreatedAt:       now.Format("2006-01-02T15:04:05-07:00"),
-		ID:              matchID,
-	})
-}
+	log.Printf("[DEBUG] Swipe recorded: swiper=%s, swiped=%s, match_id=%v", body.SwiperProfileID, body.SwipedProfileID, matchID)
+ 
+ 	c.JSON(http.StatusCreated, SwipeOut{
+ 		SwipeID:         swipeID,
+ 		SwiperProfileID: body.SwiperProfileID,
+ 		SwipedProfileID: body.SwipedProfileID,
+ 		Direction:       body.Direction,
+ 		CreatedAt:       now.Format("2006-01-02T15:04:05-07:00"),
+ 		ID:              matchID,
+ 		MatchID:         matchID,
+ 	})
+ }
 
 func handleGetMatch(c *gin.Context) {
 	id := c.Param("id")
@@ -259,7 +281,8 @@ func handleListMatchesForProfile(c *gin.Context) {
 	iter := client.Collection(MATCHES_COLLECTION).Where("profiles", "array_contains", profileID).Documents(ctx)
 	docs, err := iter.GetAll()
 	if err != nil {
-		c.JSON(http.StatusOK, []MatchOut{})
+		log.Printf("[ERROR] Failed to list matches for profile %s: %v", profileID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": fmt.Sprintf("Failed to query matches: %v", err)})
 		return
 	}
 
@@ -286,4 +309,31 @@ func handleListMatchesForProfile(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, results)
+}
+
+func handleDeleteAll(c *gin.Context) {
+	ctx := context.Background()
+	client, err := getDBFunc(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Database error"})
+		return
+	}
+
+	// Purge both cache and real swipes/matches for local tests
+	colls := []string{PROFILES_CACHE, SWIPES_COLLECTION, MATCHES_COLLECTION}
+	for _, coll := range colls {
+		iter := client.Collection(coll).Documents(ctx)
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				continue
+			}
+			doc.Ref().Delete(ctx)
+		}
+	}
+
+	c.Status(http.StatusNoContent)
 }

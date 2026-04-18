@@ -1,6 +1,7 @@
 steps:
   # Deploy to Cloud Functions
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    dir: 'services/discovery_subscriber'
     entrypoint: 'bash'
     args:
       - '-c'

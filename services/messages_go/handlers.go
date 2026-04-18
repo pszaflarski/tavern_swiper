@@ -35,11 +35,14 @@ func handleSendMessage(c *gin.Context, discoveryClient DiscoveryClient) {
 	nowStr := now.Format("2006-01-02T15:04:05Z")
 
 	// Fetch match details from Discovery service
-	participants := []string{}
+	participants := []string{body.SenderProfileID}
 	if match, err := discoveryClient.GetMatch(body.MatchID, auth.Token); err == nil && match != nil {
 		participants = match.Profiles
 	} else {
-		log.Printf("[WARNING] Failed to fetch match participants for conversation indexing: %v", err)
+		log.Printf("[WARNING] Failed to fetch match participants for conversation indexing: %v. MatchID: %s", err, body.MatchID)
+		// If Discovery is down, we don't know the recipient, but we should at least index the sender.
+		// However, to ensure the recipient sees it later, we might need a background task or 
+		// repair mechanism. For now, we'll proceed with just the sender if Discovery fails.
 	}
 
 	client, err := getDBFunc(ctx)

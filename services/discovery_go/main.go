@@ -43,6 +43,7 @@ func main() {
 		})
 		d.GET("/matches/:id", handleGetMatch)
 		d.GET("/matches/profile/:profile_id", handleListMatchesForProfile)
+		d.DELETE("/all", handleDeleteAll)
 	}
 
 	log.Printf("[INFO] Discovery Go Service listening on port %s", port)
