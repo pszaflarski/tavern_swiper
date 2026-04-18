@@ -30,7 +30,11 @@ func getStorageClient(ctx context.Context) (*storage.Client, error) {
 	return storageClient, nil
 }
 
-func uploadToGCS(ctx context.Context, profileID string, filename string, contentType string, data io.Reader) (string, error) {
+var uploadToGCS = func(ctx context.Context, profileID string, filename string, contentType string, data io.Reader) (string, error) {
+	return uploadToGCSInternal(ctx, profileID, filename, contentType, data)
+}
+
+func uploadToGCSInternal(ctx context.Context, profileID string, filename string, contentType string, data io.Reader) (string, error) {
 	client, err := getStorageClient(ctx)
 	if err != nil {
 		return "", err

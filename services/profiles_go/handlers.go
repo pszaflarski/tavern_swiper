@@ -57,7 +57,7 @@ func handleListAllProfiles(c *gin.Context) {
 }
 
 // handleCreateProfile matches Python: @app.post("/profiles/")
-func handleCreateProfile(c *gin.Context) {
+func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	var body ProfileCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
 		// Manual parity for missing fields
@@ -108,17 +108,13 @@ func handleCreateProfile(c *gin.Context) {
 	}
 
 	ref := client.Collection(COLLECTION).Doc(profileID)
-	// We use Set here. Note: Batch.Set isn't in our interface but client.Collection().Doc().Set is.
-	// Wait, our interface has Batch().Delete() but not Batch().Set().
-	// I should update the interface to include Set or just do it sequentially.
-	// The Python code does doc.set() then _deactivate_other_profiles (which is sequential updates).
 	
 	if _, err := ref.Set(c.Request.Context(), data); err != nil {
 		send500(c, fmt.Sprintf("Failed to create profile: %v", err))
 		return
 	}
 
-	deactivateOtherProfiles(c.Request.Context(), client, targetUID, profileID)
+	deactivateOtherProfiles(c.Request.Context(), client, targetUID, profileID, publisher)
 
 	// Refetch to return ProfileOut
 	doc, err := ref.Get(c.Request.Context())
@@ -128,7 +124,9 @@ func handleCreateProfile(c *gin.Context) {
 	}
 
 	p, _ := docToProfile(doc)
-	PublishUpserted(c.Request.Context(), p)
+	if publisher != nil {
+		publisher.PublishUpserted(c.Request.Context(), p)
+	}
 	c.JSON(http.StatusCreated, p)
 }
 
@@ -213,7 +211,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 }
 
 // Helper: deactivateOtherProfiles
-func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID string, activeProfileID string) {
+func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID string, activeProfileID string, publisher Publisher) {
 	iter := client.Collection(COLLECTION).
 		Where("user_id", "==", userID).
 		Where("is_active", "==", true).
@@ -229,12 +227,12 @@ func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID
 			_, err := snap.Ref().Update(ctx, []firestore.Update{
 				{Path: "is_active", Value: false},
 			})
-			if err == nil {
+			if err == nil && publisher != nil {
 				// Also publish the deactivation so the discovery cache updates
 				p, err := docToProfile(snap)
 				if err == nil {
 					p.IsActive = false
-					PublishUpserted(ctx, p)
+					publisher.PublishUpserted(ctx, p)
 				}
 			}
 		}
@@ -267,7 +265,7 @@ func handleListProfilesForUser(c *gin.Context) {
 }
 
 // handleUpdateProfile matches Python: @app.put("/profiles/{profile_id}")
-func handleUpdateProfile(c *gin.Context) {
+func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	var body ProfileUpdate
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -322,18 +320,20 @@ func handleUpdateProfile(c *gin.Context) {
 		}
 
 		if body.IsActive != nil && *body.IsActive {
-			deactivateOtherProfiles(c.Request.Context(), client, profileData["user_id"].(string), id)
+			deactivateOtherProfiles(c.Request.Context(), client, profileData["user_id"].(string), id, publisher)
 		}
 	}
 
 	newDoc, _ := ref.Get(c.Request.Context())
 	p, _ := docToProfile(newDoc)
-	PublishUpserted(c.Request.Context(), p)
+	if publisher != nil {
+		publisher.PublishUpserted(c.Request.Context(), p)
+	}
 	c.JSON(http.StatusOK, p)
 }
 
 // handleDeleteProfile matches Python: @app.delete("/profiles/{profile_id}")
-func handleDeleteProfile(c *gin.Context) {
+func handleDeleteProfile(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	auth := GetAuth(c)
 	client, err := getDBFunc(c.Request.Context())
@@ -361,12 +361,14 @@ func handleDeleteProfile(c *gin.Context) {
 		return
 	}
 
-	PublishDeleted(c.Request.Context(), id)
+	if publisher != nil {
+		publisher.PublishDeleted(c.Request.Context(), id)
+	}
 	c.Status(http.StatusNoContent)
 }
 
 // handleSetProfileActive matches Python: @app.post("/profiles/{profile_id}/set_active")
-func handleSetProfileActive(c *gin.Context) {
+func handleSetProfileActive(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	auth := GetAuth(c)
 	client, err := getDBFunc(c.Request.Context())
@@ -396,11 +398,13 @@ func handleSetProfileActive(c *gin.Context) {
 		return
 	}
 
-	deactivateOtherProfiles(c.Request.Context(), client, profileData["user_id"].(string), id)
+	deactivateOtherProfiles(c.Request.Context(), client, profileData["user_id"].(string), id, publisher)
 
 	newDoc, _ := ref.Get(c.Request.Context())
 	p, _ := docToProfile(newDoc)
-	PublishUpserted(c.Request.Context(), p)
+	if publisher != nil {
+		publisher.PublishUpserted(c.Request.Context(), p)
+	}
 	c.JSON(http.StatusOK, p)
 }
 
@@ -483,7 +487,7 @@ func handleGetMyActiveProfile(c *gin.Context) {
 }
 
 // handleDeleteAllProfiles matches Python: @app.delete("/profiles/")
-func handleDeleteAllProfiles(c *gin.Context) {
+func handleDeleteAllProfiles(c *gin.Context, publisher Publisher) {
 	auth := GetAuth(c)
 	if auth.Role != "root_admin" {
 		send403(c, "Root Admin authorization required")
@@ -508,12 +512,14 @@ func handleDeleteAllProfiles(c *gin.Context) {
 		doc.Ref().Delete(c.Request.Context())
 	}
 
-	PublishAllDeleted(c.Request.Context(), auth.UID)
+	if publisher != nil {
+		publisher.PublishAllDeleted(c.Request.Context(), auth.UID)
+	}
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Purged %d profiles", len(docs))})
 }
 
 // handleUploadProfileImage matches Python: @app.post("/profiles/{id}/image")
-func handleUploadProfileImage(c *gin.Context) {
+func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	auth := GetAuth(c)
 
@@ -602,7 +608,9 @@ func handleUploadProfileImage(c *gin.Context) {
 	// Refetch and return
 	newDoc, _ := ref.Get(c.Request.Context())
 	p, _ := docToProfile(newDoc)
-	PublishUpserted(c.Request.Context(), p)
+	if publisher != nil {
+		publisher.PublishUpserted(c.Request.Context(), p)
+	}
 	c.JSON(http.StatusOK, p)
 }
 

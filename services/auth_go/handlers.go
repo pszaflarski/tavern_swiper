@@ -14,7 +14,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var httpClient = &http.Client{
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+var httpClient HTTPClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 

@@ -12,18 +12,21 @@ import (
 	pb "tavern-swiper.app/profiles_go/generated"
 )
 
-var (
-	pubClient *pubsub.Client
-	topicID   = getEnv("PUBSUB_TOPIC_ID", "profile-updates")
-)
+type Publisher interface {
+	PublishUpserted(ctx context.Context, p ProfileOut)
+	PublishDeleted(ctx context.Context, profileID string)
+	PublishAllDeleted(ctx context.Context, adminUserID string)
+}
 
-func getPubSubClient(ctx context.Context) (*pubsub.Client, error) {
-	if pubClient != nil {
-		return pubClient, nil
-	}
+type RealPublisher struct {
+	client  *pubsub.Client
+	topicID string
+}
 
+func NewPublisher(ctx context.Context) (Publisher, error) {
 	projectID := getEnv("PUBSUB_PROJECT_ID", "tavern-swiper-dev")
-	
+	tID := getEnv("PUBSUB_TOPIC_ID", "profile-updates")
+
 	// Check for emulator
 	if host := os.Getenv("PUBSUB_EMULATOR_HOST"); host != "" {
 		log.Printf("[INFO] Using Pub/Sub Emulator at %s", host)
@@ -33,18 +36,15 @@ func getPubSubClient(ctx context.Context) (*pubsub.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pubsub client: %v", err)
 	}
-	pubClient = client
-	return pubClient, nil
+
+	return &RealPublisher{
+		client:  client,
+		topicID: tID,
+	}, nil
 }
 
-func publishEvent(ctx context.Context, event *pb.ProfileEvent) {
-	client, err := getPubSubClient(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Pub/Sub client error: %v", err)
-		return
-	}
-
-	topic := client.Topic(topicID)
+func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent) {
+	topic := r.client.Topic(r.topicID)
 	
 	payload, err := proto.Marshal(event)
 	if err != nil {
@@ -56,17 +56,15 @@ func publishEvent(ctx context.Context, event *pb.ProfileEvent) {
 		Data: payload,
 	})
 
-	// We block for result to match Python's future.result() behavior if needed,
-	// or just log errors.
 	_, err = res.Get(ctx)
 	if err != nil {
 		log.Printf("[ERROR] Failed to publish event: %v", err)
 	} else {
-		log.Printf("[INFO] Published event type %v to %s", event.Type, topicID)
+		log.Printf("[INFO] Published event type %v to %s", event.Type, r.topicID)
 	}
 }
 
-func PublishUpserted(ctx context.Context, p ProfileOut) {
+func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) {
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_UPSERTED,
 		Event: &pb.ProfileEvent_Upserted{
@@ -82,10 +80,10 @@ func PublishUpserted(ctx context.Context, p ProfileOut) {
 			},
 		},
 	}
-	publishEvent(ctx, event)
+	r.publishEvent(ctx, event)
 }
 
-func PublishDeleted(ctx context.Context, profileID string) {
+func (r *RealPublisher) PublishDeleted(ctx context.Context, profileID string) {
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_DELETED,
 		Event: &pb.ProfileEvent_Deleted{
@@ -94,10 +92,10 @@ func PublishDeleted(ctx context.Context, profileID string) {
 			},
 		},
 	}
-	publishEvent(ctx, event)
+	r.publishEvent(ctx, event)
 }
 
-func PublishAllDeleted(ctx context.Context, adminUserID string) {
+func (r *RealPublisher) PublishAllDeleted(ctx context.Context, adminUserID string) {
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_ALL_DELETED,
 		Event: &pb.ProfileEvent_AllDeleted{
@@ -107,5 +105,5 @@ func PublishAllDeleted(ctx context.Context, adminUserID string) {
 			},
 		},
 	}
-	publishEvent(ctx, event)
+	r.publishEvent(ctx, event)
 }

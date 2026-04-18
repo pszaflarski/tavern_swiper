@@ -1,3 +1,6 @@
+//go:build snapshot
+// +build snapshot
+
 package main
 
 import (

@@ -27,12 +27,11 @@ func main() {
 	// Global Middleware
 	r.Use(AuthMiddleware())
 
-	// Initialize Firestore
+	// Initialize Pub/Sub
 	ctx := context.Background()
-	_, err := getDBFunc(ctx)
+	publisher, err := NewPublisher(ctx)
 	if err != nil {
-		log.Printf("[CRITICAL] Failed to initialize Firestore: %v", err)
-		// We don't exit here to allow Cloud Run to start and return 503 instead of 500/Crash
+		log.Printf("[WARN] Pub/Sub publisher initialization failed: %v", err)
 	}
 
 	// Routes
@@ -42,16 +41,16 @@ func main() {
 	p := r.Group("/profiles")
 	{
 		p.GET("/all", handleListAllProfiles)
-		p.POST("/", handleCreateProfile)
+		p.POST("/", func(c *gin.Context) { handleCreateProfile(c, publisher) })
 		p.GET("/:id", handleGetProfile)
 		p.POST("/batch", handleGetProfilesBatch)
 		p.GET("/user/me/active", handleGetMyActiveProfile)
 		p.GET("/user/:user_id", handleListProfilesForUser)
-		p.PUT("/:id", handleUpdateProfile)
-		p.POST("/:id/set_active", handleSetProfileActive)
-		p.DELETE("/:id", handleDeleteProfile)
-		p.POST("/:id/image", handleUploadProfileImage)
-		p.DELETE("/", handleDeleteAllProfiles)
+		p.PUT("/:id", func(c *gin.Context) { handleUpdateProfile(c, publisher) })
+		p.POST("/:id/set_active", func(c *gin.Context) { handleSetProfileActive(c, publisher) })
+		p.DELETE("/:id", func(c *gin.Context) { handleDeleteProfile(c, publisher) })
+		p.POST("/:id/image", func(c *gin.Context) { handleUploadProfileImage(c, publisher) })
+		p.DELETE("/", func(c *gin.Context) { handleDeleteAllProfiles(c, publisher) })
 	}
 
 	log.Printf("[INFO] Profiles Go Service starting on port %s", port)

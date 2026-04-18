@@ -1,3 +1,6 @@
+//go:build snapshot
+// +build snapshot
+
 package main
 
 import (
@@ -39,7 +42,8 @@ func assertParity(t *testing.T, snapName string, body []byte, snaps Snapshots) {
 }
 
 func TestSnapshotsParity(t *testing.T) {
-	r := setupTest()
+	mockPub := &mockPublisher{}
+	r := setupTest(mockPub)
 	snaps := loadSnapshots(t)
 	var w *httptest.ResponseRecorder
 	var req *http.Request
