@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"cloud.google.com/go/storage"
@@ -58,6 +59,12 @@ func uploadToGCS(ctx context.Context, profileID string, filename string, content
 
 	if err := w.Close(); err != nil {
 		return "", fmt.Errorf("failed to close GCS writer: %v", err)
+	}
+
+	// Make the object public so the frontend can display it
+	if err := obj.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
+		// We log the error but don't fail the upload, as the image was already saved
+		log.Printf("[WARNING] Failed to set public ACL for %s: %v", objectName, err)
 	}
 
 	// Sign URL or construct public URL (depending on bucket settings)
