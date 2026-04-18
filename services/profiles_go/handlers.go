@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -540,21 +542,35 @@ func handleUploadProfileImage(c *gin.Context) {
 	}
 
 	// 4. Upload to GCS
+	log.Printf("[INFO] Normalizing image for profile %s (isAdmin: %v)", id, isAdmin)
+	startTime := time.Now()
+
 	filename := fmt.Sprintf("%v.jpg", uuid.New().String())
-	publicURL, err := uploadToGCS(c.Request.Context(), id, filename, "image/jpeg", bytes.NewReader(normalizedData))
+
+	// Create a context with timeout for GCP operations
+	gcpCtx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
+	publicURL, err := uploadToGCS(gcpCtx, id, filename, "image/jpeg", bytes.NewReader(normalizedData))
 	if err != nil {
+		log.Printf("[ERROR] GCS upload failed for profile %s: %v (took %v)", id, err, time.Since(startTime))
 		send503(c, fmt.Sprintf("Storage error: %v", err))
 		return
 	}
+	log.Printf("[INFO] Image uploaded to GCS for profile %s: %s (took %v)", id, publicURL, time.Since(startTime))
 
 	// 5. Update Profile
 	imageURLs := docToProfileImageURLs(doc)
 	imageURLs = append(imageURLs, publicURL)
 
-	_, err = ref.Update(c.Request.Context(), []firestore.Update{
+	updateCtx, updateCancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer updateCancel()
+
+	_, err = ref.Update(updateCtx, []firestore.Update{
 		{Path: "image_urls", Value: imageURLs},
 	})
 	if err != nil {
+		log.Printf("[ERROR] Firestore update failed for profile %s: %v", id, err)
 		send500(c, "Failed to update profile with new image URL")
 		return
 	}

@@ -33,7 +33,8 @@ type realAuthClient struct {
 func getAuthInternal(ctx context.Context) (AuthClient, error) {
 	firebaseAppOnce.Do(func() {
 		log.Println("Initializing Firebase Admin SDK...")
-		firebaseApp, firebaseAppErr = firebase.NewApp(ctx, nil)
+		// Use Background context for initialization to avoid capturing request context
+		firebaseApp, firebaseAppErr = firebase.NewApp(context.Background(), nil)
 	})
 	if firebaseAppErr != nil {
 		return nil, firebaseAppErr

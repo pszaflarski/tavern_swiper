@@ -1,14 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Replicates FastAPI's error format: {"detail": "message"} or {"detail": [...]}
 func httpError(c *gin.Context, status int, message string) {
+	log.Printf("[ERROR] HTTP %d: %s", status, message)
 	c.JSON(status, ErrorResponse{
 		Detail: message,
 	})
@@ -16,6 +18,7 @@ func httpError(c *gin.Context, status int, message string) {
 
 // Replicates a simplified validation error format: {"detail": [{"field": "...", "message": "..."}]}
 func validationError(c *gin.Context, err error) {
+	log.Printf("[ERROR] Validation failed: %v", err)
 	// In a real app, you'd parse the 'err' from Gin's binding into specific items.
 	// For this migration, we'll provide a simplified detail array.
 	items := []ValidationErrorItem{
@@ -30,11 +33,12 @@ func validationError(c *gin.Context, err error) {
 }
 
 func mapFirebaseError(message string) string {
+	log.Printf("[DEBUG] Mapping Firebase error: '%s'", message)
 	// Replicates map_firebase_error() from Python logic
 	switch {
 	case contains(message, "EMAIL_EXISTS"):
 		return "An account with this email address already exists."
-	case contains(message, "INVALID_PASSWORD"):
+	case contains(message, "INVALID_PASSWORD"), contains(message, "INVALID_LOGIN_CREDENTIALS"):
 		return "Incorrect password. Please try again."
 	case contains(message, "USER_NOT_FOUND"), contains(message, "EMAIL_NOT_FOUND"):
 		return "No account found with this email address."
@@ -50,7 +54,7 @@ func mapFirebaseError(message string) string {
 }
 
 func contains(s, substr string) bool {
-	return fmt.Sprintf("%v", s) != "" && (len(s) >= len(substr)) && (s == substr || (len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr)))
+	return strings.Contains(s, substr)
 }
 // Note: using a more robust strings.Contains would require the strings package, 
 // but I'll keep it simple for now or just import strings in the final main.go

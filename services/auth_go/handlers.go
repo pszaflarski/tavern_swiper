@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +13,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
 
 func healthHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
@@ -26,14 +32,21 @@ func verifyTokenHandler(c *gin.Context) {
 		return
 	}
 
+	log.Printf("[INFO] Verifying token (length: %d)", len(body.IDToken))
+
 	authClient, err := getAuthFunc(c.Request.Context())
 	if err != nil {
 		httpError(c, http.StatusServiceUnavailable, "Authentication service temporarily unavailable")
 		return
 	}
 
-	decoded, err := authClient.VerifyIDToken(c.Request.Context(), body.IDToken)
+	// Add timeout to SDK call
+	verifyCtx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	decoded, err := authClient.VerifyIDToken(verifyCtx, body.IDToken)
 	if err != nil {
+		log.Printf("[ERROR] Token verification failed: %v", err)
 		// Basic error mapping for verify
 		msg := err.Error()
 		if contains(msg, "ID token has expired") {
@@ -51,13 +64,15 @@ func verifyTokenHandler(c *gin.Context) {
 	role := "user"
 	uDB, err := getUsersDBFunc(c.Request.Context())
 	if err == nil {
-		doc, err := uDB.Collection("users").Doc(uid).Get(c.Request.Context())
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		doc, err := uDB.Collection("users").Doc(uid).Get(ctx)
 		if err == nil && doc.Exists() {
 			if r, ok := doc.Data()["user_type"].(string); ok {
 				role = r
 			}
 		} else if err != nil {
-			log.Printf("Warning: Failed to fetch role for %s: %v", uid, err)
+			log.Printf("[WARN] Failed to fetch role for %s: %v", uid, err)
 		}
 	}
 
@@ -106,10 +121,27 @@ func firebaseAuthREST(c *gin.Context, action string) {
 		"returnSecureToken": true,
 	})
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Post(url, "application/json", bytes.NewBuffer(payload))
+	log.Printf("[INFO] AUTH %s START: %s", action, body.Email)
+	startTime := time.Now()
+
+	// Use context with timeout for external identity provider calls
+	authCtx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(authCtx, "POST", url, bytes.NewBuffer(payload))
 	if err != nil {
-		httpError(c, http.StatusServiceUnavailable, "External identity provider unavailable")
+		httpError(c, http.StatusInternalServerError, "Failed to create authentication request")
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		if authCtx.Err() == context.DeadlineExceeded {
+			httpError(c, http.StatusGatewayTimeout, "Authentication provider timed out")
+		} else {
+			httpError(c, http.StatusServiceUnavailable, "External identity provider unavailable")
+		}
 		return
 	}
 	defer resp.Body.Close()
@@ -121,6 +153,7 @@ func firebaseAuthREST(c *gin.Context, action string) {
 			} `json:"error"`
 		}
 		json.NewDecoder(resp.Body).Decode(&errData)
+		log.Printf("[ERROR] Firebase Auth REST failure for %s: %s", body.Email, errData.Error.Message)
 		errorMsg := mapFirebaseError(errData.Error.Message)
 		
 		status := resp.StatusCode
@@ -136,7 +169,16 @@ func firebaseAuthREST(c *gin.Context, action string) {
 		IDToken string `json:"idToken"`
 		LocalID string `json:"localId"`
 	}
-	json.NewDecoder(resp.Body).Decode(&data)
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed to read response body for %s: %v", action, err)
+		httpError(c, http.StatusInternalServerError, "Failed to read identity provider response")
+		return
+	}
+	json.Unmarshal(bodyBytes, &data)
+
+	log.Printf("[INFO] AUTH %s SUCCESS: %s (took %v, body length: %d)", action, body.Email, time.Since(startTime), len(bodyBytes))
 
 	c.JSON(http.StatusOK, AuthResponse{
 		IDToken: data.IDToken,

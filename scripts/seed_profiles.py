@@ -26,7 +26,7 @@ def get_url(service_name, env="local"):
             "profiles": 8002,
             "users": 8006,
         }
-        return f"http://localhost:{ports.get(service_name)}"
+        return f"http://127.0.0.1:{ports.get(service_name)}"
     
     # Fetch from Cloud Run
     if env == "dev":
@@ -74,33 +74,37 @@ def get_token(email, password):
     """Register or Login a user to get their token and UID."""
     # We verify the token after login to ensure it's a valid Tavern token
     print(f"  Attempting login for {email}...")
-    login_resp = requests.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": password})
+    login_resp = requests.post(f"{AUTH_URL}/auth/login", json={"email": email, "password": password}, timeout=30)
     if login_resp.status_code == 200:
         data = login_resp.json()
         id_token = data.get("id_token")
         uid = data.get("uid")
         
         # Exchange for Tavern token
-        v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
+        v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token}, timeout=30)
         if v_resp.status_code == 200:
             return v_resp.json()["token"], uid
         else:
             print(f"  ⚠️ Tavern Verification Failed for {email}: {v_resp.status_code} - {v_resp.text}")
     
-    # Try register if login fails or is rejected
-    print(f"  Sign-in failed for {email}. Attempting registration...")
-    reg_resp = requests.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
+    # Fallback to registration if login fails (expected for new users or fresh environments)
+    if login_resp.status_code not in [401, 404]:
+        print(f"  Login returned unexpected status {login_resp.status_code} for {email}.")
+    
+    print(f"  [First-time setup] Registering user: {email}...")
+    reg_resp = requests.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password}, timeout=30)
     if reg_resp.status_code == 200:
         data = reg_resp.json()
         id_token = data.get("id_token")
         uid = data.get("uid")
         
         # Exchange for Tavern token
-        v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
+        v_resp = requests.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token}, timeout=30)
         if v_resp.status_code == 200:
             return v_resp.json()["token"], uid
         else:
-             print(f"  ⚠️ Tavern Verification Failed after Registration for {email}: {v_resp.status_code} - {v_resp.text}")
+            msg = f"Tavern Verification Failed for {email} after registration.\n  Status: {v_resp.status_code} | Body: {v_resp.text}"
+            raise Exception(msg)
     
     msg = f"Failed to auth {email}.\n  Login status: {login_resp.status_code} | Body: {login_resp.text}\n  Register status: {reg_resp.status_code} | Body: {reg_resp.text}"
     raise Exception(msg)
@@ -135,9 +139,9 @@ def seed_system():
             if email == SEEDER_EMAIL:
                 print(f"  (Skipping {email} setup - already bootstrapped)")
             else:
-                u_resp = requests.post(f"{USERS_URL}/users/", json=user_data, headers=seeder_headers)
+                u_resp = requests.post(f"{USERS_URL}/users/", json=user_data, headers=seeder_headers, timeout=30)
                 if u_resp.status_code not in [201, 200]:
-                    print(f"Warning: Could not set user record/role for {email}: {u_resp.text}")
+                    print(f"  ❌ Could not set user record/role for {email}: {u_resp.status_code} {u_resp.text}")
             
             user_map[email] = {"uid": uid, "token": token, "role": row["user_role"]}
 
@@ -155,9 +159,9 @@ def seed_system():
             "is_active": True
         }
         
-        resp = requests.post(f"{PROFILES_URL}/profiles/", json=profile_data, headers=seeder_headers)
+        resp = requests.post(f"{PROFILES_URL}/profiles/", json=profile_data, headers=seeder_headers, timeout=30)
         if resp.status_code != 201:
-            print(f"Failed to create profile: {resp.text}")
+            print(f"Failed to create profile: {resp.status_code} {resp.text}")
             continue
         
         profile_id = resp.json()["profile_id"]
@@ -177,12 +181,13 @@ def seed_system():
                         img_resp = requests.post(
                             f"{PROFILES_URL}/profiles/{profile_id}/image?index={i-1}",
                             headers=seeder_headers,
-                            files=files
+                            files=files,
+                            timeout=60 # Larger timeout for image processing
                         )
                         if img_resp.status_code == 200:
                             print(f"Successfully uploaded {img_filename}")
                         else:
-                            print(f"Failed to upload {img_filename}: {img_resp.text}")
+                            print(f"Failed to upload {img_filename}: {img_resp.status_code} {img_resp.text}")
 
     print("\n✅ Multi-user seeding complete!")
 

@@ -13,11 +13,12 @@ steps:
           --gen2 \
           --runtime=go125 \
           --region=us-central1 \
-          --source=services/${_DIR_NAME} \
+          --source=. \
           --entry-point=HandleProfileEvent \
           --trigger-topic=${_ENV_NAME}-profiles-profile-events-v1 \
           --service-account=tavern-swiper-sa@${PROJECT_ID}.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_DATABASE_ID=${_DB_ID}
+          --update-env-vars GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_DATABASE_ID=${_DB_ID} \
+          --allow-unauthenticated
 
 options:
   logging: GCS_ONLY

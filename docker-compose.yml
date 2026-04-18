@@ -11,13 +11,13 @@ services:
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
-      - tavern-net
+      - default
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 512M
         reservations:
-          memory: 100M
+          memory: 256M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/auth/health"]
       interval: 10s
@@ -37,13 +37,13 @@ services:
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
-      - tavern-net
+      - default
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 512M
         reservations:
-          memory: 100M
+          memory: 256M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/profiles/health"]
       interval: 10s
@@ -63,13 +63,13 @@ services:
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
-      - tavern-net
+      - default
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 512M
         reservations:
-          memory: 100M
+          memory: 256M
     depends_on:
       profiles:
         condition: service_healthy
@@ -92,13 +92,13 @@ services:
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
-      - tavern-net
+      - default
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 512M
         reservations:
-          memory: 100M
+          memory: 256M
     depends_on:
       profiles:
         condition: service_healthy
@@ -121,7 +121,7 @@ services:
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
-      - tavern-net
+      - default
     deploy:
       resources:
         limits:
@@ -136,5 +136,5 @@ services:
 
 
 networks:
-  tavern-net:
+  default:
     driver: bridge

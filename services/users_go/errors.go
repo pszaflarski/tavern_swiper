@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 
 // Replicates FastAPI's error format: {"detail": "message"} or {"detail": [...]}
 func httpError(c *gin.Context, status int, message string) {
+	log.Printf("[ERROR] HTTP %d: %s", status, message)
 	c.JSON(status, ErrorResponse{
 		Detail: message,
 	})

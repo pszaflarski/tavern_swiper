@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -176,11 +177,17 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	targetUID := auth.UID
-	db, _ := getDBFunc(c.Request.Context())
+	db, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
 
 	// 1. Root Admin Singleton Logic
 	if body.UserType == RootAdmin {
-		q := db.Collection("users").Where("user_type", "==", string(RootAdmin)).Limit(1).Documents(c.Request.Context())
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		q := db.Collection("users").Where("user_type", "==", string(RootAdmin)).Limit(1).Documents(ctx)
 		existingRoot, err := q.Next()
 		if err == nil {
 			if existingRoot.ID() == auth.UID {
@@ -208,8 +215,11 @@ func createUserHandler(c *gin.Context) {
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
 	docRef := db.Collection("users").Doc(targetUID)
-	doc, err := docRef.Get(c.Request.Context())
+	doc, err := docRef.Get(ctx)
 	
 	if err == nil && doc.Exists() {
 		log.Printf("[INFO] User record already exists for %s, returning existing record (Idempotent)", targetUID)
@@ -227,9 +237,9 @@ func createUserHandler(c *gin.Context) {
 		"is_deleted": body.IsDeleted,
 		"created_at": _now(),
 	}
-	_, err = docRef.Set(c.Request.Context(), newData)
+	_, err = docRef.Set(ctx, newData)
 	if err != nil {
-		httpError(c, http.StatusInternalServerError, "Failed to create user record")
+		httpError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create user record: %v", err))
 		return
 	}
 	var u UserOut

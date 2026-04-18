@@ -118,6 +118,7 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight, cu
             <Image 
               source={{ uri: profile.image_urls[currentIndex] }} 
               style={styles.image} 
+              resizeMode="contain"
             />
           ) : (
             <View style={styles.imagePlaceholder}>
@@ -231,7 +232,6 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'contain',
   },
   imagePlaceholder: {
     width: '100%',

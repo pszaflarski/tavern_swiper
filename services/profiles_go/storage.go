@@ -43,6 +43,7 @@ func uploadToGCS(ctx context.Context, profileID string, filename string, content
 	bh := client.Bucket(bucketName)
 	obj := bh.Object(objectName)
 	
+	// Ensure writer uses the context (with timeout)
 	w := obj.NewWriter(ctx)
 	w.ContentType = contentType
 	// Optional: Metadata for easier debugging

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +34,7 @@ func sendValidationError(c *gin.Context, body interface{}, field string, msg str
 }
 
 func sendGenericError(c *gin.Context, status int, msg string) {
+	log.Printf("[ERROR] HTTP %d: %s", status, msg)
 	c.JSON(status, gin.H{"detail": msg})
 }
 
@@ -43,22 +44,26 @@ type ErrorResponse struct {
 }
 
 func send403(c *gin.Context, msg string) {
+	log.Printf("[ERROR] HTTP 403: %s", msg)
 	c.JSON(http.StatusForbidden, ErrorResponse{Detail: msg})
 }
 
 func send404(c *gin.Context, msg string) {
+	log.Printf("[ERROR] HTTP 404: %s", msg)
 	c.JSON(http.StatusNotFound, ErrorResponse{Detail: msg})
 }
 
 func send400(c *gin.Context, msg string) {
+	log.Printf("[ERROR] HTTP 400: %s", msg)
 	c.JSON(http.StatusBadRequest, ErrorResponse{Detail: msg})
 }
 
 func send500(c *gin.Context, msg string) {
-	fmt.Printf("[ERROR] %s\n", msg)
+	log.Printf("[ERROR] HTTP 500: %s", msg)
 	c.JSON(http.StatusInternalServerError, ErrorResponse{Detail: msg})
 }
 
 func send503(c *gin.Context, msg string) {
+	log.Printf("[ERROR] HTTP 503: %s", msg)
 	c.JSON(http.StatusServiceUnavailable, ErrorResponse{Detail: msg})
 }

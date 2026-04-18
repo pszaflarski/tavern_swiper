@@ -40,7 +40,8 @@ func getUsersDBInternal(ctx context.Context) (*firestore.Client, error) {
 			dbID = "users"
 		}
 		log.Printf("Initializing Users Firestore client for DB: %s", dbID)
-		usersDB, usersDBError = firestore.NewClientWithDatabase(ctx, projectID, dbID)
+		// Use Background context for client initialization
+		usersDB, usersDBError = firestore.NewClientWithDatabase(context.Background(), projectID, dbID)
 	})
 	return usersDB, usersDBError
 }
@@ -53,7 +54,8 @@ func getAuthDBInternal(ctx context.Context) (*firestore.Client, error) {
 			dbID = "auth"
 		}
 		log.Printf("Initializing Auth Firestore client for DB: %s", dbID)
-		authDB, authDBError = firestore.NewClientWithDatabase(ctx, projectID, dbID)
+		// Use Background context for client initialization
+		authDB, authDBError = firestore.NewClientWithDatabase(context.Background(), projectID, dbID)
 	})
 	return authDB, authDBError
 }

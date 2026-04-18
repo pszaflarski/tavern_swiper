@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -138,15 +139,25 @@ var getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 func getDBInternal(ctx context.Context) (FirestoreClient, error) {
 	dbOnce.Do(func() {
 		projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		if projectID == "" {
+			dbErr = fmt.Errorf("GOOGLE_CLOUD_PROJECT environment variable is required")
+			log.Printf("[ERROR] %v", dbErr)
+			return
+		}
+
 		dbID := os.Getenv("FIRESTORE_DATABASE_ID")
 		if dbID == "" {
 			dbID = "(default)"
 		}
 		log.Printf("Initializing Firestore client for project %s, DB: %s", projectID, dbID)
-		realDB, dbErr := firestore.NewClientWithDatabase(ctx, projectID, dbID)
-		if dbErr == nil {
-			db = realClient{realDB}
+		// Use Background context for client initialization
+		realDB, err := firestore.NewClientWithDatabase(context.Background(), projectID, dbID)
+		if err != nil {
+			dbErr = fmt.Errorf("failed to create firestore client: %v", err)
+			log.Printf("[ERROR] %v", dbErr)
+			return
 		}
+		db = realClient{realDB}
 	})
 	return db, dbErr
 }
