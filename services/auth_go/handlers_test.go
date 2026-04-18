@@ -50,11 +50,81 @@ func setupTest() *gin.Engine {
 		authGrp.POST("/verify", verifyTokenHandler)
 		authGrp.POST("/register", registerHandler)
 		authGrp.POST("/login", loginHandler)
+		authGrp.POST("/dev-mint", devMintHandler)
 		authGrp.DELETE("/users/:uid", deleteUserHandler)
 		authGrp.DELETE("/users/", deleteUsersBulkHandler)
 		authGrp.DELETE("/all", deleteAllHandler)
 	}
 	return r
+}
+
+// --- 26. Dev Minting ---
+
+func TestDevMint(t *testing.T) {
+	r := setupTest()
+
+	tests := []struct {
+		name           string
+		body           DevMintRequest
+		allowLong      string
+		project        string
+		emulator       string
+		expectedStatus int
+	}{
+		{
+			name:           "Forbidden in Prod",
+			body:           DevMintRequest{UID: "u1", Email: "e1@t.com"},
+			allowLong:      "false",
+			project:        "prod",
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "Forbidden if Flag Off even in Dev",
+			body:           DevMintRequest{UID: "u1", Email: "e1@t.com"},
+			allowLong:      "false",
+			project:        "dev-dev",
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "Success in Dev Project",
+			body:           DevMintRequest{UID: "u1", Email: "e1@t.com"},
+			allowLong:      "true",
+			project:        "tavern-swiper-dev",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Success with Emulator",
+			body:           DevMintRequest{UID: "u1", Email: "e1@t.com"},
+			allowLong:      "true",
+			project:        "prod",
+			emulator:       "localhost:9099",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Validation Error",
+			body:           DevMintRequest{UID: "", Email: "invalid"},
+			allowLong:      "true",
+			project:        "tavern-swiper-dev",
+			expectedStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setEnv(t, "ALLOW_LONG_LIVED_TOKENS", tt.allowLong)
+			setEnv(t, "GOOGLE_CLOUD_PROJECT", tt.project)
+			setEnv(t, "FIREBASE_AUTH_EMULATOR_HOST", tt.emulator)
+
+			jsonBody, _ := json.Marshal(tt.body)
+			req, _ := http.NewRequest("POST", "/auth/dev-mint", bytes.NewBuffer(jsonBody))
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("%s: Expected %d, got %d", tt.name, tt.expectedStatus, w.Code)
+			}
+		})
+	}
 }
 
 // --- 1. Health ---

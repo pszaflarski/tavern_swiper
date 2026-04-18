@@ -14,6 +14,12 @@ type BulkDeleteRequest struct {
 	UIDs []string `json:"uids" binding:"required"`
 }
 
+type DevMintRequest struct {
+	UID   string `json:"uid" binding:"required"`
+	Email string `json:"email" binding:"required,email"`
+	Role  string `json:"role"`
+}
+
 // Response Models
 type TokenResponse struct {
 	UID   string  `json:"uid"`

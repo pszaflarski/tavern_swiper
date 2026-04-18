@@ -35,6 +35,7 @@ func main() {
 		auth.POST("/verify", verifyTokenHandler)
 		auth.POST("/register", registerHandler)
 		auth.POST("/login", loginHandler)
+		auth.POST("/dev-mint", devMintHandler)
 		auth.DELETE("/users/:uid", deleteUserHandler)
 		auth.DELETE("/users/", deleteUsersBulkHandler)
 		auth.DELETE("/all", deleteAllHandler)

@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -253,4 +254,39 @@ func deleteAllHandler(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func devMintHandler(c *gin.Context) {
+	// Strict Safety Check
+	allowLongLived := os.Getenv("ALLOW_LONG_LIVED_TOKENS") == "true"
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	isEmulator := os.Getenv("FIREBASE_AUTH_EMULATOR_HOST") != ""
+	isDevProject := strings.HasSuffix(projectID, "-dev")
+
+	if !allowLongLived || (!isEmulator && !isDevProject) {
+		httpError(c, http.StatusForbidden, "Dev minting is only allowed in development environments with ALLOW_LONG_LIVED_TOKENS=true")
+		return
+	}
+
+	var body DevMintRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		validationError(c, err)
+		return
+	}
+
+	if body.Role == "" {
+		body.Role = "user"
+	}
+
+	token, err := mintTavernJWT(body.UID, body.Email, body.Role)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Failed to generate dev token")
+		return
+	}
+
+	c.JSON(http.StatusOK, TokenResponse{
+		UID:   body.UID,
+		Role:  body.Role,
+		Token: &token,
+	})
 }
