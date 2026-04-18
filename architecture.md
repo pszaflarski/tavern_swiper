@@ -4,10 +4,10 @@ This document provides a technical overview of the Tavern Swiper application, co
 
 ## 1. System Overview
 
-Tavern Swiper is a hero-discovery application where users "forge" identities and discover other heroes (swipe). It consists of a **React Native (Expo)** frontend and a **Python (FastAPI)** backend composed of five microservices.
+Tavern Swiper is a hero-discovery application where users "forge" identities and discover other heroes (swipe). It consists of a **React Native (Expo)** frontend and a **Go (Gin)** backend composed of six microservices.
 
 ### Backend Microservices
-All services are built with Python and FastAPI, utilizing Firestore for persistent storage.
+All services are built with Go and the Gin framework, utilizing Firestore for persistent storage.
 
 | Service | Port | Responsibility |
 | :--- | :--- | :--- |
@@ -118,7 +118,7 @@ graph TD
 The Tavern Swiper project employs a multi-layered testing strategy. For detailed instructions, see [docs/testing.md](file:///home/peter/Documents/tavern_swiper/docs/testing.md).
 
 ### Unit Tests
-- **Backend (Python)**: Run using `pytest` from the respective service directory or the root with `PYTHONPATH` correctly set.
+- **Backend (Go)**: Run using `go test ./...` from the respective service directory (e.g., `services/auth_go`).
 - **Frontend (Node/Jest)**: Run using `npm test` exclusively from within the `frontend/` directory.
 
 ### Integration Tests

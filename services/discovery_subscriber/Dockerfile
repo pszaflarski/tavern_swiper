@@ -11,7 +11,8 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o subscriber-bin .
+# We build cmd/local/main.go which uses the funcframework for local execution
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o subscriber-bin ./cmd/local/main.go
 
 # Run stage
 FROM --platform=linux/amd64 debian:bookworm-slim

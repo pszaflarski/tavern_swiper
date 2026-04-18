@@ -1,6 +1,0 @@
-pytest
-httpx
-pytest-asyncio
-fastapi
-PyJWT==2.10.1
-respx

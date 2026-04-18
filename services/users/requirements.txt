@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-google-cloud-firestore
-firebase-admin
-httpx
-pydantic[email]
-python-dotenv
-PyJWT==2.10.1

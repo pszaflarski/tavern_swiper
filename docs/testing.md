@@ -8,23 +8,23 @@ The project consists of multiple independent environments (Python, Node.js). You
 
 | Layer | Runner | Directory |
 | :--- | :--- | :--- |
-| **Backend Services** | `pytest` | `services/<service-name>/` |
+| **Backend Services** | `go test` | `services/<service-name>_go/` |
 | **Frontend** | `npm test` | `frontend/` |
 | **Integration** | `pytest` | Root `/` |
 
-## 2. Backend Unit Tests (Python)
+## 2. Backend Unit Tests (Go)
 
-Each service has its own `tests/` directory.
+Each service has its own unit tests within the service directory.
 
 ### Running Service Tests
 To run tests for a specific service:
 ```bash
-cd services/<service-name>
-PYTHONPATH=. ../../.venv/bin/pytest tests
+cd services/<service-name>_go
+go test -v ./...
 ```
 
 ### Mocking Dependencies
-Backend unit tests use `respx` to mock cross-service HTTP calls and `unittest.mock` to patch Firestore/GCS clients. This ensures tests run quickly and reliably without external connectivity.
+Backend unit tests use interfaces to mock Firestore, GCS, and Pub/Sub clients. This ensures tests run quickly and reliably without external connectivity.
 
 ## 3. Frontend Unit Tests (Jest)
 
@@ -45,10 +45,10 @@ Integration tests verify the end-to-end flow between multiple services.
 ### Running Integration Tests
 ```bash
 # Locally (requires Docker/Emulators)
-bash tests/run_integration_tests.sh --local
+bash tests/run_go_integration_tests.sh --local
 
 # Against Cloud (Dev environment)
-bash tests/run_integration_tests.sh
+bash tests/run_go_integration_tests.sh
 ```
 
 > [!WARNING]

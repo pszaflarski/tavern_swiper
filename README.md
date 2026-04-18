@@ -35,8 +35,8 @@ This project uses advanced Firestore queries (e.g., matching + time-based sortin
 - Docker & Docker Compose v2
 - Google Cloud SDK (`gcloud`)
 - A Google Cloud Project (`tavern-swiper-dev`)
-- A Firebase Web API Key
-- Python 3.10+ (for scripts and testing)
+- Go 1.25+ (for backend development)
+- Python 3.10+ (for administrative scripts and integration testing)
 
 ### 2. Virtual Environment (Strict Isolation)
 To ensure dependency consistency across microservices and administrative scripts, always use the project's root virtual environment:
@@ -121,7 +121,7 @@ Service-to-service integration tests targeting the backend REST APIs.
 - **What it does**: Validates complex backend workflows like discovery filtering and cross-service data consistency.
 - **Run (Local)**:
   ```bash
-  bash tests/run_integration_tests.sh
+  bash tests/run_go_integration_tests.sh --local
   ```
 - **Run (Cloud)**:
   ```bash
@@ -140,8 +140,8 @@ Native mobile automation for React Native.
 Automated build and deployment is managed via **Google Cloud Build** triggers.
 
 ### Backend Services
-Each backend service uses a shared Cloud Build config at [`services/cloudbuild.yaml`](services/cloudbuild.yaml):
-1. Runs unit tests (`pytest`) inside a Python 3.12 container.
+Each backend service uses its own Cloud Build config (e.g., `services/auth_go/cloudbuild.yaml`):
+1. Runs unit tests (`go test ./...`) inside a Go 1.25 container.
 2. Builds and pushes a Docker image to GCR.
 3. Deploys to Cloud Run with the appropriate environment suffix (`-dev` or `-test`).
 
