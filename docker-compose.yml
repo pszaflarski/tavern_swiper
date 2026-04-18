@@ -10,6 +10,7 @@ services:
       - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
       - FIREBASE_AUTH_URL=http://firebase-emulator:9099/identitytoolkit.googleapis.com/v1/accounts
       - FIREBASE_WEB_API_KEY=any-mock-key
+      - ALLOW_LONG_LIVED_TOKENS=true
     env_file: ./services/auth_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
@@ -61,6 +62,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PORT=8003
+      - ALLOW_LONG_LIVED_TOKENS=true
     env_file: ./services/discovery_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
