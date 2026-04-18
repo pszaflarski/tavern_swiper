@@ -1,4 +1,4 @@
-package discovery_subscriber
+package main
 
 import (
 	"context"
@@ -9,12 +9,20 @@ import (
 	"sync"
 
 	"cloud.google.com/go/firestore"
+	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"google.golang.org/protobuf/proto"
 
 	pb "tavern-swiper.app/discovery_subscriber/proto"
 )
+
+func main() {
+	port := getEnv("PORT", "8080")
+	if err := funcframework.StartHostPort("0.0.0.0", port); err != nil {
+		log.Fatalf("funcframework.StartHostPort: %v\n", err)
+	}
+}
 
 // PubSubMessage is the payload of a Pub/Sub event.
 type PubSubMessage struct {

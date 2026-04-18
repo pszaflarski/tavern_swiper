@@ -1,4 +1,4 @@
-package discovery_subscriber
+package main
 
 import (
 	"context"
