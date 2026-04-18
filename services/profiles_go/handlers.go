@@ -184,15 +184,31 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		return []string{}
 	}
 
+	// Helper for required strings
+	reqStr := func(key string) string {
+		if val, ok := d[key].(string); ok {
+			return val
+		}
+		return ""
+	}
+
+	// Helper for required bools
+	reqBool := func(key string) bool {
+		if val, ok := d[key].(bool); ok {
+			return val
+		}
+		return false
+	}
+
 	return ProfileOut{
 		ProfileID:   doc.ID(),
-		UserID:      d["user_id"].(string),
-		DisplayName: d["display_name"].(string),
+		UserID:      reqStr("user_id"),
+		DisplayName: reqStr("display_name"),
 		Tagline:     getStr("tagline"),
 		Bio:         getStr("bio"),
 		Gender:      getStr("gender"),
 		ImageURLs:   getURLs("image_urls"),
-		IsActive:    d["is_active"].(bool),
+		IsActive:    reqBool("is_active"),
 	}, nil
 }
 
@@ -210,9 +226,17 @@ func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID
 	
 	for _, snap := range snaps {
 		if snap.ID() != activeProfileID {
-			snap.Ref().Update(ctx, []firestore.Update{
+			_, err := snap.Ref().Update(ctx, []firestore.Update{
 				{Path: "is_active", Value: false},
 			})
+			if err == nil {
+				// Also publish the deactivation so the discovery cache updates
+				p, err := docToProfile(snap)
+				if err == nil {
+					p.IsActive = false
+					PublishUpserted(ctx, p)
+				}
+			}
 		}
 	}
 }

@@ -82,7 +82,11 @@ func handleGetFeed(c *gin.Context) {
 	for _, doc := range candidateDocs {
 		var p DiscoveryProfile
 		data := doc.Data()
-		pID := data["profile_id"].(string)
+		pID, ok := data["profile_id"].(string)
+		if !ok || pID == "" {
+			log.Printf("[WARN] Skipping malformed profile doc %s: missing profile_id", doc.ID())
+			continue
+		}
 
 		if pID == profileID || alreadySwiped[pID] {
 			continue
@@ -111,18 +115,22 @@ func handleGetFeed(c *gin.Context) {
 		
 		// Handle image_urls (coerce null to empty list if needed)
 		if val, ok := data["image_urls"].([]interface{}); ok {
-			p.ImageURLs = make([]string, len(val))
-			for i, v := range val {
-				p.ImageURLs[i] = v.(string)
+			p.ImageURLs = []string{}
+			for _, v := range val {
+				if s, ok := v.(string); ok {
+					p.ImageURLs = append(p.ImageURLs, s)
+				}
 			}
 		} else {
 			p.ImageURLs = []string{}
 		}
 
 		if val, ok := data["talents"].([]interface{}); ok {
-			p.Talents = make([]string, len(val))
-			for i, v := range val {
-				p.Talents[i] = v.(string)
+			p.Talents = []string{}
+			for _, v := range val {
+				if s, ok := v.(string); ok {
+					p.Talents = append(p.Talents, s)
+				}
 			}
 		} else {
 			p.Talents = []string{}
@@ -260,8 +268,9 @@ func handleGetMatch(c *gin.Context) {
 		createdAt = s
 	}
 
+	mID, _ := data["id"].(string)
 	c.JSON(http.StatusOK, MatchOut{
-		ID:        data["id"].(string),
+		ID:        mID,
 		Profiles:  profiles,
 		CreatedAt: createdAt,
 	})
@@ -302,8 +311,9 @@ func handleListMatchesForProfile(c *gin.Context) {
 			createdAt = s
 		}
 
+		mID, _ := data["id"].(string)
 		results = append(results, MatchOut{
-			ID:        data["id"].(string),
+			ID:        mID,
 			Profiles:  profiles,
 			CreatedAt: createdAt,
 		})
