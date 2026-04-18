@@ -1,8 +1,7 @@
-package main
+package discovery_subscriber
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,20 +9,12 @@ import (
 	"sync"
 
 	"cloud.google.com/go/firestore"
-	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"google.golang.org/protobuf/proto"
-	"net/http"
 
 	pb "tavern-swiper.app/discovery_subscriber/proto"
 )
-
-func main() {
-	port := getEnv("PORT", "8080")
-	if err := funcframework.StartHostPort("0.0.0.0", port); err != nil {
-		log.Fatalf("funcframework.StartHostPort: %v\n", err)
-	}
-}
 
 // PubSubMessage is the payload of a Pub/Sub event.
 type PubSubMessage struct {
@@ -39,8 +30,8 @@ var (
 )
 
 func init() {
-	// Register the HTTP function with the Functions Framework
-	functions.HTTP("HandleProfileEvent", handleProfileEvent)
+	// Register the CloudEvent function with the Functions Framework
+	functions.CloudEvent("HandleProfileEvent", handleProfileEvent)
 }
 
 func getFirestoreClient(ctx context.Context) (*firestore.Client, error) {
@@ -52,7 +43,6 @@ func getFirestoreClient(ctx context.Context) (*firestore.Client, error) {
 		fsClient, err = firestore.NewClientWithDatabase(ctx, projectID, firestoreDB)
 	})
 	if fsClient == nil && err == nil {
-		// This handles the case where Once.Do finished but fsClient is still nil
 		projectID := getEnv("GOOGLE_CLOUD_PROJECT", "tavern-swiper-dev")
 		firestoreDB = getEnv("FIRESTORE_DATABASE_ID", "discovery")
 		fsClient, err = firestore.NewClientWithDatabase(ctx, projectID, firestoreDB)
@@ -67,58 +57,34 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// handleProfileEvent consumes a Pub/Sub push message (HTTP POST) and updates the Firestore cache.
-func handleProfileEvent(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	log.Printf("📥 HTTP Event Received! Method: %s", r.Method)
+// handleProfileEvent consumes a CloudEvent message and updates the Firestore cache.
+func handleProfileEvent(ctx context.Context, e event.Event) error {
+	log.Printf("📥 CloudEvent Received! ID: %s, Source: %s", e.ID(), e.Source())
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
-		return
+	// 1. Try to parse as the nested structure (Eventarc standard)
+	var nestedMsg struct {
+		Message struct {
+			Data []byte `json:"data"`
+		} `json:"message"`
 	}
 
-	// Read body for logging and flexible parsing
-	var bodyMap map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&bodyMap); err != nil {
-		log.Printf("❌ JSON Decode Error: %v", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+	rawJSON := e.Data()
+	if err := json.Unmarshal(rawJSON, &nestedMsg); err == nil && len(nestedMsg.Message.Data) > 0 {
+		log.Printf("📦 Detected Nested Eventarc Format (found %d bytes)", len(nestedMsg.Message.Data))
+		return processSerializedEvent(ctx, nestedMsg.Message.Data)
 	}
 
-	log.Printf("📝 Received Body: %+v", bodyMap)
-
-	// In Pub/Sub push, the data is in message.data
-	message, ok := bodyMap["message"].(map[string]interface{})
-	if !ok {
-		log.Printf("🤔 Warning: 'message' field missing or invalid type")
-		w.WriteHeader(http.StatusOK)
-		return
+	// 2. Fallback: Try to parse as flat PubSubMessage (legacy/direct)
+	var flatMsg struct {
+		Data []byte `json:"data"`
+	}
+	if err := json.Unmarshal(rawJSON, &flatMsg); err == nil && len(flatMsg.Data) > 0 {
+		log.Printf("📦 Detected Flat Pub/Sub Format (found %d bytes)", len(flatMsg.Data))
+		return processSerializedEvent(ctx, flatMsg.Data)
 	}
 
-	dataStr, ok := message["data"].(string)
-	if !ok {
-		log.Printf("🤔 Warning: 'data' field missing or not a string")
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	log.Printf("📦 Detected Pub/Sub Data String (length %d)", len(dataStr))
-	
-	// Manual base64 decode if it's a string
-	data, err := base64.StdEncoding.DecodeString(dataStr)
-	if err != nil {
-		log.Printf("❌ Base64 Decode Error: %v", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-
-	if err := processSerializedEvent(ctx, data); err != nil {
-		log.Printf("❌ Processing Error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	log.Printf("🤔 Warning: Received event data but could not find 'data' field in expected structures. Raw: %s", string(rawJSON))
+	return nil
 }
 
 func processSerializedEvent(ctx context.Context, data []byte) error {
