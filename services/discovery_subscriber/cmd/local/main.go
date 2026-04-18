@@ -7,8 +7,7 @@ import (
 )
 
 func main() {
-	// StartHostPort(hostname, port)
-	if err := funcframework.StartHostPort("0.0.0.0", "8007"); err != nil {
+	if err := funcframework.StartHostPort("8007"); err != nil {
 		log.Fatalf("funcframework.StartHostPort: %v\n", err)
 	}
 }
