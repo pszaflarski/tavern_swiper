@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"google.golang.org/api/iterator"
 )
 
 const (
@@ -254,12 +253,7 @@ func handleGetMatch(c *gin.Context) {
 	}
 
 	data := doc.Data()
-	var profiles []string
-	if p, ok := data["profiles"].([]interface{}); ok {
-		for _, v := range p {
-			profiles = append(profiles, v.(string))
-		}
-	}
+	profiles := parseProfiles(data["profiles"])
 
 	var createdAt string
 	if t, ok := data["created_at"].(time.Time); ok {
@@ -287,23 +281,22 @@ func handleListMatchesForProfile(c *gin.Context) {
 
 	// FIXME: In production, we should verify the user owns the profile_id. 
 	// For now, it's open to all logged-in users to allow for discovery.
-	iter := client.Collection(MATCHES_COLLECTION).Where("profiles", "array_contains", profileID).Documents(ctx)
+	iter := client.Collection(MATCHES_COLLECTION).Where("profiles", "array-contains", profileID).Documents(ctx)
 	docs, err := iter.GetAll()
 	if err != nil {
 		log.Printf("[ERROR] Failed to list matches for profile %s: %v", profileID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"detail": fmt.Sprintf("Failed to query matches: %v", err)})
+		// Include the exact error message to help diagnose missing indexes or permission issues in CI/CD
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"detail": fmt.Sprintf("Failed to query matches: %v", err),
+			"error_type": "firestore_query_error",
+		})
 		return
 	}
 
 	results := []MatchOut{}
 	for _, doc := range docs {
 		data := doc.Data()
-		var profiles []string
-		if p, ok := data["profiles"].([]interface{}); ok {
-			for _, v := range p {
-				profiles = append(profiles, v.(string))
-			}
-		}
+		profiles := parseProfiles(data["profiles"])
 		var createdAt string
 		if t, ok := data["created_at"].(time.Time); ok {
 			createdAt = t.Format("2006-01-02T15:04:05-07:00")
@@ -329,21 +322,43 @@ func handleDeleteAll(c *gin.Context) {
 		return
 	}
 
-	// Purge both cache and real swipes/matches for local tests
-	colls := []string{PROFILES_CACHE, SWIPES_COLLECTION, MATCHES_COLLECTION}
-	for _, coll := range colls {
-		iter := client.Collection(coll).Documents(ctx)
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				continue
-			}
-			doc.Ref().Delete(ctx)
-		}
+	// Delete swipes
+	iter := client.Collection(SWIPES_COLLECTION).Documents(ctx)
+	docs, _ := iter.GetAll()
+	batch := client.Batch()
+	for _, doc := range docs {
+		batch.Delete(doc.Ref())
+	}
+	
+	// Delete matches
+	iterM := client.Collection(MATCHES_COLLECTION).Documents(ctx)
+	docsM, _ := iterM.GetAll()
+	for _, doc := range docsM {
+		batch.Delete(doc.Ref())
 	}
 
-	c.Status(http.StatusNoContent)
+	batch.Commit(ctx)
+	c.JSON(http.StatusOK, gin.H{"status": "purged"})
+}
+
+// Helper: Safely parse profiles array from Firestore
+func parseProfiles(val interface{}) []string {
+	if val == nil {
+		return []string{}
+	}
+	// Try []string (often returned by Firestore Go client if saved as such)
+	if s, ok := val.([]string); ok {
+		return s
+	}
+	// Try []interface{} (standard Firestore response for arrays)
+	if i, ok := val.([]interface{}); ok {
+		res := make([]string, 0, len(i))
+		for _, v := range i {
+			if s, ok := v.(string); ok {
+				res = append(res, s)
+			}
+		}
+		return res
+	}
+	return []string{}
 }
