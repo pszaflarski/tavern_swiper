@@ -12,7 +12,7 @@ steps:
         # While it consumes 'profile' events, it writes them to the Discovery candidate cache.
         gcloud functions deploy ${_SERVICE_NAME}${_ENV_SUFFIX} \
           --gen2 \
-          --runtime=go122 \
+          --runtime=go125 \
           --region=us-central1 \
           --source=. \
           --entry-point=HandleProfileEvent \
