@@ -31,7 +31,7 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
-	port := getEnv("PORT", "8008")
+	port := getEnv("PORT", "8080")
 	r := gin.Default()
 
 	// Wellness check

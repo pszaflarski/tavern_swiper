@@ -26,7 +26,7 @@ COPY --from=builder /app/subscriber-bin .
 RUN chmod +x subscriber-bin
 
 # Expose port
-EXPOSE 8007
+EXPOSE 8080
 
 # Run the binary
 CMD ["./subscriber-bin"]
