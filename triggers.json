@@ -1,0 +1,395 @@
+[
+  {
+    "createTime": "2026-04-18T18:53:40.062261235Z",
+    "filename": "services/users_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^test$"
+      }
+    },
+    "id": "0ece2461-57a3-4674-8247-126d0e40e300",
+    "includedFiles": [
+      "services/users_go/**"
+    ],
+    "name": "users-test-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/0ece2461-57a3-4674-8247-126d0e40e300",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "users-test",
+      "_DIR_NAME": "users_go",
+      "_ENV_NAME": "test",
+      "_ENV_SUFFIX": "-test",
+      "_SERVICE_NAME": "users"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:38.546089812Z",
+    "filename": "services/messages_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^test$"
+      }
+    },
+    "id": "64d8b8bf-4978-4269-b7c5-3248de8c962d",
+    "includedFiles": [
+      "services/messages_go/**"
+    ],
+    "name": "messages-test-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/64d8b8bf-4978-4269-b7c5-3248de8c962d",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "messages-test",
+      "_DIR_NAME": "messages_go",
+      "_ENV_NAME": "test",
+      "_ENV_SUFFIX": "-test",
+      "_SERVICE_NAME": "messages"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:37.262918852Z",
+    "filename": "services/profiles_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^test$"
+      }
+    },
+    "id": "88b4db2a-2f6b-4d55-bd9a-58b26057b270",
+    "includedFiles": [
+      "services/profiles_go/**"
+    ],
+    "name": "profiles-test-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/88b4db2a-2f6b-4d55-bd9a-58b26057b270",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "profiles-test",
+      "_DIR_NAME": "profiles_go",
+      "_ENV_NAME": "test",
+      "_ENV_SUFFIX": "-test",
+      "_SERVICE_NAME": "profiles"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:36.002763318Z",
+    "filename": "services/discovery_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^test$"
+      }
+    },
+    "id": "16e773b3-6035-4fa7-809a-125a8924aaa1",
+    "includedFiles": [
+      "services/discovery_go/**"
+    ],
+    "name": "discovery-test-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/16e773b3-6035-4fa7-809a-125a8924aaa1",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "discovery-test",
+      "_DIR_NAME": "discovery_go",
+      "_ENV_NAME": "test",
+      "_ENV_SUFFIX": "-test",
+      "_SERVICE_NAME": "discovery"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:34.775845057Z",
+    "filename": "services/auth_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^test$"
+      }
+    },
+    "id": "cccaae19-aab4-4d84-8ac3-1d382c6cb997",
+    "includedFiles": [
+      "services/auth_go/**"
+    ],
+    "name": "auth-test-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/cccaae19-aab4-4d84-8ac3-1d382c6cb997",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "auth-test",
+      "_DIR_NAME": "auth_go",
+      "_ENV_NAME": "test",
+      "_ENV_SUFFIX": "-test",
+      "_FIREBASE_WEB_API_KEY": "AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk",
+      "_SERVICE_NAME": "auth",
+      "_USERS_DB_ID": "users-test"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:31.896843045Z",
+    "filename": "services/users_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^dev$"
+      }
+    },
+    "id": "6f591180-55f5-4beb-adea-b3cf204b1712",
+    "includedFiles": [
+      "services/users_go/**"
+    ],
+    "name": "users-dev-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/6f591180-55f5-4beb-adea-b3cf204b1712",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "users-dev",
+      "_DIR_NAME": "users_go",
+      "_ENV_NAME": "dev",
+      "_ENV_SUFFIX": "-dev",
+      "_SERVICE_NAME": "users"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:27.893943623Z",
+    "filename": "services/messages_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^dev$"
+      }
+    },
+    "id": "c37ca30a-3488-494b-ae45-681d7e20fba7",
+    "includedFiles": [
+      "services/messages_go/**"
+    ],
+    "name": "messages-dev-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/c37ca30a-3488-494b-ae45-681d7e20fba7",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "messages-dev",
+      "_DIR_NAME": "messages_go",
+      "_ENV_NAME": "dev",
+      "_ENV_SUFFIX": "-dev",
+      "_SERVICE_NAME": "messages"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:23.996086771Z",
+    "filename": "services/profiles_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^dev$"
+      }
+    },
+    "id": "c56dcd59-f071-4534-b578-13706949e3e5",
+    "includedFiles": [
+      "services/profiles_go/**"
+    ],
+    "name": "profiles-dev-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/c56dcd59-f071-4534-b578-13706949e3e5",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "profiles-dev",
+      "_DIR_NAME": "profiles_go",
+      "_ENV_NAME": "dev",
+      "_ENV_SUFFIX": "-dev",
+      "_SERVICE_NAME": "profiles"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:19.612512404Z",
+    "filename": "services/discovery_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^dev$"
+      }
+    },
+    "id": "78184a63-dd71-4473-bb8f-31ac2ad1da06",
+    "includedFiles": [
+      "services/discovery_go/**"
+    ],
+    "name": "discovery-dev-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/78184a63-dd71-4473-bb8f-31ac2ad1da06",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "discovery-dev",
+      "_DIR_NAME": "discovery_go",
+      "_ENV_NAME": "dev",
+      "_ENV_SUFFIX": "-dev",
+      "_SERVICE_NAME": "discovery"
+    }
+  },
+  {
+    "createTime": "2026-04-18T18:53:15.804932063Z",
+    "filename": "services/auth_go/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^dev$"
+      }
+    },
+    "id": "c6fe0338-f34b-458b-a393-b963491710b0",
+    "includedFiles": [
+      "services/auth_go/**"
+    ],
+    "name": "auth-dev-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/c6fe0338-f34b-458b-a393-b963491710b0",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "auth-dev",
+      "_DIR_NAME": "auth_go",
+      "_ENV_NAME": "dev",
+      "_ENV_SUFFIX": "-dev",
+      "_FIREBASE_WEB_API_KEY": "AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk",
+      "_SERVICE_NAME": "auth",
+      "_USERS_DB_ID": "users-dev"
+    }
+  },
+  {
+    "createTime": "2026-04-17T18:27:00.647201414Z",
+    "filename": "services/discovery_subscriber/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^dev$"
+      }
+    },
+    "id": "ff7e189f-811c-4180-b6a3-dc465e088d5e",
+    "includedFiles": [
+      "services/discovery_subscriber/**"
+    ],
+    "name": "discovery-subscriber-dev",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/ff7e189f-811c-4180-b6a3-dc465e088d5e",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "discovery-dev",
+      "_DIR_NAME": "discovery_subscriber",
+      "_ENV_NAME": "dev",
+      "_ENV_SUFFIX": "-dev",
+      "_SERVICE_NAME": "discovery-subscriber"
+    }
+  },
+  {
+    "createTime": "2026-04-17T13:25:42.948439859Z",
+    "filename": "frontend/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^dev$"
+      }
+    },
+    "id": "5fa2101e-49d4-4c60-bcda-7aa83840e11c",
+    "includedFiles": [
+      "frontend/**"
+    ],
+    "name": "frontend-dev",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/5fa2101e-49d4-4c60-bcda-7aa83840e11c",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_ENV_NAME": "dev",
+      "_ENV_SUFFIX": "-dev",
+      "_SERVICE_NAME": "app"
+    }
+  },
+  {
+    "createTime": "2026-04-14T14:53:58.610489777Z",
+    "filename": "frontend/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^test$"
+      }
+    },
+    "id": "22e703ad-5bf8-4f19-9fb7-91aa0d63f326",
+    "includedFiles": [
+      "frontend/**"
+    ],
+    "name": "frontend-test-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/22e703ad-5bf8-4f19-9fb7-91aa0d63f326",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_ENV_SUFFIX": "-test"
+    }
+  },
+  {
+    "createTime": "2026-04-14T14:53:51.352288886Z",
+    "filename": "services/discovery_subscriber/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^test$"
+      }
+    },
+    "id": "e7cf729a-6769-49ce-873f-6db81adc389c",
+    "includedFiles": [
+      "services/discovery_subscriber/**"
+    ],
+    "name": "discovery-subscriber-test-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/e7cf729a-6769-49ce-873f-6db81adc389c",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "discovery-test",
+      "_DEPLOY_TYPE": "function",
+      "_ENV_NAME": "test",
+      "_ENV_SUFFIX": "-test",
+      "_SERVICE_NAME": "discovery-subscriber"
+    }
+  },
+  {
+    "createTime": "2026-04-14T14:53:46.137361298Z",
+    "filename": "frontend/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^main$"
+      }
+    },
+    "id": "0f343fb1-a957-4796-850f-9bd138908142",
+    "includedFiles": [
+      "frontend/**"
+    ],
+    "name": "frontend-dev-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/0f343fb1-a957-4796-850f-9bd138908142",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_ENV_SUFFIX": ""
+    }
+  },
+  {
+    "createTime": "2026-04-14T14:53:37.848308815Z",
+    "filename": "services/discovery_subscriber/cloudbuild.yaml",
+    "github": {
+      "name": "tavern_swiper",
+      "owner": "pszaflarski",
+      "push": {
+        "branch": "^main$"
+      }
+    },
+    "id": "3ca45ddf-aa4b-44eb-b972-6525f8fb5f60",
+    "includedFiles": [
+      "services/discovery_subscriber/**"
+    ],
+    "name": "discovery-subscriber-dev-deploy",
+    "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/3ca45ddf-aa4b-44eb-b972-6525f8fb5f60",
+    "serviceAccount": "projects/tavern-swiper-dev/serviceAccounts/cicd-builder@tavern-swiper-dev.iam.gserviceaccount.com",
+    "substitutions": {
+      "_DB_ID": "discovery",
+      "_DEPLOY_TYPE": "function",
+      "_ENV_NAME": "dev",
+      "_SERVICE_NAME": "discovery-subscriber"
+    }
+  }
+]
