@@ -19,6 +19,11 @@ import (
 func init() {
 	// Silence logger for tests
 	log.SetOutput(bytes.NewBuffer(nil))
+	
+	// Set mock database
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{}, nil
+	}
 }
 
 func TestUnmarshalEvent(t *testing.T) {

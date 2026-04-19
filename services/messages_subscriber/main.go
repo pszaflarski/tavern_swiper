@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
@@ -22,22 +21,7 @@ type PubSubPushRequest struct {
 	} `json:"message"`
 }
 
-var (
-	fsClient    *firestore.Client
-	fsOnce      sync.Once
-	firestoreDB string
-)
 
-func getFirestoreClient(ctx context.Context) (*firestore.Client, error) {
-	var err error
-	fsOnce.Do(func() {
-		projectID := getEnv("GOOGLE_CLOUD_PROJECT", "tavern-swiper-dev")
-		firestoreDB = getEnv("FIRESTORE_DATABASE_ID", "messages-dev")
-		log.Printf("🔥 Initializing Firestore Client (Project: %s, DB: %s)", projectID, firestoreDB)
-		fsClient, err = firestore.NewClientWithDatabase(ctx, projectID, firestoreDB)
-	})
-	return fsClient, err
-}
 
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
@@ -98,16 +82,16 @@ func processSerializedEvent(ctx context.Context, data []byte) error {
 		return fmt.Errorf("proto.Unmarshal: %v", err)
 	}
 
-	client, err := getFirestoreClient(ctx)
+	client, err := getDBFunc(ctx)
 	if err != nil {
 		log.Printf("❌ Firestore Initialization Error: %v", err)
-		return fmt.Errorf("getFirestoreClient: %v", err)
+		return fmt.Errorf("getDBFunc: %v", err)
 	}
 
 	return processEvent(ctx, client, &event)
 }
 
-func processEvent(ctx context.Context, client *firestore.Client, event *pb.MatchEvent) error {
+func processEvent(ctx context.Context, client FirestoreClient, event *pb.MatchEvent) error {
 	if client == nil {
 		log.Printf("⚠️ processEvent: firestore client is nil, skipping database operations")
 		return nil
