@@ -1,16 +1,25 @@
-package messages_subscriber
+package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/proto"
 
 	pb "tavern-swiper.app/messages_subscriber/proto"
 )
+
+func init() {
+	// Silence logger for tests
+	log.SetOutput(bytes.NewBuffer(nil))
+}
 
 func TestUnmarshalEvent(t *testing.T) {
 	event := &pb.MatchEvent{
@@ -70,79 +79,76 @@ func TestProcessEventBasic(t *testing.T) {
 	}
 }
 
-func TestHandleMatchEvent_NestedFormat(t *testing.T) {
-	ctx := context.Background()
-	
-	// Create a real MatchEvent
+func TestHandlePubSubPush_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.POST("/", handlePubSubPush)
+
 	me := &pb.MatchEvent{
 		Type: pb.MatchEvent_CREATED,
 		Event: &pb.MatchEvent_Created{
 			Created: &pb.MatchCreated{
-				MatchId: "nested-123",
-				ProfileIds: []string{"p1", "p2"},
+				MatchId: "m-123",
 			},
 		},
 	}
 	meBytes, _ := proto.Marshal(me)
+
+	pushReq := PubSubPushRequest{}
+	pushReq.Message.Data = meBytes
+	jsonBody, _ := json.Marshal(pushReq)
+
+	req, _ := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
 	
-	// Wrap it in the Nested Eventarc structure
-	nestedJSON := map[string]interface{}{
-		"message": map[string]interface{}{
-			"data": meBytes,
-		},
-	}
-	jsonData, _ := json.Marshal(nestedJSON)
-	
-	e := event.New()
-	e.SetID("12345")
-	e.SetSource("test-source")
-	e.SetData(event.ApplicationJSON, jsonData)
-	
-	err := handleMatchEvent(ctx, e)
-	if err != nil {
-		t.Errorf("handleMatchEvent failed on nested format: %v", err)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 }
 
-func TestHandleMatchEvent_FlatFormat(t *testing.T) {
-	ctx := context.Background()
+func TestHandlePubSubPush_InvalidJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.POST("/", handlePubSubPush)
+
+	req, _ := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"bad": "json"`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
 	
-	me := &pb.MatchEvent{
-		Type: pb.MatchEvent_CREATED,
-		Event: &pb.MatchEvent_Created{
-			Created: &pb.MatchCreated{
-				MatchId: "flat-123",
-				ProfileIds: []string{"p1", "p2"},
-			},
-		},
-	}
-	meBytes, _ := proto.Marshal(me)
-	
-	// Wrap it in the Flat Pub/Sub structure
-	flatJSON := map[string]interface{}{
-		"data": meBytes,
-	}
-	jsonData, _ := json.Marshal(flatJSON)
-	
-	e := event.New()
-	e.SetData(event.ApplicationJSON, jsonData)
-	
-	err := handleMatchEvent(ctx, e)
-	if err != nil {
-		t.Errorf("handleMatchEvent failed on flat format: %v", err)
+	r.ServeHTTP(w, req)
+
+	// We return 200 for malformed JSON to avoid Pub/Sub retries
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for invalid JSON, got %d", w.Code)
 	}
 }
 
-func TestHandleMatchEvent_InvalidData(t *testing.T) {
-	ctx := context.Background()
+func TestHandlePubSubPush_EmptyData(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.POST("/", handlePubSubPush)
+
+	pushReq := PubSubPushRequest{}
+	jsonBody, _ := json.Marshal(pushReq)
+
+	req, _ := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
 	
-	e := event.New()
-	e.SetData(event.ApplicationJSON, []byte(`{"not_what_we_expect": "true"}`))
-	
-	// Should return nil (with warning log) rather than crashing or erroring
-	err := handleMatchEvent(ctx, e)
-	if err != nil {
-		t.Errorf("handleMatchEvent should handle invalid JSON gracefully, got %v", err)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for empty data, got %d", w.Code)
+	}
+}
+
+func TestProcessSerializedEvent_ProtoError(t *testing.T) {
+	err := processSerializedEvent(context.Background(), []byte("not-a-proto"))
+	if err == nil {
+		t.Errorf("Expected error for invalid proto data, got nil")
 	}
 }
 

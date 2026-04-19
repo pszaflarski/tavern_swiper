@@ -1,23 +1,22 @@
-package messages_subscriber
+package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"sync"
 
 	"cloud.google.com/go/firestore"
-	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/proto"
 
 	pb "tavern-swiper.app/messages_subscriber/proto"
 )
 
-// PubSubMessage is the payload of a Pub/Sub event.
-type PubSubMessage struct {
+// PubSubPushRequest is the payload sent by Pub/Sub Push subscriptions.
+type PubSubPushRequest struct {
 	Message struct {
 		Data []byte `json:"data"`
 	} `json:"message"`
@@ -29,16 +28,12 @@ var (
 	firestoreDB string
 )
 
-func init() {
-	// Register the CloudEvent function with the Functions Framework
-	functions.CloudEvent("HandleMatchEvent", handleMatchEvent)
-}
-
 func getFirestoreClient(ctx context.Context) (*firestore.Client, error) {
 	var err error
 	fsOnce.Do(func() {
 		projectID := getEnv("GOOGLE_CLOUD_PROJECT", "tavern-swiper-dev")
 		firestoreDB = getEnv("FIRESTORE_DATABASE_ID", "messages-dev")
+		log.Printf("🔥 Initializing Firestore Client (Project: %s, DB: %s)", projectID, firestoreDB)
 		fsClient, err = firestore.NewClientWithDatabase(ctx, projectID, firestoreDB)
 	})
 	return fsClient, err
@@ -51,34 +46,49 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// handleMatchEvent consumes a CloudEvent message and updates the Firestore cache.
-func handleMatchEvent(ctx context.Context, e event.Event) error {
-	log.Printf("📥 CloudEvent Received! ID: %s, Source: %s", e.ID(), e.Source())
+func main() {
+	port := getEnv("PORT", "8008")
+	r := gin.Default()
 
-	// 1. Try to parse as the nested structure (Eventarc standard)
-	var nestedMsg struct {
-		Message struct {
-			Data []byte `json:"data"`
-		} `json:"message"`
+	// Wellness check
+	r.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Messages Subscriber is running")
+	})
+
+	// Pub/Sub Push endpoint
+	r.POST("/", handlePubSubPush)
+
+	log.Printf("🚀 Messages Subscriber listening on port %s", port)
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("❌ Failed to start server: %v", err)
+	}
+}
+
+func handlePubSubPush(c *gin.Context) {
+	var pushMsg PubSubPushRequest
+	if err := c.ShouldBindJSON(&pushMsg); err != nil {
+		// Log but return 200 to Pub/Sub to avoid retries for malformed JSON
+		log.Printf("⚠️ Failed to parse Pub/Sub push request: %v", err)
+		c.Status(http.StatusOK)
+		return
 	}
 
-	rawJSON := e.Data()
-	if err := json.Unmarshal(rawJSON, &nestedMsg); err == nil && len(nestedMsg.Message.Data) > 0 {
-		log.Printf("📦 Detected Nested Eventarc Format (found %d bytes)", len(nestedMsg.Message.Data))
-		return processSerializedEvent(ctx, nestedMsg.Message.Data)
+	if len(pushMsg.Message.Data) == 0 {
+		log.Printf("🤔 Received empty data in Pub/Sub message")
+		c.Status(http.StatusOK)
+		return
 	}
 
-	// 2. Fallback: Try to parse as flat PubSubMessage (legacy/direct)
-	var flatMsg struct {
-		Data []byte `json:"data"`
-	}
-	if err := json.Unmarshal(rawJSON, &flatMsg); err == nil && len(flatMsg.Data) > 0 {
-		log.Printf("📦 Detected Flat Pub/Sub Format (found %d bytes)", len(flatMsg.Data))
-		return processSerializedEvent(ctx, flatMsg.Data)
+	log.Printf("📥 Received Pub/Sub message (%d bytes)", len(pushMsg.Message.Data))
+
+	if err := processSerializedEvent(c.Request.Context(), pushMsg.Message.Data); err != nil {
+		log.Printf("❌ Failed to process event: %v", err)
+		// We can return 500 here if we want Pub/Sub to retry
+		c.Status(http.StatusInternalServerError)
+		return
 	}
 
-	log.Printf("🤔 Warning: Received event data but could not find 'data' field in expected structures. Raw: %s", string(rawJSON))
-	return nil
+	c.Status(http.StatusOK)
 }
 
 func processSerializedEvent(ctx context.Context, data []byte) error {
@@ -104,7 +114,7 @@ func processEvent(ctx context.Context, client *firestore.Client, event *pb.Match
 	}
 	collection := "discovery_matches_cache"
 
-	log.Printf("📥 Received Event of type: %s", event.Type)
+	log.Printf("📥 Processing MatchEvent type: %s", event.Type)
 
 	switch event.Type {
 	case pb.MatchEvent_CREATED:

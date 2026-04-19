@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=linux/amd64 golang:1.25-bookworm AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -11,22 +11,22 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o subscriber-bin .
+RUN CGO_ENABLED=0 GOOS=linux go build -o subscriber-bin .
 
 # Run stage
-FROM --platform=linux/amd64 debian:bookworm-slim
+FROM alpine:latest
 
-WORKDIR /root/
+# Install curl for healthchecks (consistency with other services)
+RUN apk add --no-cache curl
 
-# Install CA certificates for Firestore connection
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/subscriber-bin .
 RUN chmod +x subscriber-bin
 
 # Expose port
-EXPOSE 8007
+EXPOSE 8008
 
 # Run the binary
 CMD ["./subscriber-bin"]

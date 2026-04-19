@@ -12,4 +12,4 @@ export PORT=${PORT:-8008}
 # export PUBSUB_EMULATOR_HOST=localhost:8085
 
 echo "🚀 Starting Messages Subscriber (Go)..."
-go run cmd/local/main.go
+go run main.go
