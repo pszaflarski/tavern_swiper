@@ -7,12 +7,12 @@ steps:
       - |
         go mod download
         go test -v ./...
-    dir: 'services/messages_subscriber'
+    dir: 'services/$_DIR_NAME'
 
   # 2. Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME', '.']
-    dir: 'services/messages_subscriber'
+    dir: 'services/$_DIR_NAME'
 
   # 3. Push the image to GCR
   - name: 'gcr.io/cloud-builders/docker'
@@ -34,13 +34,15 @@ steps:
           --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID \
           --cpu-boost \
           --memory=512Mi \
-          --execution-environment=gen1
+          --execution-environment=gen1 \
+          --quiet
 
         echo "🔐 Ensuring Pub/Sub Invoker permissions..."
         gcloud run services add-iam-policy-binding $_SERVICE_NAME$_ENV_SUFFIX \
           --region=us-central1 \
           --member="serviceAccount:tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-          --role="roles/run.invoker"
+          --role="roles/run.invoker" \
+          --quiet
 
         echo "🔗 Configuring Pub/Sub Push Subscription..."
         
@@ -59,7 +61,8 @@ steps:
           gcloud pubsub subscriptions create $$SUB_NAME \
             --topic=$$TOPIC_NAME \
             --push-endpoint=$$SERVICE_URL \
-            --push-auth-service-account=$$SA_EMAIL
+            --push-auth-service-account=$$SA_EMAIL \
+            --quiet
         fi
 
 options:
