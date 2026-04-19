@@ -46,22 +46,40 @@ steps:
 
         echo "🔗 Configuring Pub/Sub Push Subscription..."
         
-        SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME$_ENV_SUFFIX --region us-central1 --format 'value(status.url)')
+        SA_EMAIL="tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com"
         SUB_NAME="$_ENV_NAME-discovery-from-profiles-profile-events-v1-sub"
         TOPIC_NAME="$_ENV_NAME-profiles-profile-events-v1"
-        SA_EMAIL="tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com"
+
+        # Retry logic to get the service URL (handling eventual consistency)
+        echo "⏳ Retrieving service URL for $_SERVICE_NAME$_ENV_SUFFIX..."
+        for i in {1..5}; do
+          SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME$_ENV_SUFFIX --region us-central1 --format 'value(status.url)' 2>/dev/null)
+          if [ -n "$SERVICE_URL" ]; then
+            break
+          fi
+          echo "...attempt $i: URL not ready, retrying in 5s..."
+          sleep 5
+        done
+
+        if [ -z "$SERVICE_URL" ]; then
+          echo "❌ ERROR: Failed to retrieve SERVICE_URL for $_SERVICE_NAME$_ENV_SUFFIX"
+          exit 1
+        fi
+
+        echo "✅ Service URL: $SERVICE_URL"
 
         # Check if subscription exists
-        if gcloud pubsub subscriptions describe $$SUB_NAME > /dev/null 2>&1; then
-          echo "Updating existing subscription $$SUB_NAME..."
-          gcloud pubsub subscriptions update $$SUB_NAME \
-            --push-endpoint=$$SERVICE_URL
+        if gcloud pubsub subscriptions describe $SUB_NAME > /dev/null 2>&1; then
+          echo "Updating existing subscription $SUB_NAME..."
+          gcloud pubsub subscriptions update $SUB_NAME \
+            --push-endpoint=$SERVICE_URL \
+            --quiet
         else
-          echo "Creating new subscription $$SUB_NAME..."
-          gcloud pubsub subscriptions create $$SUB_NAME \
-            --topic=$$TOPIC_NAME \
-            --push-endpoint=$$SERVICE_URL \
-            --push-auth-service-account=$$SA_EMAIL \
+          echo "Creating new subscription $SUB_NAME..."
+          gcloud pubsub subscriptions create $SUB_NAME \
+            --topic=$TOPIC_NAME \
+            --push-endpoint=$SERVICE_URL \
+            --push-auth-service-account=$SA_EMAIL \
             --quiet
         fi
 
