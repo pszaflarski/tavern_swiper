@@ -1,0 +1,22 @@
+steps:
+  # Deploy to Cloud Functions
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+         echo "🚀 Deploying $_SERVICE_NAME$_ENV_SUFFIX to $_ENV_NAME environment as a Cloud Function..."
+         
+         gcloud functions deploy $_SERVICE_NAME$_ENV_SUFFIX \
+           --gen2 \
+           --runtime=go125 \
+           --region=us-central1 \
+           --source=services/messages_subscriber \
+           --entry-point=HandleMatchEvent \
+           --trigger-topic=$_ENV_NAME-discovery-match-events-v1 \
+           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+           --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID
+
+options:
+  logging: GCS_ONLY
+logsBucket: "gs://tavern-swiper-build-logs-dev"
