@@ -24,8 +24,10 @@ steps:
     args:
       - '-c'
       - |
-        echo "🚀 Deploying $_SERVICE_NAME$_ENV_SUFFIX to $_ENV_NAME environment as a Cloud Run service..."
+        set -ex
+        echo "🚀 Deploying $_SERVICE_NAME$_ENV_SUFFIX to $_ENV_NAME environment..."
 
+        # 1. Deploy Cloud Run Service
         gcloud run deploy $_SERVICE_NAME$_ENV_SUFFIX \
           --image=gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest \
           --region=us-central1 \
@@ -37,22 +39,10 @@ steps:
           --execution-environment=gen1 \
           --quiet
 
-        echo "🔐 Ensuring Pub/Sub Invoker permissions..."
-        gcloud run services add-iam-policy-binding $_SERVICE_NAME$_ENV_SUFFIX \
-          --region=us-central1 \
-          --member="serviceAccount:tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-          --role="roles/run.invoker" \
-          --quiet
-
-        echo "🔗 Configuring Pub/Sub Push Subscription..."
-        
-        SA_EMAIL="tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com"
-        SUB_NAME="$_ENV_NAME-discovery-from-profiles-profile-events-v1-sub"
-        TOPIC_NAME="$_ENV_NAME-profiles-profile-events-v1"
-
-        # Retry logic to get the service URL (handling eventual consistency)
+        # 2. Extract Service URL
         echo "⏳ Retrieving service URL for $_SERVICE_NAME$_ENV_SUFFIX..."
-        for i in {1..5}; do
+        SERVICE_URL=""
+        for i in {1..10}; do
           SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME$_ENV_SUFFIX --region us-central1 --format 'value(status.url)' 2>/dev/null)
           if [ -n "$$SERVICE_URL" ]; then
             break
@@ -62,13 +52,30 @@ steps:
         done
 
         if [ -z "$$SERVICE_URL" ]; then
-          echo "❌ ERROR: Failed to retrieve SERVICE_URL for $_SERVICE_NAME$_ENV_SUFFIX"
+          echo "❌ ERROR: Failed to retrieve SERVICE_URL after 10 attempts"
           exit 1
         fi
-
         echo "✅ Service URL: $$SERVICE_URL"
 
-        # Check if subscription exists
+        # 3. Ensure Pub/Sub Topic exists
+        TOPIC_NAME="$_ENV_NAME-profiles-profile-events-v1"
+        if ! gcloud pubsub topics describe $$TOPIC_NAME > /dev/null 2>&1; then
+          echo "📣 Creating missing topic $$TOPIC_NAME..."
+          gcloud pubsub topics create $$TOPIC_NAME --quiet
+        fi
+
+        # 4. Ensure Pub/Sub Invoker permissions
+        echo "🔐 Ensuring Pub/Sub Invoker permissions..."
+        gcloud run services add-iam-policy-binding $_SERVICE_NAME$_ENV_SUFFIX \
+          --region=us-central1 \
+          --member="serviceAccount:tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+          --role="roles/run.invoker" \
+          --quiet
+
+        # 5. Configure Subscription
+        SA_EMAIL="tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com"
+        SUB_NAME="$_ENV_NAME-discovery-from-profiles-profile-events-v1-sub"
+
         if gcloud pubsub subscriptions describe $$SUB_NAME > /dev/null 2>&1; then
           echo "Updating existing subscription $$SUB_NAME..."
           gcloud pubsub subscriptions update $$SUB_NAME \
@@ -84,5 +91,5 @@ steps:
         fi
 
 options:
-  logging: GCS_ONLY
-logsBucket: "gs://tavern-swiper-build-logs-dev"
+  logging: CLOUD_LOGGING_ONLY
+
