@@ -78,6 +78,7 @@ else
     done
     
     export DISCOVERY_DB="discovery-${ENV_NAME}"
+    export MESSAGES_DB="messages-${ENV_NAME}"
     export PUBSUB_EMULATOR_HOST=""
 fi
 
