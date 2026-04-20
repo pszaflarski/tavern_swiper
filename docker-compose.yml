@@ -19,7 +19,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 128M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/auth/health"]
       interval: 10s
@@ -46,7 +46,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 128M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/profiles/health"]
       interval: 10s
@@ -63,6 +63,9 @@ services:
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PORT=8003
       - ALLOW_LONG_LIVED_TOKENS=true
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PUBSUB_PROJECT_ID=tavern-swiper-dev
+      - PUBSUB_TOPIC_ID=dev-discovery-match-events-v1
     env_file: ./services/discovery_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
@@ -71,7 +74,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 128M
     depends_on:
       profiles:
         condition: service_healthy
@@ -98,7 +101,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 128M
     depends_on:
       profiles:
         condition: service_healthy
@@ -125,7 +128,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 128M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8006/users/health"]
       interval: 10s
@@ -169,9 +172,32 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 128M
     ports:
       - "8007:8007"
+
+  messages-subscriber:
+    build:
+      context: ./services/messages_subscriber
+    environment:
+      - FIRESTORE_DATABASE_ID=messages-dev
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PORT=8008
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    volumes:
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    ports:
+      - "8008:8008"
 
 
   firebase-emulator:
@@ -202,7 +228,11 @@ services:
         limits:
           memory: 64M
     command: >
-      sh -c "curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1' && curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-discovery-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://discovery-subscriber:8007/HandleProfileEvent\"}}' && echo '✅ Pub/Sub Initialized'"
+      sh -c "curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-discovery-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://discovery-subscriber:8007/HandleProfileEvent\"}}' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-messages-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://messages-subscriber:8008/\"}}' && \
+             echo '✅ Pub/Sub Initialized'"
     networks:
       - default
 

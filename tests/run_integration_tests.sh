@@ -98,14 +98,17 @@ if [[ "$RESET" == "true" ]]; then
 
     if [[ "$MODE" == "local" ]]; then
         echo "🚀 Starting Local Test Environment (Docker)..."
-        docker compose -f $TEST_COMPOSE_FILE up -d --build
+        # Build with limited parallelism to avoid OOM
+        export BUILDKIT_PARALLEL_LIMIT=2
+        docker compose -f $TEST_COMPOSE_FILE build
+        docker compose -f $TEST_COMPOSE_FILE up -d
         
         # Wait for services to be healthy
         echo "⏳ Waiting for local services..."
         MAX_RETRIES=12
         RETRY_INTERVAL=5
         RETRIES=0
-        services=("auth:8001:auth/health" "profiles:8002:profiles/health" "discovery:8003:discovery/health" "messages:8005:messages/health" "users:8006:users/health" "pubsub-emulator:8085:" "discovery-subscriber:8007:")
+        services=("auth:8001:auth/health" "profiles:8002:profiles/health" "discovery:8003:discovery/health" "messages:8005:messages/health" "users:8006:users/health" "pubsub-emulator:8085:" "discovery-subscriber:8007:" "messages-subscriber:8008:")
 
         wait_for_service() {
             local service=$1
