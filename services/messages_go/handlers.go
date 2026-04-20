@@ -21,6 +21,23 @@ const (
 	COLLECTION_CACHE                 = "discovery_matches_cache"
 )
 
+func parseStringSlice(val interface{}) []string {
+	if val == nil {
+		return []string{}
+	}
+	if s, ok := val.([]string); ok {
+		return s
+	}
+	if i, ok := val.([]interface{}); ok {
+		res := make([]string, len(i))
+		for j, v := range i {
+			res[j] = v.(string)
+		}
+		return res
+	}
+	return []string{}
+}
+
 func handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"service": "messages", "status": "ok"})
 }
@@ -75,18 +92,17 @@ func handleCreateConversation(c *gin.Context) {
 		allowed := false
 		for _, cd := range cacheDocs {
 			data := cd.Data()
-			if pList, ok := data["profile_ids"].([]interface{}); ok {
-				hasOther := false
-				for _, p := range pList {
-					if p.(string) == pids[1] {
-						hasOther = true
-						break
-					}
-				}
-				if hasOther {
-					allowed = true
+			pList := parseStringSlice(data["profile_ids"])
+			hasOther := false
+			for _, p := range pList {
+				if p == pids[1] {
+					hasOther = true
 					break
 				}
+			}
+			if hasOther {
+				allowed = true
+				break
 			}
 		}
 
@@ -273,12 +289,7 @@ func handleListConversations(c *gin.Context) {
 			updatedAtT, _ := d["updated_at"].(time.Time)
 			updatedAt := updatedAtT.Format(time.RFC3339)
 
-			var pids []string
-			if rawPIDs, ok := d["participant_ids"].([]interface{}); ok {
-				for _, rawPID := range rawPIDs {
-					pids = append(pids, rawPID.(string))
-				}
-			}
+			pids := parseStringSlice(d["participant_ids"])
 
 			var otherID *string
 			for _, pid := range pids {
