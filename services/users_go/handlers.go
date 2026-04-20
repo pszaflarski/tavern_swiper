@@ -103,7 +103,7 @@ func getMeHandler(c *gin.Context) {
 				"user_type":  string(auth.Role),
 				"is_premium": false,
 				"is_deleted": false,
-				"created_at": _now(),
+				"created_at": firestore.ServerTimestamp,
 			}
 			_, err = docRef.Set(c.Request.Context(), newData)
 			if err != nil {
@@ -235,7 +235,7 @@ func createUserHandler(c *gin.Context) {
 		"user_type":  string(body.UserType),
 		"is_premium": body.IsPremium,
 		"is_deleted": body.IsDeleted,
-		"created_at": _now(),
+		"created_at": firestore.ServerTimestamp,
 	}
 	_, err = docRef.Set(ctx, newData)
 	if err != nil {

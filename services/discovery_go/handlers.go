@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"cloud.google.com/go/firestore"
 )
 
 const (
@@ -185,8 +186,8 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 		"swiper_profile_id": body.SwiperProfileID,
 		"swiped_profile_id": body.SwipedProfileID,
 		"direction":         body.Direction,
-		"created_at":        now,
-		"modified_at":       now,
+		"created_at":        firestore.ServerTimestamp,
+		"modified_at":       firestore.ServerTimestamp,
 		"is_deleted":        false,
 	}
 	_, _ = client.Collection(SWIPES_COLLECTION).Doc(swipeID).Set(ctx, swipeData)
@@ -213,7 +214,7 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 			matchData := map[string]interface{}{
 				"id":         mID,
 				"profiles":   ids,
-				"created_at": now,
+				"created_at": firestore.ServerTimestamp,
 			}
 			_, _ = client.Collection(MATCHES_COLLECTION).Doc(mID).Set(ctx, matchData)
 
