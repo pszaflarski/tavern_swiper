@@ -13,8 +13,12 @@ This example demonstrates how to correctly use the `array-contains` operator in 
 
 To see this example in action, you should first populate your Firestore database with some match data. You can use the existing profile swipe example:
 
+> [!TIP]
+> Make sure to activate your virtual environment before running the Python script.
+
 ```bash
 # From the root of the tavern_swiper repository
+source .venv/bin/activate
 python3 examples/profile_swipe/swipe_demo.py
 ```
 
@@ -34,6 +38,11 @@ This will create profiles and matching entries in the cache.
 
     ```bash
     cd examples/go_match_query
+    # Option A: Practical quick-start
+    ./run_demo.sh
+
+    # Option B: Manual control
+    export GOOGLE_CLOUD_PROJECT="your-project-id"
     go run main.go
     ```
 

@@ -108,6 +108,10 @@ async def test_match_cache_propagation():
         user_a, user_b = users[0], users[1]
         print(f"Profiles Created: A={user_a['profile_id']}, B={user_b['profile_id']}")
 
+        # Wait for profiles to propagate to Discovery cache
+        print("[PREP] Waiting for profiles to propagate to Discovery cache...")
+        await asyncio.sleep(5)
+
         # --- 2. Perform Swipes ---
         # A swipes right on B
         print(f"User A swipes RIGHT on B...")
