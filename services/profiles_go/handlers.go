@@ -105,6 +105,8 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		"gender":       body.Gender,
 		"image_urls":   body.ImageURLs,
 		"is_active":    true,
+		"created_at":   firestore.ServerTimestamp,
+		"updated_at":   firestore.ServerTimestamp,
 	}
 
 	ref := client.Collection(COLLECTION).Doc(profileID)
@@ -198,6 +200,17 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		return false
 	}
 
+	// Helper for timestamps
+	getTimestamp := func(key string) *time.Time {
+		if val, ok := d[key].(time.Time); ok {
+			return &val
+		}
+		if val, ok := d[key].(*time.Time); ok {
+			return val
+		}
+		return nil
+	}
+
 	return ProfileOut{
 		ProfileID:   doc.ID(),
 		UserID:      reqStr("user_id"),
@@ -207,6 +220,8 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		Gender:      getStr("gender"),
 		ImageURLs:   getURLs("image_urls"),
 		IsActive:    reqBool("is_active"),
+		CreatedAt:   getTimestamp("created_at"),
+		UpdatedAt:   getTimestamp("updated_at"),
 	}, nil
 }
 
@@ -226,6 +241,7 @@ func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID
 		if snap.ID() != activeProfileID {
 			_, err := snap.Ref().Update(ctx, []firestore.Update{
 				{Path: "is_active", Value: false},
+				{Path: "updated_at", Value: firestore.ServerTimestamp},
 			})
 			if err == nil && publisher != nil {
 				// Also publish the deactivation so the discovery cache updates
@@ -314,6 +330,7 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	}
 
 	if len(updates) > 0 {
+		updates = append(updates, firestore.Update{Path: "updated_at", Value: firestore.ServerTimestamp})
 		if _, err := ref.Update(c.Request.Context(), updates); err != nil {
 			send500(c, "Failed to update profile")
 			return
@@ -392,6 +409,7 @@ func handleSetProfileActive(c *gin.Context, publisher Publisher) {
 
 	_, err = ref.Update(c.Request.Context(), []firestore.Update{
 		{Path: "is_active", Value: true},
+		{Path: "updated_at", Value: firestore.ServerTimestamp},
 	})
 	if err != nil {
 		send500(c, "Failed to set profile active")
@@ -598,6 +616,7 @@ func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 
 	_, err = ref.Update(updateCtx, []firestore.Update{
 		{Path: "image_urls", Value: imageURLs},
+		{Path: "updated_at", Value: firestore.ServerTimestamp},
 	})
 	if err != nil {
 		log.Printf("[ERROR] Firestore update failed for profile %s: %v", id, err)

@@ -69,14 +69,24 @@ func (d *mockDoc) Get(ctx context.Context) (DocumentSnapshot, error) {
 func (d *mockDoc) Set(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
 	d.exists = true
 	if m, ok := data.(map[string]interface{}); ok {
-		d.data = m
+		for k, v := range m {
+			if v == firestore.ServerTimestamp {
+				d.data[k] = _now().UTC()
+			} else {
+				d.data[k] = v
+			}
+		}
 	}
 	return &firestore.WriteResult{}, nil
 }
 
 func (d *mockDoc) Update(ctx context.Context, updates []firestore.Update, opts ...firestore.Precondition) (*firestore.WriteResult, error) {
 	for _, u := range updates {
-		d.data[u.Path] = u.Value
+		if u.Value == firestore.ServerTimestamp {
+			d.data[u.Path] = _now().UTC()
+		} else {
+			d.data[u.Path] = u.Value
+		}
 	}
 	return &firestore.WriteResult{}, nil
 }

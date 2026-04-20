@@ -14,11 +14,10 @@ Migrate all microservices from application-generated timestamps (`time.Now()`) t
 | Service | Collection | Fields | Current Strategy |
 | :--- | :--- | :--- | :--- |
 | **Messages** | `conversations` | `created_at`, `updated_at` | **Server-side (Migrated)** |
-| **Messages** | `messages` | `created_at`, `updated_at` | **Server-side (Migrated)** |
-| **Users** | `users` | `created_at` | Application-side (`_now()`) |
+| **Profiles** | `profiles` | `created_at`, `updated_at` | **Server-side (Migrated)** |
 | **Discovery** | `swipes` | `created_at`, `modified_at` | Application-side (`_now()`) |
 | **Discovery** | `matches` | `created_at` | Application-side (`_now()`) |
-| **Profiles** | `profiles` | None | **Missing** |
+| **Users** | `users` | `created_at` | Application-side (`_now()`) |
 
 ## Implementation Strategy
 

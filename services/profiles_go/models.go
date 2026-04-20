@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 type ProfileCreate struct {
 	DisplayName string   `json:"display_name" binding:"required"`
 	Tagline     *string  `json:"tagline"`
@@ -24,12 +26,14 @@ type ProfileBatchRequest struct {
 }
 
 type ProfileOut struct {
-	ProfileID   string   `json:"profile_id"`
-	UserID      string   `json:"user_id"`
-	DisplayName string   `json:"display_name"`
-	Tagline     *string  `json:"tagline"`
-	Bio         *string  `json:"bio"`
-	Gender      *string  `json:"gender"`
-	ImageURLs   []string `json:"image_urls"`
-	IsActive    bool     `json:"is_active"`
+	ProfileID   string     `json:"profile_id"`
+	UserID      string     `json:"user_id"`
+	DisplayName string     `json:"display_name"`
+	Tagline     *string    `json:"tagline"`
+	Bio         *string    `json:"bio"`
+	Gender      *string    `json:"gender"`
+	ImageURLs   []string   `json:"image_urls"`
+	IsActive    bool       `json:"is_active"`
+	CreatedAt   *time.Time `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
 }
