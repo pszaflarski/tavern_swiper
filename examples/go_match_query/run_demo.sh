@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration with defaults
-export GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
+export GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-"tavern-swiper-dev"}
 export FIRESTORE_DATABASE_ID=${FIRESTORE_DATABASE_ID:-"messages-dev"}
 export PROFILE_ID=${PROFILE_ID:-"test_profile_id"}
 

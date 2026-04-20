@@ -11,7 +11,7 @@ This example demonstrates how to correctly use the `array-contains` operator in 
 
 ## How to Populate Data
 
-To see this example in action, you should first populate your Firestore database with some match data. You can use the existing profile swipe example:
+To see this example in action, you should first populate your Firestore database with some match data. You can use the existing bulk matching example:
 
 > [!TIP]
 > Make sure to activate your virtual environment before running the Python script.
@@ -19,7 +19,7 @@ To see this example in action, you should first populate your Firestore database
 ```bash
 # From the root of the tavern_swiper repository
 source .venv/bin/activate
-python3 examples/profile_swipe/swipe_demo.py
+python3 examples/bulk_matching_demo/bulk_matching_demo.py
 ```
 
 This will create profiles and matching entries in the cache.
@@ -29,7 +29,7 @@ This will create profiles and matching entries in the cache.
 1.  Set the required environment variables:
 
     ```bash
-    export GOOGLE_CLOUD_PROJECT="your-project-id"
+    export GOOGLE_CLOUD_PROJECT="tavern-swiper-dev"
     export FIRESTORE_DATABASE_ID="messages-dev" # Or "(default)"
     export PROFILE_ID="one-of-the-profile-ids-from-the-match"
     ```
@@ -42,7 +42,7 @@ This will create profiles and matching entries in the cache.
     ./run_demo.sh
 
     # Option B: Manual control
-    export GOOGLE_CLOUD_PROJECT="your-project-id"
+    export GOOGLE_CLOUD_PROJECT="tavern-swiper-dev"
     go run main.go
     ```
 

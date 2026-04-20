@@ -16,7 +16,17 @@ The most powerful way to use this script is to mint tokens locally and target yo
 > [!IMPORTANT]
 > **JWT Secret Alignment**: For this to work, the `JWT_SECRET` used by your local `auth` service MUST exactly match the `JWT_SECRET` deployed in your Cloud Run services. If they differ, the cloud services will reject the locally-minted tokens as unauthorized.
 
-### Execution Command
+### Execution Command (Quick Start)
+
+The easiest way to run this against Cloud Dev is using the provided script, which handles the auth service and URL configuration for you:
+
+```bash
+./run_cloud_demo.sh --count 5
+```
+
+### Manual Execution
+
+If you want to set custom URLs or use a local backend:
 
 ```bash
 # Set your target Cloud URLs
