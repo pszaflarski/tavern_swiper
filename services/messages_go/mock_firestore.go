@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -84,7 +85,11 @@ func (d *mockDoc) Set(ctx context.Context, data interface{}, opts ...firestore.S
 	d.exists = true
 	if m, ok := data.(map[string]interface{}); ok {
 		for k, v := range m {
-			d.data[k] = v
+			if v == firestore.ServerTimestamp {
+				d.data[k] = time.Now().UTC()
+			} else {
+				d.data[k] = v
+			}
 		}
 	} else if doc, ok := data.(Conversation); ok {
 		d.data = map[string]interface{}{

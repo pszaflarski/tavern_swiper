@@ -120,27 +120,32 @@ func handleCreateConversation(c *gin.Context) {
 
 	// 4. Create new Conversation
 	convID := uuid.New().String()
-	now := _now().UTC()
-	conv := Conversation{
-		ID:              convID,
-		ParticipantsKey: participantsKey,
-		ParticipantIDs:  pids,
-		CreatedBy:       pids[0], // Arbitrary for now
-		CreatedAt:       now,
-		UpdatedAt:       now,
-	}
+	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
+	batch := client.Batch()
 
-	_, _ = client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(ctx, conv)
+	batch.Set(convRef, map[string]interface{}{
+		"id":               convID,
+		"participants_key": participantsKey,
+		"participant_ids":  pids,
+		"created_by":       pids[0],
+		"created_at":       firestore.ServerTimestamp,
+		"updated_at":       firestore.ServerTimestamp,
+	})
 
 	// 5. Create ProfileConversation mappings
 	for _, pid := range pids {
 		pcID := fmt.Sprintf("%s_%s", pid, convID)
-		pc := ProfileConversation{
-			ProfileID:      pid,
-			ConversationID: convID,
-			Role:           "participant",
-		}
-		_, _ = client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID).Set(ctx, pc)
+		batch.Set(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), map[string]interface{}{
+			"profile_id":      pid,
+			"conversation_id": convID,
+			"role":            "participant",
+		})
+	}
+
+	if _, err := batch.Commit(ctx); err != nil {
+		log.Printf("[ERROR] Failed to commit conversation batch: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to create conversation"})
+		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"conversation_id": convID})
@@ -181,34 +186,40 @@ func handleSendMessage(c *gin.Context) {
 		return
 	}
 
-	// Create Message
+	// 2. Prepare Batch Write for Atomicity
 	messageID := uuid.New().String()
-	now := _now().UTC()
-	msg := Message{
-		SentBy:    body.SenderProfileID,
-		Content:   body.Content,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-
 	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
-	_, _ = convRef.Collection(COLLECTION_MESSAGES).Doc(messageID).Set(ctx, msg)
+	batch := client.Batch()
 
-	// Update denormalized parent fields
-	_, _ = convRef.Set(ctx, map[string]interface{}{
-		"updated_at":             now,
+	// Create Message in sub-collection
+	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(messageID), map[string]interface{}{
+		"sent_by":    body.SenderProfileID,
+		"content":    body.Content,
+		"created_at": firestore.ServerTimestamp,
+		"updated_at": firestore.ServerTimestamp,
+	})
+
+	// Update denormalized parent fields in Conversation
+	batch.Set(convRef, map[string]interface{}{
+		"updated_at":             firestore.ServerTimestamp,
 		"last_message_id":        messageID,
 		"last_message_text":      body.Content,
-		"last_message_sent_at":   now,
+		"last_message_sent_at":   firestore.ServerTimestamp,
 		"last_message_sender_id": body.SenderProfileID,
 	}, firestore.MergeAll)
+
+	if _, err := batch.Commit(ctx); err != nil {
+		log.Printf("[ERROR] Failed to commit message batch: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to send message"})
+		return
+	}
 
 	c.JSON(http.StatusCreated, MessageOut{
 		MessageID:       messageID,
 		ConversationID:  convID,
 		SenderProfileID: body.SenderProfileID,
 		Content:         body.Content,
-		SentAt:          now.Format(time.RFC3339),
+		SentAt:          _now().Format(time.RFC3339), // Approximate server time for client
 	})
 }
 
@@ -231,6 +242,13 @@ func handleGetMessages(c *gin.Context) {
 		return
 	}
 
+	// Stable sort by CreatedAt BEFORE mapping to result strings
+	sort.SliceStable(docs, func(i, j int) bool {
+		ti, _ := docs[i].Data()["created_at"].(time.Time)
+		tj, _ := docs[j].Data()["created_at"].(time.Time)
+		return ti.Before(tj)
+	})
+
 	var results []MessageOut
 	for _, doc := range docs {
 		d := doc.Data()
@@ -244,10 +262,6 @@ func handleGetMessages(c *gin.Context) {
 			SentAt:          tVal.Format(time.RFC3339),
 		})
 	}
-
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].SentAt < results[j].SentAt
-	})
 
 	if len(results) == 0 {
 		c.JSON(http.StatusOK, []MessageOut{})

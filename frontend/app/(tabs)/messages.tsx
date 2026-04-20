@@ -122,7 +122,7 @@ function MessagesScreenInner() {
                     <View style={styles.inboxTextContainer}>
                       <Text style={styles.inboxName}>{convo.otherProfile?.display_name || 'Traveler'}</Text>
                       <Text style={styles.inboxLastMessage} numberOfLines={1}>
-                        {convo.lastMessage?.content}
+                        {convo.last_message?.content}
                       </Text>
                     </View>
                   </View>

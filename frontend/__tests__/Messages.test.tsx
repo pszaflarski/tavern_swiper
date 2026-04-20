@@ -47,8 +47,13 @@ describe('Messages Screen', () => {
   const mockInbox = [
     {
       id: 'c1',
+      other_profile_id: 'p3',
       otherProfile: { display_name: 'Thorne', image_urls: [] },
-      lastMessage: { content: 'Hello there!', sent_at: new Date().toISOString() },
+      last_message: { 
+        content: 'Hello there!', 
+        sent_at: new Date().toISOString(),
+        sender_profile_id: 'p3'
+      },
     },
   ];
 
