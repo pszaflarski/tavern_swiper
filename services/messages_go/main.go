@@ -15,7 +15,6 @@ func main() {
 		port = "8005"
 	}
 
-	discoveryClient := NewDiscoveryClient()
 	r := gin.Default()
 
 	config := cors.DefaultConfig()
@@ -29,13 +28,15 @@ func main() {
 
 	m := r.Group("/messages")
 	{
-		m.POST("/", func(c *gin.Context) {
-			handleSendMessage(c, discoveryClient)
-		})
-		m.GET("/:match_id", handleGetMessages)
-		m.GET("/conversations/:profile_id", func(c *gin.Context) {
-			handleListConversations(c, discoveryClient)
-		})
+		// Conversations
+		m.POST("/conversations", handleCreateConversation)
+		m.GET("/conversations/profile/:profile_id", handleListConversations)
+
+		// Messages for a specific conversation
+		m.POST("/conversations/:id/messages", handleSendMessage)
+		m.GET("/conversations/:id/messages", handleGetMessages)
+
+		// Admin
 		m.DELETE("/", handleDeleteAllMessages)
 	}
 

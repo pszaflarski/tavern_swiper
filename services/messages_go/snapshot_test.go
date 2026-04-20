@@ -64,7 +64,9 @@ func (m *MockDiscoveryClient) ListMatchesForProfile(profileID string, token stri
 
 func TestSnapshotsParity(t *testing.T) {
 	mockDiscovery := &MockDiscoveryClient{}
-	r := setupTest(mockDiscovery)
+	r := setupTest()
+	r.GET("/messages/health", handleHealth)
+	r.Use(AuthMiddleware())
 	snaps := loadSnapshots(t)
 	var w *httptest.ResponseRecorder
 	var req *http.Request
@@ -192,7 +194,7 @@ func TestSnapshotsParity(t *testing.T) {
 				},
 			}, nil
 		}
-		req, _ = http.NewRequest("GET", "/messages/m1", nil)
+		req, _ = http.NewRequest("GET", "/messages/conversations/ANY_ID/messages", nil)
 		req.Header.Set("Authorization", "Bearer "+signGoTestToken("u1", "user"))
 		w = httptest.NewRecorder()
 		r.ServeHTTP(w, req)
@@ -219,7 +221,7 @@ func TestSnapshotsParity(t *testing.T) {
 			}, nil
 		}
 		
-		req, _ = http.NewRequest("GET", "/messages/conversations/p1", nil)
+		req, _ = http.NewRequest("GET", "/messages/conversations/profile/p1", nil)
 		req.Header.Set("Authorization", "Bearer "+signGoTestToken("u1", "user"))
 		w = httptest.NewRecorder()
 		r.ServeHTTP(w, req)

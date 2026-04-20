@@ -32,6 +32,7 @@ type DocumentRef interface {
 	Get(ctx context.Context) (DocumentSnapshot, error)
 	Set(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error)
 	Delete(ctx context.Context, opts ...firestore.Precondition) (*firestore.WriteResult, error)
+	Collection(path string) CollectionRef
 }
 
 type DocumentSnapshot interface {
@@ -94,6 +95,7 @@ func (d realDoc) Set(ctx context.Context, data interface{}, opts ...firestore.Se
 func (d realDoc) Delete(ctx context.Context, opts ...firestore.Precondition) (*firestore.WriteResult, error) {
 	return d.DocumentRef.Delete(ctx, opts...)
 }
+func (d realDoc) Collection(path string) CollectionRef { return realCollection{d.DocumentRef.Collection(path)} }
 
 func (s realSnap) Exists() bool                 { return s.DocumentSnapshot.Exists() }
 func (s realSnap) Data() map[string]interface{} { return s.DocumentSnapshot.Data() }

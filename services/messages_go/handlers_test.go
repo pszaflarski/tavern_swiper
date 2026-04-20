@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func setupTest(discoveryClient DiscoveryClient) *gin.Engine {
+func setupTest() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 
@@ -16,13 +16,9 @@ func setupTest(discoveryClient DiscoveryClient) *gin.Engine {
 
 	m := r.Group("/messages")
 	{
-		m.POST("/", func(c *gin.Context) {
-			handleSendMessage(c, discoveryClient)
-		})
-		m.GET("/:match_id", handleGetMessages)
-		m.GET("/conversations/:profile_id", func(c *gin.Context) {
-			handleListConversations(c, discoveryClient)
-		})
+		m.POST("/", handleSendMessage)
+		m.GET("/:id", handleGetMessages)
+		m.GET("/conversations/:profile_id", handleListConversations)
 		m.DELETE("/", handleDeleteAllMessages)
 	}
 
