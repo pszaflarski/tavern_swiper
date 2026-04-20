@@ -21,6 +21,9 @@ jest.mock('../context/ProfileContext', () => ({
 
 jest.mock('../hooks/useMessages', () => ({
   useInvolvedMatches: jest.fn(),
+  useCreateConversation: jest.fn(() => ({
+    mutate: jest.fn(),
+  })),
 }));
 
 describe('Messages Screen', () => {
@@ -40,7 +43,7 @@ describe('Messages Screen', () => {
   const mockNewMatches = [
     {
       id: 'm1',
-      otherProfile: { display_name: 'Elora', image_urls: [] },
+      otherProfile: { profile_id: 'p2', display_name: 'Elora', image_urls: [] },
     },
   ];
 
@@ -114,24 +117,36 @@ describe('Messages Screen', () => {
     expect(setActiveProfileId).toHaveBeenCalledWith('p2');
   });
 
-  it('handles pressing a new match', () => {
+  it('handles pressing a new match by creating a conversation and navigating', () => {
+    const { useCreateConversation } = require('../hooks/useMessages');
+    const { router } = require('expo-router');
+    const mockMutate = jest.fn();
+    
+    (useCreateConversation as jest.Mock).mockReturnValue({
+      mutate: mockMutate,
+    });
+
     const { getByTestId } = render(<MessagesScreen />);
     const newMatch = getByTestId('new-match-m1');
     
-    // Clicking should fire the interaction, even if it doesn't navigate yet
     fireEvent.press(newMatch);
     
-    // For now we just verify it exists and is pressable without error
-    expect(newMatch).toBeTruthy();
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ 
+        participants: ['p1', 'p2'] 
+      }),
+      expect.any(Object)
+    );
   });
 
-  it('handles pressing an inbox item', () => {
+  it('handles pressing an inbox item by navigating to the conversation', () => {
+    const { router } = require('expo-router');
     const { getByTestId } = render(<MessagesScreen />);
     const inboxItem = getByTestId('inbox-item-c1');
     
     fireEvent.press(inboxItem);
     
-    expect(inboxItem).toBeTruthy();
+    expect(router.push).toHaveBeenCalledWith('/conversation/c1');
   });
 
   it('shows loading state when content is loading', () => {

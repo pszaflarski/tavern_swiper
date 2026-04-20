@@ -26,27 +26,29 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 // Mock expo-router
-jest.mock('expo-router', () => ({
-  useRouter: () => ({
+jest.mock('expo-router', () => {
+  const mockRouter = {
     push: jest.fn(),
     replace: jest.fn(),
     back: jest.fn(),
-  }),
-  useLocalSearchParams: () => ({}),
-  usePathname: () => '/',
-  useFocusEffect: jest.fn((cb) => {
-    // In tests, we often just want it to run once on mount or when specifically triggered.
-    // Use require('react') inside the mock to avoid out-of-scope variable errors.
-    require('react').useEffect(cb, []);
-  }),
-  Stack: {
-    Screen: jest.fn(() => null),
-  },
-  Tabs: {
-    Screen: jest.fn(() => null),
-  },
-  Link: jest.fn(({ children }) => children),
-}));
+  };
+  return {
+    router: mockRouter,
+    useRouter: () => mockRouter,
+    useLocalSearchParams: () => ({}),
+    usePathname: () => '/',
+    useFocusEffect: jest.fn((cb) => {
+      require('react').useEffect(cb, []);
+    }),
+    Stack: {
+      Screen: jest.fn(() => null),
+    },
+    Tabs: {
+      Screen: jest.fn(() => null),
+    },
+    Link: jest.fn(({ children }) => children),
+  };
+});
 
 jest.mock('./hooks/useProfiles', () => ({
   useProfiles: jest.fn(() => ({ 

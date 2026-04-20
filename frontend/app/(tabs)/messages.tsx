@@ -4,8 +4,9 @@ import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
-import { useInvolvedMatches } from '../../hooks/useMessages';
+import { useInvolvedMatches, useCreateConversation } from '../../hooks/useMessages';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
+import { router } from 'expo-router';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 
@@ -16,6 +17,7 @@ function MessagesScreenInner() {
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const { data: myProfiles = [], isLoading: isLoadingMyProfiles, refetch: refetchProfiles } = useProfiles(uid);
   const { newMatches, inbox, isLoading: isLoadingContent, refetch: refetchMatches } = useInvolvedMatches(activeProfileId);
+  const { mutate: createConversation } = useCreateConversation();
 
   useRefreshOnFocus(React.useCallback(() => {
     refetchProfiles();
@@ -23,6 +25,21 @@ function MessagesScreenInner() {
   }, [refetchProfiles, refetchMatches]));
 
   const selectedProfile = Array.isArray(myProfiles) ? myProfiles.find(p => p.profile_id === activeProfileId) : undefined;
+
+  const handleMatchPress = (otherProfileId: string) => {
+    if (!activeProfileId) return;
+    createConversation({ 
+      participants: [activeProfileId, otherProfileId] 
+    }, {
+      onSuccess: (data) => {
+        router.push(`/conversation/${data.conversation_id}`);
+      }
+    });
+  };
+
+  const handleConversationPress = (convoId: string) => {
+    router.push(`/conversation/${convoId}`);
+  };
 
   const renderProfileImage = (uri: string | undefined) => {
     return uri ? { uri } : PLACEHOLDER_IMAGE;
@@ -88,6 +105,7 @@ function MessagesScreenInner() {
                     key={match.id} 
                     testID={`new-match-${match.id}`}
                     style={styles.newMatchItem}
+                    onPress={() => match.otherProfile?.profile_id && handleMatchPress(match.otherProfile.profile_id)}
                   >
                     <Image 
                       source={renderProfileImage(match.otherProfile?.image_urls?.[0])} 
@@ -112,6 +130,7 @@ function MessagesScreenInner() {
                   key={convo.id} 
                   testID={`inbox-item-${convo.id}`}
                   style={styles.inboxItem}
+                  onPress={() => handleConversationPress(convo.id)}
                 >
                   <View style={styles.inboxContent}>
                     <Image 
