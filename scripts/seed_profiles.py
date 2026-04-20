@@ -24,6 +24,8 @@ def get_url(service_name, env="local"):
         ports = {
             "auth": 8001,
             "profiles": 8002,
+            "discovery": 8003,
+            "messages": 8005,
             "users": 8006,
         }
         return f"http://127.0.0.1:{ports.get(service_name)}"
@@ -63,6 +65,8 @@ def get_url(service_name, env="local"):
 AUTH_URL = None
 PROFILES_URL = None
 USERS_URL = None
+DISCOVERY_URL = None
+MESSAGES_URL = None
 
 # Standardize paths to be absolute relative to the project root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -145,7 +149,8 @@ def seed_system():
             
             user_map[email] = {"uid": uid, "token": token, "role": row["user_role"]}
 
-    # 4. Create Profiles
+    # 4. Create Profiles and Collect for Interactions
+    seeded_profiles = [] # list of {profile_id, token, name}
     for row in rows:
         email = row["email"]
         target_uid = user_map[email]["uid"]
@@ -188,6 +193,86 @@ def seed_system():
                             print(f"Successfully uploaded {img_filename}")
                         else:
                             print(f"Failed to upload {img_filename}: {img_resp.status_code} {img_resp.text}")
+        
+        seeded_profiles.append({
+            "profile_id": profile_id,
+            "token": user_map[email]["token"],
+            "name": row["name"]
+        })
+
+    # 6. Interaction Seeding (Mutual Match & Conversation)
+    if len(seeded_profiles) >= 2:
+        p1 = seeded_profiles[0]
+        p2 = seeded_profiles[1]
+        
+        print(f"\n🤝 Creating Interaction between {p1['name']} and {p2['name']}...")
+        
+        # A. Mutual Match
+        print(f"  {p1['name']} swipes RIGHT on {p2['name']}...")
+        requests.post(
+            f"{DISCOVERY_URL}/discovery/swipe/",
+            headers={"Authorization": f"Bearer {p1['token']}"},
+            json={
+                "swiper_profile_id": p1['profile_id'],
+                "swiped_profile_id": p2['profile_id'],
+                "direction": "right"
+            },
+            timeout=30
+        )
+        
+        print(f"  {p2['name']} swipes RIGHT on {p1['name']} (Mutual Match!)...")
+        requests.post(
+            f"{DISCOVERY_URL}/discovery/swipe/",
+            headers={"Authorization": f"Bearer {p2['token']}"},
+            json={
+                "swiper_profile_id": p2['profile_id'],
+                "swiped_profile_id": p1['profile_id'],
+                "direction": "right"
+            },
+            timeout=30
+        )
+        
+        # Wait for propagation (Matches service cache)
+        print("  Waiting 5s for match propagation...")
+        time.sleep(5)
+        
+        # B. Conversation
+        print(f"  {p1['name']} initiating conversation...")
+        conv_resp = requests.post(
+            f"{MESSAGES_URL}/messages/conversations",
+            headers={"Authorization": f"Bearer {p1['token']}"},
+            json={"participant_profile_ids": [p1['profile_id'], p2['profile_id']]},
+            timeout=30
+        )
+        
+        if conv_resp.status_code in [200, 201]:
+            conv_id = conv_resp.json()["conversation_id"]
+            print(f"  Conversation established: {conv_id}")
+            
+            # Message 1: P1 -> P2
+            msg1 = "Greetings! I've been looking for a brave soul to join me at the Rusty Dragon. Interested?"
+            print(f"  {p1['name']} sending first message...")
+            requests.post(
+                f"{MESSAGES_URL}/messages/conversations/{conv_id}/messages",
+                headers={"Authorization": f"Bearer {p1['token']}"},
+                json={"sender_profile_id": p1['profile_id'], "content": msg1},
+                timeout=30
+            )
+            
+            time.sleep(1.5) # Ensure distinct timestamps
+            
+            # Message 2: P2 -> P1
+            msg2 = "The Rusty Dragon? Count me in! I'll bring the map. What time are we meeting?"
+            print(f"  {p2['name']} sending reply...")
+            requests.post(
+                f"{MESSAGES_URL}/messages/conversations/{conv_id}/messages",
+                headers={"Authorization": f"Bearer {p2['token']}"},
+                json={"sender_profile_id": p2['profile_id'], "content": msg2},
+                timeout=30
+            )
+            print("  ✅ Seeded back-and-forth conversation.")
+        else:
+            print(f"  ⚠️ Could not initiate conversation: {conv_resp.status_code} {conv_resp.text}")
 
     print("\n✅ Multi-user seeding complete!")
 
@@ -201,8 +286,10 @@ if __name__ == "__main__":
     AUTH_URL = get_url("auth", env)
     PROFILES_URL = get_url("profiles", env)
     USERS_URL = get_url("users", env)
+    DISCOVERY_URL = get_url("discovery", env)
+    MESSAGES_URL = get_url("messages", env)
     
-    if not all([AUTH_URL, PROFILES_URL, USERS_URL]):
+    if not all([AUTH_URL, PROFILES_URL, USERS_URL, DISCOVERY_URL, MESSAGES_URL]):
         print("❌ Could not determine all service URLs.")
         sys.exit(1)
         
