@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profilesApi, discoveryApi, messagesApi } from '../lib/api';
 import { Profile } from './useProfiles';
 
@@ -22,6 +22,14 @@ export interface Conversation {
   last_message?: LastMessageInfo;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface Message {
+  message_id: string;
+  conversation_id: string;
+  sender_profile_id: string;
+  content: string;
+  sent_at: string;
 }
 
 export interface UnifiedMatch extends Match {
@@ -61,6 +69,65 @@ export function useConversations(profileId: string | undefined) {
     },
     enabled: !!profileId,
     staleTime: 30000, // 30 seconds
+  });
+}
+
+/**
+ * Hook to fetch messages for a specific conversation.
+ */
+export function useConversationMessages(conversationId: string | undefined) {
+  return useQuery<Message[]>({
+    queryKey: ['messages', conversationId],
+    queryFn: async () => {
+      if (!conversationId) return [];
+      const res = await messagesApi.get(`/messages/conversations/${conversationId}/messages`);
+      return Array.isArray(res.data) ? res.data : [];
+    },
+    enabled: !!conversationId,
+    refetchInterval: 5000, // Poll every 5 seconds for "real-time" feel
+  });
+}
+
+/**
+ * Hook to send a message.
+ */
+export function useSendMessage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ conversationId, senderProfileId, content }: { conversationId: string, senderProfileId: string, content: string }) => {
+      const res = await messagesApi.post(`/messages/conversations/${conversationId}/messages`, {
+        sender_profile_id: senderProfileId,
+        content,
+      });
+      return res.data as Message;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate messages for this conversation to trigger a refetch
+      queryClient.invalidateQueries({ queryKey: ['messages', variables.conversationId] });
+      // Also invalidate conversations list to update last message
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+/**
+ * Hook to initialize a conversation between two profiles.
+ */
+export function useCreateConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ participants }: { participants: string[] }) => {
+      const res = await messagesApi.post('/messages/conversations', {
+        participant_profile_ids: participants,
+      });
+      return res.data as { conversation_id: string };
+    },
+    onSuccess: () => {
+      // Refresh conversations list
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
   });
 }
 
@@ -116,7 +183,7 @@ export function useInvolvedMatches(profileId: string | undefined) {
         ...match,
         otherProfile
       };
-    });
+    }).filter(m => !!m.otherProfile); // Filter out matches whose profiles aren't loaded yet
 
     const enrichedInbox = conversations.map(convo => {
       const otherProfile = Array.isArray(profiles) ? profiles.find(p => p.profile_id === convo.other_profile_id) ?? null : null;
@@ -125,7 +192,7 @@ export function useInvolvedMatches(profileId: string | undefined) {
         ...convo,
         otherProfile
       };
-    });
+    }).filter(c => !!c.otherProfile);
 
     return { 
       newMatches: enrichedMatches, 
@@ -140,3 +207,4 @@ export function useInvolvedMatches(profileId: string | undefined) {
     refetch
   };
 }
+
