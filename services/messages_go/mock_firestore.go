@@ -200,7 +200,7 @@ func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 				if !reflect.DeepEqual(val, f.value) {
 					match = false
 				}
-			case "array_contains":
+			case "array-contains":
 				found := false
 				if slice, ok := val.([]interface{}); ok {
 					for _, v := range slice {

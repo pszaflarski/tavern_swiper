@@ -86,8 +86,14 @@ func handleCreateConversation(c *gin.Context) {
 
 	// 3. Verification step (check match cache for 1-on-1 chats)
 	if len(pids) == 2 {
-		cacheIter := client.Collection(COLLECTION_CACHE).Where("profile_ids", "array_contains", pids[0]).Documents(ctx)
-		cacheDocs, _ := cacheIter.GetAll()
+		cacheIter := client.Collection(COLLECTION_CACHE).Where("profile_ids", "array-contains", pids[0]).Documents(ctx)
+		cacheDocs, err := cacheIter.GetAll()
+		if err != nil {
+			log.Printf("[ERROR] Failed to query match cache for %s: %v", pids[0], err)
+			c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to verify match cache"})
+			return
+		}
+		log.Printf("[INFO] Match cache check for %s: %d docs found", pids[0], len(cacheDocs))
 
 		allowed := false
 		for _, cd := range cacheDocs {
