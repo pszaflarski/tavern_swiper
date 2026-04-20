@@ -290,7 +290,7 @@ async def test_discovery_feed_limit():
         p_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Limit Tester"})
         profile_id = p_resp.json()["profile_id"]
 
-        await asyncio.sleep(2) # Wait for Pub/Sub to Discovery cache propagation
+        await asyncio.sleep(5) # Wait for Pub/Sub to Discovery cache propagation
 
         # 2. Test Limit = 1
         feed_1 = await client.get(f"{DISCOVERY_URL}/discovery/feed/{profile_id}?limit=1", headers=headers)
@@ -370,7 +370,7 @@ async def test_left_swipe_exclusion():
         await client.post(f"{USERS_URL}/users/", headers=headers_b, json={"email": email_b})
         p_b_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_b, json={"display_name": "SwiperB"})).json()["profile_id"]
 
-        await asyncio.sleep(2) # Wait for Pub/Sub to Discovery cache propagation
+        await asyncio.sleep(5) # Wait for Pub/Sub to Discovery cache propagation
 
         # 1. Verify B is in A's feed initially
         feed_init = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}", headers=headers_a)

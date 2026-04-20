@@ -109,6 +109,10 @@ async def test_full_conversation_lifecycle():
         assert resp.status_code == 201, f"Failed to send: {resp.text}"
         print(f"✅ Message sent by {hero_a_profile_id}")
 
+        # Add a sleep to ensure the second message has a different RFC3339 timestamp string
+        # This prevents stable sorting issues in the API response.
+        await asyncio.sleep(1.1)
+
         # --- STEP 3: Hero B checks their inbox ---
         print("\nStep 3: Hero B checks their inbox")
         # This verifies the ProfileConversation mapping and denormalization
