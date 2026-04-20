@@ -19,14 +19,12 @@ steps:
     args: ['push', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest']
 
   # 4. Deploy to Cloud Run
-  # 4. Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        set -ex
-        echo "🚀 Deploying $_SERVICE_NAME$_ENV_SUFFIX to $_ENV_NAME environment..."
+        echo "🚀 Deploying $_SERVICE_NAME$_ENV_SUFFIX to $_ENV_NAME environment as a Cloud Run service..."
 
         gcloud run deploy $_SERVICE_NAME$_ENV_SUFFIX \
           --image=gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest \
@@ -39,48 +37,8 @@ steps:
           --execution-environment=gen1 \
           --quiet
 
-  # 5. Ensure Pub/Sub Invoker permissions
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        set -ex
-        echo "🔐 Ensuring Pub/Sub Invoker permissions..."
-        gcloud run services add-iam-policy-binding $_SERVICE_NAME$_ENV_SUFFIX \
-          --region=us-central1 \
-          --member="serviceAccount:tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-          --role="roles/run.invoker" \
-          --quiet
-
-  # 6. Configure Push Subscription (Idempotent)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        set -ex
-        echo "🔗 Configuring Pub/Sub Push Subscription..."
-
-        SA_EMAIL="tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com"
-        SUB_NAME="$_ENV_NAME-messages-from-discovery-match-events-v1-sub"
-        TOPIC_NAME="$_ENV_NAME-discovery-match-events-v1"
-
-        # Get service URL
-        SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME$_ENV_SUFFIX --region us-central1 --format 'value(status.url)')
-        echo "✅ Service URL: $$SERVICE_URL"
-
-        # Idempotent Create or Update
-        gcloud pubsub subscriptions create $$SUB_NAME \
-          --topic=$$TOPIC_NAME \
-          --push-endpoint=$$SERVICE_URL \
-          --push-auth-service-account=$$SA_EMAIL \
-          --quiet || \
-        gcloud pubsub subscriptions update $$SUB_NAME \
-          --push-endpoint=$$SERVICE_URL \
-          --quiet
-
 options:
   logging: CLOUD_LOGGING_ONLY
+
 
 
