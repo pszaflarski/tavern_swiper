@@ -1,7 +1,3 @@
-// @title         Auth Service API
-// @version       1.0
-// @description   Firebase Auth proxy for registration, login, token verification, and JWT minting.
-// @host          localhost:8001
 // @BasePath      /auth
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -33,12 +29,11 @@ func main() {
 	r := gin.Default()
 
 	// Middleware
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		AllowCredentials: true,
-	}))
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	r.Use(cors.New(config))
 
 	// Swagger UI
 	r.GET("/auth/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

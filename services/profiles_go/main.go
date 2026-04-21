@@ -1,7 +1,3 @@
-// @title         Profiles Service API
-// @version       1.0
-// @description   Profile CRUD, image uploads, and active profile management.
-// @host          localhost:8002
 // @BasePath      /profiles
 // @securityDefinitions.apikey BearerAuth
 // @in header

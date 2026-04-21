@@ -1,7 +1,3 @@
-// @title         Discovery Service API
-// @version       1.0
-// @description   Hero feed generation, swipe recording, and match management.
-// @host          localhost:8003
 // @BasePath      /discovery
 // @securityDefinitions.apikey BearerAuth
 // @in header
