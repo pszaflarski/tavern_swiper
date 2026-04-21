@@ -238,6 +238,7 @@ func firebaseAuthREST(c *gin.Context, action string) {
 // @Param        uid  path  string  true  "User UID"
 // @Success      204  "No Content"
 // @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
 // @Router       /users/{uid} [delete]
 func deleteUserHandler(c *gin.Context) {
 	uid := c.Param("uid")
@@ -264,6 +265,7 @@ func deleteUserHandler(c *gin.Context) {
 // @Param        body  body  BulkDeleteRequest  true  "List of UIDs to delete"
 // @Success      204  "No Content"
 // @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
 // @Router       /users/ [delete]
 func deleteUsersBulkHandler(c *gin.Context) {
 	var body BulkDeleteRequest
@@ -298,6 +300,7 @@ func deleteUsersBulkHandler(c *gin.Context) {
 // @Tags         admin
 // @Success      204  "No Content"
 // @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
 // @Router       /all [delete]
 func deleteAllHandler(c *gin.Context) {
 	authClient, err := getAuthFunc(c.Request.Context())
@@ -330,6 +333,7 @@ func deleteAllHandler(c *gin.Context) {
 // @Success      200   {object}  TokenResponse
 // @Failure      403   {object}  ErrorResponse
 // @Failure      500   {object}  ErrorResponse
+// @Security      BearerAuth
 // @Router       /dev-mint [post]
 func devMintHandler(c *gin.Context) {
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
