@@ -1,12 +1,21 @@
+// @title         Auth Service API
+// @version       1.0
+// @description   Firebase Auth proxy for registration, login, token verification, and JWT minting.
+// @host          localhost:8001
+// @BasePath      /auth
 package main
 
 import (
 	"log"
 	"os"
 
+	_ "tavern-swiper.app/auth_go/docs"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -27,6 +36,9 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
 	}))
+
+	// Swagger UI
+	r.GET("/auth/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Routes
 	auth := r.Group("/auth")

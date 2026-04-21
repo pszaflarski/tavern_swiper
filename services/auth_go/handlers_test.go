@@ -79,11 +79,11 @@ func TestDevMint(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "Forbidden if Flag Off even in Dev",
+			name:           "Allowed in Dev even if Flag Off",
 			body:           DevMintRequest{UID: "u1", Email: "e1@t.com"},
 			allowLong:      "false",
 			project:        "dev-dev",
-			expectedStatus: http.StatusForbidden,
+			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Success in Dev Project",

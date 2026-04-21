@@ -1,3 +1,11 @@
+// @title         Profiles Service API
+// @version       1.0
+// @description   Profile CRUD, image uploads, and active profile management.
+// @host          localhost:8002
+// @BasePath      /profiles
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -5,8 +13,12 @@ import (
 	"log"
 	"os"
 
+	_ "tavern-swiper.app/profiles_go/docs"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -23,6 +35,9 @@ func main() {
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
+
+	// Swagger UI (before auth middleware)
+	r.GET("/profiles/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Global Middleware
 	r.Use(AuthMiddleware())
@@ -58,3 +73,4 @@ func main() {
 		log.Fatalf("[CRITICAL] Failed to run server: %v", err)
 	}
 }
+

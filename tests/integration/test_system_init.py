@@ -2,58 +2,17 @@ import pytest
 import httpx
 import uuid
 import asyncio
-
-# --- Configuration ---
 import os
-# --- Configuration ---
-# Fallback to local docker-compose-test.yml if env vars are not set
-AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
-PROFILES_URL = os.getenv("PROFILES_URL", "http://localhost:8002")
-DISCOVERY_URL = os.getenv("DISCOVERY_URL", "http://localhost:8003")
-MESSAGES_URL = os.getenv("MESSAGES_URL", "http://localhost:8005")
-USERS_URL = os.getenv("USERS_URL", "http://localhost:8006")
+from .helpers import register_user, get_root_admin, AUTH_URL, USERS_URL, PROFILES_URL, DISCOVERY_URL, TEST_PASSWORD
 
 TEST_EMAIL = f"root-test-{uuid.uuid4().hex[:8]}@example.com"
-TEST_PASSWORD = "TestPassword123!"
 
 @pytest.fixture(scope="module")
 async def auth_token():
-    """Fixture to register a new user, promote them to root_admin, and return their elevated token."""
+    """Fixture to ensure root admin exists and return its token and UID."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # 1. Register via Auth Service
-        resp = await client.post(
-            f"{AUTH_URL}/auth/register",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
-        )
-        assert resp.status_code == 200, f"Registration failed: {resp.text}"
-        id_token = resp.json()["id_token"]
-        uid = resp.json()["uid"]
-
-        # 2. Exchange for initial Tavern JWT (role='user' by default)
-        verify_resp = await client.post(
-            f"{AUTH_URL}/auth/verify",
-            json={"id_token": id_token}
-        )
-        assert verify_resp.status_code == 200
-        initial_token = verify_resp.json()["token"]
-
-        # 3. Claim the Root Admin throne (promotion)
-        # Note: This is idempotent if already claimed.
-        await client.post(
-            f"{USERS_URL}/users/", 
-            headers={"Authorization": f"Bearer {initial_token}"},
-            json={"email": TEST_EMAIL, "user_type": "root_admin"}
-        )
-
-        # 4. Exchange for UPGRADED Tavern JWT (role='root_admin')
-        verify_resp_final = await client.post(
-            f"{AUTH_URL}/auth/verify",
-            json={"id_token": id_token}
-        )
-        assert verify_resp_final.status_code == 200, f"Verification failed: {verify_resp_final.text}"
-        elevated_token = verify_resp_final.json()["token"]
-
-        return {"token": elevated_token, "uid": uid}
+        root = await get_root_admin(client)
+        return root
 
 @pytest.mark.asyncio
 async def test_root_initialization_flow(auth_token):
@@ -157,38 +116,38 @@ async def test_multi_profile_discovery_and_matching():
     User A (Profile A1, Profile A2) <-> User B (Profile B1)
     1. Setup User A with 2 profiles
     2. Setup User B with 1 profile
-    3. User A (A1) swipes RIGHT on B1
-    4. User B (B1) swipes RIGHT on A1
-    5. Verify Match is created for both A1 and B1
+    3. Set A1 as active (since creating A2 auto-activates A2)
+    4. User A (A1) swipes RIGHT on B1
+    5. User B (B1) swipes RIGHT on A1
+    6. Verify Match is created for both A1 and B1
     """
     async with httpx.AsyncClient(timeout=30.0) as client:
         # --- 1. Setup User A ---
-        email_a = f"user-a-{uuid.uuid4().hex[:8]}@example.com"
-        reg_a = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_a, "password": TEST_PASSWORD})
-        id_token_a = reg_a.json()["id_token"]
-        v_a = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token_a})
-        token_a = v_a.json()["token"]
+        user_a = await register_user(client)
+        token_a = user_a["token"]
         headers_a = {"Authorization": f"Bearer {token_a}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers_a, json={"email": email_a})
         
         # Create A1
         p_a1_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "A1"})
+        assert p_a1_resp.status_code == 201, f"A1 creation failed: {p_a1_resp.text}"
         p_a1_id = p_a1_resp.json()["profile_id"]
-        # Create A2
+        # Create A2 (auto-activates A2, deactivates A1)
         p_a2_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "A2"})
+        assert p_a2_resp.status_code == 201, f"A2 creation failed: {p_a2_resp.text}"
         p_a2_id = p_a2_resp.json()["profile_id"]
 
+        # Re-activate A1 so it shows up in feed and can be used for swiping
+        set_active_resp = await client.post(f"{PROFILES_URL}/profiles/{p_a1_id}/set_active", headers=headers_a)
+        assert set_active_resp.status_code == 200, f"Set A1 active failed: {set_active_resp.text}"
+
         # --- 2. Setup User B ---
-        email_b = f"user-b-{uuid.uuid4().hex[:8]}@example.com"
-        reg_b = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
-        id_token_b = reg_b.json()["id_token"]
-        v_b = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token_b})
-        token_b = v_b.json()["token"]
+        user_b = await register_user(client)
+        token_b = user_b["token"]
         headers_b = {"Authorization": f"Bearer {token_b}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers_b, json={"email": email_b})
         
         # Create B1
         p_b1_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers_b, json={"display_name": "B1"})
+        assert p_b1_resp.status_code == 201, f"B1 creation failed: {p_b1_resp.text}"
         p_b1_id = p_b1_resp.json()["profile_id"]
 
         print(f"Waiting for 10s for propagation of profiles {p_a1_id}, {p_a2_id}, {p_b1_id}")
@@ -196,14 +155,13 @@ async def test_multi_profile_discovery_and_matching():
 
         # --- 3. User A (A1) Swipes RIGHT on B1 ---
         # Get feed for A1
-        feed_a1 = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a1_id}", headers=headers_a)
+        feed_a1 = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a1_id}?limit=100", headers=headers_a)
         if feed_a1.status_code != 200:
             print(f"Discovery failed: {feed_a1.text}")
         assert feed_a1.status_code == 200, f"Discovery failed with {feed_a1.status_code}: {feed_a1.text}"
         profile_ids_in_feed = [p["profile_id"] for p in feed_a1.json()["profiles"]]
-        assert p_b1_id in profile_ids_in_feed
-        assert p_a1_id not in profile_ids_in_feed # Self-exclusion
-        assert p_a2_id in profile_ids_in_feed # Multi-profile discovery (Should see other profiles on same account)
+        assert p_b1_id in profile_ids_in_feed, f"B1 ({p_b1_id}) not in feed: {profile_ids_in_feed}"
+        assert p_a1_id not in profile_ids_in_feed, "Self-exclusion: A1 should not appear in own feed"
 
         # Swipe RIGHT
         swipe_a_resp = await client.post(
@@ -226,7 +184,6 @@ async def test_multi_profile_discovery_and_matching():
         # Check matches for A1
         matches_a1 = await client.get(f"{DISCOVERY_URL}/discovery/matches/profile/{p_a1_id}", headers=headers_a)
         assert matches_a1.status_code == 200
-        # In current Discovery, matches are returned as MatchOut: { id, profiles, created_at }
         matches_a1_data = matches_a1.json()
         match_profiles_a1 = []
         for m in matches_a1_data:
@@ -248,16 +205,10 @@ async def test_multi_profile_discovery_and_matching():
 async def test_root_singleton_enforcement(auth_token):
     """Verify that a second root admin cannot be created."""
     # Register another user
+    # Register another user
     async with httpx.AsyncClient(timeout=30.0) as client:
-        other_email = f"other-{uuid.uuid4().hex[:8]}@example.com"
-        reg_resp = await client.post(
-            f"{AUTH_URL}/auth/register",
-            json={"email": other_email, "password": TEST_PASSWORD}
-        )
-        assert reg_resp.status_code == 200
-        id_token_other = reg_resp.json()["id_token"]
-        v_ohter = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token_other})
-        other_token = v_ohter.json()["token"]
+        other_user = await register_user(client)
+        other_token = other_user["token"]
         
         # Try to init as root_admin
         headers = {"Authorization": f"Bearer {other_token}"}
@@ -265,7 +216,7 @@ async def test_root_singleton_enforcement(auth_token):
             f"{USERS_URL}/users/",
             headers=headers,
             json={
-                "email": other_email,
+                "email": other_user["email"],
                 "user_type": "root_admin"
             }
         )
@@ -280,13 +231,10 @@ async def test_discovery_feed_limit():
     email = f"limit-user-{uuid.uuid4().hex[:8]}@example.com"
     async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Setup User & Profile
-        reg_resp = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
-        id_token = reg_resp.json()["id_token"]
-        v_resp = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": id_token})
-        token = v_resp.json()["token"]
+        user = await register_user(client)
+        token = user["token"]
         headers = {"Authorization": f"Bearer {token}"}
         
-        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
         p_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Limit Tester"})
         profile_id = p_resp.json()["profile_id"]
 
@@ -325,11 +273,8 @@ async def test_profile_lifecycle():
     """Verify profile creation, update, and deletion."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Auth setup
-        email = f"profile-lc-{uuid.uuid4().hex[:8]}@example.com"
-        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
-        token = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})).json()["token"]
-        headers = {"Authorization": f"Bearer {token}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+        user = await register_user(client)
+        headers = {"Authorization": f"Bearer {user['token']}"}
 
         # 1. Create
         resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Initial Name"})
@@ -355,25 +300,19 @@ async def test_left_swipe_exclusion():
     """Verify that profiles swiped LEFT are excluded from future discovery feeds."""
     async with httpx.AsyncClient(timeout=35.0) as client:
         # Setup User A
-        email_a = f"swiper-{uuid.uuid4().hex[:8]}@example.com"
-        reg_a = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_a, "password": TEST_PASSWORD})
-        token_a = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_a.json()["id_token"]})).json()["token"]
-        headers_a = {"Authorization": f"Bearer {token_a}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers_a, json={"email": email_a})
+        user_a = await register_user(client)
+        headers_a = {"Authorization": f"Bearer {user_a['token']}"}
         p_a_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "SwiperA"})).json()["profile_id"]
 
         # Setup User B
-        email_b = f"swiped-{uuid.uuid4().hex[:8]}@example.com"
-        reg_b = await client.post(f"{AUTH_URL}/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
-        token_b = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg_b.json()["id_token"]})).json()["token"]
-        headers_b = {"Authorization": f"Bearer {token_b}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers_b, json={"email": email_b})
+        user_b = await register_user(client)
+        headers_b = {"Authorization": f"Bearer {user_b['token']}"}
         p_b_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers_b, json={"display_name": "SwiperB"})).json()["profile_id"]
 
         await asyncio.sleep(5) # Wait for Pub/Sub to Discovery cache propagation
 
         # 1. Verify B is in A's feed initially
-        feed_init = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}", headers=headers_a)
+        feed_init = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}?limit=100", headers=headers_a)
         p_ids = [p["profile_id"] for p in feed_init.json()["profiles"]]
         assert p_b_id in p_ids
 
@@ -382,7 +321,7 @@ async def test_left_swipe_exclusion():
                          json={"swiper_profile_id": p_a_id, "swiped_profile_id": p_b_id, "direction": "left"})
 
         # 3. Verify B is NOT in A's feed anymore
-        feed_after = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}", headers=headers_a)
+        feed_after = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}?limit=100", headers=headers_a)
         p_ids_after = [p["profile_id"] for p in feed_after.json()["profiles"]]
         assert p_b_id not in p_ids_after
         print(f"\nSuccessfully verified left-swipe exclusion for profile {p_b_id}")
@@ -391,11 +330,9 @@ async def test_left_swipe_exclusion():
 async def test_user_account_management():
     """Verify GET /users/me and PUT /users/me."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        email = f"user-mgmt-{uuid.uuid4().hex[:8]}@example.com"
-        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
-        token = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})).json()["token"]
-        headers = {"Authorization": f"Bearer {token}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+        user = await register_user(client)
+        headers = {"Authorization": f"Bearer {user['token']}"}
+        email = user["email"]
 
         # 1. Fetch account info
         resp = await client.get(f"{USERS_URL}/users/me", headers=headers)
@@ -413,11 +350,9 @@ async def test_user_account_management():
 async def test_active_profile_switching():
     """Verify profile auto-activation and manual switching."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        email = f"switcher-{uuid.uuid4().hex[:8]}@example.com"
-        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
-        token = (await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})).json()["token"]
-        headers = {"Authorization": f"Bearer {token}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
+        user = await register_user(client)
+        headers = {"Authorization": f"Bearer {user['token']}"}
+        email = user["email"]
 
         # 1. Create P1 (will be active)
         p1_id = (await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "P1"})).json()["profile_id"]
@@ -447,13 +382,10 @@ async def test_active_profile_switching():
 async def test_user_profiles_listing():
     """Verify GET /profiles/user/{user_id}."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        email = f"listing-{uuid.uuid4().hex[:8]}@example.com"
-        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": TEST_PASSWORD})
-        resp_verify = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": reg.json()["id_token"]})
-        token = resp_verify.json()["token"]
-        uid = resp_verify.json()["uid"]
+        user = await register_user(client)
+        token = user["token"]
+        uid = user["uid"]
         headers = {"Authorization": f"Bearer {token}"}
-        await client.post(f"{USERS_URL}/users/", headers=headers, json={"email": email})
 
         # Create two profiles
         await client.post(f"{PROFILES_URL}/profiles/", headers=headers, json={"display_name": "Profile 1"})
@@ -472,12 +404,10 @@ async def test_user_soft_delete_and_restore(auth_token):
     headers_admin = {"Authorization": f"Bearer {auth_token['token']}"}
     
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # 1. Setup a Target User
-        target_email = f"softdelete-{uuid.uuid4().hex[:8]}@example.com"
-        reg = await client.post(f"{AUTH_URL}/auth/register", json={"email": target_email, "password": TEST_PASSWORD})
-        target_uid = reg.json()["uid"]
-        # Create record in Users service
-        await client.post(f"{USERS_URL}/users/", headers=headers_admin, json={"email": target_email, "uid": target_uid})
+        # 1. Setup a Target User (Using dev-mint via root admin)
+        target_user = await register_user(client)
+        target_uid = target_user["uid"]
+        target_email = target_user["email"]
 
         # 2. Soft-delete the user
         resp_del = await client.delete(f"{USERS_URL}/users/{target_uid}?hard=false", headers=headers_admin)

@@ -5,6 +5,9 @@ You are Antigravity, the AI assistant for the Tavern Swiper project. Adhere to t
 > [!IMPORTANT]
 > **NEVER** run Python commands using the system interpreter. You **MUST** use the project's virtual environment at `.venv/bin/python3`. Failure to do so will pollute the system and cause inconsistencies in the development environment.
 
+> [!IMPORTANT]
+> **DOCKER RESOURCE PROTECTION**: **NEVER** run `docker compose up`, `docker compose build`, `tests/run_integration_tests.sh --local`, or any resource-intensive Docker setup commands automatically. These operations risk triggering **Out Of Memory (OOM)** issues. You **MUST** obtain explicit user permission before starting the Docker environment to allow the user to manage local resources.
+
 ## 🏰 Architecture: Shared Nothing Microservices
 This project follows a strictly isolated microservice backend. **NEVER** suggest sharing databases or direct internal calls between services (except via the `auth` service for identity verification).
 
@@ -24,7 +27,7 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 
 ## 🔐 Security: Zero-Trust Enforcement
 - All microservice endpoints (except `auth/login` and `auth/register`) MUST verify the Firebase ID token via the `auth` service.
-- **Internal Auth**: No service trusts a request by default. Use `auth_utils.py` logic in services to ensure token validation.
+- **Internal Auth**: No service trusts a request by default. Each Go service has its own `auth.go` with middleware for token validation.
 
 ## ⚙️ Configuration
 - Each microservice loads its environment from a local `.env` within its `services/<service_name>/` directory.
@@ -52,11 +55,11 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 
 ### 🧪 Development Workflow
 - **Venv First**: Always prefix python commands with `.venv/bin/python3`.
-- **Testing**: Always run `bash services/run_tests.sh` after backend changes to ensure zero-trust boundaries are intact.
+- **Testing**: Run `go test -v ./...` from each service directory after backend changes to ensure zero-trust boundaries are intact.
 - **Microservice Cycle**:
-  1. Update microservice `main.py` and `models.py`.
+  1. Update microservice `main.go`, `handlers.go`, and `models.go`.
   2. Update its local `.env`.
-  3. Verify with `run_tests.sh`.
+  3. Verify with `go test -v ./...` from the service directory.
 
 ## 🃏 Jest Unit Testing Guidelines
 - **Provider Mocking**: Components relying on global state (e.g., `useQueryClient` or `ActiveProfileContext`) must be rendered with a custom wrapper providing fresh instances of those contexts (e.g., `<QueryClientProvider>`) to avoid cross-test cache pollution.

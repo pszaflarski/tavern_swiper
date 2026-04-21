@@ -1,12 +1,24 @@
+// @title         Users Service API
+// @version       1.0
+// @description   User record management, roles, and admin operations.
+// @host          localhost:8006
+// @BasePath      /users
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
 	"log"
 	"os"
 
+	_ "tavern-swiper.app/users_go/docs"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -26,6 +38,9 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
 	}))
+
+	// Swagger UI (before auth)
+	r.GET("/users/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Routes
 	users := r.Group("/users")

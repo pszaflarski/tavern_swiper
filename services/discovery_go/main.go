@@ -1,3 +1,11 @@
+// @title         Discovery Service API
+// @version       1.0
+// @description   Hero feed generation, swipe recording, and match management.
+// @host          localhost:8003
+// @BasePath      /discovery
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -5,8 +13,12 @@ import (
 	"net/http"
 	"os"
 
+	_ "discovery_go/docs"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -27,6 +39,9 @@ func main() {
 	config.AllowAllOrigins = true
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
+
+	// Swagger UI (before auth middleware)
+	r.GET("/discovery/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Global Middleware
 	r.Use(AuthMiddleware())

@@ -4,6 +4,7 @@ import uuid
 import asyncio
 import os
 from google.cloud import firestore
+from .helpers import register_user, AUTH_URL, PROFILES_URL, DISCOVERY_URL, USERS_URL
 
 # --- Configuration ---
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
@@ -31,28 +32,8 @@ async def create_profile(auth_client):
 @pytest.fixture
 async def authenticated_user():
     """Fixture to register a new user and return their token and UID."""
-    email = f"msg-test-{uuid.uuid4().hex[:8]}@example.com"
-    password = "TestPassword123!"
-    
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # 1. Register
-        reg_resp = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
-        assert reg_resp.status_code == 200
-        creds = reg_resp.json()
-        
-        # 2. Tavern Token
-        v_resp = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": creds["id_token"]})
-        assert v_resp.status_code == 200
-        token = v_resp.json()["token"]
-        
-        # 3. User Record (Hydrate)
-        await client.post(
-            f"{USERS_URL}/users/", 
-            headers={"Authorization": f"Bearer {token}"},
-            json={"email": email}
-        )
-        
-        return {"token": token, "uid": creds["uid"], "email": email}
+        return await register_user(client)
 
 async def poll_for_match_cache(match_id, timeout=30):
     """Poll Firestore messages-test DB for the cached match."""
@@ -84,16 +65,8 @@ async def test_match_cache_propagation():
         # --- 1. Setup Users & Profiles ---
         users = []
         for i in range(2):
-            email = f"match-test-{uuid.uuid4().hex[:8]}@example.com"
-            reg_resp = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": "Password123!"})
-            assert reg_resp.status_code == 200
-            creds = reg_resp.json()
-            
-            v_resp = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": creds["id_token"]})
-            token = v_resp.json()["token"]
-            
-            # Hydrate user
-            await client.post(f"{USERS_URL}/users/", headers={"Authorization": f"Bearer {token}"}, json={"email": email})
+            u_data = await register_user(client)
+            token = u_data["token"]
             
             # Create profile
             p_resp = await client.post(

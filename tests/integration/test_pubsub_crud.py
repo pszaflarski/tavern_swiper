@@ -4,6 +4,7 @@ import uuid
 import asyncio
 import os
 from google.cloud import firestore
+from .helpers import register_user, AUTH_URL, PROFILES_URL, USERS_URL
 
 # --- Configuration ---
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "https://auth-hhqol7siba-uc.a.run.app")
@@ -17,28 +18,8 @@ DISCOVERY_DB = os.getenv("DISCOVERY_DB", "discovery")
 @pytest.fixture(scope="module")
 async def auth_user():
     """Fixture to register a new user and return their token/UID."""
-    email = f"pubsub-test-{uuid.uuid4().hex[:8]}@example.com"
-    password = "TestPassword123!"
-    
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # 1. Register
-        reg_resp = await client.post(f"{AUTH_URL}/auth/register", json={"email": email, "password": password})
-        assert reg_resp.status_code == 200
-        creds = reg_resp.json()
-        
-        # 2. Tavern Token
-        v_resp = await client.post(f"{AUTH_URL}/auth/verify", json={"id_token": creds["id_token"]})
-        assert v_resp.status_code == 200
-        token = v_resp.json()["token"]
-        
-        # 3. User Record
-        await client.post(
-            f"{USERS_URL}/users/", 
-            headers={"Authorization": f"Bearer {token}"},
-            json={"email": email}
-        )
-        
-        return {"token": token, "uid": creds["uid"], "email": email}
+        return await register_user(client)
 
 async def poll_for_cache(profile_id, expected_name, timeout=15):
     """Poll Firestore discovery-test DB for the cached profile."""

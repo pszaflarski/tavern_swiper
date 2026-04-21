@@ -20,10 +20,31 @@ const (
 	PROFILES_CACHE     = "profiles_profiles_cache"
 )
 
+// handleHealth godoc
+// @Summary      Health check
+// @Description  Returns the health status of the discovery service.
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health [get]
 func handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"service": "discovery", "status": "ok"})
 }
 
+// handleGetFeed godoc
+// @Summary      Get discovery feed
+// @Description  Returns a curated list of active profiles the caller hasn't swiped on yet.
+// @Tags         feed
+// @Accept       json
+// @Produce      json
+// @Param        profile_id  path   string  true  "Caller's Profile ID"
+// @Param        limit       query  int     false "Max profiles to return" default(10)
+// @Success      200  {object}  FeedResponse
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /feed/{profile_id} [get]
 func handleGetFeed(c *gin.Context) {
 	profileID := c.Param("profile_id")
 	auth := GetAuth(c)
@@ -147,6 +168,20 @@ func handleGetFeed(c *gin.Context) {
 	c.JSON(http.StatusOK, FeedResponse{Profiles: profiles})
 }
 
+// handleRecordSwipe godoc
+// @Summary      Record a swipe
+// @Description  Records a left/right swipe. If mutual right-swipe is detected, creates a match.
+// @Tags         swipes
+// @Accept       json
+// @Produce      json
+// @Param        body  body      SwipeCreate  true  "Swipe payload"
+// @Success      201   {object}  SwipeOut
+// @Failure      400   {object}  map[string]string
+// @Failure      403   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /swipe/ [post]
 func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 	var body SwipeCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -238,6 +273,17 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
  	})
  }
 
+// handleGetMatch godoc
+// @Summary      Get a match by ID
+// @Description  Returns the details of a specific match.
+// @Tags         matches
+// @Produce      json
+// @Param        id  path      string  true  "Match ID"
+// @Success      200  {object}  MatchOut
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /matches/{id} [get]
 func handleGetMatch(c *gin.Context) {
 	id := c.Param("id")
 	ctx := context.Background()
@@ -271,6 +317,16 @@ func handleGetMatch(c *gin.Context) {
 	})
 }
 
+// handleListMatchesForProfile godoc
+// @Summary      List matches for a profile
+// @Description  Returns all matches that include the given profile ID.
+// @Tags         matches
+// @Produce      json
+// @Param        profile_id  path      string  true  "Profile ID"
+// @Success      200  {array}   MatchOut
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /matches/profile/{profile_id} [get]
 func handleListMatchesForProfile(c *gin.Context) {
 	profileID := c.Param("profile_id")
 	ctx := context.Background()
@@ -315,6 +371,15 @@ func handleListMatchesForProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
+// handleDeleteAll godoc
+// @Summary      Purge all discovery data
+// @Description  Deletes all swipes and matches. Admin/test use only.
+// @Tags         admin
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /all [delete]
 func handleDeleteAll(c *gin.Context) {
 	ctx := context.Background()
 	client, err := getDBFunc(ctx)

@@ -1,0 +1,268 @@
+basePath: /auth
+definitions:
+  main.AuthResponse:
+    properties:
+      id_token:
+        type: string
+      uid:
+        type: string
+    type: object
+  main.BulkDeleteRequest:
+    properties:
+      uids:
+        items:
+          type: string
+        type: array
+    required:
+    - uids
+    type: object
+  main.DevMintRequest:
+    properties:
+      email:
+        type: string
+      role:
+        type: string
+      uid:
+        type: string
+    required:
+    - email
+    - uid
+    type: object
+  main.ErrorResponse:
+    properties:
+      detail: {}
+    type: object
+  main.HealthResponse:
+    properties:
+      service:
+        type: string
+      status:
+        type: string
+    type: object
+  main.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  main.TokenRequest:
+    properties:
+      id_token:
+        type: string
+    required:
+    - id_token
+    type: object
+  main.TokenResponse:
+    properties:
+      role:
+        type: string
+      token:
+        description: Pointer handles null vs empty string parity
+        type: string
+      uid:
+        type: string
+    type: object
+host: localhost:8001
+info:
+  contact: {}
+  description: Firebase Auth proxy for registration, login, token verification, and
+    JWT minting.
+  title: Auth Service API
+  version: "1.0"
+paths:
+  /all:
+    delete:
+      description: Lists and deletes all Firebase Auth users. Test/admin use only.
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Delete all users
+      tags:
+      - admin
+  /dev-mint:
+    post:
+      consumes:
+      - application/json
+      description: Mints a long-lived Tavern JWT for development/testing. Only available
+        when ALLOW_LONG_LIVED_TOKENS=true in dev environments.
+      parameters:
+      - description: Dev mint payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.DevMintRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.TokenResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Mint a dev JWT
+      tags:
+      - dev
+  /health:
+    get:
+      description: Returns the health status of the auth service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user via Firebase Auth REST API and returns an
+        ID token.
+      parameters:
+      - description: Email and password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Login with email and password
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new Firebase Auth user via the Identity Toolkit REST
+        API.
+      parameters:
+      - description: Email and password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /users/:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes multiple Firebase Auth users by their UIDs.
+      parameters:
+      - description: List of UIDs to delete
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.BulkDeleteRequest'
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Bulk delete users
+      tags:
+      - admin
+  /users/{uid}:
+    delete:
+      description: Deletes a Firebase Auth user by UID.
+      parameters:
+      - description: User UID
+        in: path
+        name: uid
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Delete a single user
+      tags:
+      - admin
+  /verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a Firebase ID token and returns a Tavern JWT with the
+        user's role.
+      parameters:
+      - description: Firebase ID token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.TokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Verify Firebase ID token
+      tags:
+      - auth
+swagger: "2.0"

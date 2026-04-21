@@ -6,26 +6,30 @@ A fantasy-themed dating app with a **strictly isolated, zero-trust microservice 
 
 ---
 
-## Architecture
+## Documentation
 
-This project follows a "Shared Nothing" microservice architecture. Each service is a completely self-contained unit with its own logic, dependencies, and **dedicated Firestore database instance**.
-
-### Key Infrastructure
-- **Microservices**: 5 core services (Auth, Profiles, Discovery, Messages, Users).
-- **Internal Workers**: Specialized subscribers (e.g., `discovery_subscriber`) that handle cross-service events.
-- **Event-Driven Resilience**: Services broadcast state changes (e.g., Profile Updates, Mutual Matches) via **Google Cloud Pub/Sub** using **Protobuf** serialization to maintain local read-caches in other services.
-- **Dual Environments**: Every service supports **Dev** and **Test** deployments on Google Cloud Run.
-- **Database Isolation**: Targeted at **10 distinct Firestore databases** (5 for `dev`, 5 for `test`).
-- **Truly Keyless**: Local development and Cloud Run deployments use **IAM Impersonation** instead of static service account keys.
+| Document | Description |
+| :--- | :--- |
+| [Architecture](docs/architecture.md) | System overview, service map, Pub/Sub events, match lifecycle |
+| [Data Model](docs/data_model.md) | Firestore collection schemas and index requirements |
+| [Testing](docs/testing.md) | Unit, integration, and UI testing guide |
+| [Deployment](docs/deployment.md) | CI/CD pipelines and pre-push checklist |
+| [Keyboard Handling](docs/patterns/keyboard-handling.md) | Gold standard for mobile keyboard UX |
+| [Swagger Proposal](docs/proposals/go-swagger.md) | OpenAPI documentation plan for Go services |
 
 ---
 
-## ⚙️ Firestore Indexing
+## Architecture at a Glance
 
-This project uses advanced Firestore queries (e.g., matching + time-based sorting) that require **Composite Indexes**.
+This project follows a "Shared Nothing" microservice architecture. Each service is a completely self-contained unit with its own logic, dependencies, and **dedicated Firestore database instance**.
 
-- **Automatic Workaround**: The services currently use in-memory sorting for testing and development to avoid immediate index requirements.
-- **Production Requirement**: For large-scale data, you must provision composite indexes as documented in [docs/data_model.md](docs/data_model.md#️-firestore-index-requirements).
+- **5 Core Services**: Auth, Profiles, Discovery, Messages, Users — all Go/Gin.
+- **2 Event Workers**: `discovery_subscriber`, `messages_subscriber` — maintain local caches via Pub/Sub.
+- **Event-Driven**: Profile updates and match events propagate via **Google Cloud Pub/Sub** with **Protobuf** serialization.
+- **Database Isolation**: 10 distinct Firestore databases (5 for `dev`, 5 for `test`).
+- **Truly Keyless**: Local development and Cloud Run deployments use **IAM Impersonation** instead of static service account keys.
+
+For full details, see [docs/architecture.md](docs/architecture.md).
 
 ---
 
@@ -39,7 +43,7 @@ This project uses advanced Firestore queries (e.g., matching + time-based sortin
 - Python 3.10+ (for administrative scripts and integration testing)
 
 ### 2. Virtual Environment (Strict Isolation)
-To ensure dependency consistency across microservices and administrative scripts, always use the project's root virtual environment:
+To ensure dependency consistency across administrative scripts, always use the project's root virtual environment:
 ```bash
 # Create the environment (one-time)
 python3 -m venv .venv
@@ -82,7 +86,16 @@ From the root directory:
 ```bash
 docker compose up --build
 ```
-*Note: Containers now dynamically listen on the port provided by the `$PORT` environment variable.*
+*Note: Containers dynamically listen on the port provided by the `$PORT` environment variable.*
+
+---
+
+## ⚙️ Firestore Indexing
+
+This project uses advanced Firestore queries (e.g., matching + time-based sorting) that require **Composite Indexes**.
+
+- **Automatic Workaround**: The services currently use in-memory sorting for testing and development to avoid immediate index requirements.
+- **Production Requirement**: For large-scale data, you must provision composite indexes as documented in [docs/data_model.md](docs/data_model.md#️-firestore-index-requirements).
 
 ---
 
@@ -99,64 +112,6 @@ The dashboard provides tools to:
 - **Initialize the Realm**: Claim the root throne on fresh environments.
 - **Entity Oversight**: Search, identify, and manage user roles.
 - **System Sanitization**: Irreversibly purge all entities (Root Admin only).
-
----
-
-## Testing
-
-This project maintains a robust, multi-layered testing strategy to ensure the integrity of its zero-trust microservice architecture.
-
-### 1. Frontend Unit & Hook Tests (Jest)
-Tests individual React hooks and logic in isolation using mocked API responses.
-- **What it does**: Validates UI state transitions, error handling, and business logic without a running backend.
-- **Test coverage**: Login, profile creation, swiping, messages, navigation, optimistic updates, portfolio navigation, and UI snapshots.
-- **Run**:
-  ```bash
-  cd frontend
-  npm test
-  ```
-
-### 2. System Integration Tests (Python/Pytest)
-Service-to-service integration tests targeting the backend REST APIs.
-- **What it does**: Validates complex backend workflows like discovery filtering and cross-service data consistency.
-- **Run (Local)**:
-  ```bash
-  bash tests/run_go_integration_tests.sh --local
-  ```
-- **Run (Cloud)**:
-  ```bash
-  bash tests/run_cloud_integration_tests.sh
-  ```
-
-### 3. Mobile UI Integration (Maestro) — *Planned / Future*
-Native mobile automation for React Native.
-- **What it will do**: Simulate real touch interactions on an Android/iOS emulator and verify UI elements.
-- **Status**: Planned for future implementation.
-
----
-
-## CI/CD (Cloud Build)
-
-Automated build and deployment is managed via **Google Cloud Build** triggers.
-
-### Backend Services
-Each backend service uses its own Cloud Build config (e.g., `services/auth_go/cloudbuild.yaml`):
-1. Runs unit tests (`go test ./...`) inside a Go 1.25 container.
-2. Builds and pushes a Docker image to GCR.
-3. Deploys to Cloud Run with the appropriate environment suffix (`-dev` or `-test`).
-
-### Frontend
-The frontend uses its own Cloud Build config at [`frontend/cloudbuild.yaml`](frontend/cloudbuild.yaml):
-1. Runs Jest unit tests.
-2. Fetches backend Cloud Run URLs for the target environment.
-3. Builds an Expo web bundle inside a Docker image with injected env vars.
-4. Deploys the containerized frontend to Cloud Run.
-
----
-
-## Deployment
-
-All deployments are automated via **Google Cloud Build** pipelines linked to GitHub. Push to `main` to trigger builds for both backend services and the frontend.
 
 ---
 
