@@ -8,6 +8,7 @@ TESTS_DIR="tests/integration"
 # Default Mode: Cloud Dev
 MODE="cloud-dev"
 RESET=true
+REAL_AUTH=""
 
 for arg in "$@"; do
     case $arg in
@@ -21,6 +22,10 @@ for arg in "$@"; do
             ;;
         --no-reset)
             RESET=false
+            shift
+            ;;
+        --real-auth)
+            REAL_AUTH="--real-auth"
             shift
             ;;
     esac
@@ -161,7 +166,7 @@ fi
 # ---------------------------------------------------------------------------
 echo "🧪 Running Integration Tests..."
 $PYTHON -m pip install -r tests/requirements.txt -q
-$PYTHON -m pytest $TESTS_DIR -v -s
+$PYTHON -m pytest $TESTS_DIR $REAL_AUTH -v -s
 
 # Return the exit code of pytest
 EXIT_CODE=$?

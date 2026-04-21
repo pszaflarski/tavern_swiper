@@ -24,6 +24,13 @@ def cleanup_test_databases():
     yield
     # wipe()  # After session
 
+def pytest_addoption(parser):
+    parser.addoption("--real-auth", action="store_true", help="Use real Firebase Auth instead of dev-mint")
+
+def pytest_configure(config):
+    if config.getoption("--real-auth"):
+        os.environ["USE_REAL_FIREBASE_AUTH"] = "true"
+
 def _delete_collection(coll_ref, batch_size):
     """Helper to delete a collection in batches."""
     docs = coll_ref.limit(batch_size).stream()
