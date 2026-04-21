@@ -3,6 +3,9 @@
 // @description   Firebase Auth proxy for registration, login, token verification, and JWT minting.
 // @host          localhost:8001
 // @BasePath      /auth
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
