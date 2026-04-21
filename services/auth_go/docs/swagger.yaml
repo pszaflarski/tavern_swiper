@@ -66,13 +66,8 @@ definitions:
       uid:
         type: string
     type: object
-host: localhost:8001
 info:
   contact: {}
-  description: Firebase Auth proxy for registration, login, token verification, and
-    JWT minting.
-  title: Auth Service API
-  version: "1.0"
 paths:
   /all:
     delete:
@@ -84,6 +79,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Delete all users
       tags:
       - admin
@@ -115,6 +112,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Mint a dev JWT
       tags:
       - dev
@@ -212,6 +211,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Bulk delete users
       tags:
       - admin
@@ -231,6 +232,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Delete a single user
       tags:
       - admin
@@ -265,4 +268,9 @@ paths:
       summary: Verify Firebase ID token
       tags:
       - auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
