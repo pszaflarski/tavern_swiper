@@ -1,7 +1,3 @@
-// @title         Messages Service API
-// @version       1.0
-// @description   Conversation and messaging between matched profiles.
-// @host          localhost:8005
 // @BasePath      /messages
 // @securityDefinitions.apikey BearerAuth
 // @in header

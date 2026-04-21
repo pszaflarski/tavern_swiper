@@ -1,7 +1,3 @@
-// @title         Users Service API
-// @version       1.0
-// @description   User record management, roles, and admin operations.
-// @host          localhost:8006
 // @BasePath      /users
 // @securityDefinitions.apikey BearerAuth
 // @in header
