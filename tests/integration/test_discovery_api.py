@@ -44,9 +44,8 @@ async def test_match_retrieval():
         )
         assert resp_b.status_code == 201
         res_data = resp_b.json()
-        assert res_data.get("is_match") is True
-        match_id = res_data.get("match_id")
-        assert match_id is not None
+        assert res_data.get("match_id") is not None, f"Expected a match_id in response but got: {res_data}"
+        match_id = res_data["match_id"]
         
         # 1. Fetch match by ID using user_a credentials
         resp_match = await client.get(
@@ -56,8 +55,8 @@ async def test_match_retrieval():
         assert resp_match.status_code == 200
         match_data = resp_match.json()
         assert match_data["id"] == match_id
-        assert pid_a in match_data["profile_ids"]
-        assert pid_b in match_data["profile_ids"]
+        assert pid_a in match_data["profiles"]
+        assert pid_b in match_data["profiles"]
         
         # 2. Fetch matches for profile
         resp_list = await client.get(

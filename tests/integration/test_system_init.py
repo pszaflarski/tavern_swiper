@@ -155,7 +155,7 @@ async def test_multi_profile_discovery_and_matching():
 
         # --- 3. User A (A1) Swipes RIGHT on B1 ---
         # Get feed for A1
-        feed_a1 = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a1_id}", headers=headers_a)
+        feed_a1 = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a1_id}?limit=100", headers=headers_a)
         if feed_a1.status_code != 200:
             print(f"Discovery failed: {feed_a1.text}")
         assert feed_a1.status_code == 200, f"Discovery failed with {feed_a1.status_code}: {feed_a1.text}"
@@ -312,7 +312,7 @@ async def test_left_swipe_exclusion():
         await asyncio.sleep(5) # Wait for Pub/Sub to Discovery cache propagation
 
         # 1. Verify B is in A's feed initially
-        feed_init = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}", headers=headers_a)
+        feed_init = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}?limit=100", headers=headers_a)
         p_ids = [p["profile_id"] for p in feed_init.json()["profiles"]]
         assert p_b_id in p_ids
 
@@ -321,7 +321,7 @@ async def test_left_swipe_exclusion():
                          json={"swiper_profile_id": p_a_id, "swiped_profile_id": p_b_id, "direction": "left"})
 
         # 3. Verify B is NOT in A's feed anymore
-        feed_after = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}", headers=headers_a)
+        feed_after = await client.get(f"{DISCOVERY_URL}/discovery/feed/{p_a_id}?limit=100", headers=headers_a)
         p_ids_after = [p["profile_id"] for p in feed_after.json()["profiles"]]
         assert p_b_id not in p_ids_after
         print(f"\nSuccessfully verified left-swipe exclusion for profile {p_b_id}")
