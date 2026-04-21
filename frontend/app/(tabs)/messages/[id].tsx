@@ -14,18 +14,30 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { useProfileContext } from '../../context/ProfileContext';
-import { useInvolvedMatches, useConversationMessages, useSendMessage } from '../../hooks/useMessages';
-import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../../theme';
+import { useProfileContext } from '../../../context/ProfileContext';
+import { useInvolvedMatches, useConversationMessages, useSendMessage } from '../../../hooks/useMessages';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScreenErrorBoundary from '../../../components/ScreenErrorBoundary';
 
-const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
+const PLACEHOLDER_IMAGE = require('../../../assets/images/placeholder/hero1.jpeg');
 
 function ConversationScreenInner() {
   const { id: conversationId } = useLocalSearchParams<{ id: string }>();
   const { activeProfileId } = useProfileContext();
   const [messageText, setMessageText] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const insets = useSafeAreaInsets();
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   // Get conversation info (other profile details etc.)
   const { inbox, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
@@ -66,11 +78,13 @@ function ConversationScreenInner() {
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
+      enabled={true}
     >
       <Stack.Screen 
         options={{
+          headerShown: true,
           headerTitle: '',
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -130,7 +144,10 @@ function ConversationScreenInner() {
         />
       )}
 
-      <View style={styles.inputContainer}>
+      <View style={[
+        styles.inputContainer, 
+        { paddingBottom: Spacing[4], paddingTop: Spacing[2] }
+      ]}>
         <TextInput
           style={styles.input}
           placeholder="Compose a missive..."
@@ -256,7 +273,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: Spacing[4],
     paddingVertical: Spacing[3],
     backgroundColor: Colors.surfaceContainerLowest,

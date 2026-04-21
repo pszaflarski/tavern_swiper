@@ -6,6 +6,7 @@ import { Colors, Fonts } from '../../theme';
 export default function TabLayout() {
   return (
     <Tabs
+      sceneContainerStyle={{ backgroundColor: Colors.background }}
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.outline,
