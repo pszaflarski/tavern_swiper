@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -6,11 +6,9 @@ import {
   FlatList, 
   TextInput, 
   TouchableOpacity, 
-  KeyboardAvoidingView, 
   Platform, 
   Image,
   ActivityIndicator,
-  Keyboard
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,9 +16,12 @@ import { Colors, Fonts, Spacing, Radius, Shadow } from '../../../theme';
 import { useProfileContext } from '../../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage } from '../../../hooks/useMessages';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../../components/ScreenErrorBoundary';
 
 const PLACEHOLDER_IMAGE = require('../../../assets/images/placeholder/hero1.jpeg');
+const INPUT_BAR_HEIGHT = 60;
 
 function ConversationScreenInner() {
   const { id: conversationId } = useLocalSearchParams<{ id: string }>();
@@ -28,16 +29,9 @@ function ConversationScreenInner() {
   const [messageText, setMessageText] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
+  // Native keyboard animation hook — gives us a smooth, frame-synced height value
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
 
   // Get conversation info (other profile details etc.)
   const { inbox, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
@@ -48,7 +42,7 @@ function ConversationScreenInner() {
   const { data: messages = [], isLoading: isLoadingMessages } = useConversationMessages(conversationId);
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (!messageText.trim() || !activeProfileId || !conversationId) return;
     
     sendMessage({
@@ -57,7 +51,7 @@ function ConversationScreenInner() {
       content: messageText.trim(),
     });
     setMessageText('');
-  };
+  }, [messageText, activeProfileId, conversationId, sendMessage]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -66,6 +60,17 @@ function ConversationScreenInner() {
       }, 100);
     }
   }, [messages.length]);
+
+  // Animated style for the input bar — translates up with the keyboard
+  const inputBarAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: keyboardHeight.value }],
+  }));
+
+  // Animated style for the FlatList spacer — adds padding at bottom so messages
+  // don't get hidden behind the input bar when the keyboard is up
+  const listBottomSpacerStyle = useAnimatedStyle(() => ({
+    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value),
+  }));
 
   if (isLoadingInbox && !conversation) {
     return (
@@ -76,12 +81,7 @@ function ConversationScreenInner() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
-      enabled={true}
-    >
+    <View style={styles.container}>
       <Stack.Screen 
         options={{
           headerShown: true,
@@ -117,6 +117,8 @@ function ConversationScreenInner() {
           data={messages}
           keyExtractor={(item) => item.message_id}
           contentContainerStyle={styles.messageList}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
           renderItem={({ item }) => {
             const isMe = item.sender_profile_id === activeProfileId;
             return (
@@ -135,6 +137,7 @@ function ConversationScreenInner() {
               </View>
             );
           }}
+          ListFooterComponent={<Animated.View style={listBottomSpacerStyle} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>The air is thick with unspoken words.</Text>
@@ -144,34 +147,33 @@ function ConversationScreenInner() {
         />
       )}
 
-      <View style={[
-        styles.inputContainer, 
-        { paddingBottom: Spacing[4], paddingTop: Spacing[2] }
-      ]}>
-        <TextInput
-          style={styles.input}
-          placeholder="Compose a missive..."
-          placeholderTextColor={Colors.outline}
-          value={messageText}
-          onChangeText={setMessageText}
-          multiline
-          maxLength={500}
-          testID="message-input"
-        />
-        <TouchableOpacity 
-          style={[styles.sendButton, !messageText.trim() && styles.sendButtonDisabled]} 
-          onPress={handleSend}
-          disabled={!messageText.trim() || isSending}
-          testID="send-button"
-        >
-          {isSending ? (
-            <ActivityIndicator size="small" color={Colors.onPrimary} />
-          ) : (
-            <Ionicons name="send" size={20} color={Colors.onPrimary} />
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      <Animated.View style={[styles.inputWrapper, { paddingBottom: insets.bottom || Spacing[2] }, inputBarAnimatedStyle]}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Compose a missive..."
+            placeholderTextColor={Colors.outline}
+            value={messageText}
+            onChangeText={setMessageText}
+            multiline
+            maxLength={500}
+            testID="message-input"
+          />
+          <TouchableOpacity 
+            style={[styles.sendButton, !messageText.trim() && styles.sendButtonDisabled]} 
+            onPress={handleSend}
+            disabled={!messageText.trim() || isSending}
+            testID="send-button"
+          >
+            {isSending ? (
+              <ActivityIndicator size="small" color={Colors.onPrimary} />
+            ) : (
+              <Ionicons name="send" size={20} color={Colors.onPrimary} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -224,7 +226,6 @@ const styles = StyleSheet.create({
   },
   messageList: {
     padding: Spacing[4],
-    paddingBottom: Spacing[6],
   },
   messageBubbleContainer: {
     marginVertical: Spacing[2],
@@ -271,14 +272,20 @@ const styles = StyleSheet.create({
     color: Colors.outline,
     marginTop: 2,
   },
+  inputWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outlineVariant,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
+    paddingVertical: Spacing[2],
   },
   input: {
     flex: 1,

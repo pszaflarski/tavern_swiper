@@ -15,6 +15,7 @@ export default function TabLayout() {
           borderTopColor: Colors.outlineVariant,
         },
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarLabelStyle: {
           fontFamily: Fonts.scribe,
           fontSize: 10,
