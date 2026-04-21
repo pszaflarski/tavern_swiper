@@ -56,8 +56,15 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  if (!loaded) {
+  console.log('[RootLayout] State:', { loaded, hasError: !!error });
+
+  if (!loaded && !error) {
     return null;
+  }
+
+  if (error) {
+    console.error('[RootLayout] Font loading error:', error);
+    // Let the ErrorBoundary handled it if it's thrown, but we'll also log here.
   }
 
   return (
@@ -83,11 +90,13 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === 'auth';
 
+    console.log('[RootLayoutNav] Auth state changed:', { isAuthenticated, isLoading, segment: segments[0] });
+
     if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to the login page if the user is not authenticated
+      console.log('[RootLayoutNav] Redirecting to /auth');
       router.replace('/auth');
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect away from the login page if the user is authenticated
+      console.log('[RootLayoutNav] Redirecting to /(tabs)');
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, isLoading, segments]);

@@ -60,7 +60,7 @@ steps:
           --build-arg EXPO_PUBLIC_PROFILES_URL=$$EXPO_PUBLIC_PROFILES_URL \
           --build-arg EXPO_PUBLIC_DISCOVERY_URL=$$EXPO_PUBLIC_DISCOVERY_URL \
           --build-arg EXPO_PUBLIC_MESSAGES_URL=$$EXPO_PUBLIC_MESSAGES_URL \
-          --build-arg EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyCnKm4gayoO0C35CNeMJ7E82fFITvVpGAw \
+          --build-arg EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk \
           --build-arg EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=$PROJECT_ID.firebaseapp.com \
           --build-arg EXPO_PUBLIC_FIREBASE_PROJECT_ID=$PROJECT_ID \
           --build-arg EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=$PROJECT_ID.firebasestorage.app \
