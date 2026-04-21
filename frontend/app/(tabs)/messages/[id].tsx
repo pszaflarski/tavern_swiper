@@ -10,18 +10,18 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, router, Stack } from 'expo-router';
+import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../../theme';
 import { useProfileContext } from '../../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage } from '../../../hooks/useMessages';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../../components/ScreenErrorBoundary';
 
 const PLACEHOLDER_IMAGE = require('../../../assets/images/placeholder/hero1.jpeg');
-const INPUT_BAR_HEIGHT = 60;
+const INPUT_BAR_HEIGHT = 56; // Tighter base height for the input bar content
 
 function ConversationScreenInner() {
   const { id: conversationId } = useLocalSearchParams<{ id: string }>();
@@ -30,6 +30,12 @@ function ConversationScreenInner() {
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
 
+  // The methodology we're using:
+  // 1. react-native-keyboard-controller's useReanimatedKeyboardAnimation for native frame-synced tracking.
+  // 2. Animated.View for the input bar with absolute positioning to avoid layout thrashing.
+  // 3. A dynamic spacer in the FlatList footer that perfectly mirrors the keyboard + input bar height.
+  // This is recorded as the gold standard for this repo in docs/patterns/keyboard-handling.md
+  
   // Native keyboard animation hook — gives us a smooth, frame-synced height value
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
 
@@ -61,15 +67,51 @@ function ConversationScreenInner() {
     }
   }, [messages.length]);
 
-  // Animated style for the input bar — translates up with the keyboard
-  const inputBarAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: keyboardHeight.value }],
-  }));
+  const navigation = useNavigation();
 
-  // Animated style for the FlatList spacer — adds padding at bottom so messages
-  // don't get hidden behind the input bar when the keyboard is up
+  // Hide the tab bar while on this screen to allow the chat bar to be the footer
+  useEffect(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.setOptions({
+        tabBarStyle: { display: 'none' },
+      });
+    }
+    
+    return () => {
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: {
+            backgroundColor: Colors.surfaceContainerLowest,
+            borderTopColor: Colors.outlineVariant,
+            display: 'flex', // Restore on exit
+          },
+        });
+      }
+    };
+  }, [navigation]);
+
+  // Animated style for the input bar — translates up with the keyboard.
+  // Now that the Tab Bar is hidden, this bar sits at the very bottom.
+  // We use paddingBottom to ensure absolute symmetry around the text box.
+  const inputBarAnimatedStyle = useAnimatedStyle(() => {
+    const bottomPadding = interpolate(
+      Math.abs(keyboardHeight.value),
+      [0, 100],
+      [insets.bottom + Spacing[3], Spacing[3]], // Mirror the Spacing[3] top padding
+      Extrapolate.CLAMP
+    );
+
+    return {
+      transform: [{ translateY: keyboardHeight.value }],
+      paddingBottom: bottomPadding,
+    };
+  });
+
+  // Animated style for the FlatList spacer.
+  // Precisely mirrors the footer's height for smooth scrolling.
   const listBottomSpacerStyle = useAnimatedStyle(() => ({
-    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value),
+    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
   }));
 
   if (isLoadingInbox && !conversation) {
@@ -147,7 +189,7 @@ function ConversationScreenInner() {
         />
       )}
 
-      <Animated.View style={[styles.inputWrapper, { paddingBottom: insets.bottom || Spacing[2] }, inputBarAnimatedStyle]}>
+      <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle]}>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -277,7 +319,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: Colors.surfaceContainerLowest,
+    backgroundColor: Colors.surfaceContainerLowest, // Solid background restored
     borderTopWidth: 1,
     borderTopColor: Colors.outlineVariant,
   },
@@ -285,15 +327,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
+    paddingTop: Spacing[3], // Symmetrical vertical padding
+    paddingBottom: 0, // Bottom padding is handled by the animated wrapper
   },
   input: {
     flex: 1,
     backgroundColor: Colors.surfaceContainer,
     borderRadius: Radius.xl,
     paddingHorizontal: Spacing[4],
-    paddingTop: Platform.OS === 'ios' ? Spacing[2] : Spacing[1],
-    paddingBottom: Platform.OS === 'ios' ? Spacing[2] : Spacing[1],
+    paddingTop: Spacing[2],
+    paddingBottom: Spacing[2],
     fontFamily: Fonts.scribe,
     fontSize: 15,
     color: Colors.onSurface,
