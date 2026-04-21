@@ -3,7 +3,7 @@ import httpx
 import uuid
 import asyncio
 import os
-from .helpers import register_user, get_root_admin, AUTH_URL, USERS_URL, PROFILES_URL, TEST_PASSWORD
+from .helpers import register_user, get_root_admin, AUTH_URL, USERS_URL, PROFILES_URL, DISCOVERY_URL, TEST_PASSWORD
 
 TEST_EMAIL = f"root-test-{uuid.uuid4().hex[:8]}@example.com"
 
@@ -116,9 +116,10 @@ async def test_multi_profile_discovery_and_matching():
     User A (Profile A1, Profile A2) <-> User B (Profile B1)
     1. Setup User A with 2 profiles
     2. Setup User B with 1 profile
-    3. User A (A1) swipes RIGHT on B1
-    4. User B (B1) swipes RIGHT on A1
-    5. Verify Match is created for both A1 and B1
+    3. Set A1 as active (since creating A2 auto-activates A2)
+    4. User A (A1) swipes RIGHT on B1
+    5. User B (B1) swipes RIGHT on A1
+    6. Verify Match is created for both A1 and B1
     """
     async with httpx.AsyncClient(timeout=30.0) as client:
         # --- 1. Setup User A ---
@@ -128,10 +129,16 @@ async def test_multi_profile_discovery_and_matching():
         
         # Create A1
         p_a1_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "A1"})
+        assert p_a1_resp.status_code == 201, f"A1 creation failed: {p_a1_resp.text}"
         p_a1_id = p_a1_resp.json()["profile_id"]
-        # Create A2
+        # Create A2 (auto-activates A2, deactivates A1)
         p_a2_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers_a, json={"display_name": "A2"})
+        assert p_a2_resp.status_code == 201, f"A2 creation failed: {p_a2_resp.text}"
         p_a2_id = p_a2_resp.json()["profile_id"]
+
+        # Re-activate A1 so it shows up in feed and can be used for swiping
+        set_active_resp = await client.post(f"{PROFILES_URL}/profiles/{p_a1_id}/set_active", headers=headers_a)
+        assert set_active_resp.status_code == 200, f"Set A1 active failed: {set_active_resp.text}"
 
         # --- 2. Setup User B ---
         user_b = await register_user(client)
@@ -140,6 +147,7 @@ async def test_multi_profile_discovery_and_matching():
         
         # Create B1
         p_b1_resp = await client.post(f"{PROFILES_URL}/profiles/", headers=headers_b, json={"display_name": "B1"})
+        assert p_b1_resp.status_code == 201, f"B1 creation failed: {p_b1_resp.text}"
         p_b1_id = p_b1_resp.json()["profile_id"]
 
         print(f"Waiting for 10s for propagation of profiles {p_a1_id}, {p_a2_id}, {p_b1_id}")
@@ -152,9 +160,8 @@ async def test_multi_profile_discovery_and_matching():
             print(f"Discovery failed: {feed_a1.text}")
         assert feed_a1.status_code == 200, f"Discovery failed with {feed_a1.status_code}: {feed_a1.text}"
         profile_ids_in_feed = [p["profile_id"] for p in feed_a1.json()["profiles"]]
-        assert p_b1_id in profile_ids_in_feed
-        assert p_a1_id not in profile_ids_in_feed # Self-exclusion
-        assert p_a2_id in profile_ids_in_feed # Multi-profile discovery (Should see other profiles on same account)
+        assert p_b1_id in profile_ids_in_feed, f"B1 ({p_b1_id}) not in feed: {profile_ids_in_feed}"
+        assert p_a1_id not in profile_ids_in_feed, "Self-exclusion: A1 should not appear in own feed"
 
         # Swipe RIGHT
         swipe_a_resp = await client.post(
@@ -177,7 +184,6 @@ async def test_multi_profile_discovery_and_matching():
         # Check matches for A1
         matches_a1 = await client.get(f"{DISCOVERY_URL}/discovery/matches/profile/{p_a1_id}", headers=headers_a)
         assert matches_a1.status_code == 200
-        # In current Discovery, matches are returned as MatchOut: { id, profiles, created_at }
         matches_a1_data = matches_a1.json()
         match_profiles_a1 = []
         for m in matches_a1_data:
