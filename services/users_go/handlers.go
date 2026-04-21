@@ -20,6 +20,13 @@ var _now = func() time.Time {
 	return time.Now().UTC()
 }
 
+// healthHandler godoc
+// @Summary      Health check
+// @Description  Returns the health status of the users service.
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  HealthResponse
+// @Router       /health [get]
 func healthHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
 		Service: "users",
@@ -27,6 +34,14 @@ func healthHandler(c *gin.Context) {
 	})
 }
 
+// checkRootAdminHandler godoc
+// @Summary      Check if root admin exists
+// @Description  Returns whether a root admin user has been registered.
+// @Tags         admin
+// @Produce      json
+// @Success      200  {object}  RootAdminExistsResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /root-admin-exists [get]
 func checkRootAdminHandler(c *gin.Context) {
 	db, err := getDBFunc(c.Request.Context())
 	if err != nil {
@@ -44,6 +59,16 @@ func checkRootAdminHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, RootAdminExistsResponse{Exists: exists})
 }
 
+// listUsersHandler godoc
+// @Summary      List all users
+// @Description  Returns all user records. Admin or Root Admin only.
+// @Tags         admin
+// @Produce      json
+// @Param        include_deleted  query  bool  false  "Include soft-deleted users"
+// @Success      200  {array}   UserOut
+// @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       / [get]
 func listUsersHandler(c *gin.Context) {
 	includeDeleted := c.Query("include_deleted") == "true"
 	db, err := getDBFunc(c.Request.Context())
@@ -82,6 +107,15 @@ func listUsersHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
+// getMeHandler godoc
+// @Summary      Get current user
+// @Description  Returns the authenticated user's record. Auto-initializes if not found.
+// @Tags         users
+// @Produce      json
+// @Success      200  {object}  UserOut
+// @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /me [get]
 func getMeHandler(c *gin.Context) {
 	auth := GetAuth(c)
 	db, err := getDBFunc(c.Request.Context())
@@ -124,6 +158,18 @@ func getMeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, u)
 }
 
+// updateMeHandler godoc
+// @Summary      Update current user
+// @Description  Updates fields on the authenticated user's record.
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        body  body      UserUpdate  true  "Fields to update"
+// @Success      200   {object}  UserOut
+// @Failure      404   {object}  ErrorResponse
+// @Failure      422   {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /me [put]
 func updateMeHandler(c *gin.Context) {
 	auth := GetAuth(c)
 	var body UserUpdate
@@ -168,6 +214,19 @@ func updateMeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, u)
 }
 
+// createUserHandler godoc
+// @Summary      Create a user
+// @Description  Creates a new user record. Handles self-registration, admin creation, and root admin singleton logic.
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        body  body      UserCreate  true  "User creation payload"
+// @Success      201   {object}  UserOut
+// @Failure      400   {object}  ErrorResponse
+// @Failure      403   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       / [post]
 func createUserHandler(c *gin.Context) {
 	auth := GetAuth(c)
 	var body UserCreate
@@ -247,6 +306,13 @@ func createUserHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, u)
 }
 
+// purgeAllUsersHandler godoc
+// @Summary      Purge all users
+// @Description  Deletes all user records and their Firebase Auth identities. Root Admin only.
+// @Tags         admin
+// @Success      204  "No Content"
+// @Security     BearerAuth
+// @Router       / [delete]
 func purgeAllUsersHandler(c *gin.Context) {
 	db, _ := getDBFunc(c.Request.Context())
 	docs, _ := db.Collection("users").Documents(c.Request.Context()).GetAll()
@@ -276,6 +342,18 @@ func purgeAllUsersHandler(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// deleteUserHandler godoc
+// @Summary      Delete a user
+// @Description  Soft-deletes or hard-deletes a user by UID. Admin or Root Admin only.
+// @Tags         admin
+// @Param        uid   path   string  true   "Target user UID"
+// @Param        hard  query  string  false  "Set to 'True' for hard delete"
+// @Success      204  "No Content"
+// @Failure      400  {object}  ErrorResponse
+// @Failure      403  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /{uid} [delete]
 func deleteUserHandler(c *gin.Context) {
 	targetUID := c.Param("uid")
 	hard := c.Query("hard") == "True"
@@ -323,6 +401,16 @@ func deleteUserHandler(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// restoreUserHandler godoc
+// @Summary      Restore a soft-deleted user
+// @Description  Sets is_deleted=false on a user record. Admin or Root Admin only.
+// @Tags         admin
+// @Produce      json
+// @Param        uid  path  string  true  "Target user UID"
+// @Success      200  {object}  UserOut
+// @Failure      404  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /{uid}/restore [patch]
 func restoreUserHandler(c *gin.Context) {
 	targetUID := c.Param("uid")
 	db, _ := getDBFunc(c.Request.Context())

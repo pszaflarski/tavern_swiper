@@ -38,10 +38,31 @@ func parseStringSlice(val interface{}) []string {
 	return []string{}
 }
 
+// handleHealth godoc
+// @Summary      Health check
+// @Description  Returns the health status of the messages service.
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health [get]
 func handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"service": "messages", "status": "ok"})
 }
 
+// handleCreateConversation godoc
+// @Summary      Create a conversation
+// @Description  Creates a new 1-on-1 conversation between two matched profiles. Returns existing if already created.
+// @Tags         conversations
+// @Accept       json
+// @Produce      json
+// @Param        body  body      ConversationCreate  true  "Participant profile IDs"
+// @Success      201   {object}  map[string]string   "conversation_id"
+// @Success      200   {object}  map[string]string   "Existing conversation_id"
+// @Failure      403   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /conversations [post]
 func handleCreateConversation(c *gin.Context) {
 	var body ConversationCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -151,6 +172,20 @@ func handleCreateConversation(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"conversation_id": convID})
 }
 
+// handleSendMessage godoc
+// @Summary      Send a message
+// @Description  Sends a message in a conversation. Sender must be a participant.
+// @Tags         messages
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string         true  "Conversation ID"
+// @Param        body  body      MessageCreate  true  "Message payload"
+// @Success      201   {object}  MessageOut
+// @Failure      403   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /conversations/{id}/messages [post]
 func handleSendMessage(c *gin.Context) {
 	convID := c.Param("id")
 	var body MessageCreate
@@ -223,6 +258,16 @@ func handleSendMessage(c *gin.Context) {
 	})
 }
 
+// handleGetMessages godoc
+// @Summary      Get messages in a conversation
+// @Description  Returns all messages in a conversation, sorted by creation time.
+// @Tags         messages
+// @Produce      json
+// @Param        id  path      string  true  "Conversation ID"
+// @Success      200  {array}   MessageOut
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /conversations/{id}/messages [get]
 func handleGetMessages(c *gin.Context) {
 	convID := c.Param("id")
 	ctx := context.Background()
@@ -271,6 +316,16 @@ func handleGetMessages(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
+// handleListConversations godoc
+// @Summary      List conversations for a profile
+// @Description  Returns all conversations that include the given profile, sorted by most recent activity.
+// @Tags         conversations
+// @Produce      json
+// @Param        profile_id  path      string  true  "Profile ID"
+// @Success      200  {array}   ConversationOut
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /conversations/profile/{profile_id} [get]
 func handleListConversations(c *gin.Context) {
 	profileID := c.Param("profile_id")
 	ctx := context.Background()
@@ -357,6 +412,15 @@ func handleListConversations(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
+// handleDeleteAllMessages godoc
+// @Summary      Purge all messaging data
+// @Description  Deletes all conversations, messages, and profile-conversation mappings. Admin only.
+// @Tags         admin
+// @Success      204  "No Content"
+// @Failure      403  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       / [delete]
 func handleDeleteAllMessages(c *gin.Context) {
 	auth := GetAuth(c)
 	if !IsAdmin(auth.Role) {

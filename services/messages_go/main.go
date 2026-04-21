@@ -1,3 +1,11 @@
+// @title         Messages Service API
+// @version       1.0
+// @description   Conversation and messaging between matched profiles.
+// @host          localhost:8005
+// @BasePath      /messages
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -5,8 +13,12 @@ import (
 	"net/http"
 	"os"
 
+	_ "messages_go/docs"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -21,6 +33,9 @@ func main() {
 	config.AllowAllOrigins = true
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
+
+	// Swagger UI (before auth middleware)
+	r.GET("/messages/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.GET("/messages/health", handleHealth)
 	
@@ -45,3 +60,4 @@ func main() {
 		log.Fatalf("[FATAL] Server closed: %v", err)
 	}
 }
+

@@ -23,6 +23,13 @@ var httpClient HTTPClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
+// healthHandler godoc
+// @Summary      Health check
+// @Description  Returns the health status of the auth service.
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  HealthResponse
+// @Router       /health [get]
 func healthHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
 		Service: "auth",
@@ -30,6 +37,17 @@ func healthHandler(c *gin.Context) {
 	})
 }
 
+// verifyTokenHandler godoc
+// @Summary      Verify Firebase ID token
+// @Description  Verifies a Firebase ID token and returns a Tavern JWT with the user's role.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      TokenRequest   true  "Firebase ID token"
+// @Success      200   {object}  TokenResponse
+// @Failure      401   {object}  ErrorResponse
+// @Failure      503   {object}  ErrorResponse
+// @Router       /verify [post]
 func verifyTokenHandler(c *gin.Context) {
 	var body TokenRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -94,10 +112,32 @@ func verifyTokenHandler(c *gin.Context) {
 	})
 }
 
+// registerHandler godoc
+// @Summary      Register a new user
+// @Description  Creates a new Firebase Auth user via the Identity Toolkit REST API.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      LoginRequest   true  "Email and password"
+// @Success      200   {object}  AuthResponse
+// @Failure      400   {object}  ErrorResponse
+// @Failure      503   {object}  ErrorResponse
+// @Router       /register [post]
 func registerHandler(c *gin.Context) {
 	firebaseAuthREST(c, "signUp")
 }
 
+// loginHandler godoc
+// @Summary      Login with email and password
+// @Description  Authenticates a user via Firebase Auth REST API and returns an ID token.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      LoginRequest   true  "Email and password"
+// @Success      200   {object}  AuthResponse
+// @Failure      401   {object}  ErrorResponse
+// @Failure      503   {object}  ErrorResponse
+// @Router       /login [post]
 func loginHandler(c *gin.Context) {
 	firebaseAuthREST(c, "signInWithPassword")
 }
@@ -191,6 +231,14 @@ func firebaseAuthREST(c *gin.Context, action string) {
 	})
 }
 
+// deleteUserHandler godoc
+// @Summary      Delete a single user
+// @Description  Deletes a Firebase Auth user by UID.
+// @Tags         admin
+// @Param        uid  path  string  true  "User UID"
+// @Success      204  "No Content"
+// @Failure      500  {object}  ErrorResponse
+// @Router       /users/{uid} [delete]
 func deleteUserHandler(c *gin.Context) {
 	uid := c.Param("uid")
 	authClient, err := getAuthFunc(c.Request.Context())
@@ -208,6 +256,15 @@ func deleteUserHandler(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// deleteUsersBulkHandler godoc
+// @Summary      Bulk delete users
+// @Description  Deletes multiple Firebase Auth users by their UIDs.
+// @Tags         admin
+// @Accept       json
+// @Param        body  body  BulkDeleteRequest  true  "List of UIDs to delete"
+// @Success      204  "No Content"
+// @Failure      500  {object}  ErrorResponse
+// @Router       /users/ [delete]
 func deleteUsersBulkHandler(c *gin.Context) {
 	var body BulkDeleteRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -235,6 +292,13 @@ func deleteUsersBulkHandler(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// deleteAllHandler godoc
+// @Summary      Delete all users
+// @Description  Lists and deletes all Firebase Auth users. Test/admin use only.
+// @Tags         admin
+// @Success      204  "No Content"
+// @Failure      500  {object}  ErrorResponse
+// @Router       /all [delete]
 func deleteAllHandler(c *gin.Context) {
 	authClient, err := getAuthFunc(c.Request.Context())
 	if err != nil {
@@ -256,6 +320,17 @@ func deleteAllHandler(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// devMintHandler godoc
+// @Summary      Mint a dev JWT
+// @Description  Mints a long-lived Tavern JWT for development/testing. Only available when ALLOW_LONG_LIVED_TOKENS=true in dev environments.
+// @Tags         dev
+// @Accept       json
+// @Produce      json
+// @Param        body  body      DevMintRequest  true  "Dev mint payload"
+// @Success      200   {object}  TokenResponse
+// @Failure      403   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Router       /dev-mint [post]
 func devMintHandler(c *gin.Context) {
 	// Strict Safety Check
 	allowLongLived := os.Getenv("ALLOW_LONG_LIVED_TOKENS") == "true"

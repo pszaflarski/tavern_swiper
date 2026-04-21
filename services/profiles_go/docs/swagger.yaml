@@ -1,0 +1,515 @@
+basePath: /profiles
+definitions:
+  main.ProfileBatchRequest:
+    properties:
+      profile_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - profile_ids
+    type: object
+  main.ProfileCreate:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+      gender:
+        type: string
+      image_urls:
+        items:
+          type: string
+        type: array
+      is_active:
+        type: boolean
+      tagline:
+        type: string
+      user_id:
+        type: string
+    required:
+    - display_name
+    type: object
+  main.ProfileOut:
+    properties:
+      bio:
+        type: string
+      created_at:
+        type: string
+      display_name:
+        type: string
+      gender:
+        type: string
+      image_urls:
+        items:
+          type: string
+        type: array
+      is_active:
+        type: boolean
+      profile_id:
+        type: string
+      tagline:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  main.ProfileUpdate:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+      gender:
+        type: string
+      image_urls:
+        items:
+          type: string
+        type: array
+      is_active:
+        type: boolean
+      tagline:
+        type: string
+    type: object
+host: localhost:8002
+info:
+  contact: {}
+  description: Profile CRUD, image uploads, and active profile management.
+  title: Profiles Service API
+  version: "1.0"
+paths:
+  /:
+    delete:
+      description: Deletes all profiles in the system. Root Admin only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Purge all profiles
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Creates a new profile and sets it as active. Deactivates other
+        profiles for the same user.
+      parameters:
+      - description: Profile creation payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ProfileCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.ProfileOut'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a profile
+      tags:
+      - profiles
+  /{id}:
+    delete:
+      description: Deletes a profile by ID. Owner or Admin only.
+      parameters:
+      - description: Profile ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a profile
+      tags:
+      - profiles
+    get:
+      description: Returns a single profile by its ID.
+      parameters:
+      - description: Profile ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ProfileOut'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a profile by ID
+      tags:
+      - profiles
+    put:
+      consumes:
+      - application/json
+      description: Updates fields on an existing profile. Owner or Admin only.
+      parameters:
+      - description: Profile ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ProfileUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ProfileOut'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a profile
+      tags:
+      - profiles
+  /{id}/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads an image for a profile, normalizes it, stores in GCS, and
+        updates the profile.
+      parameters:
+      - description: Profile ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ProfileOut'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload a profile image
+      tags:
+      - profiles
+  /{id}/set_active:
+    post:
+      description: Activates a profile and deactivates all other profiles for the
+        same user.
+      parameters:
+      - description: Profile ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ProfileOut'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set a profile as active
+      tags:
+      - profiles
+  /all:
+    get:
+      description: Returns all profiles in the system. Admin or Root Admin only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.ProfileOut'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all profiles
+      tags:
+      - profiles
+  /batch:
+    post:
+      consumes:
+      - application/json
+      description: Returns profiles for a list of profile IDs.
+      parameters:
+      - description: List of profile IDs
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ProfileBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.ProfileOut'
+            type: array
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get profiles in batch
+      tags:
+      - profiles
+  /health:
+    get:
+      description: Returns the health status of the profiles service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /user/{user_id}:
+    get:
+      description: Returns all profiles owned by a specific user.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.ProfileOut'
+            type: array
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List profiles for a user
+      tags:
+      - profiles
+  /user/me/active:
+    get:
+      description: Returns the authenticated user's active profile. Auto-activates
+        one if none is active.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ProfileOut'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get my active profile
+      tags:
+      - profiles
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

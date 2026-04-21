@@ -1,0 +1,293 @@
+basePath: /users
+definitions:
+  main.ErrorResponse:
+    properties:
+      detail: {}
+    type: object
+  main.HealthResponse:
+    properties:
+      service:
+        type: string
+      status:
+        type: string
+    type: object
+  main.RootAdminExistsResponse:
+    properties:
+      exists:
+        type: boolean
+    type: object
+  main.UserCreate:
+    properties:
+      email:
+        type: string
+      is_deleted:
+        type: boolean
+      is_premium:
+        type: boolean
+      uid:
+        type: string
+      user_type:
+        $ref: '#/definitions/main.UserType'
+    required:
+    - email
+    type: object
+  main.UserOut:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      is_deleted:
+        type: boolean
+      is_premium:
+        type: boolean
+      uid:
+        type: string
+      user_type:
+        $ref: '#/definitions/main.UserType'
+    required:
+    - email
+    type: object
+  main.UserType:
+    enum:
+    - user
+    - admin
+    - root_admin
+    type: string
+    x-enum-varnames:
+    - User
+    - Admin
+    - RootAdmin
+  main.UserUpdate:
+    properties:
+      is_premium:
+        type: boolean
+      user_type:
+        $ref: '#/definitions/main.UserType'
+    type: object
+host: localhost:8006
+info:
+  contact: {}
+  description: User record management, roles, and admin operations.
+  title: Users Service API
+  version: "1.0"
+paths:
+  /:
+    delete:
+      description: Deletes all user records and their Firebase Auth identities. Root
+        Admin only.
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Purge all users
+      tags:
+      - admin
+    get:
+      description: Returns all user records. Admin or Root Admin only.
+      parameters:
+      - description: Include soft-deleted users
+        in: query
+        name: include_deleted
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.UserOut'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all users
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user record. Handles self-registration, admin creation,
+        and root admin singleton logic.
+      parameters:
+      - description: User creation payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.UserCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.UserOut'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a user
+      tags:
+      - users
+  /{uid}:
+    delete:
+      description: Soft-deletes or hard-deletes a user by UID. Admin or Root Admin
+        only.
+      parameters:
+      - description: Target user UID
+        in: path
+        name: uid
+        required: true
+        type: string
+      - description: Set to 'True' for hard delete
+        in: query
+        name: hard
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a user
+      tags:
+      - admin
+  /{uid}/restore:
+    patch:
+      description: Sets is_deleted=false on a user record. Admin or Root Admin only.
+      parameters:
+      - description: Target user UID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.UserOut'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a soft-deleted user
+      tags:
+      - admin
+  /health:
+    get:
+      description: Returns the health status of the users service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /me:
+    get:
+      description: Returns the authenticated user's record. Auto-initializes if not
+        found.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.UserOut'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Updates fields on the authenticated user's record.
+      parameters:
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.UserUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.UserOut'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update current user
+      tags:
+      - users
+  /root-admin-exists:
+    get:
+      description: Returns whether a root admin user has been registered.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.RootAdminExistsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Check if root admin exists
+      tags:
+      - admin
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,10 +1,17 @@
-# Go Services Swagger Implementation Plan
+# Go Services Swagger Implementation Plan (COMPLETED)
 
-This document outlines the plan to integrate Swagger/OpenAPI documentation into the five core Go microservices.
+This document outlines the successful integration of Swagger/OpenAPI documentation into the five core Go microservices.
+
+## 0. Implementation Status (2026-04-21)
+- **Implemented**: All 5 targeted services (`auth_go`, `profiles_go`, `discovery_go`, `messages_go`, `users_go`).
+- **Tooling**: `swaggo/swag` v1.16.6.
+- **Total Endpoints**: 39 annotated.
+- **Coverage**: 100% of core REST APIs.
+
+---
 
 ## 1. Overview
-
-Currently, the REST APIs are documented implicitly through tests and frontend code. Implementing Swagger will provide a living, interactive documentation portal for each service without impacting business logic.
+Currently, the REST APIs are fully documented and interactive via Swagger UI. Implementing Swagger provides a living, interactive documentation portal for each service without impacting business logic.
 
 **Target Services:**
 *   `auth_go`

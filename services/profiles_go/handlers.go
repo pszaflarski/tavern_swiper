@@ -18,6 +18,13 @@ import (
 const COLLECTION = "profiles"
 
 // handleHealth matches Python: @app.get("/profiles/health")
+// handleHealth godoc
+// @Summary      Health check
+// @Description  Returns the health status of the profiles service.
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health [get]
 func handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"service": "profiles",
@@ -25,7 +32,16 @@ func handleHealth(c *gin.Context) {
 	})
 }
 
-// handleListAllProfiles matches Python: @app.get("/profiles/all")
+// handleListAllProfiles godoc
+// @Summary      List all profiles
+// @Description  Returns all profiles in the system. Admin or Root Admin only.
+// @Tags         profiles
+// @Produce      json
+// @Success      200  {array}   ProfileOut
+// @Failure      403  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /all [get]
 func handleListAllProfiles(c *gin.Context) {
 	auth := GetAuth(c)
 	if !IsAdmin(auth.Role) {
@@ -56,7 +72,20 @@ func handleListAllProfiles(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// handleCreateProfile matches Python: @app.post("/profiles/")
+// handleCreateProfile godoc
+// @Summary      Create a profile
+// @Description  Creates a new profile and sets it as active. Deactivates other profiles for the same user.
+// @Tags         profiles
+// @Accept       json
+// @Produce      json
+// @Param        body  body      ProfileCreate  true  "Profile creation payload"
+// @Success      201   {object}  ProfileOut
+// @Failure      400   {object}  map[string]string
+// @Failure      403   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      503   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       / [post]
 func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	var body ProfileCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -132,7 +161,17 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	c.JSON(http.StatusCreated, p)
 }
 
-// handleGetProfile matches Python: @app.get("/profiles/{profile_id}")
+// handleGetProfile godoc
+// @Summary      Get a profile by ID
+// @Description  Returns a single profile by its ID.
+// @Tags         profiles
+// @Produce      json
+// @Param        id  path      string  true  "Profile ID"
+// @Success      200  {object}  ProfileOut
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /{id} [get]
 func handleGetProfile(c *gin.Context) {
 	id := c.Param("id")
 	client, err := getDBFunc(c.Request.Context())
@@ -255,7 +294,16 @@ func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID
 	}
 }
 
-// handleListProfilesForUser matches Python: @app.get("/profiles/user/{user_id}")
+// handleListProfilesForUser godoc
+// @Summary      List profiles for a user
+// @Description  Returns all profiles owned by a specific user.
+// @Tags         profiles
+// @Produce      json
+// @Param        user_id  path      string  true  "User ID"
+// @Success      200      {array}   ProfileOut
+// @Failure      503      {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /user/{user_id} [get]
 func handleListProfilesForUser(c *gin.Context) {
 	userID := c.Param("user_id")
 	client, err := getDBFunc(c.Request.Context())
@@ -280,7 +328,21 @@ func handleListProfilesForUser(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// handleUpdateProfile matches Python: @app.put("/profiles/{profile_id}")
+// handleUpdateProfile godoc
+// @Summary      Update a profile
+// @Description  Updates fields on an existing profile. Owner or Admin only.
+// @Tags         profiles
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string         true  "Profile ID"
+// @Param        body  body      ProfileUpdate  true  "Fields to update"
+// @Success      200   {object}  ProfileOut
+// @Failure      403   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      503   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /{id} [put]
 func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	var body ProfileUpdate
@@ -349,7 +411,17 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	c.JSON(http.StatusOK, p)
 }
 
-// handleDeleteProfile matches Python: @app.delete("/profiles/{profile_id}")
+// handleDeleteProfile godoc
+// @Summary      Delete a profile
+// @Description  Deletes a profile by ID. Owner or Admin only.
+// @Tags         profiles
+// @Param        id  path  string  true  "Profile ID"
+// @Success      204  "No Content"
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /{id} [delete]
 func handleDeleteProfile(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	auth := GetAuth(c)
@@ -384,7 +456,18 @@ func handleDeleteProfile(c *gin.Context, publisher Publisher) {
 	c.Status(http.StatusNoContent)
 }
 
-// handleSetProfileActive matches Python: @app.post("/profiles/{profile_id}/set_active")
+// handleSetProfileActive godoc
+// @Summary      Set a profile as active
+// @Description  Activates a profile and deactivates all other profiles for the same user.
+// @Tags         profiles
+// @Produce      json
+// @Param        id  path      string  true  "Profile ID"
+// @Success      200  {object}  ProfileOut
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /{id}/set_active [post]
 func handleSetProfileActive(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	auth := GetAuth(c)
@@ -426,7 +509,18 @@ func handleSetProfileActive(c *gin.Context, publisher Publisher) {
 	c.JSON(http.StatusOK, p)
 }
 
-// handleGetProfilesBatch matches Python: @app.post("/profiles/batch")
+// handleGetProfilesBatch godoc
+// @Summary      Get profiles in batch
+// @Description  Returns profiles for a list of profile IDs.
+// @Tags         profiles
+// @Accept       json
+// @Produce      json
+// @Param        body  body      ProfileBatchRequest  true  "List of profile IDs"
+// @Success      200   {array}   ProfileOut
+// @Failure      422   {object}  map[string]string
+// @Failure      503   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /batch [post]
 func handleGetProfilesBatch(c *gin.Context) {
 	var body ProfileBatchRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -459,7 +553,16 @@ func handleGetProfilesBatch(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// handleGetMyActiveProfile matches Python: @app.get("/profiles/user/me/active")
+// handleGetMyActiveProfile godoc
+// @Summary      Get my active profile
+// @Description  Returns the authenticated user's active profile. Auto-activates one if none is active.
+// @Tags         profiles
+// @Produce      json
+// @Success      200  {object}  ProfileOut
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /user/me/active [get]
 func handleGetMyActiveProfile(c *gin.Context) {
 	auth := GetAuth(c)
 	client, err := getDBFunc(c.Request.Context())
@@ -504,7 +607,16 @@ func handleGetMyActiveProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, p)
 }
 
-// handleDeleteAllProfiles matches Python: @app.delete("/profiles/")
+// handleDeleteAllProfiles godoc
+// @Summary      Purge all profiles
+// @Description  Deletes all profiles in the system. Root Admin only.
+// @Tags         admin
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       / [delete]
 func handleDeleteAllProfiles(c *gin.Context, publisher Publisher) {
 	auth := GetAuth(c)
 	if auth.Role != "root_admin" {
@@ -536,7 +648,21 @@ func handleDeleteAllProfiles(c *gin.Context, publisher Publisher) {
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Purged %d profiles", len(docs))})
 }
 
-// handleUploadProfileImage matches Python: @app.post("/profiles/{id}/image")
+// handleUploadProfileImage godoc
+// @Summary      Upload a profile image
+// @Description  Uploads an image for a profile, normalizes it, stores in GCS, and updates the profile.
+// @Tags         profiles
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        id    path      string  true  "Profile ID"
+// @Param        file  formData  file    true  "Image file to upload"
+// @Success      200   {object}  ProfileOut
+// @Failure      400   {object}  map[string]string
+// @Failure      403   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      503   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /{id}/image [post]
 func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 	id := c.Param("id")
 	auth := GetAuth(c)

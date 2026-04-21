@@ -1,0 +1,269 @@
+basePath: /messages
+definitions:
+  main.ConversationCreate:
+    properties:
+      participant_profile_ids:
+        items:
+          type: string
+        minItems: 2
+        type: array
+    required:
+    - participant_profile_ids
+    type: object
+  main.ConversationOut:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      last_message:
+        $ref: '#/definitions/main.LastMessageInfo'
+      other_profile_id:
+        type: string
+      participant_ids:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  main.LastMessageInfo:
+    properties:
+      content:
+        type: string
+      sender_profile_id:
+        type: string
+      sent_at:
+        type: string
+    type: object
+  main.MessageCreate:
+    properties:
+      content:
+        type: string
+      sender_profile_id:
+        type: string
+    required:
+    - content
+    - sender_profile_id
+    type: object
+  main.MessageOut:
+    properties:
+      content:
+        type: string
+      conversation_id:
+        type: string
+      message_id:
+        type: string
+      sender_profile_id:
+        type: string
+      sent_at:
+        type: string
+    type: object
+host: localhost:8005
+info:
+  contact: {}
+  description: Conversation and messaging between matched profiles.
+  title: Messages Service API
+  version: "1.0"
+paths:
+  /:
+    delete:
+      description: Deletes all conversations, messages, and profile-conversation mappings.
+        Admin only.
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Purge all messaging data
+      tags:
+      - admin
+  /conversations:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new 1-on-1 conversation between two matched profiles.
+        Returns existing if already created.
+      parameters:
+      - description: Participant profile IDs
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ConversationCreate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Existing conversation_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "201":
+          description: conversation_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a conversation
+      tags:
+      - conversations
+  /conversations/{id}/messages:
+    get:
+      description: Returns all messages in a conversation, sorted by creation time.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.MessageOut'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get messages in a conversation
+      tags:
+      - messages
+    post:
+      consumes:
+      - application/json
+      description: Sends a message in a conversation. Sender must be a participant.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.MessageCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.MessageOut'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Send a message
+      tags:
+      - messages
+  /conversations/profile/{profile_id}:
+    get:
+      description: Returns all conversations that include the given profile, sorted
+        by most recent activity.
+      parameters:
+      - description: Profile ID
+        in: path
+        name: profile_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.ConversationOut'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List conversations for a profile
+      tags:
+      - conversations
+  /health:
+    get:
+      description: Returns the health status of the messages service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
