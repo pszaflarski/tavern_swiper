@@ -24,13 +24,14 @@ htmlcov/
 .tox/
 .nox/
 
-# Editor / OS
+# Editor / OS / Build Tools
 .vscode/
 .idea/
 .DS_Store
 *.swp
 *~
 Thumbs.db
+tmp/
 
 # Environment & Logs
 .env
