@@ -194,6 +194,29 @@ jest.mock('expo-font', () => ({
   loadAsync: jest.fn(() => Promise.resolve()),
 }));
 
+// Mock react-native-keyboard-controller
+jest.mock('react-native-keyboard-controller', () => {
+  return {
+    KeyboardProvider: ({ children }) => children,
+    KeyboardAwareScrollView: ({ children }) => children,
+    useKeyboardHandler: jest.fn(),
+    useReanimatedKeyboardAnimation: jest.fn(() => ({
+      height: { value: 0 },
+    })),
+    KeyboardController: {
+      setInputMode: jest.fn(),
+      setDefaultMode: jest.fn(),
+    },
+  };
+});
+
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+  SafeAreaProvider: ({ children }) => children,
+  SafeAreaView: ({ children }) => children,
+}));
+
 // Silence the warning: Animated: `useNativeDriver` is not supported because the native animated module is missing
 // jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
 

@@ -146,7 +146,7 @@ describe('Messages Screen', () => {
     
     fireEvent.press(inboxItem);
     
-    expect(router.push).toHaveBeenCalledWith('/conversation/c1');
+    expect(router.push).toHaveBeenCalledWith('/messages/c1');
   });
 
   it('shows loading state when content is loading', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, act, screen } from '@testing-library/react-native';
-import ConversationScreen from '../app/conversation/[id]';
+import ConversationScreen from '../app/(tabs)/messages/[id]';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useProfileContext } from '../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage } from '../hooks/useMessages';
@@ -30,6 +30,11 @@ jest.mock('expo-router', () => {
   return {
     ...actual,
     useLocalSearchParams: jest.fn(),
+    useNavigation: jest.fn(() => ({
+      getParent: jest.fn(() => ({
+        setOptions: jest.fn(),
+      })),
+    })),
     router: {
       push: jest.fn(),
       back: jest.fn(),
