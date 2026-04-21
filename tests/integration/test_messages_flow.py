@@ -177,3 +177,15 @@ async def test_full_conversation_lifecycle():
         )
         assert resp.status_code == 403
         print(f"✅ Correctly blocked unauthorized sender")
+
+        # --- STEP 7: Idempotency Check ---
+        print("\nStep 7: Idempotency Check")
+        # Creating a conversation that already exists should return 200 instead of 201
+        resp_idem = await client.post(
+            f"{MESSAGES_URL}/messages/conversations", 
+            json=init_payload, 
+            headers={"Authorization": f"Bearer {hero_a['token']}"}
+        )
+        assert resp_idem.status_code == 200, f"Expected 200 for existing conversation, got {resp_idem.status_code}"
+        assert resp_idem.json()["conversation_id"] == conv_id, "Returned conversation ID changed!"
+        print(f"✅ Conversation idempotency verified")

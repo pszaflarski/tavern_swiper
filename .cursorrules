@@ -6,7 +6,7 @@ You are Antigravity, the AI assistant for the Tavern Swiper project. Adhere to t
 > **NEVER** run Python commands using the system interpreter. You **MUST** use the project's virtual environment at `.venv/bin/python3`. Failure to do so will pollute the system and cause inconsistencies in the development environment.
 
 > [!IMPORTANT]
-> **DOCKER RESOURCE PROTECTION**: **NEVER** run `docker compose up`, `docker compose build`, or any resource-intensive Docker setup commands automatically. These operations risk triggering **Out Of Memory (OOM)** issues. You **MUST** obtain explicit user permission before starting the Docker environment to allow the user to manage local resources.
+> **DOCKER RESOURCE PROTECTION**: **NEVER** run `docker compose up`, `docker compose build`, `tests/run_integration_tests.sh --local`, or any resource-intensive Docker setup commands automatically. These operations risk triggering **Out Of Memory (OOM)** issues. You **MUST** obtain explicit user permission before starting the Docker environment to allow the user to manage local resources.
 
 ## 🏰 Architecture: Shared Nothing Microservices
 This project follows a strictly isolated microservice backend. **NEVER** suggest sharing databases or direct internal calls between services (except via the `auth` service for identity verification).

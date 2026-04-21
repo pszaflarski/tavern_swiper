@@ -332,14 +332,12 @@ func deleteAllHandler(c *gin.Context) {
 // @Failure      500   {object}  ErrorResponse
 // @Router       /dev-mint [post]
 func devMintHandler(c *gin.Context) {
-	// Strict Safety Check
-	allowLongLived := os.Getenv("ALLOW_LONG_LIVED_TOKENS") == "true"
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	isEmulator := os.Getenv("FIREBASE_AUTH_EMULATOR_HOST") != ""
 	isDevProject := strings.HasSuffix(projectID, "-dev")
 
-	if !allowLongLived || (!isEmulator && !isDevProject) {
-		httpError(c, http.StatusForbidden, "Dev minting is only allowed in development environments with ALLOW_LONG_LIVED_TOKENS=true")
+	if !isEmulator && !isDevProject {
+		httpError(c, http.StatusForbidden, "Dev minting is only allowed in development environments (Emulator or projects ending in -dev)")
 		return
 	}
 
