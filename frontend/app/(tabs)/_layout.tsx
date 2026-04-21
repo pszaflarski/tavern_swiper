@@ -6,6 +6,7 @@ import { Colors, Fonts } from '../../theme';
 export default function TabLayout() {
   return (
     <Tabs
+      sceneContainerStyle={{ backgroundColor: Colors.background }}
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.outline,
@@ -14,6 +15,7 @@ export default function TabLayout() {
           borderTopColor: Colors.outlineVariant,
         },
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarLabelStyle: {
           fontFamily: Fonts.scribe,
           fontSize: 10,

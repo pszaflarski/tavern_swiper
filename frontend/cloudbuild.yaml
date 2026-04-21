@@ -40,7 +40,6 @@ steps:
           echo "export EXPO_PUBLIC_USERS_URL=$(get_url users)"
           echo "export EXPO_PUBLIC_PROFILES_URL=$(get_url profiles)"
           echo "export EXPO_PUBLIC_DISCOVERY_URL=$(get_url discovery)"
-          echo "export EXPO_PUBLIC_SWIPES_URL=$(get_url discovery)"
           echo "export EXPO_PUBLIC_MESSAGES_URL=$(get_url messages)"
         } > /workspace/build.env || exit 1
         
@@ -60,7 +59,6 @@ steps:
           --build-arg EXPO_PUBLIC_USERS_URL=$$EXPO_PUBLIC_USERS_URL \
           --build-arg EXPO_PUBLIC_PROFILES_URL=$$EXPO_PUBLIC_PROFILES_URL \
           --build-arg EXPO_PUBLIC_DISCOVERY_URL=$$EXPO_PUBLIC_DISCOVERY_URL \
-          --build-arg EXPO_PUBLIC_SWIPES_URL=$$EXPO_PUBLIC_SWIPES_URL \
           --build-arg EXPO_PUBLIC_MESSAGES_URL=$$EXPO_PUBLIC_MESSAGES_URL \
           --build-arg EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyCnKm4gayoO0C35CNeMJ7E82fFITvVpGAw \
           --build-arg EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=$PROJECT_ID.firebaseapp.com \

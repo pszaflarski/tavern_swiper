@@ -14,6 +14,7 @@ import {
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
@@ -204,12 +205,13 @@ export default function CreateAndEditProfileScreen() {
     );
   }
 
-
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={100}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      bottomOffset={62} // Ensures active input has room above the keyboard
+      keyboardShouldPersistTaps="handled"
     >
       <Stack.Screen
         options={{
@@ -242,177 +244,175 @@ export default function CreateAndEditProfileScreen() {
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Enchanted Image Grid */}
-        <View style={styles.gridSection}>
-          <Text style={styles.sectionTitle}>Visions of the Self</Text>
-          <View style={styles.imageGrid}>
-            {[...Array(6)].map((_, index) => {
-              const uri = imageUrls[index];
-              return (
-                <View key={index} style={{ width: ITEM_WIDTH, height: ITEM_HEIGHT }} testID={`profile-image-slot-${index}`}>
-                  {uri ? (
-                    <View style={styles.filledSlot} testID={`profile-image-filled-${index}`}>
-                      <Image
-                        source={{ uri }}
-                        style={styles.gridImage}
-                        resizeMode="cover"
-                      />
-                      <TouchableOpacity
-                        style={styles.removeSeal}
-                        onPress={() => removeImage(index)}
-                        testID={`profile-image-remove-${index}`}
-                        accessibilityLabel={`Remove image ${index + 1}`}
-                        accessibilityRole="button"
-                      >
-                        <Ionicons name="close-circle" size={20} color={Colors.error} />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
+      {/* Enchanted Image Grid */}
+      <View style={styles.gridSection}>
+        <Text style={styles.sectionTitle}>Visions of the Self</Text>
+        <View style={styles.imageGrid}>
+          {[...Array(6)].map((_, index) => {
+            const uri = imageUrls[index];
+            return (
+              <View key={index} style={{ width: ITEM_WIDTH, height: ITEM_HEIGHT }} testID={`profile-image-slot-${index}`}>
+                {uri ? (
+                  <View style={styles.filledSlot} testID={`profile-image-filled-${index}`}>
+                    <Image
+                      source={{ uri }}
+                      style={styles.gridImage}
+                      resizeMode="cover"
+                    />
                     <TouchableOpacity
-                      style={styles.emptySlot}
-                      onPress={() => pickImage(index)}
-                      testID={`profile-image-add-button-${index}`}
-                      accessibilityLabel={`Add image to slot ${index + 1}`}
+                      style={styles.removeSeal}
+                      onPress={() => removeImage(index)}
+                      testID={`profile-image-remove-${index}`}
+                      accessibilityLabel={`Remove image ${index + 1}`}
                       accessibilityRole="button"
                     >
-                      <View style={styles.emptySlotContent}>
-                        <Ionicons name="camera" size={24} color={Colors.surfaceVariant} />
-                        <Text style={styles.addLabel}>Add</Text>
-                      </View>
+                      <Ionicons name="close-circle" size={20} color={Colors.error} />
                     </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-          <Text style={styles.gridHint}>Tap to reveal your hero's appearance (Max 6)</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.emptySlot}
+                    onPress={() => pickImage(index)}
+                    testID={`profile-image-add-button-${index}`}
+                    accessibilityLabel={`Add image to slot ${index + 1}`}
+                    accessibilityRole="button"
+                  >
+                    <View style={styles.emptySlotContent}>
+                      <Ionicons name="camera" size={24} color={Colors.surfaceVariant} />
+                      <Text style={styles.addLabel}>Add</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
         </View>
+        <Text style={styles.gridHint}>Tap to reveal your hero's appearance (Max 6)</Text>
+      </View>
 
-        {/* Identity Section */}
-        <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Identity</Text>
+      {/* Identity Section */}
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>Identity</Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>True Name</Text>
-            <TextInput
-              style={styles.input}
-              value={displayName}
-              testID="profile-name-input"
-              onChangeText={setDisplayName}
-              placeholder="e.g. Elara Brightsoul"
-              placeholderTextColor={Colors.surfaceVariant}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Title / Tagline</Text>
-            <TextInput
-              style={styles.input}
-              value={tagline}
-              testID="profile-tagline-input"
-              onChangeText={setTagline}
-              placeholder="e.g. Keeper of the Ancient Light"
-              placeholderTextColor={Colors.surfaceVariant}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Chronicle (Bio)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={bio}
-              testID="profile-bio-input"
-              onChangeText={setBio}
-              placeholder="Tell your tale..."
-              placeholderTextColor={Colors.surfaceVariant}
-              multiline
-              numberOfLines={4}
-            />
-          </View>
-        </View>
-
-        {/* Attributes Section */}
-        <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Attributes</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Gender / Essence</Text>
-            <View style={styles.choiceRow}>
-              {['Male', 'Female', 'Other'].map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  testID={`profile-gender-${opt}`}
-                  style={[styles.choiceBtn, gender === opt && styles.choiceBtnActive]}
-                  onPress={() => setGender(opt)}
-                >
-                  <Text style={[styles.choiceText, gender === opt && styles.choiceTextActive]}>
-                    {opt}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.forgeButton, isPending && styles.forgeButtonDisabled]}
-          onPress={handleSave}
-          testID="profile-forge-button"
-          disabled={isPending}
-        >
-          {isPending || isUploading ? (
-            <ActivityIndicator color={Colors.onPrimary} />
-          ) : (
-            <>
-              <Ionicons name="flash" size={20} color={Colors.onPrimary} style={{ marginRight: 8 }} />
-              <Text style={styles.forgeButtonText}>
-                {isEditing ? 'Confirm Alteration' : 'Forge Identity'}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {Platform.OS === 'web' && (
-          <input
-            type="file"
-            multiple
-            data-testid="hidden-image-upload"
-            style={{ display: 'none' }}
-            onChange={(e: any) => {
-              const files = Array.from(e.target.files || []);
-              if (files.length > 0) {
-                const uri = URL.createObjectURL(files[0] as any);
-                setPendingImageUri(uri);
-                setActiveSlotIndex(imageUrls.length);
-                setIsCropperVisible(true);
-              }
-            }}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>True Name</Text>
+          <TextInput
+            style={styles.input}
+            value={displayName}
+            testID="profile-name-input"
+            onChangeText={setDisplayName}
+            placeholder="e.g. Elara Brightsoul"
+            placeholderTextColor={Colors.surfaceVariant}
           />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Title / Tagline</Text>
+          <TextInput
+            style={styles.input}
+            value={tagline}
+            testID="profile-tagline-input"
+            onChangeText={setTagline}
+            placeholder="e.g. Keeper of the Ancient Light"
+            placeholderTextColor={Colors.surfaceVariant}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Chronicle (Bio)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={bio}
+            testID="profile-bio-input"
+            onChangeText={setBio}
+            placeholder="Tell your tale..."
+            placeholderTextColor={Colors.surfaceVariant}
+            multiline
+            numberOfLines={4}
+          />
+        </View>
+      </View>
+
+      {/* Attributes Section */}
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>Attributes</Text>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Gender / Essence</Text>
+          <View style={styles.choiceRow}>
+            {['Male', 'Female', 'Other'].map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                testID={`profile-gender-${opt}`}
+                style={[styles.choiceBtn, gender === opt && styles.choiceBtnActive]}
+                onPress={() => setGender(opt)}
+              >
+                <Text style={[styles.choiceText, gender === opt && styles.choiceTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.forgeButton, isPending && styles.forgeButtonDisabled]}
+        onPress={handleSave}
+        testID="profile-forge-button"
+        disabled={isPending}
+      >
+        {isPending || isUploading ? (
+          <ActivityIndicator color={Colors.onPrimary} />
+        ) : (
+          <>
+            <Ionicons name="flash" size={20} color={Colors.onPrimary} style={{ marginRight: 8 }} />
+            <Text style={styles.forgeButtonText}>
+              {isEditing ? 'Confirm Alteration' : 'Forge Identity'}
+            </Text>
+          </>
         )}
-        
-        <TouchableOpacity 
-          style={{ backgroundColor: '#444', padding: 10, margin: 10, borderRadius: 5, alignItems: 'center' }}
-          onPress={() => {
-            setPendingImageUri('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1000');
-            setActiveSlotIndex(0);
-            setIsCropperVisible(true);
+      </TouchableOpacity>
+
+      {Platform.OS === 'web' && (
+        <input
+          type="file"
+          multiple
+          data-testid="hidden-image-upload"
+          style={{ display: 'none' }}
+          onChange={(e: any) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length > 0) {
+              const uri = URL.createObjectURL(files[0] as any);
+              setPendingImageUri(uri);
+              setActiveSlotIndex(imageUrls.length);
+              setIsCropperVisible(true);
+            }
           }}
-          testID="test-gesture-button"
-        >
-          <Text style={{ color: '#fff' }}>[DEBUG] Ritual Practice (Test Gestures)</Text>
-        </TouchableOpacity>
-
-        <ImageCropperModal
-          isVisible={isCropperVisible}
-          imageUri={pendingImageUri}
-          onClose={() => setIsCropperVisible(false)}
-          onCropComplete={handleCropComplete}
         />
+      )}
+      
+      <TouchableOpacity 
+        style={{ backgroundColor: '#444', padding: 10, margin: 10, borderRadius: 5, alignItems: 'center' }}
+        onPress={() => {
+          setPendingImageUri('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1000');
+          setActiveSlotIndex(0);
+          setIsCropperVisible(true);
+        }}
+        testID="test-gesture-button"
+      >
+        <Text style={{ color: '#fff' }}>[DEBUG] Ritual Practice (Test Gestures)</Text>
+      </TouchableOpacity>
 
-        <View style={styles.footerPlaceholder} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <ImageCropperModal
+        isVisible={isCropperVisible}
+        imageUri={pendingImageUri}
+        onClose={() => setIsCropperVisible(false)}
+        onCropComplete={handleCropComplete}
+      />
+
+      <View style={styles.footerPlaceholder} />
+    </KeyboardAwareScrollView>
   );
 }
 

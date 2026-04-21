@@ -99,6 +99,10 @@ jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({
     currentUser: { uid: 'test-uid' },
   })),
+  initializeAuth: jest.fn(() => ({
+    currentUser: { uid: 'test-uid' },
+  })),
+  getReactNativePersistence: jest.fn(),
   signInWithEmailAndPassword: jest.fn(),
   createUserWithEmailAndPassword: jest.fn(),
   signOut: jest.fn(),

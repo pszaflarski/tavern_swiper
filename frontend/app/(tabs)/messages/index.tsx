@@ -1,16 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
-import { useProfileContext } from '../../context/ProfileContext';
-import { useProfiles } from '../../hooks/useProfiles';
-import { useUser } from '../../hooks/useUser';
-import { useInvolvedMatches, useCreateConversation } from '../../hooks/useMessages';
-import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../../theme';
+import { useProfileContext } from '../../../context/ProfileContext';
+import { useProfiles } from '../../../hooks/useProfiles';
+import { useUser } from '../../../hooks/useUser';
+import { useInvolvedMatches, useCreateConversation } from '../../../hooks/useMessages';
+import { useRefreshOnFocus } from '../../../hooks/useRefreshOnFocus';
 import { router } from 'expo-router';
-import ScreenHeader from '../../components/ScreenHeader';
-import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import ScreenHeader from '../../../components/ScreenHeader';
+import ScreenErrorBoundary from '../../../components/ScreenErrorBoundary';
 
-const PLACEHOLDER_IMAGE = require('../../assets/images/placeholder/hero1.jpeg');
+const PLACEHOLDER_IMAGE = require('../../../assets/images/placeholder/hero1.jpeg');
 
 function MessagesScreenInner() {
   const { uid } = useUser();
@@ -32,13 +32,13 @@ function MessagesScreenInner() {
       participants: [activeProfileId, otherProfileId] 
     }, {
       onSuccess: (data) => {
-        router.push(`/conversation/${data.conversation_id}`);
+        router.push(`/messages/${data.conversation_id}`);
       }
     });
   };
 
   const handleConversationPress = (convoId: string) => {
-    router.push(`/conversation/${convoId}`);
+    router.push(`/messages/${convoId}`);
   };
 
   const renderProfileImage = (uri: string | undefined) => {

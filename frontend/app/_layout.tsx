@@ -9,6 +9,7 @@ import { Colors } from '../theme';
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 export {
   ErrorBoundary,
@@ -61,11 +62,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <ProfileProvider>
-          <RootLayoutNav />
-        </ProfileProvider>
-      </QueryClientProvider>
+      <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+        <QueryClientProvider client={queryClient}>
+          <ProfileProvider>
+            <RootLayoutNav />
+          </ProfileProvider>
+        </QueryClientProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
