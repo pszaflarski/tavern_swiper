@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend_new",
-    "slug": "frontend_new",
+    "name": "tavern-swiper",
+    "slug": "tavern-swiper",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontendnew",
+    "scheme": "tavernswiper",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -14,9 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.peterjacob.tavernswiper"
     },
     "android": {
+      "package": "com.peterjacob.tavernswiper",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -34,6 +36,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a79020c5-9deb-42f7-9a1b-b30cbc97acc7"
+      }
+    },
+    "owner": "peterjac0b"
   }
 }
