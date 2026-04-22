@@ -72,7 +72,6 @@ definitions:
       tagline:
         type: string
     type: object
-host: localhost:8002
 info:
   contact: {}
   description: Profile CRUD, image uploads, and active profile management.

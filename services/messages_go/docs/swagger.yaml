@@ -59,7 +59,6 @@ definitions:
       sent_at:
         type: string
     type: object
-host: localhost:8005
 info:
   contact: {}
   description: Conversation and messaging between matched profiles.
