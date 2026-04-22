@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -16,22 +16,31 @@ import Animated, {
   runOnJS,
   ZoomIn,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Spacing, Shadow } from '../theme';
 import { useMatch } from '../context/MatchContext';
 import { useProfileContext } from '../context/ProfileContext';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-
-const CARD_W = SCREEN_W * 0.35;
-const CARD_H = CARD_W * (16 / 9);
-
 export default function MatchSplash() {
   const { isMatchVisible, hideMatch, matchedProfile, clearMatchedProfile } = useMatch();
   const { activeProfileId, profiles } = useProfileContext();
+  const insets = useSafeAreaInsets();
+  const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
 
   const activeProfile = profiles.find((p) => p.profile_id === activeProfileId);
 
-  // ALL hooks must be called before any conditional return
+  // Card sizing — 16:9 portrait aspect ratio
+  const CARD_W = SCREEN_W * 0.34;
+  const CARD_H = CARD_W * (16 / 9);
+
+  // Calculate max offset so rotated cards sit at edges without clipping
+  const ROTATION_DEG = 6;
+  const ROTATION_RAD = (ROTATION_DEG * Math.PI) / 180;
+  const ROTATED_HALF_W = (CARD_W * Math.cos(ROTATION_RAD) + CARD_H * Math.sin(ROTATION_RAD)) / 2;
+  const AVAILABLE_HALF_W = (SCREEN_W - 2 * Spacing[6]) / 2;
+  const CARD_OFFSET = Math.max(0, AVAILABLE_HALF_W - ROTATED_HALF_W - Spacing[1]);
+
+  // Animation values
   const leftCardX = useSharedValue(-SCREEN_W);
   const rightCardX = useSharedValue(SCREEN_W);
   const textScale = useSharedValue(0);
@@ -39,15 +48,15 @@ export default function MatchSplash() {
 
   const leftCardStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: leftCardX.value - CARD_W * 0.4 },
-      { rotate: '-8deg' },
+      { translateX: leftCardX.value - CARD_OFFSET },
+      { rotate: '-6deg' },
     ],
   }));
 
   const rightCardStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: rightCardX.value + CARD_W * 0.4 },
-      { rotate: '8deg' },
+      { translateX: rightCardX.value + CARD_OFFSET },
+      { rotate: '6deg' },
     ],
   }));
 
@@ -62,15 +71,13 @@ export default function MatchSplash() {
   useEffect(() => {
     if (isMatchVisible) {
       overlayOpacity.value = withTiming(1, { duration: 400 });
-      leftCardX.value = withDelay(300, withSpring(0, { damping: 12 }));
-      rightCardX.value = withDelay(500, withSpring(0, { damping: 12 }));
-      textScale.value = withDelay(800, withSpring(1, { damping: 10 }));
+      leftCardX.value = withDelay(300, withSpring(0, { damping: 14 }));
+      rightCardX.value = withDelay(500, withSpring(0, { damping: 14 }));
+      textScale.value = withDelay(800, withSpring(1, { damping: 12 }));
     } else {
-      // Animate cards and text out
       leftCardX.value = withTiming(-SCREEN_W, { duration: 300 });
       rightCardX.value = withTiming(SCREEN_W, { duration: 300 });
       textScale.value = withTiming(0, { duration: 200 });
-      // Fade out overlay, then unmount by clearing the matched profile
       overlayOpacity.value = withTiming(0, { duration: 300 }, (finished) => {
         if (finished) {
           runOnJS(clearMatchedProfile)();
@@ -88,18 +95,37 @@ export default function MatchSplash() {
     >
       <View style={styles.overlay} />
       
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top + Spacing[4],
+            paddingBottom: insets.bottom + Spacing[4],
+          }
+        ]}
+      >
+
         {/* Magical Background Glow */}
         <View style={styles.glow} />
 
+        {/* Title */}
         <Animated.View style={[styles.textContainer, textStyle]}>
           <Text style={styles.matchTitle}>Fate Decided!</Text>
           <Text style={styles.matchSubtitle}>A Mutual Bond Has Been Forged</Text>
         </Animated.View>
 
-        <View style={styles.cardsContainer}>
-          {/* Your Profile */}
-          <Animated.View style={[styles.card, leftCardStyle]}>
+        {/* Overlapping Cards — matched profile on top */}
+        <View style={[styles.cardsContainer, { height: CARD_H + Spacing[8] }]}>
+          {/* Your Profile (behind, tilted left) */}
+          <Animated.View style={[
+            styles.card, 
+            { 
+              width: CARD_W, 
+              height: CARD_H,
+              position: 'absolute',
+            }, 
+            leftCardStyle
+          ]}>
             <View style={styles.imageWrapper}>
               {activeProfile?.image_urls?.[0] ? (
                 <Image source={{ uri: activeProfile.image_urls[0] }} style={styles.image} />
@@ -112,8 +138,17 @@ export default function MatchSplash() {
             </View>
           </Animated.View>
 
-          {/* Matched Profile */}
-          <Animated.View style={[styles.card, rightCardStyle]}>
+          {/* Matched Profile (on top, tilted right) */}
+          <Animated.View style={[
+            styles.card, 
+            { 
+              width: CARD_W, 
+              height: CARD_H,
+              position: 'absolute',
+              zIndex: 2,
+            }, 
+            rightCardStyle
+          ]}>
             <View style={styles.imageWrapper}>
               {matchedProfile.image_url ? (
                 <Image source={{ uri: matchedProfile.image_url }} style={styles.image} />
@@ -127,13 +162,11 @@ export default function MatchSplash() {
           </Animated.View>
         </View>
 
+        {/* Actions */}
         <Animated.View entering={ZoomIn.delay(1200)} style={styles.actions}>
           <TouchableOpacity 
             style={styles.primaryButton}
-            onPress={() => {
-              // TODO: Navigate to messages
-              hideMatch();
-            }}
+            onPress={hideMatch}
           >
             <Text style={styles.primaryButtonText}>INITIATE CONVERSATION</Text>
           </TouchableOpacity>
@@ -154,29 +187,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing[6],
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   glow: {
     position: 'absolute',
-    width: SCREEN_W * 1.5,
-    height: SCREEN_W * 1.5,
-    borderRadius: SCREEN_W * 0.75,
+    width: '150%',
+    aspectRatio: 1,
+    borderRadius: 999,
     backgroundColor: Colors.secondary,
-    opacity: 0.15,
+    opacity: 0.12,
     zIndex: -1,
   },
   textContainer: {
     alignItems: 'center',
-    marginBottom: Spacing[12],
+    width: '100%',
+    marginBottom: Spacing[8],
   },
   matchTitle: {
     fontFamily: Fonts.heroic,
-    fontSize: 48,
+    fontSize: 36,
     color: Colors.tertiary,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.8)',
@@ -187,25 +221,22 @@ const styles = StyleSheet.create({
   },
   matchSubtitle: {
     fontFamily: Fonts.scribe,
-    fontSize: 18,
+    fontSize: 16,
     color: Colors.onSurfaceVariant,
-    marginTop: Spacing[2],
+    marginTop: Spacing[1],
     fontStyle: 'italic',
     textAlign: 'center',
   },
   cardsContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: CARD_H + 40,
     width: '100%',
+    marginBottom: Spacing[8],
   },
   card: {
-    width: CARD_W,
-    height: CARD_H,
     backgroundColor: Colors.surfaceContainer,
     borderRadius: Radius.md,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: Colors.tertiary,
     ...Shadow.waxSeal,
     elevation: 20,
@@ -225,24 +256,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emoji: {
-    fontSize: 32,
+    fontSize: 28,
   },
   cardLabel: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingVertical: Spacing[2],
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingVertical: Spacing[1],
     paddingHorizontal: Spacing[2],
     alignItems: 'center',
   },
   cardLabelText: {
     fontFamily: Fonts.heroic,
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.onPrimary,
     fontWeight: '700',
   },
   actions: {
-    marginTop: Spacing[16],
     width: '100%',
-    gap: Spacing[4],
+    gap: Spacing[2],
   },
   primaryButton: {
     backgroundColor: Colors.primary,
@@ -255,10 +285,10 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: Fonts.heroic,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.onPrimary,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
   secondaryButton: {
     paddingVertical: Spacing[3],
@@ -266,7 +296,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontFamily: Fonts.scribe,
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.onSurfaceVariant,
     textDecorationLine: 'underline',
   },
