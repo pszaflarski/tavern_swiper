@@ -37,6 +37,8 @@ const queryClient = new QueryClient({
 });
 
 import { ProfileProvider } from '../context/ProfileContext';
+import { MatchProvider } from '../context/MatchContext';
+import MatchSplash from '../components/MatchSplash';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -72,7 +74,9 @@ export default function RootLayout() {
       <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
         <QueryClientProvider client={queryClient}>
           <ProfileProvider>
-            <RootLayoutNav />
+            <MatchProvider>
+              <RootLayoutNav />
+            </MatchProvider>
           </ProfileProvider>
         </QueryClientProvider>
       </KeyboardProvider>
@@ -115,6 +119,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       </Stack>
+      <MatchSplash />
       <Toast />
     </>
   );

@@ -10,6 +10,7 @@ import { useDiscoveryFeed, useProfiles, Profile } from '../../hooks/useProfiles'
 import { useSwipe } from '../../hooks/useSwipe';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
+import { useMatch } from '../../context/MatchContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 
@@ -23,6 +24,7 @@ function TavernScreenInner() {
     refetchProfiles
   } = useProfileContext();
   const swipeMutation = useSwipe();
+  const { showMatch } = useMatch();
   const router = useRouter();
   const [deck, setDeck] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -124,8 +126,23 @@ function TavernScreenInner() {
   };
 
   const handleSwipeRight = (id: string) => {
-    if (!activeProfileId) return;
-    swipeMutation.mutate({ swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'right' });
+    swipeMutation.mutate(
+      { swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'right' },
+      {
+        onSuccess: (data) => {
+          if (data.match_id) {
+            const swipedProfile = deck.find(p => p.profile_id === id);
+            if (swipedProfile) {
+              showMatch({
+                profile_id: swipedProfile.profile_id,
+                display_name: swipedProfile.display_name,
+                image_url: swipedProfile.image_urls?.[0] || '',
+              });
+            }
+          }
+        },
+      }
+    );
     advanceIndex();
     setShowDetails(false);
   };

@@ -15,6 +15,7 @@ interface SwipeResult {
   swiped_profile_id: string;
   direction: Direction;
   created_at: string;
+  match_id?: string | null;
 }
 
 export function useSwipe() {
@@ -29,9 +30,13 @@ export function useSwipe() {
       } satisfies SwipePayload);
       return res.data;
     },
-    onSuccess: (_, variables) => {
-      // Swiping actions are recorded on backend, but we don't need to force a full UI refresh
-      // of the current deck to remain stable.
+    onSuccess: (data, variables) => {
+      // If a mutual match was detected, trigger the splash screen!
+      if (data.match_id) {
+         // Note: The UI layer (TavernScreen) is responsible for providing the full profile
+         // to showMatch, but we could also emit a global event or just let the mutation caller handle it.
+         console.log('Match detected in hook!', data.match_id);
+      }
     },
     onError: (error, variables) => {
       console.error('Swipe failed:', {

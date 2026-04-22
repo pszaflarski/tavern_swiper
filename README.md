@@ -115,6 +115,18 @@ The dashboard provides tools to:
 
 ---
 
+## 🛠️ Utility Scripts
+
+Several convenience scripts are available in the `scripts/` directory to assist with development and testing:
+
+| Script | Usage | Purpose |
+| :--- | :--- | :--- |
+| `clear_system.py` | `python3 scripts/clear_system.py [dev/test]` | Purges Firestore and GCS data. Add `--clear-firebase` to also wipe Auth. |
+| `delete_user.py` | `python3 scripts/delete_user.py <email>` | Deletes a single identity from Firebase Auth by email. |
+| `seed_profiles.py` | `python3 scripts/seed_profiles.py [dev/test]` | Populates the realm with authentic sample hero identities. |
+
+---
+
 ## Frontend (React Native)
 
 The frontend uses **Expo** and the **Stitch Design System**.
@@ -130,6 +142,19 @@ npx expo start
 
 ### No Direct Firestore Access
 The frontend must never call Firestore directly. All data must be fetched through the microservice APIs. The client SDK is only authorized to use the Firebase Authentication module.
+
+### Environment & Identity
+
+This project maintains three distinct deployment environments: `local`, `dev`, and `test`.
+
+- **Isolated State**: Each environment uses its own set of dedicated Firestore databases (e.g., `profiles-dev` vs `profiles-test`).
+- **Shared Identity (Project-Wide)**: All environments share a single **Firebase Auth** instance per project.
+    - **Shared Accounts**: Your account (email/password) and uniquely generated **UID** are global.
+    - **Password Changes**: Updating your password in `dev` will affect your login for `test`.
+    - **Stability**: This allows characters to exist in both realms with the same identity, but completely different progress/profiles.
+
+> [!WARNING]
+> Clearing the "Firebase Auth users" via `scripts/clear_system.py --clear-firebase` is a **project-wide destructive action**. It will delete identities for all environments. By default, the script only clears environment-specific application state (Firestore/Storage) to preserve your UIDs.
 
 ### Environment Switching
 Easily toggle the frontend between local, dev (cloud), and test (cloud) environments:

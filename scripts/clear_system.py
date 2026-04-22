@@ -36,7 +36,7 @@ def delete_collection(coll_ref, batch_size=500):
     if deleted >= batch_size:
         return delete_collection(coll_ref, batch_size)
 
-def purge_system(env="dev"):
+def purge_system(env="dev", purge_auth=False):
     print(f"🚀 Starting Direct Firestore Purge for environment: {env}\n")
     # Map 'dev' and 'test' to their respective database/bucket suffixes
     suffix = f"-{env}"
@@ -60,29 +60,32 @@ def purge_system(env="dev"):
         except Exception as e:
             print(f"  ❌ Error clearing {db_id}: {e}")
 
-    # 3. Clear Firebase Auth (Standard for the whole project)
-    print("\n🔥 Purging Firebase Auth Users...")
-    try:
-        # Initialize Firebase Admin explicitly for the target project
-        if not firebase_admin._apps:
-            # We use an options dict to specify the project ID
-            options = {'projectId': PROJECT_ID}
-            try:
-                firebase_admin.initialize_app(options=options)
-            except Exception as e:
-                print(f"  ⚠️ Warning: Firebase Admin initialization failed: {e}")
-                pass
+    # 3. Clear Firebase Auth (Optional: Standard for the whole project)
+    if purge_auth:
+        print("\n🔥 Purging Firebase Auth Users...")
+        try:
+            # Initialize Firebase Admin explicitly for the target project
+            if not firebase_admin._apps:
+                # We use an options dict to specify the project ID
+                options = {'projectId': PROJECT_ID}
+                try:
+                    firebase_admin.initialize_app(options=options)
+                except Exception as e:
+                    print(f"  ⚠️ Warning: Firebase Admin initialization failed: {e}")
+                    pass
 
-        # Fetch and delete users in batches
-        users = list(auth.list_users().iterate_all())
-        uids = [user.uid for user in users]
-        if uids:
-            auth.delete_users(uids)
-            print(f"  ✅ {len(uids)} users deleted from Firebase Auth ({PROJECT_ID}).")
-        else:
-            print(f"  ✅ No users found in Firebase Auth ({PROJECT_ID}).")
-    except Exception as e:
-        print(f"  ❌ Error purging Firebase Auth: {e}")
+            # Fetch and delete users in batches
+            users = list(auth.list_users().iterate_all())
+            uids = [user.uid for user in users]
+            if uids:
+                auth.delete_users(uids)
+                print(f"  ✅ {len(uids)} users deleted from Firebase Auth ({PROJECT_ID}).")
+            else:
+                print(f"  ✅ No users found in Firebase Auth ({PROJECT_ID}).")
+        except Exception as e:
+            print(f"  ❌ Error purging Firebase Auth: {e}")
+    else:
+        print("\n🛡️  Skipping Firebase Auth purge (Preserving User UIDs).")
 
     # 4. Clear GCS Buckets (Hard Delete everything in the environment's media bucket)
     bucket_name = f"{PROJECT_ID}-media-{env}"
@@ -110,8 +113,10 @@ def purge_system(env="dev"):
     print("\n🏁 Direct system purge complete!")
 
 if __name__ == "__main__":
-    target_env = "dev"
-    if len(sys.argv) > 1:
-        target_env = sys.argv[1]
+    import argparse
+    parser = argparse.ArgumentParser(description="Purge system data for a specific environment.")
+    parser.add_argument("env", nargs="?", default="dev", help="Environment to purge (dev/test)")
+    parser.add_argument("--clear-firebase", action="store_true", help="Also purge all Firebase Auth users (destructive to all envs)")
     
-    purge_system(target_env)
+    args = parser.parse_args()
+    purge_system(args.env, purge_auth=args.clear_firebase)
