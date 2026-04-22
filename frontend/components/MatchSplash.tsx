@@ -13,8 +13,7 @@ import Animated, {
   withSpring,
   withDelay,
   withTiming,
-  FadeIn,
-  FadeOut,
+  runOnJS,
   ZoomIn,
 } from 'react-native-reanimated';
 import { Colors, Fonts, Radius, Spacing, Shadow } from '../theme';
@@ -27,7 +26,7 @@ const CARD_W = SCREEN_W * 0.35;
 const CARD_H = CARD_W * (16 / 9);
 
 export default function MatchSplash() {
-  const { isMatchVisible, hideMatch, matchedProfile } = useMatch();
+  const { isMatchVisible, hideMatch, matchedProfile, clearMatchedProfile } = useMatch();
   const { activeProfileId, profiles } = useProfileContext();
 
   const activeProfile = profiles.find((p) => p.profile_id === activeProfileId);
@@ -36,17 +35,18 @@ export default function MatchSplash() {
   const leftCardX = useSharedValue(-SCREEN_W);
   const rightCardX = useSharedValue(SCREEN_W);
   const textScale = useSharedValue(0);
+  const overlayOpacity = useSharedValue(0);
 
   const leftCardStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: leftCardX.value - Spacing[4] },
+      { translateX: leftCardX.value - CARD_W * 0.4 },
       { rotate: '-8deg' },
     ],
   }));
 
   const rightCardStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: rightCardX.value + Spacing[4] },
+      { translateX: rightCardX.value + CARD_W * 0.4 },
       { rotate: '8deg' },
     ],
   }));
@@ -55,35 +55,42 @@ export default function MatchSplash() {
     transform: [{ scale: textScale.value }],
   }));
 
+  const rootStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
+
   useEffect(() => {
     if (isMatchVisible) {
+      overlayOpacity.value = withTiming(1, { duration: 400 });
       leftCardX.value = withDelay(300, withSpring(0, { damping: 12 }));
       rightCardX.value = withDelay(500, withSpring(0, { damping: 12 }));
       textScale.value = withDelay(800, withSpring(1, { damping: 10 }));
     } else {
-      leftCardX.value = -SCREEN_W;
-      rightCardX.value = SCREEN_W;
-      textScale.value = 0;
+      // Animate cards and text out
+      leftCardX.value = withTiming(-SCREEN_W, { duration: 300 });
+      rightCardX.value = withTiming(SCREEN_W, { duration: 300 });
+      textScale.value = withTiming(0, { duration: 200 });
+      // Fade out overlay, then unmount by clearing the matched profile
+      overlayOpacity.value = withTiming(0, { duration: 300 }, (finished) => {
+        if (finished) {
+          runOnJS(clearMatchedProfile)();
+        }
+      });
     }
   }, [isMatchVisible]);
 
-  // Conditional return AFTER all hooks
-  if (!isMatchVisible || !matchedProfile) return null;
+  if (!matchedProfile) return null;
 
   return (
     <Animated.View 
-      entering={FadeIn.duration(400)} 
-      exiting={FadeOut.duration(300)}
-      style={StyleSheet.absoluteFill}
+      style={[StyleSheet.absoluteFill, { zIndex: 999 }, rootStyle]}
+      pointerEvents={isMatchVisible ? 'auto' : 'none'}
     >
       <View style={styles.overlay} />
       
       <View style={styles.container}>
         {/* Magical Background Glow */}
-        <Animated.View 
-          entering={FadeIn.delay(200).duration(1000)}
-          style={styles.glow} 
-        />
+        <View style={styles.glow} />
 
         <Animated.View style={[styles.textContainer, textStyle]}>
           <Text style={styles.matchTitle}>Fate Decided!</Text>

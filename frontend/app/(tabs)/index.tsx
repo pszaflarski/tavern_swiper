@@ -126,6 +126,7 @@ function TavernScreenInner() {
   };
 
   const handleSwipeRight = (id: string) => {
+    if (!activeProfileId) return;
     swipeMutation.mutate(
       { swiperProfileId: activeProfileId, swipedProfileId: id, direction: 'right' },
       {

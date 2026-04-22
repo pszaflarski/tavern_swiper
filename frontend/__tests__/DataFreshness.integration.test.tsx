@@ -4,6 +4,7 @@ import { useDiscoveryFeed, useActiveProfile, useProfiles } from '../hooks/usePro
 import { useFocusEffect } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProfileProvider } from '../context/ProfileContext';
+import { MatchProvider } from '../context/MatchContext';
 import React from 'react';
 
 // Mock axios since it causes stream issues in RN/Jest env
@@ -69,7 +70,9 @@ describe('DataFreshness Integration', () => {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <ProfileProvider>
-        {children}
+        <MatchProvider>
+          {children}
+        </MatchProvider>
       </ProfileProvider>
     </QueryClientProvider>
   );

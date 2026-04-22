@@ -24,6 +24,16 @@ jest.mock('../context/ProfileContext', () => ({
   useProfileContext: jest.fn(),
 }));
 
+jest.mock('../context/MatchContext', () => ({
+  useMatch: jest.fn(() => ({
+    showMatch: jest.fn(),
+    hideMatch: jest.fn(),
+    clearMatchedProfile: jest.fn(),
+    isMatchVisible: false,
+    matchedProfile: null,
+  })),
+}));
+
 // Mock SwipeDeck component
 jest.mock('../components/SwipeDeck', () => {
     const { View, Text } = require('react-native');

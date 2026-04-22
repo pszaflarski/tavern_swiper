@@ -33,7 +33,7 @@ export function useDiscoveryFeed(profileId: string | undefined, enabled: boolean
 /**
  * Fetch profiles for a specific user.
  */
-export function useProfiles(userId: string | undefined) {
+export function useProfiles(userId: string | null | undefined) {
   return useQuery<Profile[]>({
     queryKey: ['profiles', 'user', userId],
     queryFn: async () => {
@@ -48,7 +48,7 @@ export function useProfiles(userId: string | undefined) {
 /**
  * Fetch the currently active profile for the authenticated user.
  */
-export function useActiveProfile(userId: string | undefined, enabled: boolean = true) {
+export function useActiveProfile(userId: string | null | undefined, enabled: boolean = true) {
   return useQuery<Profile>({
     queryKey: ['profiles', 'me', 'active', userId],
     queryFn: async () => {
@@ -126,7 +126,7 @@ export function useProfile(profileId: string | undefined) {
  * Activate a specific profile for the user.
  * Implements optimistic updates for a snappy UI.
  */
-export function useActivateProfile(userId: string | undefined) {
+export function useActivateProfile(userId: string | null | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({

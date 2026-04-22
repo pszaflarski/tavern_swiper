@@ -9,6 +9,7 @@ interface MatchedProfile {
 interface MatchContextType {
   showMatch: (profile: MatchedProfile) => void;
   hideMatch: () => void;
+  clearMatchedProfile: () => void;
   isMatchVisible: boolean;
   matchedProfile: MatchedProfile | null;
 }
@@ -26,11 +27,14 @@ export function MatchProvider({ children }: { children: ReactNode }) {
 
   const hideMatch = () => {
     setIsMatchVisible(false);
-    setTimeout(() => setMatchedProfile(null), 500); // Wait for animation to finish
+  };
+
+  const clearMatchedProfile = () => {
+    setMatchedProfile(null);
   };
 
   return (
-    <MatchContext.Provider value={{ showMatch, hideMatch, isMatchVisible, matchedProfile }}>
+    <MatchContext.Provider value={{ showMatch, hideMatch, clearMatchedProfile, isMatchVisible, matchedProfile }}>
       {children}
     </MatchContext.Provider>
   );

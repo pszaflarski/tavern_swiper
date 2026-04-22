@@ -21,6 +21,16 @@ jest.mock('../context/ProfileContext', () => ({
   useProfileContext: jest.fn(),
 }));
 
+jest.mock('../context/MatchContext', () => ({
+  useMatch: jest.fn(() => ({
+    showMatch: jest.fn(),
+    hideMatch: jest.fn(),
+    clearMatchedProfile: jest.fn(),
+    isMatchVisible: false,
+    matchedProfile: null,
+  })),
+}));
+
 describe('Profiles Screen', () => {
   const mockProfiles = [
     {
