@@ -13,6 +13,13 @@ jest.mock('../context/ProfileContext', () => ({
   useProfileContext: jest.fn(),
 }));
 
+const mockCreateConversation = jest.fn().mockResolvedValue({ conversation_id: 'conv-123' });
+jest.mock('../hooks/useMessages', () => ({
+  useCreateConversation: jest.fn(() => ({
+    mutateAsync: mockCreateConversation,
+  })),
+}));
+
 describe('MatchSplash Component', () => {
   const mockHideMatch = jest.fn();
   const mockClearMatchedProfile = jest.fn();
@@ -106,12 +113,22 @@ describe('MatchSplash Component', () => {
 
   // --- Button interactions ---
 
-  it('calls hideMatch when "INITIATE CONVERSATION" is pressed', () => {
+  it('dismisses splash, navigates to messages, and creates conversation on "INITIATE CONVERSATION"', async () => {
+    const { router } = require('expo-router');
     mockMatchState();
     const { getByText } = render(<MatchSplash />);
 
     fireEvent.press(getByText('INITIATE CONVERSATION'));
+    
+    // Optimistic: splash dismissed and navigated to messages tab immediately
     expect(mockHideMatch).toHaveBeenCalledTimes(1);
+    expect(router.push).toHaveBeenCalledWith('/(tabs)/messages');
+    
+    // Background: conversation creation is attempted with correct participants
+    await new Promise(resolve => setTimeout(resolve, 0)); // flush microtasks
+    expect(mockCreateConversation).toHaveBeenCalledWith({
+      participants: ['ap1', 'mp1'],
+    });
   });
 
   it('calls hideMatch when "Return to the Tavern" is pressed', () => {

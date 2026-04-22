@@ -141,14 +141,18 @@ export default function CreateAndEditProfileScreen() {
     const newImagesToUpload = imageUrls.map((uri, index) => ({ uri, index }))
       .filter(({ uri }) => uri && (uri.startsWith('blob:') || uri.startsWith('file:') || !uri.startsWith('http')));
 
-    // Build the initial payload (metadata and existing permanent URLs)
-    // For slots that will be uploaded, we can leave them for now or send the temp URI
+    // Build the initial payload — only include permanently hosted URLs.
+    // Local blob:/file: URIs are excluded; they'll be uploaded in the next step.
+    const permanentImageUrls = imageUrls.filter(
+      (uri) => uri && uri.startsWith('http') && !uri.startsWith('blob:')
+    );
+
     const payload = {
       display_name: displayName,
       tagline,
       bio,
       gender,
-      image_urls: imageUrls,
+      image_urls: permanentImageUrls,
     };
 
     try {
