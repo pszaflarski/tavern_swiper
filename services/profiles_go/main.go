@@ -55,6 +55,7 @@ func main() {
 		p.POST("/", func(c *gin.Context) { handleCreateProfile(c, publisher) })
 		p.GET("/:id", handleGetProfile)
 		p.POST("/batch", handleGetProfilesBatch)
+		p.GET("/user/me", handleListMyProfiles)
 		p.GET("/user/me/active", handleGetMyActiveProfile)
 		p.GET("/user/:user_id", handleListProfilesForUser)
 		p.PUT("/:id", func(c *gin.Context) { handleUpdateProfile(c, publisher) })

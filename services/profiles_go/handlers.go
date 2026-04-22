@@ -294,6 +294,39 @@ func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID
 	}
 }
 
+// handleListMyProfiles godoc
+// @Summary      List my profiles
+// @Description  Returns all profiles owned by the authenticated user.
+// @Tags         profiles
+// @Produce      json
+// @Success      200  {array}   ProfileOut
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /user/me [get]
+func handleListMyProfiles(c *gin.Context) {
+	auth := GetAuth(c)
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		send503(c, "Database connection error")
+		return
+	}
+
+	docs, err := client.Collection(COLLECTION).Where("user_id", "==", auth.UID).Documents(c.Request.Context()).GetAll()
+	if err != nil {
+		send500(c, "Failed to list profiles")
+		return
+	}
+
+	results := make([]ProfileOut, 0)
+	for _, doc := range docs {
+		p, err := docToProfile(doc)
+		if err == nil {
+			results = append(results, p)
+		}
+	}
+	c.JSON(http.StatusOK, results)
+}
+
 // handleListProfilesForUser godoc
 // @Summary      List profiles for a user
 // @Description  Returns all profiles owned by a specific user.

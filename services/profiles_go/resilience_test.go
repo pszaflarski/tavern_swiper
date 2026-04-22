@@ -192,6 +192,64 @@ func TestProfilesResilience_ActiveProfileFlow(t *testing.T) {
 	}
 }
 
+func TestListMyProfiles(t *testing.T) {
+	jwtSecret = []byte("super-secret-tavern-key-123")
+	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
+	oldNow := _now
+	_now = func() time.Time { return fixedNow }
+	defer func() { _now = oldNow }()
+
+	mockPub := &mockPublisher{}
+	r := setupTest(mockPub)
+	token := localSignToken("u1", "user", fixedNow)
+
+	p1 := &mockSnap{
+		id:     "p1",
+		exists: true,
+		data:   map[string]interface{}{"user_id": "u1", "display_name": "Hero One", "is_active": true, "image_urls": []interface{}{}},
+		ref:    &mockDoc{id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "display_name": "Hero One", "is_active": true}},
+	}
+	p2 := &mockSnap{
+		id:     "p2",
+		exists: true,
+		data:   map[string]interface{}{"user_id": "u1", "display_name": "Hero Two", "is_active": false, "image_urls": []interface{}{}},
+		ref:    &mockDoc{id: "p2", exists: true, data: map[string]interface{}{"user_id": "u1", "display_name": "Hero Two", "is_active": false}},
+	}
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{
+			collections: map[string]*mockCollection{
+				COLLECTION: {
+					queryRes: []*mockSnap{p1, p2},
+				},
+			},
+		}, nil
+	}
+
+	req, _ := http.NewRequest("GET", "/profiles/user/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	var profiles []ProfileOut
+	json.Unmarshal(w.Body.Bytes(), &profiles)
+
+	if len(profiles) != 2 {
+		t.Fatalf("Expected 2 profiles, got %d", len(profiles))
+	}
+
+	if profiles[0].DisplayName != "Hero One" {
+		t.Errorf("Expected first profile 'Hero One', got '%s'", profiles[0].DisplayName)
+	}
+	if profiles[1].DisplayName != "Hero Two" {
+		t.Errorf("Expected second profile 'Hero Two', got '%s'", profiles[1].DisplayName)
+	}
+}
+
 type manualMockClient struct {
 	FirestoreClient
 	mockP1 *mockSnap
