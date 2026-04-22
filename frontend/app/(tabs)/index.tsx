@@ -162,13 +162,15 @@ function TavernScreenInner() {
   }, [currentIndex, deck.length, isFetching, refetchDiscovery, exhausted, isBackingOff]);
 
   const handleRecast = () => {
-    // Clear state and force a fresh cache-busting scry
+    // Full reset: clear local state and all related caches
     setDeck([]);
     setCurrentIndex(0);
     setExhausted(false);
     setStaleFetchCount(0);
     setIsBackingOff(false);
     queryClient.invalidateQueries({ queryKey: ['discovery'] });
+    queryClient.invalidateQueries({ queryKey: ['profiles', 'me', 'active'] });
+    queryClient.invalidateQueries({ queryKey: ['matches'] });
     refetchDiscovery();
   };
 

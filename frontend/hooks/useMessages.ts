@@ -52,7 +52,7 @@ export function useMatches(profileId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!profileId,
-    staleTime: 30000, // 30 seconds
+    staleTime: 0,
   });
 }
 
@@ -68,7 +68,7 @@ export function useConversations(profileId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!profileId,
-    staleTime: 30000, // 30 seconds
+    staleTime: 0,
   });
 }
 
@@ -160,7 +160,7 @@ export function useInvolvedMatches(profileId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: sortedOtherIds.length > 0,
-    staleTime: 120000, // 2 minutes
+    staleTime: 30000, // 30s buffer for scroll performance
   });
 
   const isLoading = isLoadingMatches || isLoadingConversations || (sortedOtherIds.length > 0 && isLoadingProfiles);

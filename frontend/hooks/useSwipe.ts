@@ -31,11 +31,12 @@ export function useSwipe() {
       return res.data;
     },
     onSuccess: (data, variables) => {
-      // If a mutual match was detected, trigger the splash screen!
+      // If a mutual match was detected, invalidate related caches
+      // so it appears immediately on the messages tab.
       if (data.match_id) {
-         // Note: The UI layer (TavernScreen) is responsible for providing the full profile
-         // to showMatch, but we could also emit a global event or just let the mutation caller handle it.
          console.log('Match detected in hook!', data.match_id);
+         queryClient.invalidateQueries({ queryKey: ['matches'] });
+         queryClient.invalidateQueries({ queryKey: ['conversations'] });
       }
     },
     onError: (error, variables) => {

@@ -26,7 +26,7 @@ export function useDiscoveryFeed(profileId: string | undefined, enabled: boolean
       return Array.isArray(res.data?.profiles) ? res.data.profiles : [];
     },
     enabled: enabled && !!profileId,
-    staleTime: 120000, // 2 minutes
+    staleTime: 0,
   });
 }
 
@@ -41,7 +41,7 @@ export function useProfiles(userId: string | null | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!userId,
-    staleTime: 300000, // 5 minutes
+    staleTime: 0,
   });
 }
 
@@ -56,7 +56,7 @@ export function useActiveProfile(userId: string | null | undefined, enabled: boo
       return res.data;
     },
     enabled: enabled && !!userId,
-    staleTime: 60000, // 1 minute (reduced from 5m)
+    staleTime: 0,
     retry: (failureCount, error: any) => {
       // Retry on 404s briefly (3 times) to handle auto-activation ritual delays
       if (error.response?.status === 404 && failureCount < 3) return true;
@@ -118,7 +118,7 @@ export function useProfile(profileId: string | undefined) {
       return res.data;
     },
     enabled: !!profileId,
-    staleTime: 120000, // 2 minutes
+    staleTime: 0,
   });
 }
 
