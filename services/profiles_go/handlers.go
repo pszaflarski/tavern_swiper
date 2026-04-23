@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"cloud.google.com/go/firestore"
 )
 
 const COLLECTION = "profiles"
@@ -111,7 +111,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	}
 
 	profileID := uuid.New().String()
-	
+
 	// Validation Ritual: Firestore Limits
 	if err := validateDataForFirestore(body); err != nil {
 		sendGenericError(c, http.StatusBadRequest, err.Error())
@@ -125,7 +125,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	}
 
 	// Logic: Set active and deactivate others
-	
+
 	data := map[string]interface{}{
 		"user_id":      targetUID,
 		"display_name": body.DisplayName,
@@ -139,7 +139,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	}
 
 	ref := client.Collection(COLLECTION).Doc(profileID)
-	
+
 	if _, err := ref.Set(c.Request.Context(), data); err != nil {
 		send500(c, fmt.Sprintf("Failed to create profile: %v", err))
 		return
@@ -200,7 +200,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 	if d == nil {
 		return ProfileOut{}, fmt.Errorf("Document %s contains no data", doc.ID())
 	}
-	
+
 	// Helper to safely get string or nil
 	getStr := func(key string) *string {
 		if val, ok := d[key].(string); ok {
@@ -270,12 +270,12 @@ func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID
 		Where("user_id", "==", userID).
 		Where("is_active", "==", true).
 		Documents(ctx)
-	
+
 	snaps, err := iter.GetAll()
 	if err != nil {
 		return
 	}
-	
+
 	for _, snap := range snaps {
 		if snap.ID() != activeProfileID {
 			_, err := snap.Ref().Update(ctx, []firestore.Update{
@@ -339,6 +339,12 @@ func handleListMyProfiles(c *gin.Context) {
 // @Router       /user/{user_id} [get]
 func handleListProfilesForUser(c *gin.Context) {
 	userID := c.Param("user_id")
+	auth := GetAuth(c)
+	if userID != auth.UID && !IsAdmin(auth.Role) {
+		send403(c, "Not authorized to list profiles for this user")
+		return
+	}
+
 	client, err := getDBFunc(c.Request.Context())
 	if err != nil {
 		send503(c, "Database connection error")
@@ -477,7 +483,7 @@ func handleDeleteProfile(c *gin.Context, publisher Publisher) {
 	}
 
 	// TODO: Delete GCS images
-	
+
 	if _, err := ref.Delete(c.Request.Context()); err != nil {
 		send500(c, "Failed to delete profile")
 		return
@@ -568,11 +574,11 @@ func handleGetProfilesBatch(c *gin.Context) {
 	}
 
 	results := make([]ProfileOut, 0)
-	// Firestore doesn't support batch get by ID in a single query easily without 'in' operator 
+	// Firestore doesn't support batch get by ID in a single query easily without 'in' operator
 	// but there's a limit of 30 for 'in'.
 	// Python uses a chunking strategy or just sequential gets in parallel.
 	// We'll follow the Python implementation's resilience: handle missing docs gracefully.
-	
+
 	for _, id := range body.ProfileIDs {
 		doc, err := client.Collection(COLLECTION).Doc(id).Get(c.Request.Context())
 		if err == nil && doc.Exists() {
@@ -610,7 +616,7 @@ func handleGetMyActiveProfile(c *gin.Context) {
 		Where("is_active", "==", true).
 		Limit(1).
 		Documents(c.Request.Context())
-	
+
 	doc, err := iter.Next()
 	if err == nil {
 		p, _ := docToProfile(doc)
@@ -623,7 +629,7 @@ func handleGetMyActiveProfile(c *gin.Context) {
 		Where("user_id", "==", auth.UID).
 		Limit(1).
 		Documents(c.Request.Context())
-	
+
 	docAny, err := iterAny.Next()
 	if err != nil {
 		send404(c, "Profile not found")
@@ -634,7 +640,7 @@ func handleGetMyActiveProfile(c *gin.Context) {
 	docAny.Ref().Update(c.Request.Context(), []firestore.Update{
 		{Path: "is_active", Value: true},
 	})
-	
+
 	p, _ := docToProfile(docAny)
 	p.IsActive = true // Update the local copy for response
 	c.JSON(http.StatusOK, p)

@@ -1,3 +1,6 @@
+// @title           Profiles Service API
+// @version         1.0
+// @description     Profile CRUD, image uploads, and active profile management.
 // @BasePath      /profiles
 // @securityDefinitions.apikey BearerAuth
 // @in header

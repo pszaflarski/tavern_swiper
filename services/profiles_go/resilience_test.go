@@ -42,12 +42,12 @@ func TestDocToProfileSafety(t *testing.T) {
 			"user_id": "u1",
 		},
 	}
-	
+
 	p, err := docToProfile(doc)
 	if err != nil {
 		t.Errorf("docToProfile should not return error on missing fields, got %v", err)
 	}
-	
+
 	if p.ProfileID != "p-missing" {
 		t.Errorf("Expected ProfileID p-missing, got %s", p.ProfileID)
 	}
@@ -85,7 +85,7 @@ func TestProfilesResilience_UploadImage(t *testing.T) {
 
 	token := localSignToken("u1", "user", fixedNow)
 	imgData := createTestJPEG(1080, 1350)
-	
+
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, _ := writer.CreateFormFile("file", "test.jpg")
@@ -170,7 +170,7 @@ func TestProfilesResilience_ActiveProfileFlow(t *testing.T) {
 			data:   map[string]interface{}{"user_id": "u1", "is_active": false, "display_name": "Hero"},
 			ref:    &mockDoc{id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "is_active": false, "display_name": "Hero"}},
 		}
-		
+
 		return &manualMockClient{
 			mockP1: mockP1,
 		}, nil
@@ -184,7 +184,7 @@ func TestProfilesResilience_ActiveProfileFlow(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
-	
+
 	var res ProfileOut
 	json.Unmarshal(w.Body.Bytes(), &res)
 	if !res.IsActive {
@@ -261,7 +261,7 @@ func (m *manualMockClient) Collection(path string) CollectionRef {
 
 type manualMockCol struct {
 	CollectionRef
-	mockP1 *mockSnap
+	mockP1        *mockSnap
 	isActiveQuery bool
 }
 
@@ -291,4 +291,63 @@ func createTestJPEG(w, h int) []byte {
 	var buf bytes.Buffer
 	jpeg.Encode(&buf, img, nil)
 	return buf.Bytes()
+}
+
+func TestListProfilesForUser_Authorization(t *testing.T) {
+	jwtSecret = []byte("super-secret-tavern-key-123")
+	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
+	oldNow := _now
+	_now = func() time.Time { return fixedNow }
+	defer func() { _now = oldNow }()
+
+	mockPub := &mockPublisher{}
+	r := setupTest(mockPub)
+
+	// Mock DB
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{
+			collections: map[string]*mockCollection{
+				COLLECTION: {
+					queryRes: []*mockSnap{
+						{
+							id:     "p1",
+							exists: true,
+							data:   map[string]interface{}{"user_id": "u1", "display_name": "User One"},
+							ref:    &mockDoc{id: "p1"},
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
+	// 1. Success: User accessing own profiles
+	tokenOwner := localSignToken("u1", "user", fixedNow)
+	req1, _ := http.NewRequest("GET", "/profiles/user/u1", nil)
+	req1.Header.Set("Authorization", "Bearer "+tokenOwner)
+	w1 := httptest.NewRecorder()
+	r.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Errorf("Expected 200 for owner, got %d", w1.Code)
+	}
+
+	// 2. Failure: User accessing others' profiles
+	tokenOther := localSignToken("u2", "user", fixedNow)
+	req2, _ := http.NewRequest("GET", "/profiles/user/u1", nil)
+	req2.Header.Set("Authorization", "Bearer "+tokenOther)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusForbidden {
+		t.Errorf("Expected 403 for unauthorized access, got %d", w2.Code)
+	}
+
+	// 3. Success: Admin accessing others' profiles
+	tokenAdmin := localSignToken("admin1", "admin", fixedNow)
+	req3, _ := http.NewRequest("GET", "/profiles/user/u1", nil)
+	req3.Header.Set("Authorization", "Bearer "+tokenAdmin)
+	w3 := httptest.NewRecorder()
+	r.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Errorf("Expected 200 for admin, got %d", w3.Code)
+	}
 }
