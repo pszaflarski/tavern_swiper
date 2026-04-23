@@ -24,6 +24,7 @@ type FirestoreClient interface {
 type CollectionRef interface {
 	Doc(path string) DocumentRef
 	Where(path, op string, value interface{}) Query
+	Limit(n int) Query
 	Documents(ctx context.Context) DocumentIterator
 }
 
@@ -72,6 +73,9 @@ func (c realClient) Batch() WriteBatch                    { return realBatch{c.C
 func (c realCollection) Doc(path string) DocumentRef { return realDoc{c.CollectionRef.Doc(path)} }
 func (c realCollection) Where(path, op string, value interface{}) Query {
 	return realQuery{c.CollectionRef.Where(path, op, value)}
+}
+func (c realCollection) Limit(n int) Query {
+	return realQuery{c.CollectionRef.Limit(n)}
 }
 func (c realCollection) Documents(ctx context.Context) DocumentIterator {
 	return realIter{c.CollectionRef.Documents(ctx)}

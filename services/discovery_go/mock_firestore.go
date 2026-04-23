@@ -51,6 +51,10 @@ func (c *mockCollection) Where(path, op string, value interface{}) Query {
 	return &mockQuery{col: c}
 }
 
+func (c *mockCollection) Limit(n int) Query {
+	return &mockQuery{col: c}
+}
+
 func (c *mockCollection) Documents(ctx context.Context) DocumentIterator {
 	return &mockIter{snaps: c.queryRes}
 }
