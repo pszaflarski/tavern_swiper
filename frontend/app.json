@@ -15,10 +15,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.peterjacob.tavernswiper"
+      "bundleIdentifier": "com.tavernswiper.app"
     },
     "android": {
-      "package": "com.peterjacob.tavernswiper",
+      "package": "com.tavernswiper.app",
+      "permissions": ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"

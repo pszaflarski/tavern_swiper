@@ -19,6 +19,7 @@ module.exports = function withLowMemoryGradle(config) {
       "org.gradle.jvmargs": "-Xmx2048m -XX:MaxMetaspaceSize=512m",
       "org.gradle.parallel": "false",
       "org.gradle.workers.max": "1",
+      "android.nativeCompilationParallelism": "1",
     };
 
     for (const [key, value] of Object.entries(propertiesToSet)) {

@@ -44,7 +44,8 @@
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "tavern-swiper-dev",
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "tavern-swiper-dev.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "374390417125",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:374390417125:web:ec1e664137daa9df11960c"
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:374390417125:web:ec1e664137daa9df11960c",
+        "CMAKE_BUILD_PARALLEL_LEVEL": "1"
       },
       "android": {
         "buildType": "app-bundle"
