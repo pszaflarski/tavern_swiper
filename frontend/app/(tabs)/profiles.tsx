@@ -163,7 +163,7 @@ function ProfilesScreenInner() {
       
       <ScreenHeader title="Profiles" />
       
-      <TouchableOpacity 
+      {/* <TouchableOpacity 
         style={styles.testerButton}
         onPress={() => showMatch({
           profile_id: 'tester',
@@ -173,7 +173,7 @@ function ProfilesScreenInner() {
       >
         <Ionicons name="sparkles" size={16} color={Colors.tertiary} />
         <Text style={styles.testerText}>TEST CELEBRATION</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {profiles === undefined ? (
         <View style={styles.centered}>

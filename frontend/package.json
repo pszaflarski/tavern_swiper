@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "NODE_OPTIONS=\"--max-old-space-size=2048\" jest --runInBand --forceExit",
     "test:jest": "NODE_OPTIONS=\"--max-old-space-size=2048\" jest --runInBand --forceExit",
@@ -21,6 +21,7 @@
     "@tanstack/react-query": "^5.96.2",
     "axios": "^1.14.0",
     "expo": "~54.0.34",
+    "expo-build-properties": "~1.0.10",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.21",
     "expo-font": "~14.0.11",

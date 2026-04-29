@@ -11,7 +11,23 @@
     },
     "preview": {
       "distribution": "internal",
-      "environment": "preview"
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_AUTH_URL": "https://auth-dev-hhqol7siba-uc.a.run.app",
+        "EXPO_PUBLIC_PROFILES_URL": "https://profiles-dev-hhqol7siba-uc.a.run.app",
+        "EXPO_PUBLIC_DISCOVERY_URL": "https://discovery-dev-hhqol7siba-uc.a.run.app",
+        "EXPO_PUBLIC_MESSAGES_URL": "https://messages-dev-hhqol7siba-uc.a.run.app",
+        "EXPO_PUBLIC_USERS_URL": "https://users-dev-hhqol7siba-uc.a.run.app",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "tavern-swiper-dev.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "tavern-swiper-dev",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "tavern-swiper-dev.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "374390417125",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:374390417125:web:ec1e664137daa9df11960c"
+      },
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
       "autoIncrement": true,

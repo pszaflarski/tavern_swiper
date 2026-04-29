@@ -34,7 +34,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": ["arm64-v8a"]
+          }
+        }
+      ],
+      "./plugins/withLowMemoryGradle"
     ],
     "experiments": {
       "typedRoutes": true
