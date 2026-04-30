@@ -32,6 +32,8 @@ htmlcov/
 *~
 Thumbs.db
 tmp/
+.gemini
+
 
 # Environment & Logs
 .env
