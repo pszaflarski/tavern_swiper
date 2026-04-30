@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/all": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Lists and deletes all Firebase Auth users. Test/admin use only.",
                 "tags": [
                     "admin"
@@ -37,6 +42,11 @@ const docTemplate = `{
         },
         "/dev-mint": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Mints a long-lived Tavern JWT for development/testing. Only available when ALLOW_LONG_LIVED_TOKENS=true in dev environments.",
                 "consumes": [
                     "application/json"
@@ -195,6 +205,11 @@ const docTemplate = `{
         },
         "/users/": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Deletes multiple Firebase Auth users by their UIDs.",
                 "consumes": [
                     "application/json"
@@ -229,6 +244,11 @@ const docTemplate = `{
         },
         "/users/{uid}": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Deletes a Firebase Auth user by UID.",
                 "tags": [
                     "admin"
@@ -405,17 +425,24 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "localhost:8001",
+	Version:          "",
+	Host:             "",
 	BasePath:         "/auth",
 	Schemes:          []string{},
-	Title:            "Auth Service API",
-	Description:      "Firebase Auth proxy for registration, login, token verification, and JWT minting.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

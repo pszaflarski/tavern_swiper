@@ -15,6 +15,7 @@ interface SwipeResult {
   swiped_profile_id: string;
   direction: Direction;
   created_at: string;
+  match_id?: string | null;
 }
 
 export function useSwipe() {
@@ -29,9 +30,14 @@ export function useSwipe() {
       } satisfies SwipePayload);
       return res.data;
     },
-    onSuccess: (_, variables) => {
-      // Swiping actions are recorded on backend, but we don't need to force a full UI refresh
-      // of the current deck to remain stable.
+    onSuccess: (data, variables) => {
+      // If a mutual match was detected, invalidate related caches
+      // so it appears immediately on the messages tab.
+      if (data.match_id) {
+         console.log('Match detected in hook!', data.match_id);
+         queryClient.invalidateQueries({ queryKey: ['matches'] });
+         queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      }
     },
     onError: (error, variables) => {
       console.error('Swipe failed:', {

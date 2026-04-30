@@ -72,7 +72,6 @@ definitions:
       tagline:
         type: string
     type: object
-host: localhost:8002
 info:
   contact: {}
   description: Profile CRUD, image uploads, and active profile management.
@@ -477,6 +476,29 @@ paths:
       security:
       - BearerAuth: []
       summary: List profiles for a user
+      tags:
+      - profiles
+  /user/me:
+    get:
+      description: Returns all profiles owned by the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.ProfileOut'
+            type: array
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my profiles
       tags:
       - profiles
   /user/me/active:

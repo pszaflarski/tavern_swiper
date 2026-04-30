@@ -26,14 +26,14 @@ export function useDiscoveryFeed(profileId: string | undefined, enabled: boolean
       return Array.isArray(res.data?.profiles) ? res.data.profiles : [];
     },
     enabled: enabled && !!profileId,
-    staleTime: 120000, // 2 minutes
+    staleTime: 0,
   });
 }
 
 /**
  * Fetch profiles for a specific user.
  */
-export function useProfiles(userId: string | undefined) {
+export function useProfiles(userId: string | null | undefined) {
   return useQuery<Profile[]>({
     queryKey: ['profiles', 'user', userId],
     queryFn: async () => {
@@ -41,14 +41,14 @@ export function useProfiles(userId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!userId,
-    staleTime: 300000, // 5 minutes
+    staleTime: 0,
   });
 }
 
 /**
  * Fetch the currently active profile for the authenticated user.
  */
-export function useActiveProfile(userId: string | undefined, enabled: boolean = true) {
+export function useActiveProfile(userId: string | null | undefined, enabled: boolean = true) {
   return useQuery<Profile>({
     queryKey: ['profiles', 'me', 'active', userId],
     queryFn: async () => {
@@ -56,7 +56,7 @@ export function useActiveProfile(userId: string | undefined, enabled: boolean = 
       return res.data;
     },
     enabled: enabled && !!userId,
-    staleTime: 60000, // 1 minute (reduced from 5m)
+    staleTime: 0,
     retry: (failureCount, error: any) => {
       // Retry on 404s briefly (3 times) to handle auto-activation ritual delays
       if (error.response?.status === 404 && failureCount < 3) return true;
@@ -118,7 +118,7 @@ export function useProfile(profileId: string | undefined) {
       return res.data;
     },
     enabled: !!profileId,
-    staleTime: 120000, // 2 minutes
+    staleTime: 0,
   });
 }
 
@@ -126,7 +126,7 @@ export function useProfile(profileId: string | undefined) {
  * Activate a specific profile for the user.
  * Implements optimistic updates for a snappy UI.
  */
-export function useActivateProfile(userId: string | undefined) {
+export function useActivateProfile(userId: string | null | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({

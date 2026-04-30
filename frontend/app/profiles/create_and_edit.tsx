@@ -79,8 +79,7 @@ export default function CreateAndEditProfileScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: Platform.OS !== 'web', // Native uses OS cropper, Web uses our modal
-      aspect: [4, 5], // Canonical 4:5 ratio
+      allowsEditing: false, // Always false — our ImageCropperModal handles cropping uniformly
       quality: 1, // Keep original quality for the cropper; we compress in the pipeline
     });
 
@@ -141,14 +140,18 @@ export default function CreateAndEditProfileScreen() {
     const newImagesToUpload = imageUrls.map((uri, index) => ({ uri, index }))
       .filter(({ uri }) => uri && (uri.startsWith('blob:') || uri.startsWith('file:') || !uri.startsWith('http')));
 
-    // Build the initial payload (metadata and existing permanent URLs)
-    // For slots that will be uploaded, we can leave them for now or send the temp URI
+    // Build the initial payload — only include permanently hosted URLs.
+    // Local blob:/file: URIs are excluded; they'll be uploaded in the next step.
+    const permanentImageUrls = imageUrls.filter(
+      (uri) => uri && uri.startsWith('http') && !uri.startsWith('blob:')
+    );
+
     const payload = {
       display_name: displayName,
       tagline,
       bio,
       gender,
-      image_urls: imageUrls,
+      image_urls: permanentImageUrls,
     };
 
     try {
@@ -392,7 +395,7 @@ export default function CreateAndEditProfileScreen() {
         />
       )}
       
-      <TouchableOpacity 
+      {/* <TouchableOpacity 
         style={{ backgroundColor: '#444', padding: 10, margin: 10, borderRadius: 5, alignItems: 'center' }}
         onPress={() => {
           setPendingImageUri('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1000');
@@ -402,7 +405,7 @@ export default function CreateAndEditProfileScreen() {
         testID="test-gesture-button"
       >
         <Text style={{ color: '#fff' }}>[DEBUG] Ritual Practice (Test Gestures)</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <ImageCropperModal
         isVisible={isCropperVisible}

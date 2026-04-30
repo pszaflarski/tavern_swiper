@@ -5,6 +5,7 @@ import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
+import { useMatch } from '../../context/MatchContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
@@ -15,6 +16,7 @@ function ProfilesScreenInner() {
   const { uid, isLoading: isLoadingUser } = useUser();
   const { data: profiles, isPending: isPendingProfiles, refetch } = useProfiles(uid);
   const { activeProfileId, setActiveProfileId } = useProfileContext();
+  const { showMatch } = useMatch();
   const deleteProfileMutation = useDeleteProfile();
 
   useRefreshOnFocus(refetch);
@@ -160,6 +162,18 @@ function ProfilesScreenInner() {
       />
       
       <ScreenHeader title="Profiles" />
+      
+      {/* <TouchableOpacity 
+        style={styles.testerButton}
+        onPress={() => showMatch({
+          profile_id: 'tester',
+          display_name: 'Valerius the Bold',
+          image_url: 'https://storage.googleapis.com/tavern-swiper-dev-media-dev/c73bb930-a364-42b4-8254-8c886e0811b0.jpg'
+        })}
+      >
+        <Ionicons name="sparkles" size={16} color={Colors.tertiary} />
+        <Text style={styles.testerText}>TEST CELEBRATION</Text>
+      </TouchableOpacity> */}
 
       {profiles === undefined ? (
         <View style={styles.centered}>
@@ -205,6 +219,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.surface,
+  },
+  testerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerHighest,
+    paddingVertical: Spacing[2],
+    marginHorizontal: Spacing[4],
+    marginBottom: Spacing[4],
+    borderRadius: Radius.sm,
+    gap: Spacing[2],
+    borderWidth: 1,
+    borderColor: Colors.tertiaryContainer,
+  },
+  testerText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.tertiary,
+    letterSpacing: 1,
   },
   centered: {
     flex: 1,

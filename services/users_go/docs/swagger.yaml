@@ -65,7 +65,6 @@ definitions:
       user_type:
         $ref: '#/definitions/main.UserType'
     type: object
-host: localhost:8006
 info:
   contact: {}
   description: User record management, roles, and admin operations.

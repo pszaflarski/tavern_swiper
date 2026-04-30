@@ -198,6 +198,7 @@ jest.mock('expo-font', () => ({
 jest.mock('react-native-keyboard-controller', () => {
   return {
     KeyboardProvider: ({ children }) => children,
+    KeyboardAvoidingView: ({ children }) => children,
     KeyboardAwareScrollView: ({ children }) => children,
     useKeyboardHandler: jest.fn(),
     useReanimatedKeyboardAnimation: jest.fn(() => ({

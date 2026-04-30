@@ -139,8 +139,8 @@ describe('ImageProcessing Service', () => {
     const result = await prepareImageUpload(processedUri, index);
 
     expect(result).toBeInstanceOf(File);
-    expect(result.name).toContain('standardized_profile_0');
-    expect(result.type).toBe('image/jpeg');
+    expect((result as File).name).toContain('standardized_profile_0');
+    expect((result as File).type).toBe('image/jpeg');
   });
 
   it('prepareImageUpload should return a special object on Native', async () => {

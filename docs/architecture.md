@@ -184,6 +184,16 @@ The Tavern Swiper project employs a multi-layered testing strategy. For detailed
 
 ---
 
+## 8. Identity & Environments
+
+### Shared Identity Pool
+Even though application data is isolated into `dev` and `test` Firestore database instances, they share a single **Firebase Auth** instance.
+- **Global UID**: A user (identified by email) will have the same UID in both environments.
+- **Shared Passwords**: Changing a password in one environment affects the account globally across the project.
+- **Data Isolation**: While the identity is shared, the profile data, messages, and swipes are stored in environment-suffixed Firestore databases (e.g., `profiles-dev` vs `profiles-test`), ensuring no cross-contamination of application state.
+
+---
+
 ## Changelog
 
 - **Phase 1 — Environment & Service Standardization**: Isolated environment profiles per service, fixed internal connectivity (`http://auth:8001`), surfaced infrastructure config into `.env` files.
@@ -191,3 +201,4 @@ The Tavern Swiper project employs a multi-layered testing strategy. For detailed
 - **Phase 3 — Go Migration & Pub/Sub**: Ported all 5 services from Python/FastAPI to Go/Gin. Implemented event-driven caching via Pub/Sub with Protobuf serialization. Added `discovery_subscriber` and `messages_subscriber` workers.
 - **Phase 4 — Server Timestamps**: Standardized all microservices to use `firestore.ServerTimestamp` for `created_at` and `updated_at` fields, replacing application-level `time.Now()`.
 - **Phase 5 — Messages Restructure**: Migrated Messages service from flat `messages` collection to `conversations` + sub-collection `messages` + `profile_conversations` lookup architecture.
+- **Phase 6 — Match Celebration & Env Sync**: Implemented global `MatchSplash` animation. Refactored `clear_system.py` to preserve Firebase identities by default, preventing UID desynchronization between dev/test environments.

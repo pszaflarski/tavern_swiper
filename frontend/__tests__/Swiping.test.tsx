@@ -24,6 +24,16 @@ jest.mock('../context/ProfileContext', () => ({
   useProfileContext: jest.fn(),
 }));
 
+jest.mock('../context/MatchContext', () => ({
+  useMatch: jest.fn(() => ({
+    showMatch: jest.fn(),
+    hideMatch: jest.fn(),
+    clearMatchedProfile: jest.fn(),
+    isMatchVisible: false,
+    matchedProfile: null,
+  })),
+}));
+
 // Mock SwipeDeck component
 jest.mock('../components/SwipeDeck', () => {
     const { View, Text } = require('react-native');
@@ -90,10 +100,13 @@ describe('Tavern (Swiping) Screen', () => {
     
     fireEvent.press(rightBtn);
     
-    expect(mockSwipeMutate).toHaveBeenCalledWith(expect.objectContaining({
-      direction: 'right',
-      swipedProfileId: 'p1',
-    }));
+    expect(mockSwipeMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        direction: 'right',
+        swipedProfileId: 'p1',
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
   });
 
   it('shows empty state when no profiles are found', () => {

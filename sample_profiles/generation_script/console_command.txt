@@ -1,0 +1,52 @@
+
+// Helper function to pause execution
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper to find and interact with the textarea
+const setInput = (text) => {
+    const xpath = "/html/body/div[10]/div/div/div[1]/div/div[3]/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div/div/div/div[1]";
+    const el = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    if (el) {
+        el.focus();
+        el.value = text;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+    }
+    console.error("Textarea not found");
+    return false;
+};
+
+// Helper to find and click the button
+const clickButton = () => {
+    const xpath = "/html/body/div[10]/div/div/div[1]/div/div[3]/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div/div/div/div[2]/div/div/div[2]/button";
+    const el = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    if (el) {
+        el.click();
+        return true;
+    }
+    console.error("Button not found");
+    return false;
+};
+
+// Main controller
+async function processQueue(items) {
+    for (const item of items) {
+        console.log(`Processing item: ${item}`);
+        
+        const inputSuccess = setInput(item);
+        if (!inputSuccess) break; // Stop if element is missing
+
+        const clickSuccess = clickButton();
+        if (!clickSuccess) break;
+
+        console.log("Action complete. Waiting 30 seconds...");
+        await sleep(30000); // 30,000ms = 30 seconds
+    }
+    console.log("Queue processing finished.");
+}
+
+// Execution
+const myList = [
+  "Description: A male Orc wizard with high ponytail hair\nAttire: A simple, sexy, high-quality tight wizard outfit.\nEnvironment: a blurred background of a serene blue lake and pine trees. shot on iphone\nLighting: Bright, direct midday sun, creating sharp shadows and highlighting the water droplets on her skin for a realistic texture."
+];
+processQueue(myList);

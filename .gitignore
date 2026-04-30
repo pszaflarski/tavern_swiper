@@ -32,6 +32,8 @@ htmlcov/
 *~
 Thumbs.db
 tmp/
+.gemini
+
 
 # Environment & Logs
 .env
@@ -56,3 +58,5 @@ explanation.md
 plan.md
 scratch.py
 scratch/
+*.apk
+*.aab
