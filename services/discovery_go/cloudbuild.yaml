@@ -31,10 +31,9 @@ steps:
           --region=us-central1 \
           --allow-unauthenticated \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=super-secret-tavern-key-123,GCS_BUCKET_NAME=$PROJECT_ID-media,PUBSUB_TOPIC_ID=$_ENV_NAME-discovery-match-events-v1,PUBSUB_PROJECT_ID=$PROJECT_ID \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$PROJECT_ID-media-$_ENV_NAME,PUBSUB_TOPIC_ID=$_ENV_NAME-discovery-match-events-v1,PUBSUB_PROJECT_ID=$PROJECT_ID \
           --cpu-boost \
           --execution-environment=gen1
 
 options:
-  logging: GCS_ONLY
-logsBucket: "gs://tavern-swiper-build-logs-dev"
+  logging: CLOUD_LOGGING_ONLY

@@ -21,9 +21,62 @@
 | **Firebase** | `tavern-swiper-dev` Firebase project | Shared |
 | **Cloud Build logs** | `gs://tavern-swiper-build-logs-dev` | Same bucket |
 
+
+---
+
+## Phase 0 — Local Environment Hygiene (Preventing Context Leaks)
+
+Before creating the production project, set up your local environment to handle multiple projects safely. This prevents accidental deployments or data operations against the wrong environment.
+
+### 0.1 Firebase Project Aliases
+Use aliases to distinguish between projects in the Firebase CLI.
+
+```bash
+# Add the dev project if not already aliased
+firebase use --add tavern-swiper-dev --alias dev
+
+# Once the prod project is created (Phase 1), add it as 'prod'
+# firebase use --add tavern-swiper-prod --alias prod
+
+# Switch between them
+firebase use dev
+firebase use prod
+```
+
+### 0.2 GCloud Configurations
+Create named configurations for `gcloud` to isolate project IDs, regions, and accounts.
+
+```bash
+# Create and configure 'dev' configuration
+gcloud config configurations create dev
+gcloud config set project tavern-swiper-dev
+gcloud config set compute/region us-central1
+
+# Create and configure 'prod' configuration
+gcloud config configurations create prod
+gcloud config set project tavern-swiper-prod
+gcloud config set compute/region us-central1
+
+# Switch between them
+gcloud config configurations activate dev
+gcloud config configurations activate prod
+```
+
+### 0.3 Frontend Credential Isolation
+The `frontend/.env` file should **always** contain dev/emulator credentials. Production credentials should **never** be stored in the main `.env` file.
+
+- **Local Dev**: Continues to use `frontend/.env` (pointing to dev or emulator).
+- **EAS Builds**: Uses environment variables stored in the Expo cloud (Phase 11.2 will handle updating these).
+- **Manual Prod Tasks**: If you ever need to run a script against prod locally (rare), use a temporary env file like `.env.prod` and load it explicitly, or use `export` in your current shell.
+
+### 0.4 Backend Service Account Keys
+- **Dev**: Usually relies on Application Default Credentials (ADC) or a dev service account key stored in `credentials/`.
+- **Prod**: Do **not** download a prod service account key unless absolutely necessary. If you do, name it `credentials/tavern-swiper-prod-sa.json` (already ignored by `.gitignore`) and never use it as the default ADC for your local machine.
+
 ---
 
 ## Phase 1 — Firebase Project (creates GCP project automatically)
+
 
 > [!IMPORTANT]
 > Creating the Firebase project first is the recommended approach. Firebase will auto-create the underlying GCP project, enable core APIs (Identity Toolkit, Firestore, Storage), and provision all Firebase service agents (`firebase-adminsdk`, `firebase-rules@`, etc.) with correct IAM roles. This avoids the permission/bootstrapping issues that can occur when adding Firebase to an existing GCP project.
