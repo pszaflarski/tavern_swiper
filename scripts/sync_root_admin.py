@@ -4,13 +4,26 @@ from google.cloud import firestore
 import firebase_admin
 from firebase_admin import auth, credentials
 
-# Configuration for environment
-PROJECT_ID = "tavern-swiper-dev"
+# Map environment names to GCP project IDs
+PROJECT_MAP = {
+    "dev": "tavern-swiper-dev",
+    "test": "tavern-swiper-dev",
+    "prod": "tavern-swiper-prod",
+}
+
 EMAIL = "peter@gmail.com"
+
 def sync_root(env="dev"):
-    suffix = "-test" if env == "test" else ""
-    db_id = f"users{suffix}"
-    print(f"🔄 Syncing Root Admin for {EMAIL} in project {PROJECT_ID} (DB: {db_id})...")
+    if env not in PROJECT_MAP:
+        print(f"❌ Unknown environment: {env}. Valid options: {list(PROJECT_MAP.keys())}")
+        sys.exit(1)
+
+    project_id = PROJECT_MAP[env]
+
+    # All environments use suffixed DB names: users-dev, users-test, users-prod
+    db_id = f"users-{env}"
+
+    print(f"🔄 Syncing Root Admin for {EMAIL} in project {project_id} (DB: {db_id})...")
     
     # 1. Initialize Firebase Admin to get UID
     try:
@@ -27,7 +40,7 @@ def sync_root(env="dev"):
         return
 
     # 2. Update Users Firestore Database
-    db = firestore.Client(project=PROJECT_ID, database=db_id)
+    db = firestore.Client(project=project_id, database=db_id)
     user_ref = db.collection("users").document(uid)
     
     user_data = {

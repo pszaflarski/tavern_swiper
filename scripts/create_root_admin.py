@@ -5,10 +5,18 @@ import json
 import subprocess
 
 # --- Configuration ---
-# Targets the test environment by default if "test" is passed as an argument.
-# Otherwise targets local.
-PROJECT_ID = "tavern-swiper-dev"
 REGION = "us-central1"
+
+# Map environment names to GCP project IDs
+PROJECT_MAP = {
+    "local": "tavern-swiper-dev",
+    "dev": "tavern-swiper-dev",
+    "test": "tavern-swiper-dev",
+    "prod": "tavern-swiper-prod",
+}
+
+def get_project_id(env):
+    return PROJECT_MAP.get(env, "tavern-swiper-dev")
 
 def get_url(service_name, env="local"):
     # Check for explicit environment variable overrides
@@ -23,39 +31,34 @@ def get_url(service_name, env="local"):
         }
         return f"http://localhost:{ports.get(service_name)}"
     
-    # Fetch from Cloud Run
-    if env == "dev":
-        deploy_name = f"{service_name}-dev"
-    elif env == "test":
-        deploy_name = f"{service_name}-test"
-    else:
-        deploy_name = service_name
+    project_id = get_project_id(env)
+    
+    # All remote environments use suffixed service names: auth-dev, auth-test, auth-prod
+    deploy_name = f"{service_name}-{env}"
         
     try:
         url = subprocess.check_output([
             "gcloud", "run", "services", "describe", deploy_name,
-            "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+            "--platform", "managed", "--region", REGION, "--project", project_id,
             "--format", "value(status.url)"
         ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url
     except Exception:
-        # Fallback for 'dev' if suffixed service not found
-        if env == "dev":
-            print(f"⚠️  Suffixed service {deploy_name} not found. Falling back to unsuffixed name: {service_name}")
-            try:
-                url = subprocess.check_output([
-                    "gcloud", "run", "services", "describe", service_name,
-                    "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
-                    "--format", "value(status.url)"
-                ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-                return url
-            except Exception as e2:
-                print(f"❌ Error fetching URL for fallback {service_name}: {e2}")
-                return None
-        return None
+        # Fallback: try unsuffixed name (legacy services)
+        print(f"⚠️  Suffixed service {deploy_name} not found. Falling back to unsuffixed name: {service_name}")
+        try:
+            url = subprocess.check_output([
+                "gcloud", "run", "services", "describe", service_name,
+                "--platform", "managed", "--region", REGION, "--project", project_id,
+                "--format", "value(status.url)"
+            ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+            return url
+        except Exception as e2:
+            print(f"❌ Error fetching URL for fallback {service_name}: {e2}")
+            return None
 
 def create_root(env="local", email="admin@example.com", password="Password123!"):
-    print(f"🚀 Creating Root Admin in {env} environment...")
+    print(f"🚀 Creating Root Admin in {env} environment (project: {get_project_id(env)})...")
     
     auth_url = get_url("auth", env)
     users_url = get_url("users", env)
@@ -126,6 +129,10 @@ if __name__ == "__main__":
     env = "dev"
     if len(sys.argv) > 1:
         env = sys.argv[1]
+    
+    if env not in PROJECT_MAP:
+        print(f"❌ Unknown environment: {env}. Valid options: {list(PROJECT_MAP.keys())}")
+        sys.exit(1)
     
     email = os.getenv("ROOT_EMAIL", "root@example.com")
     password = os.getenv("ROOT_PASSWORD", "Password123!")

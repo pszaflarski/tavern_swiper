@@ -153,20 +153,30 @@ gcloud services enable --project=tavern-swiper-prod \
 
 ## Phase 3 — Firestore Databases
 
-Firebase auto-created the **default** `(default)` Firestore database. You need the **named** databases matching the per-service convention:
+> [!IMPORTANT]
+> To maintain strict isolation, we delete the auto-created `(default)` database first and create a dedicated database for every service.
+
+### 3.1 Delete default database
+```bash
+gcloud firestore databases delete --database="(default)" --project=tavern-swiper-prod --quiet
+```
+
+### 3.2 Create named databases
+Create `discovery-prod` first, followed by the others:
 
 ```bash
-for DB in auth-prod users-prod profiles-prod discovery-prod messages-prod; do
+# Create discovery-prod first
+gcloud firestore databases create --database=discovery-prod --location=us-central1 --type=firestore-native --project=tavern-swiper-prod
+
+# Create the remaining service databases
+for DB in auth-prod users-prod profiles-prod messages-prod; do
   gcloud firestore databases create \
     --database="$DB" \
-    --location=nam5 \
+    --location=us-central1 \
     --type=firestore-native \
     --project=tavern-swiper-prod
 done
 ```
-
-> [!TIP]
-> Use `nam5` (us-central) for Firestore location to keep latency low with Cloud Run in `us-central1`.
 
 ### 3.1 Firestore Security Rules & Indexes
 - Export indexes from dev: `gcloud firestore indexes composite list --database=<DB_ID> --project=tavern-swiper-dev`
@@ -332,28 +342,44 @@ The `prod` branch will be a **protected branch** that only receives merges from 
 > These triggers live in the **new** `tavern-swiper-prod` project, not in `tavern-swiper-dev`. You must connect the GitHub repo to this new project first.
 
 ### 10.1 Connect GitHub repo to the new project
-In the Cloud Build console for `tavern-swiper-prod`:
-1. Go to **Triggers → Manage repositories**
-2. Connect `pszaflarski/tavern_swiper`
 
-### 10.2 Create triggers
+> [!IMPORTANT]
+> This step **must** be done in the browser before any triggers can be created.
 
-Create one trigger per service, all watching `^prod$` branch. Here's the full list:
+1. Open the Cloud Build connection page for `tavern-swiper-prod`:
+   **https://console.cloud.google.com/cloud-build/triggers;region=global/connect?project=43551826902**
+2. Select **GitHub (Cloud Build GitHub App)**
+3. Authenticate with your GitHub account
+4. Select the `pszaflarski/tavern_swiper` repository
+5. Confirm the connection
+
+### 10.2 Trigger reference table
+
+All 8 triggers watch the `^prod$` branch. Here's the full list:
 
 | Trigger Name | cloudbuild.yaml | Included Files | Key Substitutions |
 |---|---|---|---|
-| `auth-prod-deploy` | `services/auth_go/cloudbuild.yaml` | `services/auth_go/**` | `_DB_ID=auth-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=auth_go`, `_SERVICE_NAME=auth`, `_FIREBASE_WEB_API_KEY=<PROD_KEY>`, `_USERS_DB_ID=users-prod` |
-| `users-prod-deploy` | `services/users_go/cloudbuild.yaml` | `services/users_go/**` | `_DB_ID=users-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=users_go`, `_SERVICE_NAME=users` |
-| `profiles-prod-deploy` | `services/profiles_go/cloudbuild.yaml` | `services/profiles_go/**` | `_DB_ID=profiles-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=profiles_go`, `_SERVICE_NAME=profiles` |
-| `discovery-prod-deploy` | `services/discovery_go/cloudbuild.yaml` | `services/discovery_go/**` | `_DB_ID=discovery-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=discovery_go`, `_SERVICE_NAME=discovery` |
-| `messages-prod-deploy` | `services/messages_go/cloudbuild.yaml` | `services/messages_go/**` | `_DB_ID=messages-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=messages_go`, `_SERVICE_NAME=messages` |
+| `auth-prod-deploy` | `services/auth_go/cloudbuild.yaml` | `services/auth_go/**` | `_DB_ID=auth-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=auth_go`, `_SERVICE_NAME=auth`, `_FIREBASE_WEB_API_KEY=AIzaSyAe4-eeKUvy1SBYSFzHO5f92Cu1HuBPonI`, `_USERS_DB_ID=users-prod`, `_JWT_SECRET=<PROD_SECRET>` |
+| `users-prod-deploy` | `services/users_go/cloudbuild.yaml` | `services/users_go/**` | `_DB_ID=users-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=users_go`, `_SERVICE_NAME=users`, `_JWT_SECRET=<PROD_SECRET>` |
+| `profiles-prod-deploy` | `services/profiles_go/cloudbuild.yaml` | `services/profiles_go/**` | `_DB_ID=profiles-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=profiles_go`, `_SERVICE_NAME=profiles`, `_JWT_SECRET=<PROD_SECRET>` |
+| `discovery-prod-deploy` | `services/discovery_go/cloudbuild.yaml` | `services/discovery_go/**` | `_DB_ID=discovery-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=discovery_go`, `_SERVICE_NAME=discovery`, `_JWT_SECRET=<PROD_SECRET>` |
+| `messages-prod-deploy` | `services/messages_go/cloudbuild.yaml` | `services/messages_go/**` | `_DB_ID=messages-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=messages_go`, `_SERVICE_NAME=messages`, `_JWT_SECRET=<PROD_SECRET>` |
 | `discovery-subscriber-prod-deploy` | `services/discovery_subscriber/cloudbuild.yaml` | `services/discovery_subscriber/**` | `_DB_ID=discovery-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=discovery_subscriber`, `_SERVICE_NAME=discovery-subscriber` |
 | `messages-subscriber-prod-deploy` | `services/messages_subscriber/cloudbuild.yaml` | `services/messages_subscriber/**` | `_DB_ID=messages-prod`, `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_DIR_NAME=messages_subscriber`, `_SERVICE_NAME=messages-subscriber` |
-| `frontend-prod-deploy` | `frontend/cloudbuild.yaml` | `frontend/**` | `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_SERVICE_NAME=app` |
+| `frontend-prod-deploy` | `frontend/cloudbuild.yaml` | `frontend/**` | `_ENV_NAME=prod`, `_ENV_SUFFIX=-prod`, `_SERVICE_NAME=app`, `_FIREBASE_API_KEY=AIzaSyAe4-eeKUvy1SBYSFzHO5f92Cu1HuBPonI`, `_FIREBASE_MESSAGING_SENDER_ID=43551826902`, `_FIREBASE_APP_ID=1:43551826902:web:a6dd705d465b60447bba77` |
 
 Each trigger uses:
 - `serviceAccount: projects/tavern-swiper-prod/serviceAccounts/cicd-builder@tavern-swiper-prod.iam.gserviceaccount.com`
 - Branch filter: `^prod$`
+
+### 10.3 Run the automated trigger creation script
+
+After the GitHub repo is connected (step 10.1), run:
+```bash
+bash scripts/create_prod_triggers.sh
+```
+
+This script creates all 8 triggers with the correct substitutions, including the production JWT secret and Firebase keys.
 
 ---
 
@@ -366,10 +392,10 @@ The existing cloudbuild files have some **hardcoded** references that need to be
 | File | Hardcoded Value | Change |
 |---|---|---|
 | [auth_go/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/services/auth_go/cloudbuild.yaml#L33) | `tavern-swiper-sa@$PROJECT_ID` | ✅ Already uses `$PROJECT_ID` — no change needed |
-| [auth_go/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/services/auth_go/cloudbuild.yaml#L40) | `gs://tavern-swiper-build-logs-dev` | ❌ **Change to** `gs://tavern-swiper-build-logs-$_ENV_NAME` or pass as substitution |
-| [profiles_go/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/services/profiles_go/cloudbuild.yaml#L41) | `gs://tavern-swiper-build-logs-dev` | ❌ Same fix |
-| [frontend/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/frontend/cloudbuild.yaml#L63-L68) | Hardcoded Firebase config (API key, sender ID, app ID) | ❌ **Parameterize** using substitutions (`$_FIREBASE_API_KEY`, etc.) |
-| [frontend/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/frontend/cloudbuild.yaml#L99) | `gs://tavern-swiper-build-logs-dev` | ❌ Same fix |
+| [auth_go/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/services/auth_go/cloudbuild.yaml#L40) | `gs://tavern-swiper-build-logs-dev` | ✅ **Done** — Switched to `CLOUD_LOGGING_ONLY` |
+| [profiles_go/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/services/profiles_go/cloudbuild.yaml#L41) | `gs://tavern-swiper-build-logs-dev` | ✅ **Done** — Switched to `CLOUD_LOGGING_ONLY` |
+| [frontend/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/frontend/cloudbuild.yaml#L63-L68) | Hardcoded Firebase config (API key, sender ID, app ID) | ✅ **Done** — Parameterized via substitutions |
+| [frontend/cloudbuild.yaml](file:///home/peter/Documents/tavern_swiper/frontend/cloudbuild.yaml#L99) | `gs://tavern-swiper-build-logs-dev` | ✅ **Done** — Switched to `CLOUD_LOGGING_ONLY` |
 
 #### Recommended changes to `cloudbuild.yaml` files:
 
@@ -511,6 +537,37 @@ Then add the DNS records Google provides.
 
 ---
 
+## Phase 13.5 — Bootstrap Root Admin
+
+> [!IMPORTANT]
+> The app requires a root admin user before it is usable. This must be done after Firebase Auth is enabled and the auth/users services are deployed.
+
+### 13.5.1 Enable Firebase Auth (if not done already)
+1. Go to [Firebase Console → Authentication](https://console.firebase.google.com/project/tavern-swiper-prod/authentication/providers)
+2. Enable **Email/Password** provider
+
+### 13.5.2 Create the Root Admin
+```bash
+ROOT_EMAIL="your-admin-email@example.com" ROOT_PASSWORD="your-secure-password" \
+  python3 scripts/create_root_admin.py prod
+```
+
+This script will:
+1. Register the user via the prod auth service
+2. Exchange for a Tavern JWT
+3. Bootstrap the user as `root_admin` in the users service
+
+### 13.5.3 (Alternative) Sync an existing Firebase user as root admin
+If you already have a Firebase user and just need to set their role:
+```bash
+python3 scripts/sync_root_admin.py prod
+```
+
+> [!NOTE]
+> Both scripts have been parameterized to support all environments (`local`, `dev`, `test`, `prod`) via a `PROJECT_MAP`. Pass the environment name as the first argument.
+
+---
+
 ## Phase 14 — Verification Runbook
 
 ### Smoke tests after first prod deploy
@@ -530,7 +587,7 @@ Then add the DNS records Google provides.
 
 ## Summary Checklist
 
-- [ ] **Phase 1** — Create Firebase project (auto-creates GCP project), register web app, configure Auth
+- [x] **Phase 1** — Create Firebase project (auto-creates GCP project), register web app, configure Auth
 - [ ] **Phase 2** — Link billing, enable additional GCP APIs (Cloud Run, Cloud Build, Pub/Sub, etc.)
 - [ ] **Phase 3** — Firestore named databases (5 databases)
 - [ ] **Phase 4** — GCS media bucket
