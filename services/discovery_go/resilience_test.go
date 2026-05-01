@@ -23,20 +23,24 @@ func TestHandleGetFeed_MalformedCache(t *testing.T) {
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
 	
+	candidateSnaps := []*mockSnap{
+		{id: "p-bad", exists: true, data: map[string]interface{}{"display_name": "Ghost", "is_active": true}}, // MISSING profile_id
+		{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "is_active": true}},
+	}
+
 	// Resilience: malformed cache profile (missing profile_id or malformed)
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
 			collections: map[string]*mockCollection{
 				PROFILES_CACHE: {
 					docs: map[string]*mockDoc{ "p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}}},
-					queryRes: []*mockSnap{
-						{id: "p-bad", exists: true, data: map[string]interface{}{"display_name": "Ghost", "is_active": true}}, // MISSING profile_id
-						{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "is_active": true}},
-					},
 				},
 			},
 		}, nil
 	}
+	oldFeed := getFeedCandidatesFunc
+	getFeedCandidatesFunc = mockGetFeedCandidates(candidateSnaps)
+	defer func() { getFeedCandidatesFunc = oldFeed }()
 	
 	req, _ := http.NewRequest("GET", "/discovery/feed/p1", nil)
 	req.Header.Set("Authorization", "Bearer "+signGoTestToken("u1", "user"))
@@ -172,6 +176,12 @@ func TestDiscoveryResilience_FeedExclusions(t *testing.T) {
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
 
+	candidateSnaps := []*mockSnap{
+		{id: "p1", exists: true, data: map[string]interface{}{"profile_id": "p1", "user_id": "u1", "display_name": "Me", "is_active": true}},
+		{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Swiped", "is_active": true}},
+		{id: "p3", exists: true, data: map[string]interface{}{"profile_id": "p3", "user_id": "u3", "display_name": "Candidate", "is_active": true}},
+	}
+
 	// User P1
 	// Swiped P2 already
 	// Candidate P3 available
@@ -183,11 +193,6 @@ func TestDiscoveryResilience_FeedExclusions(t *testing.T) {
 					docs: map[string]*mockDoc{
 						"p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}},
 					},
-					queryRes: []*mockSnap{
-						{id: "p1", exists: true, data: map[string]interface{}{"profile_id": "p1", "user_id": "u1", "display_name": "Me", "is_active": true}},
-						{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Swiped", "is_active": true}},
-						{id: "p3", exists: true, data: map[string]interface{}{"profile_id": "p3", "user_id": "u3", "display_name": "Candidate", "is_active": true}},
-					},
 				},
 				SWIPES_COLLECTION: {
 					queryRes: []*mockSnap{
@@ -197,6 +202,9 @@ func TestDiscoveryResilience_FeedExclusions(t *testing.T) {
 			},
 		}, nil
 	}
+	oldFeed := getFeedCandidatesFunc
+	getFeedCandidatesFunc = mockGetFeedCandidates(candidateSnaps)
+	defer func() { getFeedCandidatesFunc = oldFeed }()
 
 	req, _ := http.NewRequest("GET", "/discovery/feed/p1", nil)
 	req.Header.Set("Authorization", "Bearer "+signGoTestToken("u1", "user"))

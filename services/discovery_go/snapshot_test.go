@@ -83,6 +83,10 @@ func TestSnapshotsParity(t *testing.T) {
 
 	t.Run("GetFeed", func(t *testing.T) {
 		// test_get_feed_success
+		feedSnaps := []*mockSnap{
+			{id: "p1", exists: true, data: map[string]interface{}{"profile_id": "p1", "user_id": "u1", "display_name": "Aragorn", "is_active": true, "image_urls": []interface{}{}}},
+			{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "is_active": true, "image_urls": []interface{}{}}},
+		}
 		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 			return &mockClient{
 				collections: map[string]*mockCollection{
@@ -91,14 +95,14 @@ func TestSnapshotsParity(t *testing.T) {
 							"p1": {id: "p1", exists: true, data: map[string]interface{}{"profile_id": "p1", "user_id": "u1", "display_name": "Aragorn", "is_active": true, "image_urls": []interface{}{}}},
 							"p2": {id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "is_active": true, "image_urls": []interface{}{}}},
 						},
-						queryRes: []*mockSnap{
-							{id: "p1", exists: true, data: map[string]interface{}{"profile_id": "p1", "user_id": "u1", "display_name": "Aragorn", "is_active": true, "image_urls": []interface{}{}}},
-							{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "is_active": true, "image_urls": []interface{}{}}},
-						},
 					},
 				},
 			}, nil
 		}
+		oldFeed := getFeedCandidatesFunc
+		getFeedCandidatesFunc = mockGetFeedCandidates(feedSnaps)
+		defer func() { getFeedCandidatesFunc = oldFeed }()
+
 		headers := map[string]string{"Authorization": "Bearer " + signGoTestToken("u1", "user")}
 		req, _ = http.NewRequest("GET", "/discovery/feed/p1", nil)
 		for k, v := range headers { req.Header.Set(k, v) }
@@ -117,19 +121,20 @@ func TestSnapshotsParity(t *testing.T) {
 		assertParity(t, "test_get_feed_unauthorized_profile", w.Body.Bytes(), snaps)
 		
 		// resilience: malformed cache profile (missing profile_id)
+		malformedSnaps := []*mockSnap{
+			{id: "p-bad", exists: true, data: map[string]interface{}{"display_name": "Ghost", "is_active": true}}, // MISSING profile_id
+			{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "is_active": true}},
+		}
 		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 			return &mockClient{
 				collections: map[string]*mockCollection{
 					PROFILES_CACHE: {
 						docs: map[string]*mockDoc{ "p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}}},
-						queryRes: []*mockSnap{
-							{id: "p-bad", exists: true, data: map[string]interface{}{"display_name": "Ghost", "is_active": true}}, // MISSING profile_id
-							{id: "p2", exists: true, data: map[string]interface{}{"profile_id": "p2", "user_id": "u2", "display_name": "Legolas", "is_active": true}},
-						},
 					},
 				},
 			}, nil
 		}
+		getFeedCandidatesFunc = mockGetFeedCandidates(malformedSnaps)
 		req, _ = http.NewRequest("GET", "/discovery/feed/p1", nil)
 		req.Header.Set("Authorization", "Bearer "+signGoTestToken("u1", "user"))
 		w = httptest.NewRecorder()

@@ -152,3 +152,26 @@ func (b *mockBatch) Delete(dr DocumentRef) WriteBatch {
 func (b *mockBatch) Commit(ctx context.Context) ([]*firestore.WriteResult, error) {
 	return []*firestore.WriteResult{}, nil
 }
+
+// mockGetFeedCandidates creates a getFeedCandidatesFunc mock from a slice of mockSnaps.
+// It applies the same exclusion logic the real pipeline does, so tests behave identically.
+func mockGetFeedCandidates(candidateSnaps []*mockSnap) func(ctx context.Context, collection string, excludeIDs []string, limit int) ([]FeedCandidate, error) {
+	return func(ctx context.Context, collection string, excludeIDs []string, limit int) ([]FeedCandidate, error) {
+		excludeSet := make(map[string]bool)
+		for _, id := range excludeIDs {
+			excludeSet[id] = true
+		}
+
+		var result []FeedCandidate
+		for _, snap := range candidateSnaps {
+			if pID, ok := snap.data["profile_id"].(string); ok && excludeSet[pID] {
+				continue
+			}
+			result = append(result, FeedCandidate{Data: snap.data})
+			if len(result) >= limit {
+				break
+			}
+		}
+		return result, nil
+	}
+}

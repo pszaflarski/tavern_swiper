@@ -39,20 +39,22 @@ func TestUserOverlapInFeed(t *testing.T) {
 		"is_active":  true,
 	})
 
-	// 2. Setup Candidate Profile (Mage) - same user_id
-	p2Snap := &mockSnap{
-		id: profile2,
-		data: map[string]interface{}{
-			"profile_id":   profile2,
-			"user_id":      userId,
-			"display_name": "Mage Hero",
-			"is_active":    true,
+	// 2. Setup pipeline mock with Candidate Profile (Mage) - same user_id
+	candidateSnaps := []*mockSnap{
+		{
+			id: profile2,
+			data: map[string]interface{}{
+				"profile_id":   profile2,
+				"user_id":      userId,
+				"display_name": "Mage Hero",
+				"is_active":    true,
+			},
+			exists: true,
 		},
-		exists: true,
 	}
-	
-	// Prepare mock query results for the candidates fetch
-	mockDB.Collection(PROFILES_CACHE).(*mockCollection).queryRes = []*mockSnap{p2Snap}
+	oldFeed := getFeedCandidatesFunc
+	getFeedCandidatesFunc = mockGetFeedCandidates(candidateSnaps)
+	defer func() { getFeedCandidatesFunc = oldFeed }()
 
 	// 3. Execution
 	r := setupTest(nil)

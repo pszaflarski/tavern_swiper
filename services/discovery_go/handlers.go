@@ -33,7 +33,7 @@ func handleHealth(c *gin.Context) {
 
 // handleGetFeed godoc
 // @Summary      Get discovery feed
-// @Description  Returns a curated list of active profiles the caller hasn't swiped on yet.
+// @Description  Returns a curated list of profiles the caller hasn't swiped on yet.
 // @Tags         feed
 // @Accept       json
 // @Produce      json
@@ -70,52 +70,50 @@ func handleGetFeed(c *gin.Context) {
 	// 1. Get swipe history
 	iter := client.Collection(SWIPES_COLLECTION).Where("swiper_profile_id", "==", profileID).Documents(ctx)
 	swipedDocs, _ := iter.GetAll()
-	alreadySwiped := make(map[string]bool)
+
+	// Build exclusion list: self + already-swiped profile IDs
+	excludeSet := make(map[string]bool)
+	excludeSet[profileID] = true // Exclude self
 	for _, doc := range swipedDocs {
 		if sid, ok := doc.Data()["swiped_profile_id"].(string); ok {
-			alreadySwiped[sid] = true
+			excludeSet[sid] = true
 		}
 	}
+	excludeIDs := make([]string, 0, len(excludeSet))
+	for id := range excludeSet {
+		excludeIDs = append(excludeIDs, id)
+	}
 
-	// 2. Fetch candidates
+	// 2. Fetch candidates via Pipeline (server-side filtering + projection)
 	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 		log.Printf("[DEBUG] Using default limit 10 (err or <=0: %v, str: %s)", err, limitStr)
 		limit = 10
 	}
-	log.Printf("[DEBUG] Profile %s requested feed with limit=%d", profileID, limit)
+	log.Printf("[DEBUG] Profile %s requested feed with limit=%d, excluding %d profiles", profileID, limit, len(excludeIDs))
 
-	// Overfetch as in Python (limit * 5) to account for alreadySwiped and self
-	overfetchLimit := limit * 5
-	if overfetchLimit < 50 {
-		overfetchLimit = 50
-	}
-
-	candidatesIter := client.Collection(PROFILES_CACHE).Where("is_active", "==", true).Limit(overfetchLimit).Documents(ctx)
-	candidateDocs, err := candidatesIter.GetAll()
+	candidates, err := getFeedCandidatesFunc(ctx, PROFILES_CACHE, excludeIDs, limit)
 	if err != nil {
+		log.Printf("[ERROR] Pipeline feed query failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Internal discovery error"})
 		return
 	}
 
+	// 3. Hydrate response from pipeline results
 	var profiles []DiscoveryProfile
-	for _, doc := range candidateDocs {
+	for _, candidate := range candidates {
 		var p DiscoveryProfile
-		data := doc.Data()
+		data := candidate.Data
 		pID, ok := data["profile_id"].(string)
 		if !ok || pID == "" {
-			log.Printf("[WARN] Skipping malformed profile doc %s: missing profile_id", doc.ID())
-			continue
-		}
-
-		if pID == profileID || alreadySwiped[pID] {
+			log.Printf("[WARN] Skipping malformed profile in pipeline result: missing profile_id")
 			continue
 		}
 
 		p.ProfileID = pID
 		p.DisplayName, _ = data["display_name"].(string)
-		
+
 		if val, ok := data["bio"].(string); ok {
 			p.Bio = &val
 		}
@@ -133,7 +131,7 @@ func handleGetFeed(c *gin.Context) {
 		}
 
 		p.IsActive, _ = data["is_active"].(bool)
-		
+
 		// Handle image_urls (coerce null to empty list if needed)
 		if val, ok := data["image_urls"].([]interface{}); ok {
 			p.ImageURLs = []string{}
@@ -158,10 +156,6 @@ func handleGetFeed(c *gin.Context) {
 		}
 
 		profiles = append(profiles, p)
-		if len(profiles) >= limit {
-			log.Printf("[DEBUG] Reached limit %d, stopping candidate collection", limit)
-			break
-		}
 	}
 
 	log.Printf("[DEBUG] Returning %d profiles for %s", len(profiles), profileID)
