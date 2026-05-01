@@ -37,6 +37,12 @@
       "expo-router",
       "expo-web-browser",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
