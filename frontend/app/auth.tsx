@@ -18,6 +18,7 @@ import {
 } from 'firebase/auth';
 import { useUser } from '../hooks/useUser';
 import { usersApi } from '../lib/api';
+import { signInWithGoogle, statusCodes } from '../lib/googleAuth';
 
 import { useRouter, Redirect } from 'expo-router';
 
@@ -99,6 +100,33 @@ export default function AuthScreen() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+      // Navigation is handled by the useEffect/isAuthenticated check
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
+      
+      let errorMessage = `Google sign-in failed: ${error.code || 'unknown'} - ${error.message || 'no message'}`;
+      
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        errorMessage = 'Sign-in cancelled.';
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        errorMessage = 'Sign-in already in progress.';
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        errorMessage = 'Google Play Services not available.';
+      } else if (error.message?.includes('auth/account-exists-with-different-credential')) {
+        errorMessage = 'An account already exists with this email. Please sign in with your password first.';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -113,6 +141,22 @@ export default function AuthScreen() {
             ? 'Enter the tavern to continue your journey.'
             : 'Join the ranks of heroes seeking companionship.'}
         </Text>
+
+        <TouchableOpacity
+          style={[styles.googleButton, loading && styles.buttonDisabled]}
+          onPress={handleGoogleSignIn}
+          disabled={loading}
+          testID="auth-google-button"
+        >
+          <Ionicons name="logo-google" size={20} color={Colors.primary} style={styles.googleIcon} />
+          <Text style={styles.googleButtonText}>Continue with Google</Text>
+        </TouchableOpacity>
+
+        <View style={styles.dividerContainer}>
+          <View style={styles.divider} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.divider} />
+        </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email Address</Text>
@@ -314,5 +358,44 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    padding: Spacing[4],
+    borderRadius: Radius.full,
+    marginBottom: Spacing[4],
+  },
+  googleIcon: {
+    marginRight: Spacing[2],
+  },
+  googleButtonText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing[4],
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.outlineVariant,
+  },
+  dividerText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.outline,
+    paddingHorizontal: Spacing[3],
+    fontSize: 12,
+    textTransform: 'uppercase',
   },
 });

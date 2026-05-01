@@ -14,6 +14,7 @@ const (
 // Base User fields
 type UserBase struct {
 	Email     string   `json:"email" binding:"required,email"`
+	FullName  string   `json:"full_name,omitempty" firestore:"full_name,omitempty"`
 	IsPremium bool     `json:"is_premium"`
 	UserType  UserType `json:"user_type"`
 	IsDeleted bool     `json:"is_deleted"`
@@ -28,6 +29,7 @@ type UserCreate struct {
 type UserUpdate struct {
 	IsPremium *bool     `json:"is_premium,omitempty"`
 	UserType  *UserType `json:"user_type,omitempty"`
+	FullName  *string   `json:"full_name,omitempty"`
 }
 
 // Response Models

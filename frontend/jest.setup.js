@@ -103,13 +103,36 @@ jest.mock('firebase/auth', () => ({
     currentUser: { uid: 'test-uid' },
   })),
   getReactNativePersistence: jest.fn(),
+  browserLocalPersistence: 'browserLocalPersistence',
   signInWithEmailAndPassword: jest.fn(),
   createUserWithEmailAndPassword: jest.fn(),
+  signInWithCredential: jest.fn(),
+  signInWithPopup: jest.fn(),
+  linkWithCredential: jest.fn(),
+  GoogleAuthProvider: Object.assign(
+    jest.fn(),
+    { credential: jest.fn(() => ({ providerId: 'google.com' })) }
+  ),
   signOut: jest.fn(),
   onAuthStateChanged: jest.fn((auth, callback) => {
     callback({ uid: 'test-uid' });
     return jest.fn(); // Unsubscribe
   }),
+}));
+
+// Mock @react-native-google-signin/google-signin
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    hasPlayServices: jest.fn().mockResolvedValue(true),
+    signIn: jest.fn().mockResolvedValue({ data: { idToken: 'mock-id-token' } }),
+    signOut: jest.fn().mockResolvedValue(null),
+  },
+  statusCodes: {
+    SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE',
+  },
 }));
 
 jest.mock('firebase/firestore', () => ({

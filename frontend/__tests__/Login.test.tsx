@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AuthScreen from '../app/auth';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useUser } from '../hooks/useUser';
+import { signInWithGoogle } from '../lib/googleAuth';
 
 // Mock axios since it causes stream issues in RN/Jest env
 jest.mock('axios', () => ({
@@ -33,6 +34,17 @@ jest.mock('firebase/auth', () => ({
 // Mock lib/firebase
 jest.mock('../lib/firebase', () => ({
   auth: { currentUser: null },
+}));
+
+// Mock googleAuth
+jest.mock('../lib/googleAuth', () => ({
+  signInWithGoogle: jest.fn(),
+  signOutFromGoogle: jest.fn(),
+  statusCodes: {
+    SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE',
+  },
 }));
 
 describe('Login Screen', () => {
@@ -103,5 +115,63 @@ describe('Login Screen', () => {
     expect(passwordInput.props.secureTextEntry).toBe(true);
     fireEvent.press(toggleButton);
     expect(passwordInput.props.secureTextEntry).toBe(false);
+  });
+
+  // --- Google Sign-In Tests ---
+
+  it('renders the Google Sign-In button', () => {
+    const { getByTestId, getByText } = render(<AuthScreen />);
+    expect(getByTestId('auth-google-button')).toBeTruthy();
+    expect(getByText('Continue with Google')).toBeTruthy();
+  });
+
+  it('calls signInWithGoogle when Google button is pressed', async () => {
+    (signInWithGoogle as jest.Mock).mockResolvedValueOnce(undefined);
+
+    const { getByTestId } = render(<AuthScreen />);
+    fireEvent.press(getByTestId('auth-google-button'));
+
+    await waitFor(() => {
+      expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows error when Google sign-in fails', async () => {
+    (signInWithGoogle as jest.Mock).mockRejectedValueOnce({
+      code: 'auth/network-request-failed',
+      message: 'A network error occurred.',
+    });
+
+    const { getByTestId, findByTestId } = render(<AuthScreen />);
+    fireEvent.press(getByTestId('auth-google-button'));
+
+    const errorText = await findByTestId('auth-error-text');
+    expect(errorText).toBeTruthy();
+  });
+
+  it('shows friendly message when Google Play Services unavailable', async () => {
+    (signInWithGoogle as jest.Mock).mockRejectedValueOnce({
+      code: 'PLAY_SERVICES_NOT_AVAILABLE',
+      message: 'Play services not available',
+    });
+
+    const { getByTestId, findByText } = render(<AuthScreen />);
+    fireEvent.press(getByTestId('auth-google-button'));
+
+    const errorText = await findByText('Google Play Services not available.');
+    expect(errorText).toBeTruthy();
+  });
+
+  it('silently handles cancelled Google sign-in', async () => {
+    (signInWithGoogle as jest.Mock).mockRejectedValueOnce({
+      code: 'SIGN_IN_CANCELLED',
+      message: 'User cancelled',
+    });
+
+    const { getByTestId, findByText } = render(<AuthScreen />);
+    fireEvent.press(getByTestId('auth-google-button'));
+
+    const errorText = await findByText('Sign-in cancelled.');
+    expect(errorText).toBeTruthy();
   });
 });

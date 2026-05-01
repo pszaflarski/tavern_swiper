@@ -20,23 +20,21 @@ def get_project_id(env):
 
 def get_url(service_name, env="local"):
     # Check for explicit environment variable overrides
-    env_var = "AUTH_URL" if service_name == "auth" else "USERS_URL"
+    env_var = f"{service_name.upper()}_URL"
     if os.getenv(env_var):
         return os.getenv(env_var)
 
     if env == "local":
         ports = {
             "auth": 8001,
+            "profiles": 8002,
             "users": 8006,
         }
         return f"http://localhost:{ports.get(service_name)}"
     
     project_id = get_project_id(env)
-    
-    # All remote environments use suffixed service names: auth-dev, auth-test, auth-prod
     deploy_name = f"{service_name}-{env}"
-        
-    region = "nam5" if env == "prod" else REGION
+    region = REGION # Cloud Run services are in us-central1 for all envs
         
     try:
         url = subprocess.check_output([
@@ -46,8 +44,7 @@ def get_url(service_name, env="local"):
         ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url
     except Exception:
-        # Fallback: try unsuffixed name (legacy services)
-        print(f"⚠️  Suffixed service {deploy_name} not found. Falling back to unsuffixed name: {service_name}")
+        # Fallback: try unsuffixed name
         try:
             url = subprocess.check_output([
                 "gcloud", "run", "services", "describe", service_name,
@@ -55,31 +52,31 @@ def get_url(service_name, env="local"):
                 "--format", "value(status.url)"
             ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
             return url
-        except Exception as e2:
-            print(f"❌ Error fetching URL for fallback {service_name}: {e2}")
+        except Exception:
             return None
 
-def create_root(env="local", email="admin@example.com", password="Password123!"):
+def create_root(env="local", email="root@tavernswiper.com", password="Password123!"):
     print(f"🚀 Creating Root Admin in {env} environment (project: {get_project_id(env)})...")
     
     auth_url = get_url("auth", env)
     users_url = get_url("users", env)
+    profiles_url = get_url("profiles", env)
     
-    if not auth_url or not users_url:
-        print("❌ Could not determine service URLs.")
+    if not all([auth_url, users_url, profiles_url]):
+        print("❌ Could not determine all service URLs.")
+        print(f"  Auth: {auth_url}")
+        print(f"  Users: {users_url}")
+        print(f"  Profiles: {profiles_url}")
         return
 
     # 1. Register or Login
     print(f"Authenticating: {email}...")
-    headers = {"Content-Type": "application/json"}
     payload = {"email": email, "password": password}
     
-    # Try login first
     resp = requests.post(f"{auth_url}/auth/login", json=payload)
     if resp.status_code == 200:
         print("✅ Logged in existing user.")
     else:
-        # Try register
         resp = requests.post(f"{auth_url}/auth/register", json=payload)
         if resp.status_code == 200:
             print("✅ Registered new user.")
@@ -98,10 +95,10 @@ def create_root(env="local", email="admin@example.com", password="Password123!")
         return
     
     tavern_token = v_resp.json()["token"]
-    
+    u_headers = {"Authorization": f"Bearer {tavern_token}"}
+
     # 3. Bootstrap as Root Admin in Users Service
     print("Bootstrapping Root Admin status...")
-    u_headers = {"Authorization": f"Bearer {tavern_token}"}
     u_payload = {
         "email": email,
         "user_type": "root_admin",
@@ -112,11 +109,36 @@ def create_root(env="local", email="admin@example.com", password="Password123!")
     if u_resp.status_code in [200, 201]:
         print("✅ Root Admin record created/confirmed.")
     elif u_resp.status_code == 400 and "root admin already exists" in u_resp.text.lower():
-        print(f"❌ Error: A root admin already exists in the {env} environment.")
-        sys.exit(1)
+        print("ℹ️ Root admin already exists in Users service.")
     else:
         print(f"❌ User creation failed: {u_resp.status_code} - {u_resp.text}")
         sys.exit(1)
+
+    # 4. Refresh Token (to get the new role in the JWT)
+    print("Refreshing Tavern JWT to pick up Root Admin role...")
+    v_resp = requests.post(f"{auth_url}/auth/verify", json={"id_token": id_token})
+    if v_resp.status_code != 200:
+        print(f"❌ Token refresh failed: {v_resp.text}")
+        return
+    tavern_token = v_resp.json()["token"]
+    u_headers = {"Authorization": f"Bearer {tavern_token}"}
+
+    # 5. Create Profile for Root Admin
+    print("Creating Root Admin profile...")
+    p_payload = {
+        "display_name": "Root Admin",
+        "bio": "System Root Administrator",
+        "gender": "other",
+        "user_id": uid,
+        "is_active": True
+    }
+    p_resp = requests.post(f"{profiles_url}/profiles/", json=p_payload, headers=u_headers)
+    if p_resp.status_code in [200, 201]:
+        print("✅ Root Admin profile created.")
+    elif p_resp.status_code == 400 and "already has a profile" in p_resp.text.lower():
+        print("ℹ️ Root admin already has a profile.")
+    else:
+        print(f"⚠️ Profile creation warning: {p_resp.status_code} - {p_resp.text}")
 
     # Final Summary
     print("\n" + "="*50)
@@ -136,7 +158,7 @@ if __name__ == "__main__":
         print(f"❌ Unknown environment: {env}. Valid options: {list(PROJECT_MAP.keys())}")
         sys.exit(1)
     
-    email = os.getenv("ROOT_EMAIL", "root@example.com")
+    email = os.getenv("ROOT_EMAIL", "root@tavernswiper.com")
     password = os.getenv("ROOT_PASSWORD", "Password123!")
     
     create_root(env, email, password)

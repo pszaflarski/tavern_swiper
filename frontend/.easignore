@@ -43,3 +43,7 @@ yarn-error.*
 # test outputs
 *.txt
 *.log
+
+# Explicitly include Firebase config for EAS builds
+!google-services.dev.json
+!google-services.prod.json

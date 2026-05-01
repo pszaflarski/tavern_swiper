@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "374390417125",
+    "project_id": "tavern-swiper-dev",
+    "storage_bucket": "tavern-swiper-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:374390417125:android:b022ded2744afa0311960c",
+        "android_client_info": {
+          "package_name": "com.tavernswiper.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "374390417125-8ad4s77g5fpo4rlifmq0q42rbbv205rl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tavernswiper.app",
+            "certificate_hash": "b202616de2f6ac01d1e686abf09a64f103209477"
+          }
+        },
+        {
+          "client_id": "374390417125-63t743snmb8esvce5kjpv9faqd3k440i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnKm4gayoO0C35CNeMJ7E82fFITvVpGAw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "374390417125-63t743snmb8esvce5kjpv9faqd3k440i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

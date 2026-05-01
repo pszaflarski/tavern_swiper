@@ -48,3 +48,6 @@ yarn-error.*
 *.apk
 *.aab
 
+
+# Firebase config (per-environment)
+google-services.*.json

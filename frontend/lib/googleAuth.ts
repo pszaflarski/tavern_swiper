@@ -1,4 +1,3 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import {
   GoogleAuthProvider,
   signInWithCredential,
@@ -7,19 +6,29 @@ import {
 import { auth } from './firebase';
 import { usersApi } from './api';
 
-// Configure once at module load
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-});
+// Lazy-load the native module to avoid crashing in Expo Go
+let GoogleSignin: any = null;
+let nativeStatusCodes: any = {};
 
-/**
- * Performs the full Google Sign-In flow:
- *   1. Native Google account picker
- *   2. Exchange Google token for Firebase credential
- *   3. Handle account linking if email already exists with a different provider
- *   4. Auto-populate full_name from Google profile for new users
- */
+try {
+  const mod = require('@react-native-google-signin/google-signin');
+  GoogleSignin = mod.GoogleSignin;
+  nativeStatusCodes = mod.statusCodes;
+
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+} catch (e) {
+  console.warn('[GoogleAuth] Native Google Sign-In module not available (expected in Expo Go)');
+}
+
+export const statusCodes = nativeStatusCodes;
+
 export async function signInWithGoogle(): Promise<void> {
+  if (!GoogleSignin) {
+    throw new Error('Google Sign-In requires a native build. It is not available in Expo Go.');
+  }
+
   // 1. Check for Google Play Services
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
@@ -40,8 +49,6 @@ export async function signInWithGoogle(): Promise<void> {
     userCred = await signInWithCredential(auth, credential);
   } catch (error: any) {
     if (error.code === 'auth/account-exists-with-different-credential') {
-      // User already has an email/password account with this email.
-      // If they are currently signed in, link the Google provider.
       if (auth.currentUser) {
         userCred = await linkWithCredential(auth.currentUser, credential);
       } else {
@@ -54,21 +61,26 @@ export async function signInWithGoogle(): Promise<void> {
     }
   }
 
-  // 5. For new users: register in our users service with full_name from Google
+  // 5. For new users: auto-populate full_name from Google profile
   const isNewUser = userCred.additionalUserInfo?.isNewUser;
-  if (isNewUser) {
-    const token = await userCred.user.getIdToken();
-    const displayName = userCred.user.displayName || '';
-
-    await usersApi.post('/users/', {
-      email: userCred.user.email,
-      full_name: displayName,
-      user_type: 'user',
-      is_premium: false,
-    }, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  if (isNewUser && userCred.user.displayName) {
+    setTimeout(async () => {
+      try {
+        await usersApi.put('/users/me', {
+          full_name: userCred.user.displayName,
+        });
+      } catch (e) {
+        console.warn('[GoogleAuth] Failed to set display name:', e);
+      }
+    }, 2000);
   }
 }
 
-export { statusCodes };
+export async function signOutFromGoogle(): Promise<void> {
+  if (!GoogleSignin) return;
+  try {
+    await GoogleSignin.signOut();
+  } catch (e) {
+    // Not signed in with Google — ignore
+  }
+}
