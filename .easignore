@@ -1,0 +1,25 @@
+# EAS Build ignore file (at repo root)
+
+# Standard ignores
+.git/
+node_modules/
+**/node_modules/
+.android_sdk/
+.venv/
+services/
+scripts/
+credentials/
+tests/
+docs/
+examples/
+next_steps/
+
+# Explicitly allow google-services files in frontend
+!frontend/google-services.dev.json
+!frontend/google-services.prod.json
+frontend/android/
+frontend/ios/
+frontend/.expo/
+frontend/dist/
+frontend/*.apk
+frontend/*.aab

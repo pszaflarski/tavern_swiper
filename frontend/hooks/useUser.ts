@@ -3,6 +3,7 @@ import { auth } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { usersApi, clearTavernSession, getPersistedUid } from '../lib/api';
+import { signOutFromGoogle } from '../lib/googleAuth';
 
 export interface UserMetadata {
   uid: string;
@@ -63,6 +64,7 @@ export function useUser() {
 
   const logout = async () => {
     try {
+      await signOutFromGoogle();
       await auth.signOut();
       await clearTavernSession();
       queryClient.clear(); // Wipe all cached data (profiles, discovery, etc.)

@@ -199,6 +199,9 @@ func updateMeHandler(c *gin.Context) {
 	if body.UserType != nil {
 		updates = append(updates, firestore.Update{Path: "user_type", Value: string(*body.UserType)})
 	}
+	if body.FullName != nil {
+		updates = append(updates, firestore.Update{Path: "full_name", Value: *body.FullName})
+	}
 
 	if len(updates) > 0 {
 		_, err = docRef.Update(c.Request.Context(), updates)
@@ -438,6 +441,7 @@ func restoreUserHandler(c *gin.Context) {
 func mapToUserOut(uid string, data map[string]interface{}, u *UserOut) {
 	u.UID = uid
 	u.Email, _ = data["email"].(string)
+	u.FullName, _ = data["full_name"].(string)
 	u.IsPremium, _ = data["is_premium"].(bool)
 	if ut, ok := data["user_type"].(string); ok {
 		u.UserType = UserType(ut)
