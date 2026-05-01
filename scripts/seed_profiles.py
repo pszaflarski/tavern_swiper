@@ -17,7 +17,7 @@ PROJECT_ID = get_current_project()
 REGION = "us-central1"
 
 # Primary Seeder (Authenticated first to perform administrative overrides)
-SEEDER_EMAIL = os.getenv("ROOT_EMAIL", "root@example.com")
+SEEDER_EMAIL = os.getenv("ROOT_EMAIL", "root@tavernswiper.com")
 SEEDER_PASSWORD = os.getenv("ROOT_PASSWORD", "Password123!")
 
 def get_url(service_name, env="local"):

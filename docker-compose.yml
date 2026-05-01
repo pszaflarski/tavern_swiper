@@ -229,7 +229,7 @@ services:
           memory: 64M
     command: >
       sh -c "curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1' && \
-             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-discovery-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://discovery-subscriber:8007/HandleProfileEvent\"}}' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-discovery-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://discovery-subscriber:8007/\"}}' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-messages-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://messages-subscriber:8008/\"}}' && \
              echo '✅ Pub/Sub Initialized'"

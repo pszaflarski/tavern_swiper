@@ -93,12 +93,12 @@ Integration tests verify end-to-end flows between multiple services.
 ### Running Integration Tests
 ```bash
 # Locally (requires Docker)
-bash tests/run_go_integration_tests.sh --local
+bash tests/run_integration_tests.sh --local
 
 # Against Cloud (Dev environment)
-bash tests/run_go_integration_tests.sh
+bash tests/run_integration_tests.sh
 
-# Cloud integration tests
+# Cloud integration tests (specialized for test system initialization)
 bash tests/run_cloud_integration_tests.sh
 ```
 
