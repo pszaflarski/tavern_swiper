@@ -44,7 +44,7 @@ def get_url(service_name, env="local"):
     else:
         deploy_name = service_name
         
-    region = "nam5" if env == "prod" else REGION
+    region = REGION
         
     try:
         url = subprocess.check_output([
