@@ -61,6 +61,7 @@ func setupTest() *gin.Engine {
 // --- 26. Dev Minting ---
 
 func TestDevMint(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	tests := []struct {
@@ -130,6 +131,7 @@ func TestDevMint(t *testing.T) {
 // --- 1. Health ---
 
 func TestHealth(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 	req, _ := http.NewRequest("GET", "/auth/health", nil)
 	w := httptest.NewRecorder()
@@ -148,6 +150,7 @@ func TestHealth(t *testing.T) {
 // --- 2-7. Verify ---
 
 func TestVerifyToken(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	tests := []struct {
@@ -247,6 +250,7 @@ func setEnv(t *testing.T, k, v string) {
 // --- 8-18. Register & Login ---
 
 func TestAuthREST(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 	os.Setenv("FIREBASE_WEB_API_KEY", "test-key")
 
@@ -380,6 +384,7 @@ func TestAuthREST(t *testing.T) {
 // --- 19-21. Delete individual ---
 
 func TestDeleteUser(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	tests := []struct {
@@ -423,6 +428,7 @@ func TestDeleteUser(t *testing.T) {
 // --- 22-24. Delete Bulk ---
 
 func TestDeleteUsersBulk(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	tests := []struct {
@@ -470,6 +476,7 @@ func TestDeleteUsersBulk(t *testing.T) {
 // --- 25. Delete All ---
 
 func TestDeleteAll(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 	// Mock DeleteAll Success (This is 25th test)
 	getAuthFunc = func(ctx context.Context) (AuthClient, error) {

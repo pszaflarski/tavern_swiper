@@ -12,6 +12,7 @@ import (
 )
 
 func TestFirestoreSyntax(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 
 	t.Run("VerifyArrayContainsOperator", func(t *testing.T) {

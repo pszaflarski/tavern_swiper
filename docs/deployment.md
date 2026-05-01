@@ -67,3 +67,56 @@ Easily toggle the frontend between local, dev (cloud), and test (cloud) environm
 ```bash
 bash scripts/switch_env.sh [local|dev|test]
 ```
+
+---
+
+## Environment Management (GCP)
+
+We use `gcloud` configurations to quickly switch between the development and production projects.
+
+### 1. List Available Configurations
+```bash
+gcloud config configurations list
+```
+
+### 2. Switch to Development (Default)
+```bash
+gcloud config configurations activate default
+```
+
+### 3. Switch to Production
+```bash
+gcloud config configurations activate prod
+```
+
+### 4. Create a New Configuration (If needed)
+If you need to set up a new environment locally:
+```bash
+gcloud config configurations create <name>
+gcloud config set project <project-id>
+gcloud config set account <your-email>
+```
+
+---
+
+## Database Setup & Indexing (Enterprise Edition)
+
+Since we use Firestore Enterprise, **automatic single-field indexing is disabled**. Every queried field must have an explicit index defined.
+
+### 1. Index Source of Truth
+Each service maintains its own `firestore.indexes.json` file:
+- `services/profiles_go/firestore.indexes.json`
+- `services/discovery_go/firestore.indexes.json`
+- `services/messages_go/firestore.indexes.json`
+- `services/users_go/firestore.indexes.json`
+
+### 2. Applying Indexes
+To apply indexes to a new or existing environment (e.g., `dev` or `test`):
+```bash
+bash scripts/apply-indexes.sh [dev|test]
+```
+This script iterates through all services and creates both single-field and composite indexes using `gcloud`.
+
+> [!IMPORTANT]
+> When adding a new `Where` or `OrderBy` query to a service, you **must** update the corresponding `firestore.indexes.json` and run the apply script. Otherwise, Firestore will perform expensive full collection scans.
+

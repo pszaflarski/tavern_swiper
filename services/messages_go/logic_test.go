@@ -15,6 +15,7 @@ import (
 )
 
 func TestUniquenessKeyGeneration(t *testing.T) {
+	skipIfRealDB(t)
 	pids := []string{"hero456", "hero123"}
 	sort.Strings(pids)
 	key := strings.Join(pids, "_")
@@ -24,6 +25,7 @@ func TestUniquenessKeyGeneration(t *testing.T) {
 }
 
 func TestHandleCreateConversation(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	
 	t.Run("AllowInitializationWithMatch", func(t *testing.T) {
@@ -93,6 +95,7 @@ func TestHandleCreateConversation(t *testing.T) {
 }
 
 func TestHandleSendMessage(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	
 	t.Run("SuccessAndDenormalization", func(t *testing.T) {
@@ -142,6 +145,7 @@ func TestHandleSendMessage(t *testing.T) {
 }
 
 func TestHandleListConversations(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	
 	t.Run("OrderedListing", func(t *testing.T) {

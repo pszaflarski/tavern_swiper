@@ -32,6 +32,7 @@ func loadSnapshots(t *testing.T) Snapshots {
 }
 
 func TestSnapshotsParity(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 	snaps := loadSnapshots(t)
 

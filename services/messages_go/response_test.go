@@ -13,6 +13,7 @@ import (
 )
 
 func TestSuccessResponseStructure(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	mock := &mockClient{}
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
@@ -99,6 +100,7 @@ func TestSuccessResponseStructure(t *testing.T) {
 }
 
 func TestErrorResponseStructure(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	
 	t.Run("422_UnprocessableEntity", func(t *testing.T) {
@@ -146,6 +148,7 @@ func TestErrorResponseStructure(t *testing.T) {
 }
 
 func TestEmptyArrayConsistency(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	mock := &mockClient{}
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }

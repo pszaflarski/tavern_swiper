@@ -42,6 +42,7 @@ func assertParity(t *testing.T, snapName string, body []byte, snaps Snapshots) {
 }
 
 func TestSnapshotsParity(t *testing.T) {
+	skipIfRealDB(t)
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
 	snaps := loadSnapshots(t)
