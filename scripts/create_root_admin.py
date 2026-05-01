@@ -60,13 +60,11 @@ def create_root(env="local", email="root@tavernswiper.com", password="Password12
     
     auth_url = get_url("auth", env)
     users_url = get_url("users", env)
-    profiles_url = get_url("profiles", env)
     
-    if not all([auth_url, users_url, profiles_url]):
+    if not all([auth_url, users_url]):
         print("❌ Could not determine all service URLs.")
         print(f"  Auth: {auth_url}")
         print(f"  Users: {users_url}")
-        print(f"  Profiles: {profiles_url}")
         return
 
     # 1. Register or Login
@@ -123,22 +121,6 @@ def create_root(env="local", email="root@tavernswiper.com", password="Password12
     tavern_token = v_resp.json()["token"]
     u_headers = {"Authorization": f"Bearer {tavern_token}"}
 
-    # 5. Create Profile for Root Admin
-    print("Creating Root Admin profile...")
-    p_payload = {
-        "display_name": "Root Admin",
-        "bio": "System Root Administrator",
-        "gender": "other",
-        "user_id": uid,
-        "is_active": True
-    }
-    p_resp = requests.post(f"{profiles_url}/profiles/", json=p_payload, headers=u_headers)
-    if p_resp.status_code in [200, 201]:
-        print("✅ Root Admin profile created.")
-    elif p_resp.status_code == 400 and "already has a profile" in p_resp.text.lower():
-        print("ℹ️ Root admin already has a profile.")
-    else:
-        print(f"⚠️ Profile creation warning: {p_resp.status_code} - {p_resp.text}")
 
     # Final Summary
     print("\n" + "="*50)

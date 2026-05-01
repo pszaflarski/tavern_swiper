@@ -27,7 +27,8 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "374390417125-63t743snmb8esvce5kjpv9faqd3k440i.apps.googleusercontent.com"
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "local"
       }
     },
     "production": {
@@ -46,7 +47,8 @@
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "tavern-swiper-prod.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "43551826902",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:43551826902:web:a6dd705d465b60447bba77",
-        "CMAKE_BUILD_PARALLEL_LEVEL": "1"
+        "CMAKE_BUILD_PARALLEL_LEVEL": "1",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "43551826902-0bi2mjd43mq3f430g3nq4eeb16ls9i2d.apps.googleusercontent.com"
       },
       "android": {
         "buildType": "app-bundle"

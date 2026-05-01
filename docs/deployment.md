@@ -34,7 +34,7 @@ go test -v ./...
 ### 2. Test Backend Integration
 Run integration tests to verify cross-service communication:
 ```bash
-bash tests/run_go_integration_tests.sh --local
+bash tests/run_integration_tests.sh --local
 ```
 
 ### 3. Test Frontend (Jest)
