@@ -18,6 +18,14 @@
       ]
     },
     {
+      "collectionGroup": "messages",
+      "fieldPath": "created_at",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
       "collectionGroup": "discovery_matches_cache",
       "fieldPath": "profile_ids",
       "indexes": [

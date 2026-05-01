@@ -57,6 +57,10 @@ func (m *mockCollection) Limit(n int) Query {
 	return &mockQuery{col: m, limit: n}
 }
 
+func (c *mockCollection) OrderBy(path string, dir firestore.Direction) Query {
+	return &mockQuery{col: c} // Mocking order as no-op
+}
+
 func (c *mockCollection) Documents(ctx context.Context) DocumentIterator {
 	q := &mockQuery{col: c}
 	return q.Documents(ctx)
@@ -119,6 +123,18 @@ func (d *mockDoc) Set(ctx context.Context, data interface{}, opts ...firestore.S
 			"participant_ids":  doc.ParticipantIDs,
 			"created_at":       doc.CreatedAt,
 			"updated_at":       doc.UpdatedAt,
+		}
+	}
+	return &firestore.WriteResult{}, nil
+}
+
+func (d *mockDoc) Update(ctx context.Context, updates []firestore.Update, opts ...firestore.Precondition) (*firestore.WriteResult, error) {
+	d.exists = true
+	for _, u := range updates {
+		if u.Value == firestore.ServerTimestamp {
+			d.data[u.Path] = time.Now().UTC()
+		} else {
+			d.data[u.Path] = u.Value
 		}
 	}
 	return &firestore.WriteResult{}, nil
@@ -191,6 +207,10 @@ func (q *mockQuery) Where(path, op string, value interface{}) Query {
 	return q
 }
 
+func (q *mockQuery) OrderBy(path string, dir firestore.Direction) Query {
+	return q // Mocking order as no-op
+}
+
 func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 	var snaps []*mockSnap
 	for _, d := range q.col.docs {
@@ -246,6 +266,10 @@ type mockBatch struct {
 
 func (b *mockBatch) Set(dr DocumentRef, data interface{}, opts ...firestore.SetOption) WriteBatch {
 	dr.Set(context.Background(), data, opts...)
+	return b
+}
+func (b *mockBatch) Update(dr DocumentRef, updates []firestore.Update, opts ...firestore.Precondition) WriteBatch {
+	dr.Update(context.Background(), updates, opts...)
 	return b
 }
 func (b *mockBatch) Delete(dr DocumentRef) WriteBatch {

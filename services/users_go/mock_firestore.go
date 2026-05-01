@@ -22,6 +22,9 @@ func (m mockCollection) Doc(path string) DocumentRef { return m.docFunc(path) }
 func (m mockCollection) Where(path, op string, value interface{}) Query {
 	return m.whereFunc(path, op, value)
 }
+func (m mockCollection) Limit(n int) Query {
+	return m.whereFunc("", "limit", n) // Reuse whereFunc for simplicity in these mocks
+}
 func (m mockCollection) Documents(ctx context.Context) DocumentIterator {
 	return m.documentsFunc(ctx)
 }
@@ -63,11 +66,15 @@ func (m mockIterator) GetAll() ([]DocumentSnapshot, error) { return m.getAllFunc
 
 type mockQuery struct {
 	limitFunc     func(n int) Query
+	whereFunc     func(path, op string, value interface{}) Query
 	documentsFunc func(ctx context.Context) DocumentIterator
 }
-func (m mockQuery) Limit(n int) Query { return m.limitFunc(n) }
-func (m mockQuery) Documents(ctx context.Context) DocumentIterator {
-	return m.documentsFunc(ctx)
+func (q *mockQuery) Limit(n int) Query { return q.limitFunc(n) }
+func (q *mockQuery) Where(path, op string, value interface{}) Query {
+	return q.whereFunc(path, op, value)
+}
+func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
+	return q.documentsFunc(ctx)
 }
 
 type mockBatch struct {

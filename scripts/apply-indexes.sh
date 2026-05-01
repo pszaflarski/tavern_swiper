@@ -65,16 +65,20 @@ for svc in "${!SERVICES[@]}"; do
       create_index "$DB_ID" "swipes" "swiper_profile_id:ASCENDING"
       create_index "$DB_ID" "swipes" "swiped_profile_id:ASCENDING"
       create_index "$DB_ID" "swipes" "direction:ASCENDING"
+      create_index "$DB_ID" "profiles_profiles_cache" "is_active:ASCENDING"
       create_index "$DB_ID" "matches" "profiles:CONTAINS"
       create_index "$DB_ID" "swipes" "swiper_profile_id:ASCENDING,swiped_profile_id:ASCENDING,direction:ASCENDING"
       ;;
     "messages_go")
       create_index "$DB_ID" "conversations" "participants_key:ASCENDING"
       create_index "$DB_ID" "profile_conversations" "profile_id:ASCENDING"
+      create_index "$DB_ID" "messages" "created_at:ASCENDING"
       create_index "$DB_ID" "discovery_matches_cache" "profile_ids:CONTAINS"
       ;;
     "users_go")
       create_index "$DB_ID" "users" "user_type:ASCENDING"
+      create_index "$DB_ID" "users" "is_deleted:ASCENDING"
+      create_index "$DB_ID" "users" "user_type:ASCENDING,is_deleted:ASCENDING"
       ;;
   esac
 done

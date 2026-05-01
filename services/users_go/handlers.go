@@ -77,7 +77,14 @@ func listUsersHandler(c *gin.Context) {
 		return
 	}
 
-	docs := db.Collection("users").Documents(c.Request.Context())
+	var query Query
+	if includeDeleted {
+		query = db.Collection("users")
+	} else {
+		query = db.Collection("users").Where("is_deleted", "==", false)
+	}
+
+	docs := query.Documents(c.Request.Context())
 	var users []UserOut
 	for {
 		doc, err := docs.Next()
@@ -91,12 +98,6 @@ func listUsersHandler(c *gin.Context) {
 
 		var u UserOut
 		data := doc.Data()
-		
-		// Manual mapping as we have flat structures in firestore usually
-		if isDel, ok := data["is_deleted"].(bool); ok && isDel && !includeDeleted {
-			continue
-		}
-		
 		mapToUserOut(doc.ID(), data, &u)
 		users = append(users, u)
 	}
@@ -373,14 +374,17 @@ func deleteUserHandler(c *gin.Context) {
 			httpError(c, http.StatusForbidden, "Only a Root Admin can delete another Root Admin.")
 			return
 		}
-		q := db.Collection("users").Where("user_type", "==", string(RootAdmin)).Documents(c.Request.Context())
+		q := db.Collection("users").
+			Where("user_type", "==", string(RootAdmin)).
+			Where("is_deleted", "==", false).
+			Documents(c.Request.Context())
 		activeRoots := 0
 		for {
-			d, err := q.Next()
-			if err == iterator.Done { break }
-			if isDel, ok := d.Data()["is_deleted"].(bool); ok && !isDel {
-				activeRoots++
+			_, err := q.Next()
+			if err == iterator.Done {
+				break
 			}
+			activeRoots++
 		}
 		if activeRoots <= 1 {
 			httpError(c, http.StatusBadRequest, "Cannot delete the last active root admin.")
