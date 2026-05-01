@@ -110,12 +110,22 @@ Each service maintains its own `firestore.indexes.json` file:
 - `services/messages_go/firestore.indexes.json`
 - `services/users_go/firestore.indexes.json`
 
-### 2. Applying Indexes
-To apply indexes to a new or existing environment (e.g., `dev` or `test`):
+### 2. Bootstrapping an Environment
+To create all required Firestore Enterprise databases and apply their initial indexes:
 ```bash
-bash scripts/apply-indexes.sh [dev|test]
+bash scripts/setup-databases.sh [dev|test|prod]
 ```
-This script iterates through all services and creates both single-field and composite indexes using `gcloud`.
+
+> [!WARNING]
+> **Database ID Cooldown:** If you delete a database and attempt to recreate it with the same ID immediately, Google Cloud enforces a **5-minute (300s) cooldown**. The setup script will fail during this period.
+
+### 3. Updating Indexes
+If you add a new `Where` or `OrderBy` query to a service, you must:
+1. Update the corresponding `firestore.indexes.json`.
+2. Run the apply script:
+```bash
+bash scripts/apply-indexes.sh [dev|test|prod]
+```
 
 > [!IMPORTANT]
 > When adding a new `Where` or `OrderBy` query to a service, you **must** update the corresponding `firestore.indexes.json` and run the apply script. Otherwise, Firestore will perform expensive full collection scans.

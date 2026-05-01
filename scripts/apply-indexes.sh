@@ -5,7 +5,7 @@
 
 set -e
 
-ENV=${1:-"dev"}
+ENV=${1:-"dev"} # [dev|test|prod]
 PROJECT=$(gcloud config get-value project)
 
 echo "🚀 Applying Firestore indexes for environment: $ENV (Project: $PROJECT)"

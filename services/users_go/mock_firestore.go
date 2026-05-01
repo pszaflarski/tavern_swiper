@@ -20,13 +20,22 @@ type mockCollection struct {
 }
 func (m mockCollection) Doc(path string) DocumentRef { return m.docFunc(path) }
 func (m mockCollection) Where(path, op string, value interface{}) Query {
-	return m.whereFunc(path, op, value)
+	if m.whereFunc != nil {
+		return m.whereFunc(path, op, value)
+	}
+	return &mockQuery{documentsFunc: m.documentsFunc} // Pass through documentsFunc
 }
 func (m mockCollection) Limit(n int) Query {
-	return m.whereFunc("", "limit", n) // Reuse whereFunc for simplicity in these mocks
+	if m.whereFunc != nil {
+		return m.whereFunc("", "limit", n)
+	}
+	return &mockQuery{documentsFunc: m.documentsFunc}
 }
 func (m mockCollection) Documents(ctx context.Context) DocumentIterator {
-	return m.documentsFunc(ctx)
+	if m.documentsFunc != nil {
+		return m.documentsFunc(ctx)
+	}
+	return &mockIterator{}
 }
 
 type mockDoc struct {
@@ -61,20 +70,41 @@ type mockIterator struct {
 	nextFunc    func() (DocumentSnapshot, error)
 	getAllFunc  func() ([]DocumentSnapshot, error)
 }
-func (m mockIterator) Next() (DocumentSnapshot, error) { return m.nextFunc() }
-func (m mockIterator) GetAll() ([]DocumentSnapshot, error) { return m.getAllFunc() }
+func (m mockIterator) Next() (DocumentSnapshot, error) { 
+	if m.nextFunc != nil {
+		return m.nextFunc()
+	}
+	return nil, nil 
+}
+func (m mockIterator) GetAll() ([]DocumentSnapshot, error) { 
+	if m.getAllFunc != nil {
+		return m.getAllFunc()
+	}
+	return []DocumentSnapshot{}, nil 
+}
 
 type mockQuery struct {
 	limitFunc     func(n int) Query
 	whereFunc     func(path, op string, value interface{}) Query
 	documentsFunc func(ctx context.Context) DocumentIterator
 }
-func (q *mockQuery) Limit(n int) Query { return q.limitFunc(n) }
+func (q *mockQuery) Limit(n int) Query {
+	if q.limitFunc != nil {
+		return q.limitFunc(n)
+	}
+	return q
+}
 func (q *mockQuery) Where(path, op string, value interface{}) Query {
-	return q.whereFunc(path, op, value)
+	if q.whereFunc != nil {
+		return q.whereFunc(path, op, value)
+	}
+	return q
 }
 func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
-	return q.documentsFunc(ctx)
+	if q.documentsFunc != nil {
+		return q.documentsFunc(ctx)
+	}
+	return &mockIterator{}
 }
 
 type mockBatch struct {

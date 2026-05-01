@@ -34,8 +34,8 @@ func TestHandleCreateConversation(t *testing.T) {
 			return mock, nil
 		}
 		
-		// Inject match into cache
-		matchID := "match123"
+		// Inject match into cache with deterministic ID
+		matchID := "match_p1_p2"
 		mock.Collection(COLLECTION_CACHE).Doc(matchID).Set(context.Background(), map[string]interface{}{
 			"profile_ids": []interface{}{"p1", "p2"},
 		})
