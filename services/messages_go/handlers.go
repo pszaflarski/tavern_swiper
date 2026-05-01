@@ -107,36 +107,14 @@ func handleCreateConversation(c *gin.Context) {
 
 	// 3. Verification step (check match cache for 1-on-1 chats)
 	if len(pids) == 2 {
-		cacheIter := client.Collection(COLLECTION_CACHE).Where("profile_ids", "array-contains", pids[0]).Documents(ctx)
-		cacheDocs, err := cacheIter.GetAll()
-		if err != nil {
-			log.Printf("[ERROR] Failed to query match cache for %s: %v", pids[0], err)
-			c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to verify match cache"})
-			return
-		}
-		log.Printf("[INFO] Match cache check for %s: %d docs found", pids[0], len(cacheDocs))
-
-		allowed := false
-		for _, cd := range cacheDocs {
-			data := cd.Data()
-			pList := parseStringSlice(data["profile_ids"])
-			hasOther := false
-			for _, p := range pList {
-				if p == pids[1] {
-					hasOther = true
-					break
-				}
-			}
-			if hasOther {
-				allowed = true
-				break
-			}
-		}
-
-		if !allowed {
+		matchID := fmt.Sprintf("match_%s_%s", pids[0], pids[1])
+		matchDoc, err := client.Collection(COLLECTION_CACHE).Doc(matchID).Get(ctx)
+		if err != nil || !matchDoc.Exists() {
+			log.Printf("[INFO] Match not found for %s vs %s (looked for %s)", pids[0], pids[1], matchID)
 			c.JSON(http.StatusForbidden, gin.H{"detail": "Conversation initialization not permitted (no match found)"})
 			return
 		}
+		log.Printf("[INFO] Match found: %s", matchID)
 	}
 
 	// 4. Create new Conversation
@@ -160,6 +138,7 @@ func handleCreateConversation(c *gin.Context) {
 			"profile_id":      pid,
 			"conversation_id": convID,
 			"role":            "participant",
+			"updated_at":      firestore.ServerTimestamp,
 		})
 	}
 
@@ -243,6 +222,20 @@ func handleSendMessage(c *gin.Context) {
 		"last_message_sender_id": body.SenderProfileID,
 	}, firestore.MergeAll)
 
+	// Update denormalized updated_at in ProfileConversation mappings for sorting
+	// Note: We need the other participant IDs to do this. We can get them from the conversation doc or just assume 1-on-1 for now.
+	// The handlesendmessage doesn't have the pids, so let's fetch the conversation participants.
+	convSnap, err := convRef.Get(ctx)
+	if err == nil && convSnap.Exists() {
+		pids := parseStringSlice(convSnap.Data()["participant_ids"])
+		for _, pid := range pids {
+			pcID := fmt.Sprintf("%s_%s", pid, convID)
+			batch.Update(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), []firestore.Update{
+				{Path: "updated_at", Value: firestore.ServerTimestamp},
+			})
+		}
+	}
+
 	if _, err := batch.Commit(ctx); err != nil {
 		log.Printf("[ERROR] Failed to commit message batch: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to send message"})
@@ -279,7 +272,9 @@ func handleGetMessages(c *gin.Context) {
 	}
 
 	// Query from sub-collection: conversations/{id}/messages
-	iter := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES).Documents(ctx)
+	iter := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES).
+		OrderBy("created_at", firestore.Asc).
+		Documents(ctx)
 	docs, err := iter.GetAll()
 	if err != nil {
 		log.Printf("[ERROR] Failed to fetch messages for %s: %v", convID, err)
@@ -287,12 +282,7 @@ func handleGetMessages(c *gin.Context) {
 		return
 	}
 
-	// Stable sort by CreatedAt BEFORE mapping to result strings
-	sort.SliceStable(docs, func(i, j int) bool {
-		ti, _ := docs[i].Data()["created_at"].(time.Time)
-		tj, _ := docs[j].Data()["created_at"].(time.Time)
-		return ti.Before(tj)
-	})
+	// No stable sort needed — results arrive pre-sorted from Firestore
 
 	var results []MessageOut
 	for _, doc := range docs {

@@ -92,7 +92,7 @@ func handleGetFeed(c *gin.Context) {
 		overfetchLimit = 50
 	}
 
-	candidatesIter := client.Collection(PROFILES_CACHE).Limit(overfetchLimit).Documents(ctx)
+	candidatesIter := client.Collection(PROFILES_CACHE).Where("is_active", "==", true).Limit(overfetchLimit).Documents(ctx)
 	candidateDocs, err := candidatesIter.GetAll()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Internal discovery error"})

@@ -14,6 +14,7 @@ import (
 )
 
 func TestUsersResilience_Health(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 	req, _ := http.NewRequest("GET", "/users/health", nil)
 	w := httptest.NewRecorder()
@@ -30,6 +31,7 @@ func TestUsersResilience_Health(t *testing.T) {
 }
 
 func TestUsersResilience_CreateRootAdminSuccess(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	// Mock DB logic
@@ -90,6 +92,7 @@ func TestUsersResilience_CreateRootAdminSuccess(t *testing.T) {
 }
 
 func TestUsersResilience_CreateRootAdminFailsIfExists(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
@@ -132,6 +135,7 @@ func TestUsersResilience_CreateRootAdminFailsIfExists(t *testing.T) {
 }
 
 func TestUsersResilience_GetMeSelfHealing(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	var setCalled bool
@@ -170,6 +174,7 @@ func TestUsersResilience_GetMeSelfHealing(t *testing.T) {
 }
 
 func TestUsersResilience_CheckRootAdminExists(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	// 1. Exists
@@ -241,6 +246,7 @@ func TestUsersResilience_CheckRootAdminExists(t *testing.T) {
 }
 
 func TestUsersResilience_ListUsersUnauthorized(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 	token := signGoTestToken("u1", User, "u1@e.com")
 	req, _ := http.NewRequest("GET", "/users/", nil)
@@ -254,6 +260,7 @@ func TestUsersResilience_ListUsersUnauthorized(t *testing.T) {
 }
 
 func TestUsersResilience_SelfRegistrationAsAdminFails(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	payload := map[string]interface{}{"email": "hacker@example.com", "user_type": "admin"}
@@ -271,6 +278,7 @@ func TestUsersResilience_SelfRegistrationAsAdminFails(t *testing.T) {
 }
 
 func TestUsersResilience_AdminCreationSuccess(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
@@ -310,6 +318,7 @@ func TestUsersResilience_AdminCreationSuccess(t *testing.T) {
 }
 
 func TestUsersResilience_ListUsersAdmin(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
@@ -345,6 +354,7 @@ func TestUsersResilience_ListUsersAdmin(t *testing.T) {
 }
 
 func TestUsersResilience_PurgeAllUsersNonRootFails(t *testing.T) {
+	skipIfRealDB(t)
 	r := setupTest()
 	token := signGoTestToken("admin-uid", Admin, "admin@e.com")
 	req, _ := http.NewRequest("DELETE", "/users/", nil)

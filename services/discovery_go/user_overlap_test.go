@@ -13,6 +13,7 @@ import (
 )
 
 func TestUserOverlapInFeed(t *testing.T) {
+	skipIfRealDB(t)
 	// Mock _now for token stability (matches signGoTestToken time)
 	fixedNow := time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC)
 	oldNow := _now
@@ -81,6 +82,7 @@ func TestUserOverlapInFeed(t *testing.T) {
 }
 
 func TestUserOverlapSwipe(t *testing.T) {
+	skipIfRealDB(t)
 	// Mock _now for token stability
 	fixedNow := time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC)
 	oldNow := _now

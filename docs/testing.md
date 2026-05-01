@@ -30,6 +30,34 @@ Backend tests include:
 - **Snapshot tests** (`snapshot_test.go`): Response format parity.
 - **Resilience tests** (`resilience_test.go`): Error handling and edge cases.
 
+### Dual-Mode Testing (Mock vs. Real Firestore)
+
+We support running backend tests against either the standard in-memory mocks or a live Firestore database.
+
+#### 1. Default (Mocks)
+This is the standard mode used for fast development and CI.
+```bash
+go test ./...
+```
+
+#### 2. Real Database Mode
+This mode runs specialized integration tests against the real Firestore project. It automatically skips tests that rely on mock-specific internals (like manual error injection).
+
+```bash
+# Run real DB tests for a service
+# (Defaults to tavern-swiper-dev project)
+go test -v -run TestIntegration -args -real-db
+
+# Override the project or database ID
+go test -v -run TestIntegration -args -real-db -project=my-project -db-id=my-db
+```
+
+> [!IMPORTANT]
+> To run real DB tests, you must have active Application Default Credentials:
+> ```bash
+> gcloud auth application-default login
+> ```
+
 ## 3. Frontend Unit Tests (Jest)
 
 The frontend uses Jest and React Native Testing Library.

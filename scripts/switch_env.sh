@@ -7,7 +7,7 @@ REGION="us-central1"
 FRONTEND_ENV="frontend/.env"
 
 if [[ -z "$ENV" ]]; then
-    echo "Usage: ./scripts/switch_env.sh [local|dev|test]"
+    echo "Usage: ./scripts/switch_env.sh [local|dev|test|prod]"
     exit 1
 fi
 
@@ -43,6 +43,8 @@ else
         
         if [[ "$ENV" == "dev" ]]; then
             DEPLOY_NAME="${ACTUAL_SERVICE}-dev"
+        elif [[ "$ENV" == "prod" ]]; then
+            DEPLOY_NAME="${ACTUAL_SERVICE}-prod"
         else
             DEPLOY_NAME="${ACTUAL_SERVICE}-test"
         fi

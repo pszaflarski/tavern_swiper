@@ -36,10 +36,12 @@ def get_url(service_name, env="local"):
     # All remote environments use suffixed service names: auth-dev, auth-test, auth-prod
     deploy_name = f"{service_name}-{env}"
         
+    region = "nam5" if env == "prod" else REGION
+        
     try:
         url = subprocess.check_output([
             "gcloud", "run", "services", "describe", deploy_name,
-            "--platform", "managed", "--region", REGION, "--project", project_id,
+            "--platform", "managed", "--region", region, "--project", project_id,
             "--format", "value(status.url)"
         ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url
@@ -49,7 +51,7 @@ def get_url(service_name, env="local"):
         try:
             url = subprocess.check_output([
                 "gcloud", "run", "services", "describe", service_name,
-                "--platform", "managed", "--region", REGION, "--project", project_id,
+                "--platform", "managed", "--region", region, "--project", project_id,
                 "--format", "value(status.url)"
             ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
             return url

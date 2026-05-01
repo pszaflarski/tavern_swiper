@@ -27,6 +27,7 @@ func init() {
 }
 
 func TestUnmarshalEvent(t *testing.T) {
+	skipIfRealDB(t)
 	event := &pb.MatchEvent{
 		Type: pb.MatchEvent_CREATED,
 		Event: &pb.MatchEvent_Created{
@@ -59,6 +60,7 @@ func TestUnmarshalEvent(t *testing.T) {
 }
 
 func TestGetEnv(t *testing.T) {
+	skipIfRealDB(t)
 	key := "TEST_ENV_VAR"
 	val := "test_val"
 	os.Setenv(key, val)
@@ -74,6 +76,7 @@ func TestGetEnv(t *testing.T) {
 }
 
 func TestProcessEventBasic(t *testing.T) {
+	skipIfRealDB(t)
 	ctx := context.Background()
 	event := &pb.MatchEvent{Type: pb.MatchEvent_UNKNOWN}
 
@@ -85,6 +88,7 @@ func TestProcessEventBasic(t *testing.T) {
 }
 
 func TestHandlePubSubPush_Success(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.POST("/", handlePubSubPush)
@@ -115,6 +119,7 @@ func TestHandlePubSubPush_Success(t *testing.T) {
 }
 
 func TestHandlePubSubPush_InvalidJSON(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.POST("/", handlePubSubPush)
@@ -132,6 +137,7 @@ func TestHandlePubSubPush_InvalidJSON(t *testing.T) {
 }
 
 func TestHandlePubSubPush_EmptyData(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.POST("/", handlePubSubPush)
@@ -151,6 +157,7 @@ func TestHandlePubSubPush_EmptyData(t *testing.T) {
 }
 
 func TestProcessSerializedEvent_ProtoError(t *testing.T) {
+	skipIfRealDB(t)
 	err := processSerializedEvent(context.Background(), []byte("not-a-proto"))
 	if err == nil {
 		t.Errorf("Expected error for invalid proto data, got nil")
@@ -158,6 +165,7 @@ func TestProcessSerializedEvent_ProtoError(t *testing.T) {
 }
 
 func TestProcessEvent_Created(t *testing.T) {
+	skipIfRealDB(t)
 	ctx := context.Background()
 	event := &pb.MatchEvent{
 		Type: pb.MatchEvent_CREATED,
@@ -176,6 +184,7 @@ func TestProcessEvent_Created(t *testing.T) {
 }
 
 func TestProcessEvent_Deleted(t *testing.T) {
+	skipIfRealDB(t)
 	ctx := context.Background()
 	event := &pb.MatchEvent{
 		Type: pb.MatchEvent_DELETED,

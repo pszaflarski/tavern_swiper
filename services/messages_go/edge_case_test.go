@@ -13,6 +13,7 @@ import (
 )
 
 func TestEdgeCaseProtections(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	mock := &mockClient{}
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }

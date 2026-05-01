@@ -7,7 +7,13 @@ import subprocess
 import json
 
 # --- Configuration ---
-PROJECT_ID = "tavern-swiper-dev"
+def get_current_project():
+    try:
+        return subprocess.check_output(["gcloud", "config", "get-value", "project"]).decode("utf-8").strip()
+    except:
+        return "tavern-swiper-dev"
+
+PROJECT_ID = get_current_project()
 REGION = "us-central1"
 
 # Primary Seeder (Authenticated first to perform administrative overrides)
@@ -38,10 +44,12 @@ def get_url(service_name, env="local"):
     else:
         deploy_name = service_name
         
+    region = "nam5" if env == "prod" else REGION
+        
     try:
         url = subprocess.check_output([
             "gcloud", "run", "services", "describe", deploy_name,
-            "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+            "--platform", "managed", "--region", region, "--project", PROJECT_ID,
             "--format", "value(status.url)"
         ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url

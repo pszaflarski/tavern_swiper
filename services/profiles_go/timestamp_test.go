@@ -13,6 +13,7 @@ import (
 )
 
 func TestProfileTimestamps(t *testing.T) {
+	skipIfRealDB(t)
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
 	

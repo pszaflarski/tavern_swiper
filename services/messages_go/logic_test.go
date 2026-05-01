@@ -15,6 +15,7 @@ import (
 )
 
 func TestUniquenessKeyGeneration(t *testing.T) {
+	skipIfRealDB(t)
 	pids := []string{"hero456", "hero123"}
 	sort.Strings(pids)
 	key := strings.Join(pids, "_")
@@ -24,6 +25,7 @@ func TestUniquenessKeyGeneration(t *testing.T) {
 }
 
 func TestHandleCreateConversation(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	
 	t.Run("AllowInitializationWithMatch", func(t *testing.T) {
@@ -32,8 +34,8 @@ func TestHandleCreateConversation(t *testing.T) {
 			return mock, nil
 		}
 		
-		// Inject match into cache
-		matchID := "match123"
+		// Inject match into cache with deterministic ID
+		matchID := "match_p1_p2"
 		mock.Collection(COLLECTION_CACHE).Doc(matchID).Set(context.Background(), map[string]interface{}{
 			"profile_ids": []interface{}{"p1", "p2"},
 		})
@@ -93,6 +95,7 @@ func TestHandleCreateConversation(t *testing.T) {
 }
 
 func TestHandleSendMessage(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	
 	t.Run("SuccessAndDenormalization", func(t *testing.T) {
@@ -142,6 +145,7 @@ func TestHandleSendMessage(t *testing.T) {
 }
 
 func TestHandleListConversations(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	
 	t.Run("OrderedListing", func(t *testing.T) {

@@ -12,6 +12,7 @@ import (
 )
 
 func TestFirestoreSyntax(t *testing.T) {
+	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 
 	t.Run("VerifyArrayContainsOperator", func(t *testing.T) {
@@ -20,9 +21,9 @@ func TestFirestoreSyntax(t *testing.T) {
 			return mock, nil
 		}
 
-		// Setup match in cache
+		// Setup match in cache with deterministic ID
 		p1, p2 := "syntax_p1", "syntax_p2"
-		matchID := "match_syntax_test"
+		matchID := "match_syntax_p1_syntax_p2"
 		mock.Collection(COLLECTION_CACHE).Doc(matchID).Set(context.Background(), map[string]interface{}{
 			"profile_ids": []string{p1, p2},
 		})

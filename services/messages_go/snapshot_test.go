@@ -63,6 +63,7 @@ func (m *MockDiscoveryClient) ListMatchesForProfile(profileID string, token stri
 }
 
 func TestSnapshotsParity(t *testing.T) {
+	skipIfRealDB(t)
 	mockDiscovery := &MockDiscoveryClient{}
 	r := setupTest()
 	r.GET("/messages/health", handleHealth)

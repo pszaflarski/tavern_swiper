@@ -25,12 +25,14 @@ type CollectionRef interface {
 	Doc(path string) DocumentRef
 	Where(path, op string, value interface{}) Query
 	Limit(n int) Query
+	OrderBy(path string, dir firestore.Direction) Query
 	Documents(ctx context.Context) DocumentIterator
 }
 
 type DocumentRef interface {
 	Get(ctx context.Context) (DocumentSnapshot, error)
 	Set(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error)
+	Update(ctx context.Context, updates []firestore.Update, opts ...firestore.Precondition) (*firestore.WriteResult, error)
 	Delete(ctx context.Context, opts ...firestore.Precondition) (*firestore.WriteResult, error)
 	Collection(path string) CollectionRef
 }
@@ -50,11 +52,13 @@ type DocumentIterator interface {
 type Query interface {
 	Limit(n int) Query
 	Where(path, op string, value interface{}) Query
+	OrderBy(path string, dir firestore.Direction) Query
 	Documents(ctx context.Context) DocumentIterator
 }
 
 type WriteBatch interface {
 	Set(dr DocumentRef, data interface{}, opts ...firestore.SetOption) WriteBatch
+	Update(dr DocumentRef, updates []firestore.Update, opts ...firestore.Precondition) WriteBatch
 	Delete(dr DocumentRef) WriteBatch
 	Commit(ctx context.Context) ([]*firestore.WriteResult, error)
 }
@@ -78,6 +82,9 @@ func (c realCollection) Where(path, op string, value interface{}) Query {
 func (c realCollection) Limit(n int) Query {
 	return realQuery{c.CollectionRef.Limit(n)}
 }
+func (c realCollection) OrderBy(path string, dir firestore.Direction) Query {
+	return realQuery{c.CollectionRef.OrderBy(path, dir)}
+}
 func (c realCollection) Documents(ctx context.Context) DocumentIterator {
 	return realIter{c.CollectionRef.Documents(ctx)}
 }
@@ -91,6 +98,9 @@ func (d realDoc) Get(ctx context.Context) (DocumentSnapshot, error) {
 }
 func (d realDoc) Set(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
 	return d.DocumentRef.Set(ctx, data, opts...)
+}
+func (d realDoc) Update(ctx context.Context, updates []firestore.Update, opts ...firestore.Precondition) (*firestore.WriteResult, error) {
+	return d.DocumentRef.Update(ctx, updates, opts...)
 }
 func (d realDoc) Delete(ctx context.Context, opts ...firestore.Precondition) (*firestore.WriteResult, error) {
 	return d.DocumentRef.Delete(ctx, opts...)
@@ -125,12 +135,19 @@ func (q realQuery) Limit(n int) Query { return realQuery{q.Query.Limit(n)} }
 func (q realQuery) Where(path, op string, value interface{}) Query {
 	return realQuery{q.Query.Where(path, op, value)}
 }
+func (q realQuery) OrderBy(path string, dir firestore.Direction) Query {
+	return realQuery{q.Query.OrderBy(path, dir)}
+}
 func (q realQuery) Documents(ctx context.Context) DocumentIterator {
 	return realIter{q.Query.Documents(ctx)}
 }
 
 func (b realBatch) Set(dr DocumentRef, data interface{}, opts ...firestore.SetOption) WriteBatch {
 	b.WriteBatch.Set(dr.(realDoc).DocumentRef, data, opts...)
+	return b
+}
+func (b realBatch) Update(dr DocumentRef, updates []firestore.Update, opts ...firestore.Precondition) WriteBatch {
+	b.WriteBatch.Update(dr.(realDoc).DocumentRef, updates, opts...)
 	return b
 }
 func (b realBatch) Delete(dr DocumentRef) WriteBatch {

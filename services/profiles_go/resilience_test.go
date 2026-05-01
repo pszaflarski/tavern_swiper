@@ -30,6 +30,7 @@ func localSignToken(uid, role string, now time.Time) string {
 }
 
 func TestDocToProfileSafety(t *testing.T) {
+	skipIfRealDB(t)
 	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
 	oldNow := _now
 	_now = func() time.Time { return fixedNow }
@@ -54,6 +55,7 @@ func TestDocToProfileSafety(t *testing.T) {
 }
 
 func TestProfilesResilience_UploadImage(t *testing.T) {
+	skipIfRealDB(t)
 	jwtSecret = []byte("super-secret-tavern-key-123")
 	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
 	oldNow := _now
@@ -123,6 +125,7 @@ func TestProfilesResilience_UploadImage(t *testing.T) {
 }
 
 func TestProfilesResilience_CreateProfileValidation(t *testing.T) {
+	skipIfRealDB(t)
 	jwtSecret = []byte("super-secret-tavern-key-123")
 	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
 	oldNow := _now
@@ -153,6 +156,7 @@ func TestProfilesResilience_CreateProfileValidation(t *testing.T) {
 }
 
 func TestProfilesResilience_ActiveProfileFlow(t *testing.T) {
+	skipIfRealDB(t)
 	jwtSecret = []byte("super-secret-tavern-key-123")
 	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
 	oldNow := _now
@@ -193,6 +197,7 @@ func TestProfilesResilience_ActiveProfileFlow(t *testing.T) {
 }
 
 func TestListMyProfiles(t *testing.T) {
+	skipIfRealDB(t)
 	jwtSecret = []byte("super-secret-tavern-key-123")
 	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
 	oldNow := _now
@@ -294,6 +299,7 @@ func createTestJPEG(w, h int) []byte {
 }
 
 func TestListProfilesForUser_Authorization(t *testing.T) {
+	skipIfRealDB(t)
 	jwtSecret = []byte("super-secret-tavern-key-123")
 	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
 	oldNow := _now

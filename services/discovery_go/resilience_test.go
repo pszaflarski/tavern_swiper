@@ -13,6 +13,7 @@ import (
 )
 
 func TestHandleGetFeed_MalformedCache(t *testing.T) {
+	skipIfRealDB(t)
 	// Mock _now for token stability
 	fixedNow := time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC)
 	oldNow := _now
@@ -54,6 +55,7 @@ func TestHandleGetFeed_MalformedCache(t *testing.T) {
 }
 
 func TestHandleListMatches_MalformedMatch(t *testing.T) {
+	skipIfRealDB(t)
 	// Mock _now for token stability
 	fixedNow := time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC)
 	oldNow := _now
@@ -94,6 +96,7 @@ func TestHandleListMatches_MalformedMatch(t *testing.T) {
 }
 
 func TestDiscoveryResilience_SwipeMatchDetection(t *testing.T) {
+	skipIfRealDB(t)
 	fixedNow := time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC)
 	oldNow := _now
 	_now = func() time.Time { return fixedNow }
@@ -160,6 +163,7 @@ func TestDiscoveryResilience_SwipeMatchDetection(t *testing.T) {
 }
 
 func TestDiscoveryResilience_FeedExclusions(t *testing.T) {
+	skipIfRealDB(t)
 	fixedNow := time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC)
 	oldNow := _now
 	_now = func() time.Time { return fixedNow }

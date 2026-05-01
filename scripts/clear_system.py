@@ -6,7 +6,13 @@ from google.cloud import firestore
 from google.oauth2.credentials import Credentials
 
 # --- Configuration ---
-PROJECT_ID = "tavern-swiper-dev"
+def get_current_project():
+    try:
+        return subprocess.check_output(["gcloud", "config", "get-value", "project"]).decode("utf-8").strip()
+    except:
+        return "tavern-swiper-dev"
+
+PROJECT_ID = get_current_project()
 SERVICES = ["users", "profiles", "auth", "messages", "discovery"]
 
 def get_gcloud_credentials():
