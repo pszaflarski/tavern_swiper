@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "374390417125-8ad4s77g5fpo4rlifmq0q42rbbv205rl.apps.googleusercontent.com",
+          "client_id": "374390417125-jkoe9v28g43fhbsfmkkubem0f2ctqlht.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.tavernswiper.app",
-            "certificate_hash": "b202616de2f6ac01d1e686abf09a64f103209477"
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
           }
         },
         {
