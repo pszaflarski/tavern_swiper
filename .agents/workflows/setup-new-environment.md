@@ -89,7 +89,7 @@ gcloud firestore databases create \
   --project=$PROJECT_ID
 
 # 3.3 Create the remaining service databases
-for DB in auth-$ENV_NAME users-$ENV_NAME profiles-$ENV_NAME messages-$ENV_NAME; do
+for DB in users-$ENV_NAME profiles-$ENV_NAME messages-$ENV_NAME; do
   gcloud firestore databases create \
     --database="$DB" \
     --location=nam5 \

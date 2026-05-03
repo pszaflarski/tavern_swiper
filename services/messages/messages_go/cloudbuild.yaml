@@ -7,12 +7,12 @@ steps:
       - |
         go mod download
         go test -v ./... -skip TestSnapshotsParity
-    dir: 'services/$_DIR_NAME'
+    dir: 'services/messages/$_DIR_NAME'
 
   # 2. Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME', '.']
-    dir: 'services/$_DIR_NAME'
+    dir: 'services/messages/$_DIR_NAME'
 
   # 3. Push the image to GCR
   - name: 'gcr.io/cloud-builders/docker'
@@ -31,7 +31,7 @@ steps:
           --region=us-central1 \
           --allow-unauthenticated \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,USERS_DATABASE_ID=$_USERS_DB_ID,JWT_SECRET=$_JWT_SECRET,FIREBASE_WEB_API_KEY=$_FIREBASE_WEB_API_KEY \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$PROJECT_ID-media-$_ENV_NAME,DISCOVERY_SERVICE_URL=$_ENV_NAME-discovery-v1,PUBSUB_PROJECT_ID=$PROJECT_ID \
           --cpu-boost \
           --execution-environment=gen1
 

@@ -8,7 +8,7 @@ import (
 
 var useRealDB = flag.Bool("real-db", false, "Use real Firestore database instead of mocks")
 var gcpProject = flag.String("project", "tavern-swiper-dev", "GCP project for real DB tests")
-var firestoreDB = flag.String("db-id", "auth-dev", "Firestore database ID for real DB tests")
+var firestoreDB = flag.String("db-id", "users-dev", "Firestore database ID for real DB tests")
 
 // skipIfRealDB skips the current test when running against a real Firestore database.
 // Use this for tests that depend on mock internals (pre-seeded data, error injection, etc.)
@@ -26,15 +26,15 @@ func setupRealDBEnv(t *testing.T) {
 		return
 	}
 	origProject := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	origDB := os.Getenv("FIRESTORE_DATABASE_ID")
+	origDB := os.Getenv("USERS_DATABASE_ID")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", *gcpProject)
-	os.Setenv("FIRESTORE_DATABASE_ID", *firestoreDB)
+	os.Setenv("USERS_DATABASE_ID", *firestoreDB)
 	t.Cleanup(func() {
 		if origProject != "" {
 			os.Setenv("GOOGLE_CLOUD_PROJECT", origProject)
 		}
 		if origDB != "" {
-			os.Setenv("FIRESTORE_DATABASE_ID", origDB)
+			os.Setenv("USERS_DATABASE_ID", origDB)
 		}
 	})
 }

@@ -1,7 +1,7 @@
 services:
   auth:
     build:
-      context: ./services/auth_go
+      context: ./services/auth/auth_go
     ports:
       - "8001:8001"
     environment:
@@ -26,7 +26,7 @@ services:
 
   profiles:
     build:
-      context: ./services/profiles_go
+      context: ./services/profiles/profiles_go
     ports:
       - "8002:8002"
     environment:
@@ -52,7 +52,7 @@ services:
 
   discovery:
     build:
-      context: ./services/discovery_go
+      context: ./services/discovery/discovery_go
     ports:
       - "8003:8003"
     networks:
@@ -80,7 +80,7 @@ services:
 
   messages:
     build:
-      context: ./services/messages_go
+      context: ./services/messages/messages_go
     ports:
       - "8005:8005"
     environment:
@@ -106,7 +106,7 @@ services:
 
   users:
     build:
-      context: ./services/users_go
+      context: ./services/auth/users_go
     ports:
       - "8006:8006"
     environment:
@@ -142,7 +142,7 @@ services:
 
   discovery-subscriber:
     build:
-      context: ./services/discovery_subscriber
+      context: ./services/discovery/discovery_subscriber
     environment:
       - FIRESTORE_DATABASE_ID=discovery-test
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
@@ -162,7 +162,7 @@ services:
 
   messages-subscriber:
     build:
-      context: ./services/messages_subscriber
+      context: ./services/messages/messages_subscriber
     environment:
       - FIRESTORE_DATABASE_ID=messages-test
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev

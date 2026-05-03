@@ -1,6 +1,6 @@
 {
   "createTime": "2026-04-08T23:08:11.506087175Z",
-  "filename": "services/profiles/cloudbuild.yaml",
+  "filename": "services/profiles/profiles_go/cloudbuild.yaml",
   "github": {
     "name": "tavern_swiper",
     "owner": "pszaflarski",
@@ -10,7 +10,7 @@
   },
   "id": "27613bd6-ad72-480c-b308-6cc1fe92639f",
   "includedFiles": [
-    "services/profiles/**"
+    "services/profiles/profiles_go/**"
   ],
   "name": "profiles-dev-deploy",
   "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/9b4996f2-9709-4009-aaf4-cbadb27fe12c",

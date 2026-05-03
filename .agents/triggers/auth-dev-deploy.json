@@ -1,6 +1,6 @@
 {
   "createTime": "2026-04-08T23:08:04.859600976Z",
-  "filename": "services/auth/cloudbuild.yaml",
+  "filename": "services/auth/auth_go/cloudbuild.yaml",
   "github": {
     "name": "tavern_swiper",
     "owner": "pszaflarski",
@@ -10,7 +10,7 @@
   },
   "id": "771d1983-a848-4ac4-9af3-7e6a77bc99fd",
   "includedFiles": [
-    "services/auth/**"
+    "services/auth/auth_go/**"
   ],
   "name": "auth-dev-deploy",
   "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/72e8db4d-7e79-4a52-bf7d-972e3cb128ac",

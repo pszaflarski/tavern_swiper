@@ -9,14 +9,13 @@ You are Antigravity, the AI assistant for the Tavern Swiper project. Adhere to t
 > **DOCKER RESOURCE PROTECTION**: **NEVER** run `docker compose up`, `docker compose build`, `tests/run_integration_tests.sh --local`, or any resource-intensive Docker setup commands automatically. These operations risk triggering **Out Of Memory (OOM)** issues. You **MUST** obtain explicit user permission before starting the Docker environment to allow the user to manage local resources.
 
 ## 🏰 Architecture: Shared Nothing Microservices
-This project follows a strictly isolated microservice backend. **NEVER** suggest sharing databases or direct internal calls between services (except via the `auth` service for identity verification).
+This project follows a strictly isolated microservice backend. **NEVER** suggest sharing databases or direct internal calls between services (except via the `auth` service for identity verification). **NEVER** share code between containers — duplication is preferred over coupling. Each container MUST be fully self-contained (its own `go.mod`, `Dockerfile`, `cloudbuild.yaml`, `.env`).
 
-- **Strict Database Isolation**: Each service MUST use its own dedicated Firestore database instance.
-  - `auth` -> `auth`
-  - `profiles` -> `profiles`
-  - `discovery` -> `discovery`
-  - `messages` -> `messages`
-  - `users` -> `users`
+- **Service Boundaries**: Containers are grouped by domain boundary under `services/`. Containers within a boundary share the same database but **never share code**.
+  - `services/auth/` → `auth_go`, `users_go` → DB: `users-<env>`
+  - `services/profiles/` → `profiles_go` → DB: `profiles-<env>`
+  - `services/discovery/` → `discovery_go`, `discovery_subscriber` → DB: `discovery-<env>`
+  - `services/messages/` → `messages_go`, `messages_subscriber` → DB: `messages-<env>`
 
 - **Port Assignments**:
   - Auth: 8001

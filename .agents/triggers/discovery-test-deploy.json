@@ -1,6 +1,6 @@
 {
   "createTime": "2026-04-08T23:08:16.009242639Z",
-  "filename": "services/discovery/cloudbuild.yaml",
+  "filename": "services/discovery/discovery_go/cloudbuild.yaml",
   "github": {
     "name": "tavern_swiper",
     "owner": "pszaflarski",
@@ -10,7 +10,7 @@
   },
   "id": "7f2ea262-7087-4a3c-8378-b733b23c93f4",
   "includedFiles": [
-    "services/discovery/**"
+    "services/discovery/discovery_go/**"
   ],
   "name": "discovery-test-deploy",
   "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/dada4fab-86d5-4ad9-80db-0f864ab611e0",

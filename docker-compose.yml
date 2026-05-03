@@ -1,7 +1,7 @@
 services:
   auth:
     build:
-      context: ./services/auth_go
+      context: ./services/auth/auth_go
     ports:
       - "8001:8001"
     environment:
@@ -11,7 +11,7 @@ services:
       - FIREBASE_AUTH_URL=http://firebase-emulator:9099/identitytoolkit.googleapis.com/v1/accounts
       - FIREBASE_WEB_API_KEY=any-mock-key
       - ALLOW_LONG_LIVED_TOKENS=true
-    env_file: ./services/auth_go/.env
+    env_file: ./services/auth/auth_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -28,7 +28,7 @@ services:
 
   profiles:
     build:
-      context: ./services/profiles_go
+      context: ./services/profiles/profiles_go
     ports:
       - "8002:8002"
     environment:
@@ -38,7 +38,7 @@ services:
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - PUBSUB_TOPIC_ID=dev-profiles-profile-events-v1
       - PUBSUB_PROJECT_ID=tavern-swiper-dev
-    env_file: ./services/profiles_go/.env
+    env_file: ./services/profiles/profiles_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -55,7 +55,7 @@ services:
 
   discovery:
     build:
-      context: ./services/discovery_go
+      context: ./services/discovery/discovery_go
     ports:
       - "8003:8003"
     environment:
@@ -66,7 +66,7 @@ services:
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - PUBSUB_PROJECT_ID=tavern-swiper-dev
       - PUBSUB_TOPIC_ID=dev-discovery-match-events-v1
-    env_file: ./services/discovery_go/.env
+    env_file: ./services/discovery/discovery_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -86,14 +86,14 @@ services:
 
   messages:
     build:
-      context: ./services/messages_go
+      context: ./services/messages/messages_go
     ports:
       - "8005:8005"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PORT=8005
-    env_file: ./services/messages_go/.env
+    env_file: ./services/messages/messages_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -113,14 +113,14 @@ services:
 
   users:
     build:
-      context: ./services/users_go
+      context: ./services/auth/users_go
     ports:
       - "8006:8006"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PORT=8006
-    env_file: ./services/users_go/.env
+    env_file: ./services/auth/users_go/.env
     volumes:
       - /home/peter/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -155,7 +155,7 @@ services:
   discovery-subscriber:
     command: go run cmd/local/main.go
     build:
-      context: ./services/discovery_subscriber
+      context: ./services/discovery/discovery_subscriber
     environment:
       - FIRESTORE_DATABASE_ID=discovery-dev
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
@@ -178,7 +178,7 @@ services:
 
   messages-subscriber:
     build:
-      context: ./services/messages_subscriber
+      context: ./services/messages/messages_subscriber
     environment:
       - FIRESTORE_DATABASE_ID=messages-dev
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev

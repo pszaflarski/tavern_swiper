@@ -1,6 +1,6 @@
 {
   "createTime": "2026-04-08T23:08:17.771869759Z",
-  "filename": "services/messages/cloudbuild.yaml",
+  "filename": "services/messages/messages_go/cloudbuild.yaml",
   "github": {
     "name": "tavern_swiper",
     "owner": "pszaflarski",
@@ -10,7 +10,7 @@
   },
   "id": "53faf0be-fb5d-4fd1-91b6-031deb1b7ad6",
   "includedFiles": [
-    "services/messages/**"
+    "services/messages/messages_go/**"
   ],
   "name": "messages-dev-deploy",
   "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/bf81ee0a-4392-4d0c-87f0-4cd63a5b17ae",

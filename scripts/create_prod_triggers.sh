@@ -53,37 +53,37 @@ create_frontend_trigger() {
 
 # 1. Auth
 create_backend_trigger "auth-prod-deploy" \
-    "services/auth_go/cloudbuild.yaml" "services/auth_go" "auth_go" "auth" \
+    "services/auth/auth_go/cloudbuild.yaml" "services/auth/auth_go" "auth_go" "auth" \
     "_DB_ID=auth-prod,_USERS_DB_ID=users-prod,_FIREBASE_WEB_API_KEY=$FIREBASE_KEY,_JWT_SECRET=$JWT_SECRET"
 
 # 2. Users
 create_backend_trigger "users-prod-deploy" \
-    "services/users_go/cloudbuild.yaml" "services/users_go" "users_go" "users" \
+    "services/auth/users_go/cloudbuild.yaml" "services/auth/users_go" "users_go" "users" \
     "_DB_ID=users-prod,_JWT_SECRET=$JWT_SECRET"
 
 # 3. Profiles
 create_backend_trigger "profiles-prod-deploy" \
-    "services/profiles_go/cloudbuild.yaml" "services/profiles_go" "profiles_go" "profiles" \
+    "services/profiles/profiles_go/cloudbuild.yaml" "services/profiles/profiles_go" "profiles_go" "profiles" \
     "_DB_ID=profiles-prod,_JWT_SECRET=$JWT_SECRET"
 
 # 4. Discovery
 create_backend_trigger "discovery-prod-deploy" \
-    "services/discovery_go/cloudbuild.yaml" "services/discovery_go" "discovery_go" "discovery" \
+    "services/discovery/discovery_go/cloudbuild.yaml" "services/discovery/discovery_go" "discovery_go" "discovery" \
     "_DB_ID=discovery-prod,_JWT_SECRET=$JWT_SECRET"
 
 # 5. Messages
 create_backend_trigger "messages-prod-deploy" \
-    "services/messages_go/cloudbuild.yaml" "services/messages_go" "messages_go" "messages" \
+    "services/messages/messages_go/cloudbuild.yaml" "services/messages/messages_go" "messages_go" "messages" \
     "_DB_ID=messages-prod,_JWT_SECRET=$JWT_SECRET"
 
 # 6. Discovery Subscriber
 create_backend_trigger "discovery-subscriber-prod-deploy" \
-    "services/discovery_subscriber/cloudbuild.yaml" "services/discovery_subscriber" "discovery_subscriber" "discovery-subscriber" \
+    "services/discovery/discovery_subscriber/cloudbuild.yaml" "services/discovery/discovery_subscriber" "discovery_subscriber" "discovery-subscriber" \
     "_DB_ID=discovery-prod"
 
 # 7. Messages Subscriber
 create_backend_trigger "messages-subscriber-prod-deploy" \
-    "services/messages_subscriber/cloudbuild.yaml" "services/messages_subscriber" "messages_subscriber" "messages-subscriber" \
+    "services/messages/messages_subscriber/cloudbuild.yaml" "services/messages/messages_subscriber" "messages_subscriber" "messages-subscriber" \
     "_DB_ID=messages-prod"
 
 # 8. Frontend (no _DIR_NAME — matches dev trigger structure)
