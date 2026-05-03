@@ -71,9 +71,14 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
 - **Strict Deployment Workflow**: You MAY use `gcloud run deploy` or `gcloud functions deploy` temporarily to test things or debug failed builds. However, when deploying actual fixes to the codebase to be finalized, you MUST trigger the existing Cloud Build CI/CD triggers by committing your work to GitHub (e.g. `main` or `test` branches). This ensures infrastructure-as-code parity and prevents drift.
 
 ## 🌿 Branch Management & CI/CD
-- **Feature Branches are Mandatory**: **NEVER** commit work directly to the `main` or `test` branches. Those branches are protected and have automated Cloud Build triggers attached.
+- **Deploy Branches**: `dev`, `test`, `prod`. Each has Cloud Build triggers that auto-deploy on push.
+  - `dev` → deploys to `tavern-swiper-dev`
+  - `test` → deploys to `tavern-swiper-dev` (test triggers)
+  - `prod` → deploys to `tavern-swiper-prod`
+- **`main` is NOT a deploy branch.** Do not push to `main` expecting a deployment.
+- **Feature Branches are Mandatory**: **NEVER** commit work directly to deploy branches without user approval.
 - **Workflow**:
   1. Create a new branch for every task: `git checkout -b <type>/<description>`.
   2. Perform implementation and verification on the local branch.
-  3. Push to origin and open a Pull Request for merge into `main` or `test`.
+  3. Merge to `dev` first, verify builds pass, then promote to `test` and `prod`.
 - This prevents accidental deployments and allows for clean code review.
