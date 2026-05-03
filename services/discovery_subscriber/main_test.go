@@ -1,7 +1,6 @@
 package main
 
 import (
-	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -22,7 +21,7 @@ func init() {
 	log.SetOutput(bytes.NewBuffer(nil))
 	
 	// Set mock database
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{}, nil
 	}
 }

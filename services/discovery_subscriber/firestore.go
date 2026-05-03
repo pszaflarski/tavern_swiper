@@ -6,21 +6,20 @@ import (
 	"os"
 	"sync"
 
-	"tavern-swiper.app/firestoreutil"
 )
 
 var (
-	db     firestoreutil.FirestoreClient
+	db     FirestoreClient
 	dbOnce sync.Once
 	dbErr  error
 )
 
 // Function pointer to allow mocking in tests
-var getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+var getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 	return getDBInternal(ctx)
 }
 
-func getDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+func getDBInternal(ctx context.Context) (FirestoreClient, error) {
 	dbOnce.Do(func() {
 		projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 		dbID := os.Getenv("FIRESTORE_DATABASE_ID")
@@ -29,7 +28,7 @@ func getDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		}
 		log.Printf("[INFO] Initializing Firestore Client for project: %s, DB: %s", projectID, dbID)
 		
-		newDB, err := firestoreutil.NewClient(ctx, projectID, dbID)
+		newDB, err := newFirestoreClient(ctx, projectID, dbID)
 		if err == nil {
 			db = newDB
 		} else {

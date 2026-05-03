@@ -5,15 +5,14 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
-	"tavern-swiper.app/firestoreutil"
 )
 
 type mockClient struct {
-	firestoreutil.FirestoreClient
+	FirestoreClient
 	collections map[string]*mockCollection
 }
 
-func (c *mockClient) Collection(path string) firestoreutil.CollectionRef {
+func (c *mockClient) Collection(path string) CollectionRef {
 	if c.collections == nil {
 		c.collections = make(map[string]*mockCollection)
 	}
@@ -25,26 +24,26 @@ func (c *mockClient) Collection(path string) firestoreutil.CollectionRef {
 	return col
 }
 
-func (c *mockClient) Batch() firestoreutil.WriteBatch {
+func (c *mockClient) Batch() WriteBatch {
 	return &mockBatch{}
 }
 
-func (c *mockClient) Pipeline() firestoreutil.Pipeline {
+func (c *mockClient) Pipeline() Pipeline {
 	return &mockPipeline{}
 }
 
-func (c *mockClient) DeleteCollection(ctx context.Context, col firestoreutil.CollectionRef, batchSize int) error {
+func (c *mockClient) DeleteCollection(ctx context.Context, col CollectionRef, batchSize int) error {
 	return nil
 }
 
 type mockCollection struct {
-	firestoreutil.CollectionRef
+	CollectionRef
 	path      string
 	docs      map[string]*mockDoc
 	queryRes  []*mockSnap
 }
 
-func (c *mockCollection) Doc(path string) firestoreutil.DocumentRef {
+func (c *mockCollection) Doc(path string) DocumentRef {
 	if c.docs == nil {
 		c.docs = make(map[string]*mockDoc)
 	}
@@ -56,24 +55,24 @@ func (c *mockCollection) Doc(path string) firestoreutil.DocumentRef {
 	return d
 }
 
-func (c *mockCollection) Where(path, op string, value interface{}) firestoreutil.Query {
+func (c *mockCollection) Where(path, op string, value interface{}) Query {
 	return &mockQuery{col: c}
 }
 
-func (c *mockCollection) Limit(n int) firestoreutil.Query {
+func (c *mockCollection) Limit(n int) Query {
 	return &mockQuery{col: c}
 }
 
-func (c *mockCollection) OrderBy(path string, dir firestore.Direction) firestoreutil.Query {
+func (c *mockCollection) OrderBy(path string, dir firestore.Direction) Query {
 	return &mockQuery{col: c}
 }
 
-func (c *mockCollection) Documents(ctx context.Context) firestoreutil.DocumentIterator {
+func (c *mockCollection) Documents(ctx context.Context) DocumentIterator {
 	return &mockIter{snaps: c.queryRes}
 }
 
 type mockDoc struct {
-	firestoreutil.DocumentRef
+	DocumentRef
 	id     string
 	data   map[string]interface{}
 	exists bool
@@ -81,7 +80,7 @@ type mockDoc struct {
 
 func (d *mockDoc) ID() string { return d.id }
 
-func (d *mockDoc) Get(ctx context.Context) (firestoreutil.DocumentSnapshot, error) {
+func (d *mockDoc) Get(ctx context.Context) (DocumentSnapshot, error) {
 	return &mockSnap{id: d.id, data: d.data, exists: d.exists, ref: d}, nil
 }
 
@@ -116,30 +115,30 @@ func (d *mockDoc) Delete(ctx context.Context, opts ...firestore.Precondition) (*
 	return &firestore.WriteResult{}, nil
 }
 
-func (d *mockDoc) Collection(path string) firestoreutil.CollectionRef {
+func (d *mockDoc) Collection(path string) CollectionRef {
 	return &mockCollection{path: path}
 }
 
 type mockSnap struct {
-	firestoreutil.DocumentSnapshot
+	DocumentSnapshot
 	id     string
 	data   map[string]interface{}
 	exists bool
-	ref    firestoreutil.DocumentRef
+	ref    DocumentRef
 }
 
 func (s *mockSnap) Exists() bool                          { return s.exists }
 func (s *mockSnap) Data() map[string]interface{}          { return s.data }
 func (s *mockSnap) ID() string                            { return s.id }
-func (s *mockSnap) Ref() firestoreutil.DocumentRef        { return s.ref }
+func (s *mockSnap) Ref() DocumentRef        { return s.ref }
 
 type mockIter struct {
-	firestoreutil.DocumentIterator
+	DocumentIterator
 	snaps []*mockSnap
 	index int
 }
 
-func (i *mockIter) Next() (firestoreutil.DocumentSnapshot, error) {
+func (i *mockIter) Next() (DocumentSnapshot, error) {
 	if i.index >= len(i.snaps) {
 		return nil, iterator.Done
 	}
@@ -148,8 +147,8 @@ func (i *mockIter) Next() (firestoreutil.DocumentSnapshot, error) {
 	return s, nil
 }
 
-func (i *mockIter) GetAll() ([]firestoreutil.DocumentSnapshot, error) {
-	res := make([]firestoreutil.DocumentSnapshot, len(i.snaps))
+func (i *mockIter) GetAll() ([]DocumentSnapshot, error) {
+	res := make([]DocumentSnapshot, len(i.snaps))
 	for j, s := range i.snaps {
 		res[j] = s
 	}
@@ -159,52 +158,52 @@ func (i *mockIter) GetAll() ([]firestoreutil.DocumentSnapshot, error) {
 func (i *mockIter) Stop() {}
 
 type mockQuery struct {
-	firestoreutil.Query
+	Query
 	col *mockCollection
 }
 
-func (q *mockQuery) Limit(n int) firestoreutil.Query { return q }
-func (q *mockQuery) Where(path, op string, value interface{}) firestoreutil.Query { return q }
-func (q *mockQuery) OrderBy(path string, dir firestore.Direction) firestoreutil.Query { return q }
-func (q *mockQuery) Documents(ctx context.Context) firestoreutil.DocumentIterator {
+func (q *mockQuery) Limit(n int) Query { return q }
+func (q *mockQuery) Where(path, op string, value interface{}) Query { return q }
+func (q *mockQuery) OrderBy(path string, dir firestore.Direction) Query { return q }
+func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 	return q.col.Documents(ctx)
 }
 
 type mockBatch struct {
-	firestoreutil.WriteBatch
+	WriteBatch
 }
 
-func (b *mockBatch) Delete(dr firestoreutil.DocumentRef) firestoreutil.WriteBatch { return b }
+func (b *mockBatch) Delete(dr DocumentRef) WriteBatch { return b }
 func (b *mockBatch) Commit(ctx context.Context) ([]*firestore.WriteResult, error) {
 	return []*firestore.WriteResult{}, nil
 }
 
 type mockPipeline struct {
-	firestoreutil.Pipeline
+	Pipeline
 }
 
-func (p *mockPipeline) Collection(path string) firestoreutil.Pipeline { return p }
-func (p *mockPipeline) CollectionGroup(id string) firestoreutil.Pipeline { return p }
-func (p *mockPipeline) Select(fields []any) firestoreutil.Pipeline { return p }
-func (p *mockPipeline) Where(filter any) firestoreutil.Pipeline { return p }
-func (p *mockPipeline) Limit(n int) firestoreutil.Pipeline { return p }
-func (p *mockPipeline) Execute(ctx context.Context) firestoreutil.PipelineSnapshot {
+func (p *mockPipeline) Collection(path string) Pipeline { return p }
+func (p *mockPipeline) CollectionGroup(id string) Pipeline { return p }
+func (p *mockPipeline) Select(fields []any) Pipeline { return p }
+func (p *mockPipeline) Where(filter any) Pipeline { return p }
+func (p *mockPipeline) Limit(n int) Pipeline { return p }
+func (p *mockPipeline) Execute(ctx context.Context) PipelineSnapshot {
 	return &mockPipelineSnapshot{}
 }
 
 type mockPipelineSnapshot struct {
-	firestoreutil.PipelineSnapshot
+	PipelineSnapshot
 }
 
-func (s *mockPipelineSnapshot) Results() firestoreutil.PipelineIterator {
+func (s *mockPipelineSnapshot) Results() PipelineIterator {
 	return &mockPipelineIter{}
 }
 
 type mockPipelineIter struct {
-	firestoreutil.PipelineIterator
+	PipelineIterator
 }
 
-func (i *mockPipelineIter) Next() (firestoreutil.PipelineResult, error) {
+func (i *mockPipelineIter) Next() (PipelineResult, error) {
 	return nil, iterator.Done
 }
 func (i *mockPipelineIter) Stop() {}

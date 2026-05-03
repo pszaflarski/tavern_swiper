@@ -10,11 +10,10 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
-	"tavern-swiper.app/firestoreutil"
 )
 
 var (
-	db     firestoreutil.FirestoreClient
+	db     FirestoreClient
 	dbOnce sync.Once
 	dbErr  error
 	// realFSClient holds the underlying *firestore.Client for pipeline operations.
@@ -23,11 +22,11 @@ var (
 )
 
 // Function pointer to allow mocking in tests
-var getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+var getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 	return getDBInternal(ctx)
 }
 
-func getDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+func getDBInternal(ctx context.Context) (FirestoreClient, error) {
 	dbOnce.Do(func() {
 		projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 		dbID := os.Getenv("FIRESTORE_DATABASE_ID")
@@ -36,8 +35,8 @@ func getDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		}
 		log.Printf("[INFO] Initializing Firestore Client for project: %s, DB: %s", projectID, dbID)
 		
-		// Use the NewClient helper from firestoreutil
-		newDB, createErr := firestoreutil.NewClient(ctx, projectID, dbID)
+		// Initialize Firestore client
+		newDB, createErr := newFirestoreClient(ctx, projectID, dbID)
 		if createErr == nil {
 			db = newDB
 			// We still need the underlying client for some operations if they aren't in the interface

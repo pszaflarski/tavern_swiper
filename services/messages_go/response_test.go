@@ -1,7 +1,6 @@
 package main
 
 import (
-	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -17,7 +16,7 @@ func TestSuccessResponseStructure(t *testing.T) {
 	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	mock := &mockClient{}
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) { return mock, nil }
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
 
 	t.Run("MessageOut_Structure", func(t *testing.T) {
 		convID := "c1"
@@ -152,7 +151,7 @@ func TestEmptyArrayConsistency(t *testing.T) {
 	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	mock := &mockClient{}
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) { return mock, nil }
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
 
 	t.Run("GetMessages_EmptyArray", func(t *testing.T) {
 		w := httptest.NewRecorder()

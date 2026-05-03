@@ -6,30 +6,29 @@ import (
 	"os"
 	"sync"
 
-	"tavern-swiper.app/firestoreutil"
 )
 
 var (
-	usersDB      firestoreutil.FirestoreClient
+	usersDB      FirestoreClient
 	usersDBOnce  sync.Once
 	usersDBError error
 
-	authDB       firestoreutil.FirestoreClient
+	authDB       FirestoreClient
 	authDBOnce   sync.Once
 	authDBError  error
 )
 
 // Function pointers to allow mocking in tests
 var (
-	getUsersDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getUsersDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return getUsersDBInternal(ctx)
 	}
-	getAuthDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getAuthDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return getAuthDBInternal(ctx)
 	}
 )
 
-func getUsersDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+func getUsersDBInternal(ctx context.Context) (FirestoreClient, error) {
 	usersDBOnce.Do(func() {
 		projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 		dbID := os.Getenv("USERS_DATABASE_ID")
@@ -38,7 +37,7 @@ func getUsersDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, err
 		}
 		log.Printf("Initializing Users Firestore client for DB: %s", dbID)
 		
-		newDB, err := firestoreutil.NewClient(context.Background(), projectID, dbID)
+		newDB, err := newFirestoreClient(context.Background(), projectID, dbID)
 		if err == nil {
 			usersDB = newDB
 		} else {
@@ -48,7 +47,7 @@ func getUsersDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, err
 	return usersDB, usersDBError
 }
 
-func getAuthDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+func getAuthDBInternal(ctx context.Context) (FirestoreClient, error) {
 	authDBOnce.Do(func() {
 		projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 		dbID := os.Getenv("FIRESTORE_DATABASE_ID")
@@ -57,7 +56,7 @@ func getAuthDBInternal(ctx context.Context) (firestoreutil.FirestoreClient, erro
 		}
 		log.Printf("Initializing Auth Firestore client for DB: %s", dbID)
 		
-		newDB, err := firestoreutil.NewClient(context.Background(), projectID, dbID)
+		newDB, err := newFirestoreClient(context.Background(), projectID, dbID)
 		if err == nil {
 			authDB = newDB
 		} else {

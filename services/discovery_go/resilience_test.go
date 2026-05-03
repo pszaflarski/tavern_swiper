@@ -1,7 +1,6 @@
 package main
 
 import (
-	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -30,7 +29,7 @@ func TestHandleGetFeed_MalformedCache(t *testing.T) {
 	}
 
 	// Resilience: malformed cache profile (missing profile_id or malformed)
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
 			collections: map[string]*mockCollection{
 				PROFILES_CACHE: {
@@ -71,7 +70,7 @@ func TestHandleListMatches_MalformedMatch(t *testing.T) {
 	r := setupTest(mockPub)
 	
 	// Resilience: malformed match doc (missing id)
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
 			collections: map[string]*mockCollection{
 				MATCHES_COLLECTION: {
@@ -112,7 +111,7 @@ func TestDiscoveryResilience_SwipeMatchDetection(t *testing.T) {
 
 	// Swipe P1 -> P2 (Right)
 	// We need a reciprocal swipe P2 -> P1 (Right) already in DB
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		mClient := &mockClient{
 			collections: map[string]*mockCollection{
 				PROFILES_CACHE: {
@@ -187,7 +186,7 @@ func TestDiscoveryResilience_FeedExclusions(t *testing.T) {
 	// Swiped P2 already
 	// Candidate P3 available
 	// Candidate P1 (Self) - should be excluded
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
 			collections: map[string]*mockCollection{
 				PROFILES_CACHE: {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -31,7 +30,7 @@ func TestHandleCreateConversation(t *testing.T) {
 	
 	t.Run("AllowInitializationWithMatch", func(t *testing.T) {
 		mock := &mockClient{}
-		getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 			return mock, nil
 		}
 		
@@ -75,7 +74,7 @@ func TestHandleCreateConversation(t *testing.T) {
 
 	t.Run("ForbiddenWithoutMatch", func(t *testing.T) {
 		mock := &mockClient{}
-		getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 			return mock, nil
 		}
 		
@@ -101,7 +100,7 @@ func TestHandleSendMessage(t *testing.T) {
 	
 	t.Run("SuccessAndDenormalization", func(t *testing.T) {
 		mock := &mockClient{}
-		getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 			return mock, nil
 		}
 		
@@ -151,7 +150,7 @@ func TestHandleListConversations(t *testing.T) {
 	
 	t.Run("OrderedListing", func(t *testing.T) {
 		mock := &mockClient{}
-		getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 			return mock, nil
 		}
 		

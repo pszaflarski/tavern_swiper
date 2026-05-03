@@ -4,15 +4,14 @@ import (
 	"context"
 
 	"cloud.google.com/go/firestore"
-	"tavern-swiper.app/firestoreutil"
 )
 
 type mockClient struct {
-	firestoreutil.FirestoreClient
+	FirestoreClient
 	collections map[string]*mockCollection
 }
 
-func (c *mockClient) Collection(path string) firestoreutil.CollectionRef {
+func (c *mockClient) Collection(path string) CollectionRef {
 	if c.collections == nil {
 		c.collections = make(map[string]*mockCollection)
 	}
@@ -25,12 +24,12 @@ func (c *mockClient) Collection(path string) firestoreutil.CollectionRef {
 }
 
 type mockCollection struct {
-	firestoreutil.CollectionRef
+	CollectionRef
 	path string
 	docs map[string]*mockDoc
 }
 
-func (c *mockCollection) Doc(path string) firestoreutil.DocumentRef {
+func (c *mockCollection) Doc(path string) DocumentRef {
 	if c.docs == nil {
 		c.docs = make(map[string]*mockDoc)
 	}
@@ -43,7 +42,7 @@ func (c *mockCollection) Doc(path string) firestoreutil.DocumentRef {
 }
 
 type mockDoc struct {
-	firestoreutil.DocumentRef
+	DocumentRef
 	id     string
 	data   map[string]interface{}
 	exists bool
@@ -51,7 +50,7 @@ type mockDoc struct {
 
 func (d *mockDoc) ID() string { return d.id }
 
-func (d *mockDoc) Get(ctx context.Context) (firestoreutil.DocumentSnapshot, error) {
+func (d *mockDoc) Get(ctx context.Context) (DocumentSnapshot, error) {
 	return &mockSnap{id: d.id, data: d.data, exists: d.exists, ref: d}, nil
 }
 
@@ -70,14 +69,14 @@ func (d *mockDoc) Delete(ctx context.Context, opts ...firestore.Precondition) (*
 }
 
 type mockSnap struct {
-	firestoreutil.DocumentSnapshot
+	DocumentSnapshot
 	id     string
 	data   map[string]interface{}
 	exists bool
-	ref    firestoreutil.DocumentRef
+	ref    DocumentRef
 }
 
 func (s *mockSnap) Exists() bool                          { return s.exists }
 func (s *mockSnap) Data() map[string]interface{}          { return s.data }
 func (s *mockSnap) ID() string                            { return s.id }
-func (s *mockSnap) Ref() firestoreutil.DocumentRef        { return s.ref }
+func (s *mockSnap) Ref() DocumentRef        { return s.ref }

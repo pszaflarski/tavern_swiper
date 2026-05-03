@@ -14,7 +14,6 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/iterator"
-	"tavern-swiper.app/firestoreutil"
 )
 
 var _now = func() time.Time {
@@ -78,7 +77,7 @@ func listUsersHandler(c *gin.Context) {
 		return
 	}
 
-	var query firestoreutil.Query
+	var query Query
 	if includeDeleted {
 		query = db.Collection("users")
 	} else {

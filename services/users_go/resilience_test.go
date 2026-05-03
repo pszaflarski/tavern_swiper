@@ -1,7 +1,6 @@
 package main
 
 import (
-	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -36,18 +35,18 @@ func TestUsersResilience_CreateRootAdminSuccess(t *testing.T) {
 	r := setupTest()
 
 	// Mock DB logic
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
-			collectionFunc: func(path string) firestoreutil.CollectionRef {
+			collectionFunc: func(path string) CollectionRef {
 				return &mockCollection{
 					// Root Admin Check
-					whereFunc: func(path, op string, value interface{}) firestoreutil.Query {
+					whereFunc: func(path, op string, value interface{}) Query {
 						return &mockQuery{
-							limitFunc: func(n int) firestoreutil.Query {
+							limitFunc: func(n int) Query {
 								return &mockQuery{
-									documentsFunc: func(ctx context.Context) firestoreutil.DocumentIterator {
+									documentsFunc: func(ctx context.Context) DocumentIterator {
 										return &mockIterator{
-											nextFunc: func() (firestoreutil.DocumentSnapshot, error) {
+											nextFunc: func() (DocumentSnapshot, error) {
 												return nil, iterator.Done // No existing root admin
 											},
 										}
@@ -57,9 +56,9 @@ func TestUsersResilience_CreateRootAdminSuccess(t *testing.T) {
 						}
 					},
 					// Document Check
-					docFunc: func(path string) firestoreutil.DocumentRef {
+					docFunc: func(path string) DocumentRef {
 						return &mockDoc{
-							getFunc: func(ctx context.Context) (firestoreutil.DocumentSnapshot, error) {
+							getFunc: func(ctx context.Context) (DocumentSnapshot, error) {
 								return &mockSnapshot{exists: false}, nil // User doesn't exist
 							},
 							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
@@ -96,17 +95,17 @@ func TestUsersResilience_CreateRootAdminFailsIfExists(t *testing.T) {
 	skipIfRealDB(t)
 	r := setupTest()
 
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
-			collectionFunc: func(path string) firestoreutil.CollectionRef {
+			collectionFunc: func(path string) CollectionRef {
 				return &mockCollection{
-					whereFunc: func(p, o string, v interface{}) firestoreutil.Query {
+					whereFunc: func(p, o string, v interface{}) Query {
 						return &mockQuery{
-							limitFunc: func(n int) firestoreutil.Query {
+							limitFunc: func(n int) Query {
 								return &mockQuery{
-									documentsFunc: func(ctx context.Context) firestoreutil.DocumentIterator {
+									documentsFunc: func(ctx context.Context) DocumentIterator {
 										return &mockIterator{
-											nextFunc: func() (firestoreutil.DocumentSnapshot, error) {
+											nextFunc: func() (DocumentSnapshot, error) {
 												// Root exists
 												return &mockSnapshot{exists: true, id: "existing-root"}, nil
 											},
@@ -140,13 +139,13 @@ func TestUsersResilience_GetMeSelfHealing(t *testing.T) {
 	r := setupTest()
 
 	var setCalled bool
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
-			collectionFunc: func(path string) firestoreutil.CollectionRef {
+			collectionFunc: func(path string) CollectionRef {
 				return &mockCollection{
-					docFunc: func(path string) firestoreutil.DocumentRef {
+					docFunc: func(path string) DocumentRef {
 						return &mockDoc{
-							getFunc: func(ctx context.Context) (firestoreutil.DocumentSnapshot, error) {
+							getFunc: func(ctx context.Context) (DocumentSnapshot, error) {
 								return nil, errors.New("code = NotFound")
 							},
 							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
@@ -179,17 +178,17 @@ func TestUsersResilience_CheckRootAdminExists(t *testing.T) {
 	r := setupTest()
 
 	// 1. Exists
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
-			collectionFunc: func(path string) firestoreutil.CollectionRef {
+			collectionFunc: func(path string) CollectionRef {
 				return &mockCollection{
-					whereFunc: func(p, o string, v interface{}) firestoreutil.Query {
+					whereFunc: func(p, o string, v interface{}) Query {
 						return &mockQuery{
-							limitFunc: func(n int) firestoreutil.Query {
+							limitFunc: func(n int) Query {
 								return &mockQuery{
-									documentsFunc: func(ctx context.Context) firestoreutil.DocumentIterator {
+									documentsFunc: func(ctx context.Context) DocumentIterator {
 										return &mockIterator{
-											nextFunc: func() (firestoreutil.DocumentSnapshot, error) {
+											nextFunc: func() (DocumentSnapshot, error) {
 												return &mockSnapshot{exists: true}, nil
 											},
 										}
@@ -214,17 +213,17 @@ func TestUsersResilience_CheckRootAdminExists(t *testing.T) {
 	}
 
 	// 2. Not Exists
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
-			collectionFunc: func(path string) firestoreutil.CollectionRef {
+			collectionFunc: func(path string) CollectionRef {
 				return &mockCollection{
-					whereFunc: func(p, o string, v interface{}) firestoreutil.Query {
+					whereFunc: func(p, o string, v interface{}) Query {
 						return &mockQuery{
-							limitFunc: func(n int) firestoreutil.Query {
+							limitFunc: func(n int) Query {
 								return &mockQuery{
-									documentsFunc: func(ctx context.Context) firestoreutil.DocumentIterator {
+									documentsFunc: func(ctx context.Context) DocumentIterator {
 										return &mockIterator{
-											nextFunc: func() (firestoreutil.DocumentSnapshot, error) {
+											nextFunc: func() (DocumentSnapshot, error) {
 												return nil, iterator.Done
 											},
 										}
@@ -282,13 +281,13 @@ func TestUsersResilience_AdminCreationSuccess(t *testing.T) {
 	skipIfRealDB(t)
 	r := setupTest()
 
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
-			collectionFunc: func(path string) firestoreutil.CollectionRef {
+			collectionFunc: func(path string) CollectionRef {
 				return &mockCollection{
-					docFunc: func(p string) firestoreutil.DocumentRef {
+					docFunc: func(p string) DocumentRef {
 						return &mockDoc{
-							getFunc: func(ctx context.Context) (firestoreutil.DocumentSnapshot, error) {
+							getFunc: func(ctx context.Context) (DocumentSnapshot, error) {
 								if p == "admin-uid" {
 									return &mockSnapshot{exists: true, data: map[string]interface{}{"user_type": "admin"}}, nil
 								}
@@ -322,14 +321,14 @@ func TestUsersResilience_ListUsersAdmin(t *testing.T) {
 	skipIfRealDB(t)
 	r := setupTest()
 
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
-			collectionFunc: func(path string) firestoreutil.CollectionRef {
+			collectionFunc: func(path string) CollectionRef {
 				return &mockCollection{
-					documentsFunc: func(ctx context.Context) firestoreutil.DocumentIterator {
+					documentsFunc: func(ctx context.Context) DocumentIterator {
 						count := 0
 						return &mockIterator{
-							nextFunc: func() (firestoreutil.DocumentSnapshot, error) {
+							nextFunc: func() (DocumentSnapshot, error) {
 								if count > 0 {
 									return nil, iterator.Done
 								}

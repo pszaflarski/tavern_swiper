@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/proto"
 
-	"tavern-swiper.app/firestoreutil"
 	pb "tavern-swiper.app/messages_subscriber/proto"
 )
 
@@ -92,7 +91,7 @@ func processSerializedEvent(ctx context.Context, data []byte) error {
 	return processEvent(ctx, client, &event)
 }
 
-func processEvent(ctx context.Context, client firestoreutil.FirestoreClient, event *pb.MatchEvent) error {
+func processEvent(ctx context.Context, client FirestoreClient, event *pb.MatchEvent) error {
 	if client == nil {
 		log.Printf("⚠️ processEvent: firestore client is nil, skipping database operations")
 		return nil

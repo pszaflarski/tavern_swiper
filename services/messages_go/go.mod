@@ -13,7 +13,6 @@ require (
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	google.golang.org/api v0.276.0
-	tavern-swiper.app/firestoreutil v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -84,5 +83,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
-
-replace tavern-swiper.app/firestoreutil => ../common/firestoreutil

@@ -13,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/proto"
 
-	"tavern-swiper.app/firestoreutil"
 	pb "tavern-swiper.app/messages_subscriber/proto"
 )
 
@@ -22,7 +21,7 @@ func init() {
 	log.SetOutput(bytes.NewBuffer(nil))
 	
 	// Set mock database
-	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{}, nil
 	}
 }

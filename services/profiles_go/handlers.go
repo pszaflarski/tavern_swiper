@@ -14,7 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
-	"tavern-swiper.app/firestoreutil"
 )
 
 const COLLECTION = "profiles"
@@ -197,7 +196,7 @@ func handleGetProfile(c *gin.Context) {
 }
 
 // Helper: docToProfile
-func docToProfile(doc firestoreutil.DocumentSnapshot) (ProfileOut, error) {
+func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 	d := doc.Data()
 	if d == nil {
 		return ProfileOut{}, fmt.Errorf("Document %s contains no data", doc.ID())
@@ -267,7 +266,7 @@ func docToProfile(doc firestoreutil.DocumentSnapshot) (ProfileOut, error) {
 }
 
 // Helper: deactivateOtherProfiles
-func deactivateOtherProfiles(ctx context.Context, client firestoreutil.FirestoreClient, userID string, activeProfileID string, publisher Publisher) {
+func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID string, activeProfileID string, publisher Publisher) {
 	iter := client.Collection(COLLECTION).
 		Where("user_id", "==", userID).
 		Where("is_active", "==", true).
@@ -616,11 +615,8 @@ func handleGetProfilesBatch(c *gin.Context) {
 		p := mapToProfile(result.Data())
 		// Pipeline result doesn't explicitly give the ID in res.Data() unless we selected it or it's implicitly there.
 		// Usually, the ID is available if we select it or through the result metadata.
-		// In our firestoreutil, we might need to expose the ID if it's not in the data.
 		// Actually, let's assume the ID is in the data if we select it or we can just use the map.
 		
-		// Wait, PipelineResult in firestoreutil doesn't have ID(). 
-		// I should probably update firestoreutil to include ID() in PipelineResult if possible.
 		// Or just select "profile_id" if it exists in the doc.
 		
 		results = append(results, p)
@@ -884,7 +880,7 @@ func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 }
 
 // Helper: docToProfileImageURLs
-func docToProfileImageURLs(doc firestoreutil.DocumentSnapshot) []string {
+func docToProfileImageURLs(doc DocumentSnapshot) []string {
 	d := doc.Data()
 	if val, ok := d["image_urls"].([]interface{}); ok {
 		res := make([]string, len(val))

@@ -1,4 +1,4 @@
-package firestoreutil
+package main
 
 import (
 	"context"
@@ -87,7 +87,7 @@ type realClient struct {
 	*firestore.Client
 }
 
-func NewClient(ctx context.Context, projectID, databaseID string) (FirestoreClient, error) {
+func newFirestoreClient(ctx context.Context, projectID, databaseID string) (FirestoreClient, error) {
 	client, err := firestore.NewClientWithDatabase(ctx, projectID, databaseID)
 	if err != nil {
 		return nil, err
@@ -313,7 +313,6 @@ func (ps *realPipelineSource) CollectionGroup(id string) Pipeline {
 	return &realPipeline{ps.PipelineSource.CollectionGroup(id)}
 }
 
-// These methods are not directly on PipelineSource, but we satisfy the interface
 func (ps *realPipelineSource) Select(fields []any) Pipeline { return nil }
 func (ps *realPipelineSource) Where(filter any) Pipeline    { return nil }
 func (ps *realPipelineSource) Limit(n int) Pipeline         { return nil }
@@ -324,12 +323,7 @@ type realPipeline struct {
 	*firestore.Pipeline
 }
 
-func (p *realPipeline) Collection(path string) Pipeline {
-	// Already have a collection from Source, this is usually not allowed in a chain
-	// but for the interface we'll return nil or panic if inappropriate.
-	return nil
-}
-
+func (p *realPipeline) Collection(path string) Pipeline    { return nil }
 func (p *realPipeline) CollectionGroup(id string) Pipeline { return nil }
 
 func (p *realPipeline) Select(fields []any) Pipeline {
