@@ -1,6 +1,7 @@
 package main
 
 import (
+	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -16,7 +17,7 @@ func TestEdgeCaseProtections(t *testing.T) {
 	skipIfRealDB(t)
 	gin.SetMode(gin.TestMode)
 	mock := &mockClient{}
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
+	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) { return mock, nil }
 
 	t.Run("CreateConversation_SelfMessaging", func(t *testing.T) {
 		w := httptest.NewRecorder()

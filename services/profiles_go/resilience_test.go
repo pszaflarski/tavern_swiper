@@ -1,6 +1,7 @@
 package main
 
 import (
+	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -69,7 +70,7 @@ func TestProfilesResilience_UploadImage(t *testing.T) {
 		return "http://gcs.com/test.jpg", nil
 	}
 
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		mockP1 := &mockSnap{
 			id:     "p1",
 			exists: true,
@@ -167,7 +168,7 @@ func TestProfilesResilience_ActiveProfileFlow(t *testing.T) {
 	r := setupTest(mockPub)
 	token := localSignToken("u1", "user", fixedNow)
 
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		mockP1 := &mockSnap{
 			id:     "p1",
 			exists: true,
@@ -221,7 +222,7 @@ func TestListMyProfiles(t *testing.T) {
 		ref:    &mockDoc{id: "p2", exists: true, data: map[string]interface{}{"user_id": "u1", "display_name": "Hero Two", "is_active": false}},
 	}
 
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		return &mockClient{
 			collections: map[string]*mockCollection{
 				COLLECTION: {
@@ -256,30 +257,30 @@ func TestListMyProfiles(t *testing.T) {
 }
 
 type manualMockClient struct {
-	FirestoreClient
+	firestoreutil.FirestoreClient
 	mockP1 *mockSnap
 }
 
-func (m *manualMockClient) Collection(path string) CollectionRef {
+func (m *manualMockClient) Collection(path string) firestoreutil.CollectionRef {
 	return &manualMockCol{mockP1: m.mockP1}
 }
 
 type manualMockCol struct {
-	CollectionRef
+	firestoreutil.CollectionRef
 	mockP1        *mockSnap
 	isActiveQuery bool
 }
 
-func (m *manualMockCol) Where(path, op string, value interface{}) Query {
+func (m *manualMockCol) Where(path, op string, value interface{}) firestoreutil.Query {
 	if path == "is_active" && value == true {
 		return &manualMockCol{mockP1: m.mockP1, isActiveQuery: true}
 	}
 	return &manualMockCol{mockP1: m.mockP1, isActiveQuery: false}
 }
 
-func (m *manualMockCol) Limit(n int) Query { return m }
+func (m *manualMockCol) Limit(n int) firestoreutil.Query { return m }
 
-func (m *manualMockCol) Documents(ctx context.Context) DocumentIterator {
+func (m *manualMockCol) Documents(ctx context.Context) firestoreutil.DocumentIterator {
 	if m.isActiveQuery {
 		return &mockIter{snaps: []*mockSnap{}}
 	}
@@ -310,7 +311,7 @@ func TestListProfilesForUser_Authorization(t *testing.T) {
 	r := setupTest(mockPub)
 
 	// Mock DB
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		return &mockClient{
 			collections: map[string]*mockCollection{
 				COLLECTION: {

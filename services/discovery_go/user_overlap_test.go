@@ -1,6 +1,7 @@
 package main
 
 import (
+	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -24,7 +25,7 @@ func TestUserOverlapInFeed(t *testing.T) {
 	mockDB := &mockClient{
 		collections: make(map[string]*mockCollection),
 	}
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		return mockDB, nil
 	}
 
@@ -95,7 +96,7 @@ func TestUserOverlapSwipe(t *testing.T) {
 	mockDB := &mockClient{
 		collections: make(map[string]*mockCollection),
 	}
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+	getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 		return mockDB, nil
 	}
 

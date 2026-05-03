@@ -12,6 +12,7 @@ import (
 
 	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
+	"tavern-swiper.app/firestoreutil"
 )
 
 // --- Mocks ---
@@ -218,7 +219,7 @@ func TestVerifyToken(t *testing.T) {
 				}
 				return &mockAuthClient{verifyIDTokenFunc: tt.mockVerify}, nil
 			}
-			getUsersDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			getUsersDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 				return nil, errors.New("no db")
 			}
 

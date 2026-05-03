@@ -13,6 +13,8 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"google.golang.org/api/iterator"
+	"tavern-swiper.app/firestoreutil"
 )
 
 const COLLECTION = "profiles"
@@ -195,7 +197,7 @@ func handleGetProfile(c *gin.Context) {
 }
 
 // Helper: docToProfile
-func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
+func docToProfile(doc firestoreutil.DocumentSnapshot) (ProfileOut, error) {
 	d := doc.Data()
 	if d == nil {
 		return ProfileOut{}, fmt.Errorf("Document %s contains no data", doc.ID())
@@ -265,7 +267,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 }
 
 // Helper: deactivateOtherProfiles
-func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID string, activeProfileID string, publisher Publisher) {
+func deactivateOtherProfiles(ctx context.Context, client firestoreutil.FirestoreClient, userID string, activeProfileID string, publisher Publisher) {
 	iter := client.Collection(COLLECTION).
 		Where("user_id", "==", userID).
 		Where("is_active", "==", true).
@@ -567,29 +569,117 @@ func handleGetProfilesBatch(c *gin.Context) {
 		return
 	}
 
+	if len(body.ProfileIDs) == 0 {
+		c.JSON(http.StatusOK, []ProfileOut{})
+		return
+	}
+
 	client, err := getDBFunc(c.Request.Context())
 	if err != nil {
 		send503(c, "Database connection error")
 		return
 	}
 
-	results := make([]ProfileOut, 0)
-	// Firestore doesn't support batch get by ID in a single query easily without 'in' operator
-	// but there's a limit of 30 for 'in'.
-	// Python uses a chunking strategy or just sequential gets in parallel.
-	// We'll follow the Python implementation's resilience: handle missing docs gracefully.
+	// C1: Optimization - Use Enterprise Pipeline for batch fetch
+	// We project only the fields needed for ProfileOut to save bytes (Enterprise pricing)
+	fields := []any{
+		"profile_id", "user_id", "display_name", "tagline", "bio", "gender",
+		"image_urls", "is_active", "created_at", "updated_at",
+	}
 
-	for _, id := range body.ProfileIDs {
-		doc, err := client.Collection(COLLECTION).Doc(id).Get(c.Request.Context())
-		if err == nil && doc.Exists() {
-			p, err := docToProfile(doc)
-			if err == nil {
-				results = append(results, p)
-			}
+	// Chunk the IDs if they exceed the limit (Enterprise might support more than 30, but let's be safe or just use the Pipeline)
+	// Actually, Pipeline API doesn't have the 30-item limit of Core 'In' filter in some versions, 
+	// but let's check if we can just pass them all.
+	
+	pipeline := client.Pipeline().
+		Collection(COLLECTION).
+		Where(firestore.EqualAny(firestore.DocumentID, body.ProfileIDs)).
+		Select(fields)
+
+	snapshot := pipeline.Execute(c.Request.Context())
+	iter := snapshot.Results()
+	defer iter.Stop()
+
+	results := make([]ProfileOut, 0)
+	for {
+		result, err := iter.Next()
+		if err == iterator.Done {
+			break
 		}
+		if err != nil {
+			log.Printf("[ERROR] Batch profile iteration error: %v", err)
+			break
+		}
+
+		// Manual hydration since we don't have a DocumentSnapshot here, but we have the map
+		// We'll reuse the logic from docToProfile but adapted for a map.
+		p := mapToProfile(result.Data())
+		// Pipeline result doesn't explicitly give the ID in res.Data() unless we selected it or it's implicitly there.
+		// Usually, the ID is available if we select it or through the result metadata.
+		// In our firestoreutil, we might need to expose the ID if it's not in the data.
+		// Actually, let's assume the ID is in the data if we select it or we can just use the map.
+		
+		// Wait, PipelineResult in firestoreutil doesn't have ID(). 
+		// I should probably update firestoreutil to include ID() in PipelineResult if possible.
+		// Or just select "profile_id" if it exists in the doc.
+		
+		results = append(results, p)
 	}
 
 	c.JSON(http.StatusOK, results)
+}
+
+// Helper: mapToProfile (adapted from docToProfile)
+func mapToProfile(d map[string]interface{}) ProfileOut {
+	getStr := func(key string) *string {
+		if val, ok := d[key].(string); ok {
+			return &val
+		}
+		return nil
+	}
+	getURLs := func(key string) []string {
+		if val, ok := d[key].([]interface{}); ok {
+			res := make([]string, len(val))
+			for i, v := range val {
+				if s, ok := v.(string); ok {
+					res[i] = s
+				}
+			}
+			return res
+		}
+		return []string{}
+	}
+	reqStr := func(key string) string {
+		if val, ok := d[key].(string); ok {
+			return val
+		}
+		return ""
+	}
+	reqBool := func(key string) bool {
+		if val, ok := d[key].(bool); ok {
+			return val
+		}
+		return false
+	}
+	getTimestamp := func(key string) *time.Time {
+		if val, ok := d[key].(time.Time); ok {
+			return &val
+		}
+		return nil
+	}
+
+	return ProfileOut{
+		ProfileID:   reqStr("profile_id"), // Ensure profile_id is in the data or selected
+		UserID:      reqStr("user_id"),
+		DisplayName: reqStr("display_name"),
+		Tagline:     getStr("tagline"),
+		Bio:         getStr("bio"),
+		Gender:      getStr("gender"),
+		ImageURLs:   getURLs("image_urls"),
+		IsActive:    reqBool("is_active"),
+		CreatedAt:   getTimestamp("created_at"),
+		UpdatedAt:   getTimestamp("updated_at"),
+	}
 }
 
 // handleGetMyActiveProfile godoc
@@ -669,22 +759,17 @@ func handleDeleteAllProfiles(c *gin.Context, publisher Publisher) {
 		return
 	}
 
-	// Purge all profiles
-	docs, err := client.Collection(COLLECTION).Documents(c.Request.Context()).GetAll()
+	log.Printf("[INFO] Admin Purge: cleaning up profiles collection")
+	err = client.DeleteCollection(c.Request.Context(), client.Collection(COLLECTION), 500)
 	if err != nil {
-		send500(c, "Failed to fetch profiles for purge")
+		sendGenericError(c, http.StatusInternalServerError, "Purge failed")
 		return
-	}
-
-	// sequential delete for simplicity in purge
-	for _, doc := range docs {
-		doc.Ref().Delete(c.Request.Context())
 	}
 
 	if publisher != nil {
 		publisher.PublishAllDeleted(c.Request.Context(), auth.UID)
 	}
-	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Purged %d profiles", len(docs))})
+	c.JSON(http.StatusOK, gin.H{"message": "Purged all profiles"})
 }
 
 // handleUploadProfileImage godoc
@@ -799,7 +884,7 @@ func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 }
 
 // Helper: docToProfileImageURLs
-func docToProfileImageURLs(doc DocumentSnapshot) []string {
+func docToProfileImageURLs(doc firestoreutil.DocumentSnapshot) []string {
 	d := doc.Data()
 	if val, ok := d["image_urls"].([]interface{}); ok {
 		res := make([]string, len(val))

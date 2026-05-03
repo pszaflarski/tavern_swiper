@@ -12,6 +12,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"google.golang.org/api/iterator"
 )
 
 const (
@@ -330,50 +331,103 @@ func handleListConversations(c *gin.Context) {
 	iter := client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Where("profile_id", "==", profileID).Documents(ctx)
 	mappings, _ := iter.GetAll()
 
-	var results []ConversationOut
+	if len(mappings) == 0 {
+		c.JSON(http.StatusOK, []ConversationOut{})
+		return
+	}
+
+	convIDs := make([]string, 0, len(mappings))
 	for _, mDoc := range mappings {
-		mapping := mDoc.Data()
-		convID := mapping["conversation_id"].(string)
-
-		convDoc, err := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Get(ctx)
-		if err == nil && convDoc.Exists() {
-			d := convDoc.Data()
-
-			var lastMsg *LastMessageInfo
-			if mid, ok := d["last_message_id"].(string); ok && mid != "" {
-				sentAtT, _ := d["last_message_sent_at"].(time.Time)
-				lastMsg = &LastMessageInfo{
-					Content:         d["last_message_text"].(string),
-					SentAt:          sentAtT.Format(time.RFC3339),
-					SenderProfileID: d["last_message_sender_id"].(string),
-				}
-			}
-
-			createdAtT, _ := d["created_at"].(time.Time)
-			createdAt := createdAtT.Format(time.RFC3339)
-			updatedAtT, _ := d["updated_at"].(time.Time)
-			updatedAt := updatedAtT.Format(time.RFC3339)
-
-			pids := parseStringSlice(d["participant_ids"])
-
-			var otherID *string
-			for _, pid := range pids {
-				if pid != profileID {
-					val := pid
-					otherID = &val
-					break
-				}
-			}
-
-			results = append(results, ConversationOut{
-				ID:             convID,
-				ParticipantIDs: pids,
-				OtherProfileID: otherID,
-				LastMessage:    lastMsg,
-				CreatedAt:      &createdAt,
-				UpdatedAt:      &updatedAt,
-			})
+		if cid, ok := mDoc.Data()["conversation_id"].(string); ok && cid != "" {
+			convIDs = append(convIDs, cid)
 		}
+	}
+
+	if len(convIDs) == 0 {
+		c.JSON(http.StatusOK, []ConversationOut{})
+		return
+	}
+
+	// C2: Optimization - Use Enterprise Pipeline for batch fetch
+	fields := []any{
+		"conversation_id", "last_message_id", "last_message_sent_at", "last_message_text",
+		"last_message_sender_id", "created_at", "updated_at", "participant_ids",
+	}
+
+	pipeline := client.Pipeline().
+		Collection(COLLECTION_CONVERSATIONS).
+		Where(firestore.EqualAny(firestore.DocumentID, convIDs)).
+		Select(fields)
+
+	snapshot := pipeline.Execute(ctx)
+	pIter := snapshot.Results()
+	defer pIter.Stop()
+
+	var results []ConversationOut
+	for {
+		res, err := pIter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Printf("[ERROR] Pipeline batch read failed for conversations: %v", err)
+			break
+		}
+
+		d := res.Data()
+		// Manual hydration
+		var lastMsg *LastMessageInfo
+		if mid, ok := d["last_message_id"].(string); ok && mid != "" {
+			sentAtT, _ := d["last_message_sent_at"].(time.Time)
+			lastMsg = &LastMessageInfo{
+				Content:         d["last_message_text"].(string),
+				SentAt:          sentAtT.Format(time.RFC3339),
+				SenderProfileID: d["last_message_sender_id"].(string),
+			}
+		}
+
+		createdAtT, _ := d["created_at"].(time.Time)
+		createdAt := createdAtT.Format(time.RFC3339)
+		updatedAtT, _ := d["updated_at"].(time.Time)
+		updatedAt := updatedAtT.Format(time.RFC3339)
+
+		pids := parseStringSlice(d["participant_ids"])
+
+		var otherID *string
+		for _, pid := range pids {
+			if pid != profileID {
+				val := pid
+				otherID = &val
+				break
+			}
+		}
+
+		// In Pipeline result, the ID might not be in Data() if it's just the document name.
+		// However, we can use firestore.DocumentID in Select to get it if needed,
+		// or we can find which convID this result belongs to.
+		// But usually, we want the ID. 
+		// I'll add conversation_id to the document data in my head, or I'll check if it's there.
+		// If not, I'll update the pipeline to select it.
+		// Wait, I'll just add "conversation_id" to the fields if it's a field in the doc.
+		
+		// Looking at handleCreateConversation, it sets conversation_id field.
+		// Yes, it does: data["conversation_id"] = id
+		
+		convID := ""
+		if val, ok := d["conversation_id"].(string); ok {
+			convID = val
+		} else {
+			convID = res.Ref().ID()
+		}
+
+		results = append(results, ConversationOut{
+			ID:             convID,
+			ParticipantIDs: pids,
+			OtherProfileID: otherID,
+			LastMessage:    lastMsg,
+			CreatedAt:      &createdAt,
+			UpdatedAt:      &updatedAt,
+		})
 	}
 
 	sort.Slice(results, func(i, j int) bool {
@@ -425,30 +479,41 @@ func handleDeleteAllMessages(c *gin.Context) {
 		return
 	}
 
-	// Delete conversations and mappings
+	// Delete conversations and mappings (L2: Paginated purge)
 	collectionsToPurge := []string{
 		COLLECTION_CONVERSATIONS,
 		COLLECTION_PROFILE_CONVERSATIONS,
 	}
 
 	for _, collName := range collectionsToPurge {
-		iter := client.Collection(collName).Documents(ctx)
-		docs, _ := iter.GetAll()
-
-		for _, doc := range docs {
-			// If it's a conversation, delete its messages sub-collection first
-			if collName == COLLECTION_CONVERSATIONS {
-				msgIter := doc.Ref().Collection(COLLECTION_MESSAGES).Documents(ctx)
-				msgDocs, _ := msgIter.GetAll()
-				if len(msgDocs) > 0 {
-					msgBatch := client.Batch()
-					for _, mDoc := range msgDocs {
-						msgBatch.Delete(mDoc.Ref())
-					}
-					_, _ = msgBatch.Commit(ctx)
+		if collName == COLLECTION_CONVERSATIONS {
+			// For conversations, we need to handle sub-collections manually because DeleteCollection
+			// takes a CollectionRef which is tied to a specific parent doc for sub-collections.
+			// So we still need to iterate top-level docs if they have sub-collections.
+			iter := client.Collection(collName).Documents(ctx)
+			for {
+				doc, err := iter.Next()
+				if err == iterator.Done {
+					break
+				}
+				if err != nil {
+					log.Printf("[ERROR] Failed to iterate conversations for purge: %v", err)
+					break
+				}
+				// Purge messages sub-collection
+				if err := client.DeleteCollection(ctx, doc.Ref().Collection(COLLECTION_MESSAGES), 500); err != nil {
+					log.Printf("[ERROR] Failed to purge messages for conversation %s: %v", doc.ID(), err)
+				}
+				// Delete the conversation doc
+				if _, err := doc.Ref().Delete(ctx); err != nil {
+					log.Printf("[ERROR] Failed to delete conversation %s: %v", doc.ID(), err)
 				}
 			}
-			_, _ = doc.Ref().Delete(ctx)
+		} else {
+			// For flat collections, use the helper
+			if err := client.DeleteCollection(ctx, client.Collection(collName), 500); err != nil {
+				log.Printf("[ERROR] Failed to purge collection %s: %v", collName, err)
+			}
 		}
 	}
 

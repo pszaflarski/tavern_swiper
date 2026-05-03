@@ -14,6 +14,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/iterator"
+	"tavern-swiper.app/firestoreutil"
 )
 
 var _now = func() time.Time {
@@ -77,7 +78,7 @@ func listUsersHandler(c *gin.Context) {
 		return
 	}
 
-	var query Query
+	var query firestoreutil.Query
 	if includeDeleted {
 		query = db.Collection("users")
 	} else {
@@ -202,6 +203,8 @@ func updateMeHandler(c *gin.Context) {
 	if body.FullName != nil {
 		updates = append(updates, firestore.Update{Path: "full_name", Value: *body.FullName})
 	}
+	// L3: Optimization - Add missing updated_at
+	updates = append(updates, firestore.Update{Path: "updated_at", Value: firestore.ServerTimestamp})
 
 	if len(updates) > 0 {
 		_, err = docRef.Update(c.Request.Context(), updates)
@@ -318,30 +321,42 @@ func createUserHandler(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       / [delete]
 func purgeAllUsersHandler(c *gin.Context) {
-	db, _ := getDBFunc(c.Request.Context())
-	docs, _ := db.Collection("users").Documents(c.Request.Context()).GetAll()
+	ctx := c.Request.Context()
+	db, _ := getDBFunc(ctx)
 	
-	var uids []string
-	for _, d := range docs {
-		uids = append(uids, d.ID())
+	authSvc := os.Getenv("AUTH_SERVICE_URL")
+	if authSvc == "" {
+		authSvc = "http://localhost:8001"
 	}
 
-	if len(uids) > 0 {
-		authSvc := os.Getenv("AUTH_SERVICE_URL")
-		if authSvc == "" {
-			authSvc = "http://localhost:8001"
+	// L2: Paginated purge for users
+	for {
+		iter := db.Collection("users").Limit(100).Documents(ctx)
+		docs, err := iter.GetAll()
+		if err != nil || len(docs) == 0 {
+			break
 		}
-		payload, _ := json.Marshal(map[string]interface{}{"uids": uids})
-		req, _ := http.NewRequest("DELETE", authSvc+"/auth/users/", bytes.NewBuffer(payload))
-		http.DefaultClient.Do(req)
-	}
 
-	// Batch delete from firestore
-	batch := db.Batch()
-	for _, d := range docs {
-		batch.Delete(d.Ref())
+		var uids []string
+		batch := db.Batch()
+		for _, d := range docs {
+			uids = append(uids, d.ID())
+			batch.Delete(d.Ref())
+		}
+
+		// Delete from Firebase Auth via auth service
+		if len(uids) > 0 {
+			payload, _ := json.Marshal(map[string]interface{}{"uids": uids})
+			req, _ := http.NewRequest("DELETE", authSvc+"/auth/users/", bytes.NewBuffer(payload))
+			_, _ = http.DefaultClient.Do(req)
+		}
+
+		// Commit Firestore batch
+		if _, err := batch.Commit(ctx); err != nil {
+			log.Printf("[ERROR] Failed to commit user purge batch: %v", err)
+			break
+		}
 	}
-	batch.Commit(c.Request.Context())
 
 	c.Status(http.StatusNoContent)
 }

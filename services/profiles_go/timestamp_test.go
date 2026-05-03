@@ -1,6 +1,7 @@
 package main
 
 import (
+	"tavern-swiper.app/firestoreutil"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -24,7 +25,7 @@ func TestProfileTimestamps(t *testing.T) {
 	defer func() { _now = oldNow }()
 
 	t.Run("CreateProfile_PopulatesTimestamps", func(t *testing.T) {
-		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 			return &mockClient{
 				collections: map[string]*mockCollection{
 					COLLECTION: {
@@ -67,7 +68,7 @@ func TestProfileTimestamps(t *testing.T) {
 		oldTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 		profileID := "p-update"
 		
-		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 			return &mockClient{
 				collections: map[string]*mockCollection{
 					COLLECTION: {

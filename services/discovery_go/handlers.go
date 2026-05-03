@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"cloud.google.com/go/firestore"
+	"google.golang.org/api/iterator"
 )
 
 const (
@@ -67,15 +68,29 @@ func handleGetFeed(c *gin.Context) {
 		return
 	}
 
-	// 1. Get swipe history
-	iter := client.Collection(SWIPES_COLLECTION).Where("swiper_profile_id", "==", profileID).Documents(ctx)
-	swipedDocs, _ := iter.GetAll()
+	// 1. Get swipe history (M1: Optimization - Use Pipeline projection)
+	pipeline := client.Pipeline().
+		Collection(SWIPES_COLLECTION).
+		Where(firestore.Equal("swiper_profile_id", profileID)).
+		Select([]any{"swiped_profile_id"})
+
+	pSnapshot := pipeline.Execute(ctx)
+	pIter := pSnapshot.Results()
+	defer pIter.Stop()
 
 	// Build exclusion list: self + already-swiped profile IDs
 	excludeSet := make(map[string]bool)
 	excludeSet[profileID] = true // Exclude self
-	for _, doc := range swipedDocs {
-		if sid, ok := doc.Data()["swiped_profile_id"].(string); ok {
+	for {
+		res, err := pIter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Printf("[ERROR] Swipe history pipeline failed: %v", err)
+			break
+		}
+		if sid, ok := res.Data()["swiped_profile_id"].(string); ok {
 			excludeSet[sid] = true
 		}
 	}
@@ -382,22 +397,15 @@ func handleDeleteAll(c *gin.Context) {
 		return
 	}
 
-	// Delete swipes
-	iter := client.Collection(SWIPES_COLLECTION).Documents(ctx)
-	docs, _ := iter.GetAll()
-	batch := client.Batch()
-	for _, doc := range docs {
-		batch.Delete(doc.Ref())
+	// Delete swipes (L2: Paginated purge)
+	if err := client.DeleteCollection(ctx, client.Collection(SWIPES_COLLECTION), 500); err != nil {
+		log.Printf("[ERROR] Swipe purge failed: %v", err)
 	}
 	
-	// Delete matches
-	iterM := client.Collection(MATCHES_COLLECTION).Documents(ctx)
-	docsM, _ := iterM.GetAll()
-	for _, doc := range docsM {
-		batch.Delete(doc.Ref())
+	// Delete matches (L2: Paginated purge)
+	if err := client.DeleteCollection(ctx, client.Collection(MATCHES_COLLECTION), 500); err != nil {
+		log.Printf("[ERROR] Match purge failed: %v", err)
 	}
-
-	batch.Commit(ctx)
 	c.JSON(http.StatusOK, gin.H{"status": "purged"})
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"tavern-swiper.app/firestoreutil"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,7 @@ func TestFirestoreSyntax(t *testing.T) {
 
 	t.Run("VerifyArrayContainsOperator", func(t *testing.T) {
 		mock := &mockClient{}
-		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		getDBFunc = func(ctx context.Context) (firestoreutil.FirestoreClient, error) {
 			return mock, nil
 		}
 
