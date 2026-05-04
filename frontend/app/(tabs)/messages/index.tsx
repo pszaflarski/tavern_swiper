@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../../theme';
 import { useProfileContext } from '../../../context/ProfileContext';
 import { useProfiles } from '../../../hooks/useProfiles';
@@ -9,8 +10,6 @@ import { useRefreshOnFocus } from '../../../hooks/useRefreshOnFocus';
 import { router } from 'expo-router';
 import ScreenHeader from '../../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../../components/ScreenErrorBoundary';
-
-const PLACEHOLDER_IMAGE = require('../../../assets/images/placeholder/hero1.jpeg');
 
 function MessagesScreenInner() {
   const { uid } = useUser();
@@ -41,9 +40,11 @@ function MessagesScreenInner() {
     router.push(`/messages/${convoId}`);
   };
 
-  const renderProfileImage = (uri: string | undefined) => {
-    return uri ? { uri } : PLACEHOLDER_IMAGE;
-  };
+  const AvatarFallback = ({ size, style }: { size: number; style?: any }) => (
+    <View style={[{ width: size, height: size, backgroundColor: Colors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center' }, style]}>
+      <Ionicons name="person" size={size * 0.5} color={Colors.outline} />
+    </View>
+  );
 
   return (
     <View style={styles.container} testID="messages-screen">
@@ -66,10 +67,11 @@ function MessagesScreenInner() {
                     activeProfileId === profile.profile_id && styles.activeProfileTab
                   ]}
                 >
-                  <Image 
-                    source={renderProfileImage(profile.image_urls?.[0])} 
-                    style={styles.profileTabImage} 
-                  />
+                  {profile.image_urls?.[0] ? (
+                    <Image source={{ uri: profile.image_urls[0] }} style={styles.profileTabImage} />
+                  ) : (
+                    <AvatarFallback size={100} style={styles.profileTabImage} />
+                  )}
                   <View style={[styles.profileTabOverlay, activeProfileId === profile.profile_id && styles.activeProfileTabOverlay]}>
                     <Text 
                       style={[styles.profileTabName, activeProfileId === profile.profile_id && styles.activeProfileTabName]}
@@ -107,10 +109,11 @@ function MessagesScreenInner() {
                     style={styles.newMatchItem}
                     onPress={() => match.otherProfile?.profile_id && handleMatchPress(match.otherProfile.profile_id)}
                   >
-                    <Image 
-                      source={renderProfileImage(match.otherProfile?.image_urls?.[0])} 
-                      style={styles.newMatchImage} 
-                    />
+                    {match.otherProfile?.image_urls?.[0] ? (
+                      <Image source={{ uri: match.otherProfile.image_urls[0] }} style={styles.newMatchImage} />
+                    ) : (
+                      <AvatarFallback size={100} style={styles.newMatchImage} />
+                    )}
                     <Text style={styles.newMatchName} numberOfLines={1}>{match.otherProfile?.display_name || 'Mysterious Soul'}</Text>
                   </TouchableOpacity>
                 ))}
@@ -133,11 +136,11 @@ function MessagesScreenInner() {
                   onPress={() => handleConversationPress(convo.id)}
                 >
                   <View style={styles.inboxContent}>
-                    <Image 
-                      source={renderProfileImage(convo.otherProfile?.image_urls?.[0])} 
-                      style={styles.inboxBanner} 
-                      resizeMode="cover" 
-                    />
+                    {convo.otherProfile?.image_urls?.[0] ? (
+                      <Image source={{ uri: convo.otherProfile.image_urls[0] }} style={styles.inboxBanner} resizeMode="cover" />
+                    ) : (
+                      <AvatarFallback size={56} style={styles.inboxBanner} />
+                    )}
                     <View style={styles.inboxTextContainer}>
                       <Text style={styles.inboxName}>{convo.otherProfile?.display_name || 'Traveler'}</Text>
                       <Text style={styles.inboxLastMessage} numberOfLines={1}>

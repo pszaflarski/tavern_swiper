@@ -20,7 +20,6 @@ import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller
 import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../../components/ScreenErrorBoundary';
 
-const PLACEHOLDER_IMAGE = require('../../../assets/images/placeholder/hero1.jpeg');
 const INPUT_BAR_HEIGHT = 56; // Tighter base height for the input bar content
 
 function ConversationScreenInner() {
@@ -132,10 +131,13 @@ function ConversationScreenInner() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
               <View style={styles.headerProfile}>
-                <Image 
-                  source={otherProfile?.image_urls?.[0] ? { uri: otherProfile.image_urls[0] } : PLACEHOLDER_IMAGE} 
-                  style={styles.headerAvatar} 
-                />
+                {otherProfile?.image_urls?.[0] ? (
+                  <Image source={{ uri: otherProfile.image_urls[0] }} style={styles.headerAvatar} />
+                ) : (
+                  <View style={[styles.headerAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surfaceContainerHigh }]}>
+                    <Ionicons name="person" size={18} color={Colors.outline} />
+                  </View>
+                )}
                 <View>
                   <Text style={styles.headerName}>{otherProfile?.display_name || 'Traveler'}</Text>
                   <Text style={styles.headerStatus}>Online in the tavern</Text>
