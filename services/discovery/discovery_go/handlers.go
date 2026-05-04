@@ -116,7 +116,7 @@ func handleGetFeed(c *gin.Context) {
 	}
 
 	// 3. Hydrate response from pipeline results
-	var profiles []DiscoveryProfile
+	profiles := make([]DiscoveryProfile, 0)
 	for _, candidate := range candidates {
 		var p DiscoveryProfile
 		data := candidate.Data

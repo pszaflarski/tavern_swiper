@@ -97,6 +97,7 @@ else
     
     export DISCOVERY_DB="discovery-${ENV_NAME}"
     export MESSAGES_DB="messages-${ENV_NAME}"
+    export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
     export PUBSUB_EMULATOR_HOST=""
 fi
 
@@ -195,7 +196,5 @@ if [[ "$MODE" == "local" ]]; then
     echo "🧹 Cleaning up local test environment..."
     docker compose -f $TEST_COMPOSE_FILE down
 fi
-
-exit $EXIT_CODE
 
 exit $EXIT_CODE
