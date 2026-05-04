@@ -13,7 +13,7 @@ DISCOVERY_URL = os.getenv("DISCOVERY_URL", "http://localhost:8003")
 USERS_URL = os.getenv("USERS_URL", "http://localhost:8004")
 
 # Targeting the test database
-FIRESTORE_PROJECT = "tavern-swiper-dev"
+FIRESTORE_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "tavern-swiper-dev")
 MESSAGES_DB = os.getenv("MESSAGES_DB", "messages-dev")
 
 @pytest.fixture

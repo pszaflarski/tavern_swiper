@@ -12,7 +12,7 @@ PROFILES_URL = os.getenv("PROFILES_URL", "https://profiles-hhqol7siba-uc.a.run.a
 USERS_URL = os.getenv("USERS_URL", "https://users-hhqol7siba-uc.a.run.app")
 
 # Targeting the test database
-FIRESTORE_PROJECT = "tavern-swiper-dev"
+FIRESTORE_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "tavern-swiper-dev")
 DISCOVERY_DB = os.getenv("DISCOVERY_DB", "discovery")
 
 @pytest.fixture(scope="module")

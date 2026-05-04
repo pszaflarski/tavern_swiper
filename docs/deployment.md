@@ -130,3 +130,69 @@ bash scripts/apply-indexes.sh [dev|test|prod]
 > [!IMPORTANT]
 > When adding a new `Where` or `OrderBy` query to a service, you **must** update the corresponding `firestore.indexes.json` and run the apply script. Otherwise, Firestore will perform expensive full collection scans.
 
+---
+
+## GCS Media Bucket Setup
+
+Each environment needs a Cloud Storage bucket for profile images. The bucket uses **Uniform Bucket-Level Access** (the GCP default), so public read access must be granted via an IAM policy — per-object ACLs are disabled.
+
+### 1. Create the Bucket
+```bash
+gcloud storage buckets create gs://$PROJECT_ID-media-$ENV \
+  --location=us-central1 \
+  --uniform-bucket-level-access
+```
+
+### 2. Grant Public Read Access
+> [!CAUTION]
+> This makes all objects in the bucket publicly readable. Only apply this to media buckets that serve profile images.
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://$PROJECT_ID-media-$ENV \
+  --member=allUsers \
+  --role=roles/storage.objectViewer
+```
+
+### 3. Verify
+```bash
+gcloud storage buckets get-iam-policy gs://$PROJECT_ID-media-$ENV
+```
+Confirm `allUsers` has `roles/storage.objectViewer`.
+
+> [!WARNING]
+> Without the public IAM policy, uploaded images will return `403 Forbidden` when the frontend tries to display them. The backend upload will appear to succeed, but images will be blank.
+
+---
+
+## Pub/Sub Push Subscriptions
+
+The profiles service publishes events to Pub/Sub when profiles are created, updated, or deleted. Subscribers (Cloud Run services) receive these events via **push subscriptions**. Topics are created automatically by the backend services, but **subscriptions must be provisioned manually** for each environment.
+
+### Required Subscriptions
+
+| Subscription | Topic | Push Endpoint |
+|---|---|---|
+| `$ENV-discovery-subscriber-push-sub` | `$ENV-profiles-profile-events-v1` | `discovery-subscriber-$ENV` Cloud Run URL |
+| `$ENV-messages-subscriber-push-sub` | `$ENV-discovery-match-events-v1` | `messages-subscriber-$ENV` Cloud Run URL |
+
+### Setup Commands
+```bash
+# Discovery subscriber (receives profile events)
+gcloud pubsub subscriptions create $ENV-discovery-subscriber-push-sub \
+  --topic=$ENV-profiles-profile-events-v1 \
+  --push-endpoint=$(gcloud run services describe discovery-subscriber-$ENV --region=us-central1 --format='value(status.url)') \
+  --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --ack-deadline=10 \
+  --project=$PROJECT_ID
+
+# Messages subscriber (receives match events)
+gcloud pubsub subscriptions create $ENV-messages-subscriber-push-sub \
+  --topic=$ENV-discovery-match-events-v1 \
+  --push-endpoint=$(gcloud run services describe messages-subscriber-$ENV --region=us-central1 --format='value(status.url)') \
+  --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --ack-deadline=10 \
+  --project=$PROJECT_ID
+```
+
+> [!WARNING]
+> Without push subscriptions, published events go nowhere. The discovery feed will be empty and matches won't propagate to the messages service.

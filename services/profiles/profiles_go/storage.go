@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"cloud.google.com/go/storage"
@@ -65,11 +64,9 @@ func uploadToGCSInternal(ctx context.Context, profileID string, filename string,
 		return "", fmt.Errorf("failed to close GCS writer: %v", err)
 	}
 
-	// Make the object public so the frontend can display it
-	if err := obj.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
-		// We log the error but don't fail the upload, as the image was already saved
-		log.Printf("[WARNING] Failed to set public ACL for %s: %v", objectName, err)
-	}
+	// Public read access is managed at the bucket level via IAM policy
+	// (allUsers → roles/storage.objectViewer). Per-object ACL calls do not work
+	// when Uniform Bucket-Level Access is enabled (the default for new buckets).
 
 	// Sign URL or construct public URL (depending on bucket settings)
 	// For this project, we usually use the public URL pattern if the bucket is public
