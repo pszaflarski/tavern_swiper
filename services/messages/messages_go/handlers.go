@@ -285,7 +285,7 @@ func handleGetMessages(c *gin.Context) {
 
 	// No stable sort needed — results arrive pre-sorted from Firestore
 
-	var results []MessageOut
+	results := make([]MessageOut, 0)
 	for _, doc := range docs {
 		d := doc.Data()
 		tVal, _ := d["created_at"].(time.Time)
@@ -361,7 +361,7 @@ func handleListConversations(c *gin.Context) {
 		return
 	}
 
-	var results []ConversationOut
+	results := make([]ConversationOut, 0)
 	for _, convDoc := range convDocs {
 		if convDoc == nil || !convDoc.Exists() {
 			continue

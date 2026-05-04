@@ -85,7 +85,7 @@ func listUsersHandler(c *gin.Context) {
 	}
 
 	docs := query.Documents(c.Request.Context())
-	var users []UserOut
+	users := make([]UserOut, 0)
 	for {
 		doc, err := docs.Next()
 		if err == iterator.Done {
@@ -102,9 +102,6 @@ func listUsersHandler(c *gin.Context) {
 		users = append(users, u)
 	}
 
-	if users == nil {
-		users = []UserOut{}
-	}
 	c.JSON(http.StatusOK, users)
 }
 

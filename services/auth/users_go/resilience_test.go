@@ -366,3 +366,40 @@ func TestUsersResilience_PurgeAllUsersNonRootFails(t *testing.T) {
 		t.Errorf("Expected 403, got %d", w.Code)
 	}
 }
+
+func TestEmptyArrayConsistency(t *testing.T) {
+	skipIfRealDB(t)
+	r := setupTest()
+
+	t.Run("ListUsers_EmptyArray", func(t *testing.T) {
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return &mockClient{
+				collectionFunc: func(path string) CollectionRef {
+					return &mockCollection{
+						documentsFunc: func(ctx context.Context) DocumentIterator {
+							return &mockIterator{
+								nextFunc: func() (DocumentSnapshot, error) {
+									return nil, iterator.Done // No users
+								},
+							}
+						},
+					}
+				},
+			}, nil
+		}
+
+		token := signGoTestToken("admin-uid", Admin, "admin@e.com")
+		req, _ := http.NewRequest("GET", "/users/", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		if w.Body.String() != "[]" {
+			t.Errorf("Expected empty array '[]', got '%s'", w.Body.String())
+		}
+	})
+}

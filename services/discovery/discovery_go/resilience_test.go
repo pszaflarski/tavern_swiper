@@ -225,3 +225,76 @@ func TestDiscoveryResilience_FeedExclusions(t *testing.T) {
 		t.Errorf("Expected candidate P3, got %s", resp.Profiles[0].ProfileID)
 	}
 }
+
+func TestEmptyArrayConsistency(t *testing.T) {
+	skipIfRealDB(t)
+	fixedNow := time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC)
+	oldNow := _now
+	_now = func() time.Time { return fixedNow }
+	defer func() { _now = oldNow }()
+
+	mockPub := &mockPublisher{}
+	r := setupTest(mockPub)
+
+	t.Run("FeedResponse_EmptyProfiles", func(t *testing.T) {
+		// Return zero candidates from feed function
+		oldFeed := getFeedCandidatesFunc
+		getFeedCandidatesFunc = func(ctx context.Context, collection string, excludeIDs []string, limit int) ([]FeedCandidate, error) {
+			return []FeedCandidate{}, nil
+		}
+		defer func() { getFeedCandidatesFunc = oldFeed }()
+
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return &mockClient{
+				collections: map[string]*mockCollection{
+					PROFILES_CACHE: {
+						docs: map[string]*mockDoc{
+							"p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}},
+						},
+					},
+					SWIPES_COLLECTION: {},
+				},
+			}, nil
+		}
+
+		req, _ := http.NewRequest("GET", "/discovery/feed/p1", nil)
+		req.Header.Set("Authorization", "Bearer "+signGoTestToken("u1", "user"))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		// Verify the raw JSON contains [] not null for profiles
+		var raw map[string]json.RawMessage
+		json.Unmarshal(w.Body.Bytes(), &raw)
+		profilesJSON := string(raw["profiles"])
+		if profilesJSON != "[]" {
+			t.Errorf("Expected profiles to be '[]', got '%s'", profilesJSON)
+		}
+	})
+
+	t.Run("ListMatches_EmptyArray", func(t *testing.T) {
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return &mockClient{
+				collections: map[string]*mockCollection{
+					MATCHES_COLLECTION: {},
+				},
+			}, nil
+		}
+
+		req, _ := http.NewRequest("GET", "/discovery/matches/profile/lonely-user", nil)
+		req.Header.Set("Authorization", "Bearer "+signGoTestToken("u1", "user"))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		if w.Body.String() != "[]" {
+			t.Errorf("Expected empty array '[]', got '%s'", w.Body.String())
+		}
+	})
+}
