@@ -43,7 +43,10 @@ def delete_collection(coll_ref, batch_size=500):
         return delete_collection(coll_ref, batch_size)
 
 def purge_system(env="dev", purge_auth=False):
-    print(f"🚀 Starting Direct Firestore Purge for environment: {env}\n")
+    # Determine the target project based on environment
+    target_project = "tavern-swiper-prod" if env == "prod" else "tavern-swiper-dev"
+    
+    print(f"🚀 Starting Direct Firestore Purge for environment: {env} (Project: {target_project})\n")
     # Map 'dev' and 'test' to their respective database/bucket suffixes
     suffix = f"-{env}"
     
@@ -56,7 +59,7 @@ def purge_system(env="dev", purge_auth=False):
         print(f"🗑️ Clearing Firestore Database: {db_id}...")
         try:
             # Use explicit credentials from gcloud to avoid ADC permission issues
-            db = firestore.Client(project=PROJECT_ID, database=db_id, credentials=g_creds)
+            db = firestore.Client(project=target_project, database=db_id, credentials=g_creds)
             collections = db.collections()
             count = 0
             for coll in collections:
@@ -68,12 +71,12 @@ def purge_system(env="dev", purge_auth=False):
 
     # 3. Clear Firebase Auth (Optional: Standard for the whole project)
     if purge_auth:
-        print("\n🔥 Purging Firebase Auth Users...")
+        print(f"\n🔥 Purging Firebase Auth Users in {target_project}...")
         try:
             # Initialize Firebase Admin explicitly for the target project
             if not firebase_admin._apps:
                 # We use an options dict to specify the project ID
-                options = {'projectId': PROJECT_ID}
+                options = {'projectId': target_project}
                 try:
                     firebase_admin.initialize_app(options=options)
                 except Exception as e:
@@ -85,21 +88,21 @@ def purge_system(env="dev", purge_auth=False):
             uids = [user.uid for user in users]
             if uids:
                 auth.delete_users(uids)
-                print(f"  ✅ {len(uids)} users deleted from Firebase Auth ({PROJECT_ID}).")
+                print(f"  ✅ {len(uids)} users deleted from Firebase Auth ({target_project}).")
             else:
-                print(f"  ✅ No users found in Firebase Auth ({PROJECT_ID}).")
+                print(f"  ✅ No users found in Firebase Auth ({target_project}).")
         except Exception as e:
             print(f"  ❌ Error purging Firebase Auth: {e}")
     else:
         print("\n🛡️  Skipping Firebase Auth purge (Preserving User UIDs).")
 
     # 4. Clear GCS Buckets (Hard Delete everything in the environment's media bucket)
-    bucket_name = f"{PROJECT_ID}-media-{env}"
+    bucket_name = f"{target_project}-media-{env}"
     print(f"\n🌊 Clearing GCS Bucket: {bucket_name}...")
     try:
         from google.cloud import storage
         # Use explicit project and credentials for reliability
-        client = storage.Client(project=PROJECT_ID, credentials=g_creds)
+        client = storage.Client(project=target_project, credentials=g_creds)
         bucket = client.bucket(bucket_name)
         
         # Check if bucket exists first to avoid crashing if it hasn't been created yet

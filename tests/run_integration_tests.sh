@@ -12,6 +12,10 @@ REAL_AUTH=""
 
 for arg in "$@"; do
     case $arg in
+        --prod)
+            MODE="cloud-prod"
+            shift
+            ;;
         --test)
             MODE="cloud-test"
             shift
@@ -36,10 +40,10 @@ echo "🌍 Running Integration Tests in mode: $MODE (Reset: $RESET)"
 # ---------------------------------------------------------------------------
 # 1. Setup Environment & URLs
 # ---------------------------------------------------------------------------
-PROJECT_ID="tavern-swiper-dev"
 REGION="us-central1"
 
 if [[ "$MODE" == "local" ]]; then
+    PROJECT_ID="tavern-swiper-dev"
     export AUTH_SERVICE_URL="http://localhost:8001"
     export PROFILES_URL="http://localhost:8002"
     export DISCOVERY_URL="http://localhost:8003"
@@ -51,8 +55,17 @@ if [[ "$MODE" == "local" ]]; then
     echo "📍 Mode: LOCAL (pointing to localhost)"
 
 else
+    # Default: Dev
     ENV_NAME="dev"
-    [[ "$MODE" == "cloud-test" ]] && ENV_NAME="test"
+    PROJECT_ID="tavern-swiper-dev"
+
+    if [[ "$MODE" == "cloud-test" ]]; then
+        ENV_NAME="test"
+        PROJECT_ID="tavern-swiper-dev"
+    elif [[ "$MODE" == "cloud-prod" ]]; then
+        ENV_NAME="prod"
+        PROJECT_ID="tavern-swiper-prod"
+    fi
     ENV_ARG=$ENV_NAME
     
     echo "🔍 Fetching Cloud Run URLs for [$ENV_NAME] environment..."
