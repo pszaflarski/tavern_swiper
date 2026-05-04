@@ -30,6 +30,15 @@ func (c *mockClient) Batch() WriteBatch {
 	return &mockBatch{}
 }
 
+func (c *mockClient) GetAll(ctx context.Context, docRefs []DocumentRef) ([]DocumentSnapshot, error) {
+	results := make([]DocumentSnapshot, len(docRefs))
+	for i, ref := range docRefs {
+		snap, _ := ref.Get(ctx)
+		results[i] = snap
+	}
+	return results, nil
+}
+
 type mockCollection struct {
 	CollectionRef
 	path     string

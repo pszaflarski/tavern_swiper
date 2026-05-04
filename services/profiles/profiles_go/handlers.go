@@ -13,7 +13,6 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"google.golang.org/api/iterator"
 )
 
 const COLLECTION = "profiles"
@@ -579,104 +578,35 @@ func handleGetProfilesBatch(c *gin.Context) {
 		return
 	}
 
-	// C1: Optimization - Use Enterprise Pipeline for batch fetch
-	// We project only the fields needed for ProfileOut to save bytes (Enterprise pricing)
-	fields := []any{
-		"profile_id", "user_id", "display_name", "tagline", "bio", "gender",
-		"image_urls", "is_active", "created_at", "updated_at",
+	// Build document references for batch get
+	refs := make([]DocumentRef, len(body.ProfileIDs))
+	for i, pid := range body.ProfileIDs {
+		refs[i] = client.Collection(COLLECTION).Doc(pid)
 	}
 
-	// Chunk the IDs if they exceed the limit (Enterprise might support more than 30, but let's be safe or just use the Pipeline)
-	// Actually, Pipeline API doesn't have the 30-item limit of Core 'In' filter in some versions, 
-	// but let's check if we can just pass them all.
-	
-	pipeline := client.Pipeline().
-		Collection(COLLECTION).
-		Where(firestore.EqualAny(firestore.DocumentID, body.ProfileIDs)).
-		Select(fields)
-
-	snapshot := pipeline.Execute(c.Request.Context())
-	iter := snapshot.Results()
-	defer iter.Stop()
+	snaps, err := client.GetAll(c.Request.Context(), refs)
+	if err != nil {
+		log.Printf("[ERROR] Batch profile GetAll error: %v", err)
+		send500(c, "Failed to fetch profiles")
+		return
+	}
 
 	results := make([]ProfileOut, 0)
-	for {
-		result, err := iter.Next()
-		if err == iterator.Done {
-			break
+	for _, snap := range snaps {
+		if snap == nil || !snap.Exists() {
+			continue // Skip non-existent docs (e.g., "non-existent-id")
 		}
-		if err != nil {
-			log.Printf("[ERROR] Batch profile iteration error: %v", err)
-			break
+		p, err := docToProfile(snap)
+		if err == nil {
+			results = append(results, p)
 		}
-
-		// Manual hydration since we don't have a DocumentSnapshot here, but we have the map
-		// We'll reuse the logic from docToProfile but adapted for a map.
-		p := mapToProfile(result.Data())
-		// Pipeline result doesn't explicitly give the ID in res.Data() unless we selected it or it's implicitly there.
-		// Usually, the ID is available if we select it or through the result metadata.
-		// Actually, let's assume the ID is in the data if we select it or we can just use the map.
-		
-		// Or just select "profile_id" if it exists in the doc.
-		
-		results = append(results, p)
 	}
 
 	c.JSON(http.StatusOK, results)
 }
 
-// Helper: mapToProfile (adapted from docToProfile)
-func mapToProfile(d map[string]interface{}) ProfileOut {
-	getStr := func(key string) *string {
-		if val, ok := d[key].(string); ok {
-			return &val
-		}
-		return nil
-	}
-	getURLs := func(key string) []string {
-		if val, ok := d[key].([]interface{}); ok {
-			res := make([]string, len(val))
-			for i, v := range val {
-				if s, ok := v.(string); ok {
-					res[i] = s
-				}
-			}
-			return res
-		}
-		return []string{}
-	}
-	reqStr := func(key string) string {
-		if val, ok := d[key].(string); ok {
-			return val
-		}
-		return ""
-	}
-	reqBool := func(key string) bool {
-		if val, ok := d[key].(bool); ok {
-			return val
-		}
-		return false
-	}
-	getTimestamp := func(key string) *time.Time {
-		if val, ok := d[key].(time.Time); ok {
-			return &val
-		}
-		return nil
-	}
 
-	return ProfileOut{
-		ProfileID:   reqStr("profile_id"), // Ensure profile_id is in the data or selected
-		UserID:      reqStr("user_id"),
-		DisplayName: reqStr("display_name"),
-		Tagline:     getStr("tagline"),
-		Bio:         getStr("bio"),
-		Gender:      getStr("gender"),
-		ImageURLs:   getURLs("image_urls"),
-		IsActive:    reqBool("is_active"),
-		CreatedAt:   getTimestamp("created_at"),
-		UpdatedAt:   getTimestamp("updated_at"),
-	}
-}
+
 
 // handleGetMyActiveProfile godoc
 // @Summary      Get my active profile

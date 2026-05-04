@@ -348,33 +348,26 @@ func handleListConversations(c *gin.Context) {
 		return
 	}
 
-	// C2: Optimization - Use Enterprise Pipeline for batch fetch
-	fields := []any{
-		"conversation_id", "last_message_id", "last_message_sent_at", "last_message_text",
-		"last_message_sender_id", "created_at", "updated_at", "participant_ids",
+	// Build document references for batch get
+	refs := make([]DocumentRef, len(convIDs))
+	for i, cid := range convIDs {
+		refs[i] = client.Collection(COLLECTION_CONVERSATIONS).Doc(cid)
 	}
 
-	pipeline := client.Pipeline().
-		Collection(COLLECTION_CONVERSATIONS).
-		Where(firestore.EqualAny(firestore.DocumentID, convIDs)).
-		Select(fields)
-
-	snapshot := pipeline.Execute(ctx)
-	pIter := snapshot.Results()
-	defer pIter.Stop()
+	convDocs, err := client.GetAll(ctx, refs)
+	if err != nil {
+		log.Printf("[ERROR] Batch conversation GetAll failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to fetch conversations"})
+		return
+	}
 
 	var results []ConversationOut
-	for {
-		res, err := pIter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Printf("[ERROR] Pipeline batch read failed for conversations: %v", err)
-			break
+	for _, convDoc := range convDocs {
+		if convDoc == nil || !convDoc.Exists() {
+			continue
 		}
 
-		d := res.Data()
+		d := convDoc.Data()
 		// Manual hydration
 		var lastMsg *LastMessageInfo
 		if mid, ok := d["last_message_id"].(string); ok && mid != "" {
@@ -402,23 +395,7 @@ func handleListConversations(c *gin.Context) {
 			}
 		}
 
-		// In Pipeline result, the ID might not be in Data() if it's just the document name.
-		// However, we can use firestore.DocumentID in Select to get it if needed,
-		// or we can find which convID this result belongs to.
-		// But usually, we want the ID. 
-		// I'll add conversation_id to the document data in my head, or I'll check if it's there.
-		// If not, I'll update the pipeline to select it.
-		// Wait, I'll just add "conversation_id" to the fields if it's a field in the doc.
-		
-		// Looking at handleCreateConversation, it sets conversation_id field.
-		// Yes, it does: data["conversation_id"] = id
-		
-		convID := ""
-		if val, ok := d["conversation_id"].(string); ok {
-			convID = val
-		} else {
-			convID = res.Ref().ID()
-		}
+		convID := convDoc.ID()
 
 		results = append(results, ConversationOut{
 			ID:             convID,
