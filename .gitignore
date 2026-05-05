@@ -51,7 +51,8 @@ scripts/pubsub_demo.py
 .LSOverride
 
 # Maestro
-.maestro
+# Maestro
+.maestro/tests/
 .android_sdk/
 
 explanation.md  

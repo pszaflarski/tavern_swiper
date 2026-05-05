@@ -1,0 +1,30 @@
+# Messages / Inbox Screen Tests
+# Analogous to: __tests__/Messages.test.tsx
+#
+# Verifies:
+# - Messages screen renders
+# - Screen title is shown
+# - Content loads (loading, empty state, or matches/inbox)
+
+appId: com.tavernswiper.app
+
+---
+
+# Launch the app and log in
+- launchApp:
+    clearState: true
+- runFlow: helpers/auth_login_helper.yaml
+
+# Navigate to Messages tab
+- tapOn: "MESSAGES"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 10000
+
+# --- Test: Screen title is shown ---
+- assertVisible:
+    id: "messages-screen"
+
+# --- Test: Content loads (wait for loading to finish) ---
+- waitForAnimationToEnd

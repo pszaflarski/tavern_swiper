@@ -1,0 +1,39 @@
+# Account Screen Tests
+# Analogous to: __tests__/Account.test.tsx
+#
+# Verifies:
+# - Account screen renders
+# - "Account" title is visible
+# - Logout button is present and functional
+# NOTE: Logout button text has CSS textTransform: 'uppercase' → "LOGOUT"
+
+appId: com.tavernswiper.app
+
+---
+
+# Launch the app and log in
+- launchApp:
+    clearState: true
+- runFlow: helpers/auth_login_helper.yaml
+
+# Navigate to Account tab
+- tapOn: "ACCOUNT"
+- extendedWaitUntil:
+    visible:
+      id: "account-screen"
+    timeout: 10000
+
+# --- Test: Account screen renders ---
+- assertVisible:
+    id: "account-screen"
+
+# --- Test: Logout button is present (rendered as uppercase "LOGOUT") ---
+- assertVisible: "LOGOUT"
+
+# --- Test: Logout button works (returns to auth screen) ---
+- tapOn: "LOGOUT"
+
+# After logout, we should be back on the auth screen
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 15000

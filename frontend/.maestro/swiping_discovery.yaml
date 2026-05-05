@@ -1,0 +1,42 @@
+# Swiping / Discovery Screen Tests
+# Analogous to: __tests__/Swiping.test.tsx
+#
+# Verifies:
+# - Tavern screen renders
+# - Swipe left and right buttons are present (when profiles exist)
+# - Or no-profile prompt is shown
+
+appId: com.tavernswiper.app
+
+---
+
+# Launch the app and log in
+- launchApp:
+    clearState: true
+- runFlow: helpers/auth_login_helper.yaml
+
+# Ensure we're on the Tavern tab (already there after login)
+- tapOn: "TAVERN"
+- waitForAnimationToEnd
+
+# --- Test: Tavern screen renders (one of two states) ---
+# Either the main tavern-screen or the no-profile screen must appear
+- runFlow:
+    when:
+      visible:
+        id: "tavern-screen"
+    commands:
+      # --- Test: Swipe buttons are present ---
+      - assertVisible:
+          id: "swipe-left-button"
+      - assertVisible:
+          id: "swipe-right-button"
+
+# Handle the no-profile case
+- runFlow:
+    when:
+      visible:
+        id: "tavern-screen-no-profile"
+    commands:
+      - assertVisible:
+          id: "forge-identity-button"

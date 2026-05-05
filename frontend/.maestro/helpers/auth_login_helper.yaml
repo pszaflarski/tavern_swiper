@@ -1,0 +1,36 @@
+# Helper: Log in with test credentials
+# Called by other flows via: - runFlow: helpers/auth_login_helper.yaml
+#
+# This flow handles the common case where the app opens to the auth screen.
+# It uses the root admin test account for simplicity.
+# Handles: splash screen wait, font loading, auth state loading.
+
+appId: com.tavernswiper.app
+
+---
+
+# Wait for the app to fully initialize (fonts + auth check can take 20s+ on emulator)
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 30000
+
+# Type email — tap the email input by its placeholder text
+- tapOn: "hero@realm.com"
+- inputText: "root@tavernswiper.com"
+
+# Type password — tap the password input by its placeholder
+- tapOn: "••••••••"
+- inputText: "Password123!"
+
+# Hide keyboard before pressing submit
+- hideKeyboard
+
+# Press submit button (rendered as uppercase "ENTER TAVERN" via CSS, but
+# React Native text content is "Enter Tavern")
+- tapOn: "Enter Tavern"
+
+# Wait for login to complete and tabs to appear
+# Tab labels are CSS uppercase so they render as "TAVERN"
+- extendedWaitUntil:
+    visible: "TAVERN"
+    timeout: 20000

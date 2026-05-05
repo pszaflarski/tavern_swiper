@@ -1,0 +1,70 @@
+# Profile Creation Form Tests
+# Analogous to: __tests__/ProfileCreation.test.tsx
+#
+# Verifies:
+# - Create profile form renders with "Forge Your Hero" header
+# - Photo upload slots are present
+# - Name and tagline inputs are visible and interactive
+# - Save button is present
+
+appId: com.tavernswiper.app
+
+---
+
+# Launch the app and log in
+- launchApp:
+    clearState: true
+- runFlow: helpers/auth_login_helper.yaml
+
+# Navigate to Profiles tab
+- tapOn: "PROFILES"
+- extendedWaitUntil:
+    visible:
+      id: "profiles-screen"
+    timeout: 10000
+
+# Navigate to the create profile screen via whichever button is showing
+- runFlow:
+    when:
+      visible: "Forge New Identity"
+    commands:
+      - tapOn: "Forge New Identity"
+
+- runFlow:
+    when:
+      visible: "Forge Your First Hero"
+    commands:
+      - tapOn: "Forge Your First Hero"
+
+# Wait for the create/edit screen to load — header says "Forge Your Hero"
+- extendedWaitUntil:
+    visible: "Forge Your Hero"
+    timeout: 10000
+
+# --- Test: Create profile form renders ---
+- assertVisible: "Forge Your Hero"
+- assertVisible: "Save"
+
+# --- Test: Photo section is present ---
+- assertVisible: "Visions of the Self"
+
+# --- Test: Identity section is visible ---
+- scrollUntilVisible:
+    element: "Identity"
+    direction: DOWN
+- assertVisible: "Identity"
+
+# --- Test: Name input is present and interactive ---
+- assertVisible: "True Name"
+- tapOn: "e.g. Elara Brightsoul"
+- inputText: "Maestro TestHero"
+
+# --- Test: Tagline input is present ---
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Title / Tagline"
+    direction: DOWN
+- assertVisible: "Title / Tagline"
+
+# Note: We intentionally do NOT press Save to avoid creating
+# test data in the backend. The form rendering is tested above.

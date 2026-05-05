@@ -1,0 +1,47 @@
+# Tab Navigation Tests
+# Analogous to: __tests__/Navigation.test.tsx
+#
+# Verifies:
+# - All 4 tab buttons are present (TAVERN, PROFILES, MESSAGES, ACCOUNT)
+# - Each tab is tappable and navigates to the correct screen
+# NOTE: Tab labels have CSS textTransform: 'uppercase' so they render as ALL CAPS
+
+appId: com.tavernswiper.app
+
+---
+
+# Launch the app and log in
+- launchApp:
+    clearState: true
+- runFlow: helpers/auth_login_helper.yaml
+
+# --- Test: All tab labels are visible ---
+- assertVisible: "TAVERN"
+- assertVisible: "PROFILES"
+- assertVisible: "MESSAGES"
+- assertVisible: "ACCOUNT"
+
+# --- Test: Navigate to Profiles tab ---
+- tapOn: "PROFILES"
+- extendedWaitUntil:
+    visible:
+      id: "profiles-screen"
+    timeout: 10000
+
+# --- Test: Navigate to Messages tab ---
+- tapOn: "MESSAGES"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 10000
+
+# --- Test: Navigate to Account tab ---
+- tapOn: "ACCOUNT"
+- extendedWaitUntil:
+    visible:
+      id: "account-screen"
+    timeout: 10000
+
+# --- Test: Navigate back to Tavern tab ---
+- tapOn: "TAVERN"
+- waitForAnimationToEnd
