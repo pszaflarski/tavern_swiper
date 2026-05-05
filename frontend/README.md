@@ -30,23 +30,46 @@ The Tavern Swiper mobile app — a React Native application built with Expo and 
 - **Build**: EAS Build (Android APK/AAB)
 - **Deployment**: EAS + Cloud Build
 
-## Development
+## Running
 
 ```bash
 # Install dependencies
 npm install
 
 # Start the Expo dev server
-npm start
+npx expo start
 
-# Run on Android
+# Run on Android device/emulator
 npm run android
+```
 
-# Run unit tests
-npm test
+### With Docker
 
-# Run Maestro E2E tests
+```bash
+docker build -t tavern-swiper-frontend ./frontend
+docker run -p 8080:8080 tavern-swiper-frontend
+```
+
+## Testing
+
+### Unit Tests (Jest)
+
+```bash
+# Run all unit tests
+npm run test:jest
+
+# Run snapshot tests only
+npm run test:snapshots
+```
+
+### E2E Tests (Maestro)
+
+```bash
+# Run Maestro tests via Docker (full environment)
 npm run test:maestro
+
+# Run Maestro tests directly (requires local emulator + APK)
+npm run test:maestro:direct
 ```
 
 ## Environment

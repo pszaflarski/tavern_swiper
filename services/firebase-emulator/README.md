@@ -9,6 +9,22 @@ A lightweight Docker container that runs the Firebase Auth Emulator for local de
 - **Project ID**: `tavern-swiper-dev`
 - **Base image**: `node:lts-slim` with `firebase-tools` installed globally
 
+## Running
+
+### With Docker Compose
+
+```bash
+# From the repo root — starts the emulator (other services depend on this automatically)
+docker compose up firebase-emulator
+```
+
+### Standalone Docker
+
+```bash
+docker build -t firebase-emulator ./services/firebase-emulator
+docker run -p 9099:9099 firebase-emulator
+```
+
 ## Usage
 
 This container is managed by `docker-compose.yml` and starts automatically alongside the other services. The Auth service connects to it via:

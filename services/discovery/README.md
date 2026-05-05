@@ -35,6 +35,54 @@ Discovery API (feed/swipe) reads from ──────────────
 Discovery API → Pub/Sub (match events) → Messages Subscriber
 ```
 
+## Running
+
+### With Air (hot-reload)
+
+```bash
+# discovery_go
+cd services/discovery/discovery_go
+air
+
+# discovery_subscriber
+cd services/discovery/discovery_subscriber
+air
+```
+
+### With Docker Compose
+
+```bash
+# From the repo root — starts discovery, subscriber, and all dependencies
+docker compose up discovery discovery-subscriber
+```
+
+### Standalone Docker
+
+```bash
+# discovery_go
+docker build -t discovery-go ./services/discovery/discovery_go
+docker run -p 8003:8003 discovery-go
+
+# discovery_subscriber
+docker build -t discovery-subscriber ./services/discovery/discovery_subscriber
+docker run -p 8007:8080 discovery-subscriber
+```
+
+## Testing
+
+```bash
+# discovery_go — unit tests (mocks)
+cd services/discovery/discovery_go
+go test ./...
+
+# discovery_go — integration tests against real Firestore
+go test ./... -run Integration -real-db
+
+# discovery_subscriber — unit tests
+cd services/discovery/discovery_subscriber
+go test ./...
+```
+
 ## Tech Stack
 - **Language**: Go
 - **Framework**: Gin + CORS

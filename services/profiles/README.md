@@ -35,6 +35,40 @@ These events are consumed by the Discovery Subscriber to keep its local profile 
 Profiles API → Pub/Sub (profile events) → Discovery Subscriber
 ```
 
+## Running
+
+### With Air (hot-reload)
+
+```bash
+cd services/profiles/profiles_go
+air
+```
+
+### With Docker Compose
+
+```bash
+# From the repo root — starts profiles and all dependencies
+docker compose up profiles
+```
+
+### Standalone Docker
+
+```bash
+docker build -t profiles-go ./services/profiles/profiles_go
+docker run -p 8002:8002 profiles-go
+```
+
+## Testing
+
+```bash
+# Unit tests (mocks)
+cd services/profiles/profiles_go
+go test ./...
+
+# Integration tests against real Firestore
+go test ./... -run Integration -real-db
+```
+
 ## Tech Stack
 - **Language**: Go
 - **Framework**: Gin + CORS

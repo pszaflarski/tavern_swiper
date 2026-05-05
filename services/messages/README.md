@@ -38,6 +38,54 @@ Discovery Service → Pub/Sub (match events) → Messages Subscriber → Firesto
 Messages API (create conversation) verifies match from ───────────────────┘
 ```
 
+## Running
+
+### With Air (hot-reload)
+
+```bash
+# messages_go
+cd services/messages/messages_go
+air
+
+# messages_subscriber
+cd services/messages/messages_subscriber
+air
+```
+
+### With Docker Compose
+
+```bash
+# From the repo root — starts messages, subscriber, and all dependencies
+docker compose up messages messages-subscriber
+```
+
+### Standalone Docker
+
+```bash
+# messages_go
+docker build -t messages-go ./services/messages/messages_go
+docker run -p 8005:8005 messages-go
+
+# messages_subscriber
+docker build -t messages-subscriber ./services/messages/messages_subscriber
+docker run -p 8008:8080 messages-subscriber
+```
+
+## Testing
+
+```bash
+# messages_go — unit tests (mocks)
+cd services/messages/messages_go
+go test ./...
+
+# messages_go — integration tests against real Firestore
+go test ./... -run Integration -real-db
+
+# messages_subscriber — unit tests
+cd services/messages/messages_subscriber
+go test ./...
+```
+
 ## Tech Stack
 - **Language**: Go
 - **Framework**: Gin + CORS

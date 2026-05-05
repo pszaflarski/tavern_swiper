@@ -33,6 +33,57 @@ Manages user account records in Firestore with RBAC (user, admin, root_admin).
   - `DELETE /users/` — Purge all users and their Firebase Auth identities (Root Admin only)
   - `GET /users/root-admin-exists` — Check if a root admin has been registered
 
+## Running
+
+### With Air (hot-reload)
+
+```bash
+# auth_go
+cd services/auth/auth_go
+air
+
+# users_go
+cd services/auth/users_go
+air
+```
+
+### With Docker Compose
+
+```bash
+# From the repo root — starts auth, users, and all dependencies
+docker compose up auth users
+```
+
+### Standalone Docker
+
+```bash
+# auth_go
+docker build -t auth-go ./services/auth/auth_go
+docker run -p 8001:8001 auth-go
+
+# users_go
+docker build -t users-go ./services/auth/users_go
+docker run -p 8082:8082 users-go
+```
+
+## Testing
+
+```bash
+# auth_go — unit tests (mocks)
+cd services/auth/auth_go
+go test ./...
+
+# auth_go — integration tests against real Firestore
+go test ./... -run Integration -real-db
+
+# users_go — unit tests (mocks)
+cd services/auth/users_go
+go test ./...
+
+# users_go — integration tests against real Firestore
+go test ./... -run Integration -real-db
+```
+
 ## Tech Stack
 - **Language**: Go
 - **Framework**: Gin + CORS
