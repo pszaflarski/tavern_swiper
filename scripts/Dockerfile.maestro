@@ -1,0 +1,30 @@
+# Lightweight Maestro test runner container
+# Used by scripts/run_maestro_tests.sh to enforce memory limits
+#
+# Build:  docker build -t tavern-maestro-runner -f scripts/Dockerfile.maestro .
+# Run:    docker run --network=host --memory=2g -v ./frontend/.maestro:/flows tavern-maestro-runner test /flows
+
+FROM eclipse-temurin:21-jdk-jammy
+
+# Install system dependencies (unzip required by Maestro installer, wget for ADB)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends unzip wget && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Maestro CLI
+RUN curl -Ls "https://get.maestro.mobile.dev" | bash
+ENV PATH="/root/.maestro/bin:${PATH}"
+
+# Install Android platform-tools (adb) so Maestro can talk to the host emulator
+RUN wget -q https://dl.google.com/android/repository/platform-tools-latest-linux.zip -O /tmp/platform-tools.zip && \
+    unzip -q /tmp/platform-tools.zip -d /opt/ && \
+    rm /tmp/platform-tools.zip
+
+ENV ANDROID_HOME=/opt
+ENV PATH="/opt/platform-tools:${PATH}"
+
+WORKDIR /flows
+
+ENTRYPOINT ["maestro"]
+CMD ["test", "."]
+

@@ -51,3 +51,6 @@ yarn-error.*
 
 # Firebase config (per-environment)
 google-services.*.json
+
+# Maestro test outputs
+.maestro/tests/
