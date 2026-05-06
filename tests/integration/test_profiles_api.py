@@ -209,3 +209,75 @@ async def test_user_creates_pending_tag():
         tag = resp.json()
         assert tag["status"] == "pending"
         assert tag["suggested_by"] == user["uid"]
+
+
+@pytest.mark.asyncio
+async def test_image_publicly_accessible():
+    """
+    End-to-end image accessibility test.
+    
+    Uploads an image as root admin (bypasses dimension validation),
+    fetches the profile to get the GCS public URL, then performs
+    a raw HTTP GET to verify the image is actually publicly downloadable.
+    
+    This test catches bucket IAM permission regressions (e.g. missing allUsers objectViewer).
+    """
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        from .helpers import get_root_admin
+
+        root = await get_root_admin(client)
+        root_headers = {"Authorization": f"Bearer {root['token']}"}
+
+        # 1. Create a profile as root admin
+        profile_resp = await client.post(
+            f"{PROFILES_URL}/profiles/",
+            headers=root_headers,
+            json={
+                "display_name": "ImageAccessTester",
+                "bio": "Testing public image accessibility",
+                "gender": [],
+            }
+        )
+        assert profile_resp.status_code == 201, f"Profile creation failed: {profile_resp.text}"
+        profile = profile_resp.json()
+        pid = profile["profile_id"]
+
+        # 2. Upload an image as admin (admin bypasses dimension validation)
+        sample_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "sample_profiles")
+        images = [f for f in os.listdir(sample_dir) if f.endswith((".jpg", ".jpeg", ".png", ".webp"))]
+        assert len(images) > 0, "No sample images found in sample_profiles/"
+        target_image = os.path.join(sample_dir, images[0])
+
+        with open(target_image, "rb") as f:
+            files = {"file": (images[0], f, "image/jpeg")}
+            upload_resp = await client.post(
+                f"{PROFILES_URL}/profiles/{pid}/image?index=0",
+                headers=root_headers,
+                files=files,
+            )
+        assert upload_resp.status_code == 200, f"Admin image upload failed: {upload_resp.status_code} {upload_resp.text}"
+
+        # 3. Fetch the profile to get the image URL
+        get_resp = await client.get(
+            f"{PROFILES_URL}/profiles/{pid}",
+            headers=root_headers,
+        )
+        assert get_resp.status_code == 200, f"Profile fetch failed: {get_resp.text}"
+        updated_profile = get_resp.json()
+        
+        image_urls = updated_profile.get("image_urls", [])
+        assert len(image_urls) >= 1, f"Expected at least 1 image URL, got: {image_urls}"
+        
+        public_url = image_urls[0]
+        assert public_url.startswith("https://storage.googleapis.com/"), \
+            f"Image URL doesn't look like a GCS public URL: {public_url}"
+
+        # 4. Fetch the image via its public URL (NO auth header — simulates a browser/app loading the image)
+        img_resp = await client.get(public_url)
+        assert img_resp.status_code == 200, \
+            f"❌ Image NOT publicly accessible! URL: {public_url} — Status: {img_resp.status_code}. " \
+            f"Bucket likely missing allUsers objectViewer IAM binding."
+        assert len(img_resp.content) > 1000, \
+            f"Image response too small ({len(img_resp.content)} bytes), likely not a real image"
+        assert img_resp.headers.get("content-type", "").startswith("image/"), \
+            f"Expected image content-type, got: {img_resp.headers.get('content-type')}"
