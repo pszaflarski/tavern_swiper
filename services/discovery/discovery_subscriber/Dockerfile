@@ -5,7 +5,8 @@ WORKDIR /app
 
 # Copy go mod and sum files
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 # Copy the source code
 COPY . .
@@ -14,7 +15,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o subscriber-bin .
 
 # Run stage
-FROM alpine:latest
+FROM alpine:3.23
 
 # Install curl for healthchecks (consistency with other services)
 RUN apk add --no-cache curl

@@ -1,0 +1,19 @@
+# Build artifacts & CI config
+cloudbuild.yaml
+Dockerfile
+README.md
+
+# Test files (not needed in production image)
+*_test.go
+mock_*.go
+snapshots.json
+
+# IDE and environment
+.git
+.vscode
+.env
+.env.*
+
+# Python artifacts (if any)
+__pycache__
+*.pyc

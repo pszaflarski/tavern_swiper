@@ -1,11 +1,15 @@
 .git
 .vscode
 .env
+.env.*
 __pycache__
 *.pyc
-*.pyo
-*.pyd
 .pytest_cache
-tests
 Dockerfile
 cloudbuild.yaml
+README.md
+
+# Test files (not needed in production image)
+*_test.go
+mock_*.go
+snapshots.json

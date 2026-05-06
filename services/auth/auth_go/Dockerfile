@@ -1,25 +1,28 @@
 # Build stage
-FROM --platform=linux/amd64 golang:1.25-bookworm AS builder
+FROM --platform=linux/amd64 golang:1.25-alpine AS builder
 
 WORKDIR /app
 
 # Copy go mod and sum files
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 # Copy the source code
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o auth-bin .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -o auth-bin .
 
 # Run stage
-FROM --platform=linux/amd64 debian:bookworm-slim
+FROM --platform=linux/amd64 alpine:3.23
 
 WORKDIR /root/
 
 # Install CA certificates and curl for Firestore/Firebase connection and healthchecks
-RUN apt-get update && apt-get install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl ca-certificates
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/auth-bin .
