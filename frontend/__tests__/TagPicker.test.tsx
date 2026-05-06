@@ -271,6 +271,54 @@ describe('TagPicker', () => {
     ]);
   });
 
+  it('shows suggest button when partial matches exist but no exact match', () => {
+    // "Star Wars" is a partial match for "Star", but "Star" itself is not an existing tag
+    (useSearchTags as jest.Mock).mockReturnValue({
+      data: [MOCK_TAGS[0]], // Star Wars
+      isLoading: false,
+    });
+
+    const { getByTestId, getByText } = render(
+      <TagPicker
+        category="fandom"
+        label="Fandoms"
+        selectedTags={[]}
+        onTagsChange={mockOnTagsChange}
+        testIDPrefix="fandom"
+      />
+    );
+
+    fireEvent.changeText(getByTestId('fandom-search'), 'Star');
+    act(() => { jest.advanceTimersByTime(300); });
+
+    // Both the partial match AND the suggest button should be visible
+    expect(getByText('Star Wars')).toBeTruthy();
+    expect(getByTestId('fandom-suggest')).toBeTruthy();
+  });
+
+  it('hides suggest button when query exactly matches an existing tag', () => {
+    (useSearchTags as jest.Mock).mockReturnValue({
+      data: [MOCK_TAGS[0]], // Star Wars
+      isLoading: false,
+    });
+
+    const { getByTestId, queryByTestId } = render(
+      <TagPicker
+        category="fandom"
+        label="Fandoms"
+        selectedTags={[]}
+        onTagsChange={mockOnTagsChange}
+        testIDPrefix="fandom"
+      />
+    );
+
+    // Exact match (case-insensitive)
+    fireEvent.changeText(getByTestId('fandom-search'), 'Star Wars');
+    act(() => { jest.advanceTimersByTime(300); });
+
+    expect(queryByTestId('fandom-suggest')).toBeNull();
+  });
+
   it('shows loading indicator while category tags are loading', () => {
     (useTagsByCategory as jest.Mock).mockReturnValue({
       data: [],

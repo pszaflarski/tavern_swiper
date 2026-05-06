@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -66,28 +66,36 @@ export function TagPicker({
   // Create tag mutation
   const createTag = useCreateTag();
 
-  const selectedIds = new Set(selectedTags.map(t => t.id));
+  const selectedIds = useMemo(() => new Set(selectedTags.map(t => t.id)), [selectedTags]);
+
+  // Keep a ref to selectedTags so toggleTag always reads the latest value,
+  // preventing stale-closure issues when taps arrive in quick succession.
+  const selectedTagsRef = useRef(selectedTags);
+  selectedTagsRef.current = selectedTags;
 
   const toggleTag = useCallback((tag: TagData) => {
-    if (selectedIds.has(tag.id)) {
+    const current = selectedTagsRef.current;
+    const currentIds = new Set(current.map(t => t.id));
+    if (currentIds.has(tag.id)) {
       // Deselect
-      onTagsChange(selectedTags.filter(t => t.id !== tag.id));
+      onTagsChange(current.filter(t => t.id !== tag.id));
     } else if (multiSelect) {
       // Add
-      onTagsChange([...selectedTags, tagToProfileTag(tag)]);
+      onTagsChange([...current, tagToProfileTag(tag)]);
     } else {
       // Replace (single select)
       onTagsChange([tagToProfileTag(tag)]);
     }
-  }, [selectedTags, selectedIds, multiSelect, onTagsChange]);
+  }, [multiSelect, onTagsChange]);
 
   const handleCreateTag = useCallback(async () => {
     if (!searchQuery.trim()) return;
     try {
       const newTag = await createTag.mutateAsync({ category, name: searchQuery.trim() });
-      // Auto-select the newly created tag
+      // Auto-select the newly created tag — read from ref to avoid stale closure
+      const current = selectedTagsRef.current;
       if (multiSelect) {
-        onTagsChange([...selectedTags, tagToProfileTag(newTag)]);
+        onTagsChange([...current, tagToProfileTag(newTag)]);
       } else {
         onTagsChange([tagToProfileTag(newTag)]);
       }
@@ -96,12 +104,20 @@ export function TagPicker({
     } catch (e) {
       console.error('Failed to create tag:', e);
     }
-  }, [searchQuery, category, multiSelect, selectedTags, onTagsChange, createTag]);
+  }, [searchQuery, category, multiSelect, onTagsChange, createTag]);
 
   // Determine which tags to display
   const displayTags = debouncedQuery.length >= 2 ? searchResults : categoryTags;
   const isLoading = debouncedQuery.length >= 2 ? isLoadingSearch : isLoadingCategory;
-  const noResults = debouncedQuery.length >= 2 && !isLoadingSearch && searchResults.length === 0;
+
+  // Show the suggest button when the user's exact query doesn't already exist as a tag,
+  // even if partial matches are displayed. Check both search results and category tags.
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const exactMatchExists = useMemo(() => {
+    const allKnown = debouncedQuery.length >= 2 ? searchResults : categoryTags;
+    return allKnown.some(t => t.name.toLowerCase() === trimmedQuery);
+  }, [debouncedQuery, searchResults, categoryTags, trimmedQuery]);
+  const canSuggest = debouncedQuery.length >= 2 && !isLoadingSearch && trimmedQuery.length > 0 && !exactMatchExists;
 
   const renderTag = useCallback(({ item }: { item: TagData }) => {
     const isSelected = selectedIds.has(item.id);
@@ -185,7 +201,7 @@ export function TagPicker({
       )}
 
       {/* "Add as suggestion" button */}
-      {noResults && searchQuery.trim().length > 0 && (
+      {canSuggest && (
         <TouchableOpacity
           style={styles.suggestButton}
           onPress={handleCreateTag}
