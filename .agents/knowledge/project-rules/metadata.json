@@ -1,0 +1,18 @@
+{
+  "title": "Tavern Swiper — Mandatory Project Rules",
+  "summary": "Critical architecture and workflow rules that MUST be followed in every conversation. Covers service isolation, security, deployment, and development patterns. Extracted from .cursorrules and operational lessons.",
+  "created": "2026-05-03T02:13:00Z",
+  "updated": "2026-05-03T02:13:00Z",
+  "references": [
+    {
+      "type": "file",
+      "path": "/home/peter/Documents/tavern_swiper/.cursorrules",
+      "description": "Primary project rules file"
+    },
+    {
+      "type": "file",
+      "path": "/home/peter/Documents/tavern_swiper/.agents/workflows/setup-new-environment.md",
+      "description": "Environment setup workflow with operational lessons"
+    }
+  ]
+}
