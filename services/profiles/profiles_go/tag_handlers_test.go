@@ -104,19 +104,24 @@ func TestTagHandlers(t *testing.T) {
 		json.Unmarshal(w.Body.Bytes(), &res)
 		assert.True(t, res.Valid)
 	})
-	t.Run("CreateTag_NonAdmin_Returns403", func(t *testing.T) {
+	t.Run("CreateTag_NonAdmin_CreatesPendingTag", func(t *testing.T) {
 		mock := &mockClient{}
 		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
 		userToken := signGoTestToken("user-123", "user")
 
-		body := TagCreate{Category: "fandom", Name: "X", Slug: "fandom__x"}
+		body := TagCreate{Category: "fandom", Name: "X"}
 		jsonBody, _ := json.Marshal(body)
 
 		req, _ := http.NewRequest("POST", "/profiles/tags/", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Authorization", "Bearer "+userToken)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusForbidden, w.Code)
+		assert.Equal(t, http.StatusCreated, w.Code)
+		var res Tag
+		json.Unmarshal(w.Body.Bytes(), &res)
+		assert.Equal(t, "pending", res.Status)
+		assert.NotNil(t, res.SuggestedBy)
+		assert.Equal(t, "user-123", *res.SuggestedBy)
 	})
 
 	t.Run("CreateTag_InvalidSlug_Returns400", func(t *testing.T) {

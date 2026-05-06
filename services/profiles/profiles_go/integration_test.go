@@ -172,7 +172,8 @@ func TestIntegration_CategorizedTags(t *testing.T) {
 
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
-	token := signGoTestToken("integration-user", "user")
+	now := time.Now()
+	token := signGoTestTokenWithTimes("integration-user", "user", now, now.Add(30*time.Minute))
 
 	t.Run("CreateProfile_WithCategorizedTags", func(t *testing.T) {
 		// 1. Seed some tags
@@ -184,10 +185,10 @@ func TestIntegration_CategorizedTags(t *testing.T) {
 			Age:         ptrInt(25),
 			IsOC:        ptrBool(true),
 			Gender: []ProfileTag{
-				{ID: t1ID, Category: "gender", Name: "Male", Slug: "gender__male"},
+				{ID: t1ID, Category: "gender", Name: "Male", Slug: "gender__male", Status: "active"},
 			},
 			Fandom: []ProfileTag{
-				{ID: t2ID, Category: "fandom", Name: "Star Wars", Slug: "fandom__star_wars"},
+				{ID: t2ID, Category: "fandom", Name: "Star Wars", Slug: "fandom__star_wars", Status: "active"},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
@@ -229,7 +230,7 @@ func TestIntegration_CategorizedTags(t *testing.T) {
 		body := ProfileCreate{
 			DisplayName: "Swapper",
 			Gender: []ProfileTag{
-				{ID: t1ID, Category: "gender", Name: "Male", Slug: "gender__male"},
+				{ID: t1ID, Category: "gender", Name: "Male", Slug: "gender__male", Status: "active"},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
@@ -243,7 +244,7 @@ func TestIntegration_CategorizedTags(t *testing.T) {
 		// Update
 		updateBody := ProfileUpdate{
 			Gender: &[]ProfileTag{
-				{ID: t2ID, Category: "gender", Name: "Female", Slug: "gender__female"},
+				{ID: t2ID, Category: "gender", Name: "Female", Slug: "gender__female", Status: "active"},
 			},
 		}
 		jsonUpdate, _ := json.Marshal(updateBody)
@@ -266,8 +267,8 @@ func TestIntegration_CategorizedTags(t *testing.T) {
 		body := ProfileCreate{
 			DisplayName: "Illegal",
 			Gender: []ProfileTag{
-				{ID: t1ID, Category: "gender", Name: "Male", Slug: "gender__male"},
-				{ID: t2ID, Category: "gender", Name: "Female", Slug: "gender__female"},
+				{ID: t1ID, Category: "gender", Name: "Male", Slug: "gender__male", Status: "active"},
+				{ID: t2ID, Category: "gender", Name: "Female", Slug: "gender__female", Status: "active"},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
@@ -304,6 +305,7 @@ func seedTag(t *testing.T, ctx context.Context, client FirestoreClient, category
 		"name":         name,
 		"slug":         slug,
 		"multi_select": multi,
+		"status":       "active",
 	})
 	if err != nil {
 		t.Fatalf("Failed to seed tag: %v", err)

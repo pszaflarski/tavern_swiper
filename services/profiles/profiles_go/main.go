@@ -73,9 +73,7 @@ func main() {
 			// Concrete paths first to avoid :id wildcard conflict
 			t.POST("/search", handleSearchTags)
 			t.POST("/validate", handleValidateTags)
-			t.POST("/suggest", handleSuggestTag)
-			t.GET("/suggestions", handleListTagSuggestions)
-			t.DELETE("/suggestions/:id", handleDeleteTagSuggestion)
+			t.GET("/pending", handleListPendingTags)
 			t.GET("/by-slug/:slug", handleGetTagBySlug)
 			t.GET("/by-category/:category", handleListTagsByCategory)
 

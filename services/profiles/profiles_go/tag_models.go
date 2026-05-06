@@ -9,6 +9,8 @@ type Tag struct {
 	Name        string     `json:"name"`
 	Slug        string     `json:"slug"`
 	MultiSelect bool       `json:"multi_select"`
+	Status      string     `json:"status"` // "active" or "pending"
+	SuggestedBy *string    `json:"suggested_by,omitempty"`
 	CreatedAt   *time.Time `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
 }
@@ -19,13 +21,15 @@ type ProfileTag struct {
 	Category string `json:"category"`
 	Name     string `json:"name"`
 	Slug     string `json:"slug"`
+	Status   string `json:"status"`
 }
 
-// TagCreate is the POST body for creating a tag (admin only).
+// TagCreate is the POST body for creating a tag.
+// Admins may provide a slug; regular users get one auto-generated.
 type TagCreate struct {
 	Category    string `json:"category" binding:"required"`
 	Name        string `json:"name" binding:"required"`
-	Slug        string `json:"slug" binding:"required"`
+	Slug        string `json:"slug"`
 	MultiSelect *bool  `json:"multi_select"`
 }
 
@@ -35,20 +39,7 @@ type TagUpdate struct {
 	Name        *string `json:"name"`
 	Slug        *string `json:"slug"`
 	MultiSelect *bool   `json:"multi_select"`
-}
-
-// TagSuggestion is a user-submitted suggestion for a new tag.
-type TagSuggestion struct {
-	ID        string     `json:"id"`
-	Category  string     `json:"category"`
-	Name      string     `json:"name"`
-	UserID    string     `json:"user_id"`
-	CreatedAt *time.Time `json:"created_at"`
-}
-
-type TagSuggestionCreate struct {
-	Category string `json:"category" binding:"required"`
-	Name     string `json:"name" binding:"required"`
+	Status      *string `json:"status"`
 }
 
 // TagSearchQuery is used for the autocomplete search endpoint.

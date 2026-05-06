@@ -16,7 +16,6 @@ import (
 )
 
 const TAGS_COLLECTION = "tags"
-const SUGGESTIONS_COLLECTION = "tag_suggestions"
 
 var ValidCategories = map[string]bool{
 	"gender":    true,
@@ -30,6 +29,31 @@ var slugPattern = regexp.MustCompile(`^[a-z0-9]+__[a-z0-9_]+$`)
 
 func isValidSlug(slug string) bool {
 	return slugPattern.MatchString(slug)
+}
+
+func generateSlugWithUniqueness(ctx context.Context, client FirestoreClient, category, name string) (string, error) {
+	base := strings.ToLower(name)
+	base = strings.ReplaceAll(base, " ", "_")
+	// Remove non-alphanumeric
+	reg, _ := regexp.Compile("[^a-z0-9_]+")
+	base = reg.ReplaceAllString(base, "")
+	
+	baseSlug := fmt.Sprintf("%s__%s", category, base)
+	
+	// Check if exists
+	slug := baseSlug
+	suffix := 1
+	for {
+		existing, err := client.Collection(TAGS_COLLECTION).Where("slug", "==", slug).Documents(ctx).GetAll()
+		if err != nil {
+			return "", err
+		}
+		if len(existing) == 0 {
+			return slug, nil
+		}
+		slug = fmt.Sprintf("%s_%d", baseSlug, suffix)
+		suffix++
+	}
 }
 
 // handleGetTag godoc
@@ -243,11 +267,6 @@ func handleValidateTags(c *gin.Context) {
 // @Router       /tags/ [post]
 func handleCreateTag(c *gin.Context) {
 	auth := GetAuth(c)
-	if !IsAdmin(auth.Role) {
-		send403(c, "Admin or Root Admin authorization required")
-		return
-	}
-
 	var body TagCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error()})
@@ -266,17 +285,45 @@ func handleCreateTag(c *gin.Context) {
 		return
 	}
 
-	// Slug format validation
-	if !isValidSlug(body.Slug) {
+	// Check if exact category/name match exists (Idempotent for users)
+	existingByName, _ := client.Collection(TAGS_COLLECTION).
+		Where("category", "==", body.Category).
+		Where("name", "==", body.Name).
+		Limit(1).Documents(c.Request.Context()).GetAll()
+	if len(existingByName) > 0 {
+		t, _ := docToTag(existingByName[0])
+		c.JSON(http.StatusOK, t)
+		return
+	}
+
+	status := "pending"
+	var suggestedBy *string
+	if IsAdmin(auth.Role) {
+		status = "active"
+	} else {
+		suggestedBy = &auth.UID
+	}
+
+	slug := body.Slug
+	if slug == "" || !IsAdmin(auth.Role) {
+		generated, err := generateSlugWithUniqueness(c.Request.Context(), client, body.Category, body.Name)
+		if err != nil {
+			send500(c, "Failed to generate unique slug")
+			return
+		}
+		slug = generated
+	} else if !isValidSlug(slug) {
 		send400(c, "Invalid slug format (expected category__name)")
 		return
 	}
 
-	// Slug uniqueness check
-	existing, _ := client.Collection(TAGS_COLLECTION).Where("slug", "==", body.Slug).Documents(c.Request.Context()).GetAll()
-	if len(existing) > 0 {
-		send400(c, "Tag with this slug already exists")
-		return
+	// Final slug uniqueness check (if manually provided)
+	if IsAdmin(auth.Role) && body.Slug != "" {
+		existing, _ := client.Collection(TAGS_COLLECTION).Where("slug", "==", slug).Documents(c.Request.Context()).GetAll()
+		if len(existing) > 0 {
+			send400(c, "Tag with this slug already exists")
+			return
+		}
 	}
 
 	// MultiSelect consistency
@@ -284,7 +331,6 @@ func handleCreateTag(c *gin.Context) {
 	if body.MultiSelect != nil {
 		multiSelect = *body.MultiSelect
 	} else {
-		// Infer from existing tags in category
 		existingInCat, _ := client.Collection(TAGS_COLLECTION).Where("category", "==", body.Category).Limit(1).Documents(c.Request.Context()).GetAll()
 		if len(existingInCat) > 0 {
 			if t, err := docToTag(existingInCat[0]); err == nil {
@@ -298,10 +344,14 @@ func handleCreateTag(c *gin.Context) {
 		"category":     body.Category,
 		"name":         body.Name,
 		"name_lower":   strings.ToLower(body.Name),
-		"slug":         body.Slug,
+		"slug":         slug,
 		"multi_select": multiSelect,
+		"status":       status,
 		"created_at":   firestore.ServerTimestamp,
 		"updated_at":   firestore.ServerTimestamp,
+	}
+	if suggestedBy != nil {
+		data["suggested_by"] = *suggestedBy
 	}
 
 	ref := client.Collection(TAGS_COLLECTION).Doc(id)
@@ -388,6 +438,9 @@ func handleUpdateTag(c *gin.Context) {
 	if body.MultiSelect != nil {
 		updates = append(updates, firestore.Update{Path: "multi_select", Value: *body.MultiSelect})
 	}
+	if body.Status != nil {
+		updates = append(updates, firestore.Update{Path: "status", Value: *body.Status})
+	}
 
 	if len(updates) > 0 {
 		updates = append(updates, firestore.Update{Path: "updated_at", Value: firestore.ServerTimestamp})
@@ -445,126 +498,6 @@ func handleDeleteTag(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// handleSuggestTag godoc
-// @Summary      Suggest a new tag
-// @Tags         tags
-// @Accept       json
-// @Produce      json
-// @Param        body  body  TagSuggestionCreate  true  "Suggestion"
-// @Success      201  {object}  TagSuggestion
-// @Security     BearerAuth
-// @Router       /tags/suggest [post]
-func handleSuggestTag(c *gin.Context) {
-	var body TagSuggestionCreate
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error()})
-		return
-	}
-
-	auth := GetAuth(c)
-	client, err := getDBFunc(c.Request.Context())
-	if err != nil {
-		send503(c, "Database connection error")
-		return
-	}
-
-	id := uuid.New().String()
-	data := map[string]interface{}{
-		"category":   body.Category,
-		"name":       body.Name,
-		"user_id":    auth.UID,
-		"created_at": firestore.ServerTimestamp,
-	}
-
-	ref := client.Collection(SUGGESTIONS_COLLECTION).Doc(id)
-	if _, err := ref.Set(c.Request.Context(), data); err != nil {
-		send500(c, "Failed to save suggestion")
-		return
-	}
-
-	doc, err := ref.Get(c.Request.Context())
-	if err != nil {
-		send500(c, "Failed to refetch suggestion")
-		return
-	}
-	s, err := docToTagSuggestion(doc)
-	if err != nil {
-		send500(c, err.Error())
-		return
-	}
-	c.JSON(http.StatusCreated, s)
-}
-
-// handleListTagSuggestions godoc
-// @Summary      List tag suggestions (Admin only)
-// @Tags         tags
-// @Success      200  {array}  TagSuggestion
-// @Security     BearerAuth
-// @Router       /tags/suggestions [get]
-func handleListTagSuggestions(c *gin.Context) {
-	auth := GetAuth(c)
-	if !IsAdmin(auth.Role) {
-		send403(c, "Admin or Root Admin authorization required")
-		return
-	}
-
-	client, err := getDBFunc(c.Request.Context())
-	if err != nil {
-		send503(c, "Database connection error")
-		return
-	}
-
-	docs, err := client.Collection(SUGGESTIONS_COLLECTION).OrderBy("created_at", firestore.Desc).Documents(c.Request.Context()).GetAll()
-	if err != nil {
-		send500(c, "Failed to list suggestions")
-		return
-	}
-
-	results := make([]TagSuggestion, 0)
-	for _, doc := range docs {
-		s, err := docToTagSuggestion(doc)
-		if err == nil {
-			results = append(results, s)
-		}
-	}
-	c.JSON(http.StatusOK, results)
-}
-
-// handleDeleteTagSuggestion godoc
-// @Summary      Delete a suggestion (Admin only)
-// @Tags         tags
-// @Param        id  path  string  true  "Suggestion ID"
-// @Success      204  "No Content"
-// @Security     BearerAuth
-// @Router       /tags/suggestions/{id} [delete]
-func handleDeleteTagSuggestion(c *gin.Context) {
-	id := c.Param("id")
-	auth := GetAuth(c)
-	if !IsAdmin(auth.Role) {
-		send403(c, "Admin or Root Admin authorization required")
-		return
-	}
-
-	client, err := getDBFunc(c.Request.Context())
-	if err != nil {
-		send503(c, "Database connection error")
-		return
-	}
-
-	ref := client.Collection(SUGGESTIONS_COLLECTION).Doc(id)
-	doc, err := ref.Get(c.Request.Context())
-	if err != nil || !doc.Exists() {
-		send404(c, "Suggestion not found")
-		return
-	}
-
-	if _, err := ref.Delete(c.Request.Context()); err != nil {
-		send500(c, "Failed to delete suggestion")
-		return
-	}
-	c.Status(http.StatusNoContent)
-}
-
 // Helper: docToTag
 func docToTag(doc DocumentSnapshot) (Tag, error) {
 	d := doc.Data()
@@ -599,39 +532,45 @@ func docToTag(doc DocumentSnapshot) (Tag, error) {
 		Name:        reqStr("name"),
 		Slug:        reqStr("slug"),
 		MultiSelect: reqBool("multi_select"),
-		CreatedAt:   getTimestamp("created_at"),
-		UpdatedAt:   getTimestamp("updated_at"),
+		Status:      reqStr("status"),
+		SuggestedBy: func() *string {
+			if s, ok := d["suggested_by"].(string); ok {
+				return &s
+			}
+			return nil
+		}(),
+		CreatedAt: getTimestamp("created_at"),
+		UpdatedAt: getTimestamp("updated_at"),
 	}, nil
 }
 
-// Helper: docToTagSuggestion
-func docToTagSuggestion(doc DocumentSnapshot) (TagSuggestion, error) {
-	d := doc.Data()
-	if d == nil {
-		return TagSuggestion{}, fmt.Errorf("Suggestion document %s empty", doc.ID())
+func handleListPendingTags(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		send403(c, "Admin or Root Admin authorization required")
+		return
 	}
 
-	reqStr := func(key string) string {
-		if val, ok := d[key].(string); ok {
-			return val
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		send503(c, "Database connection error")
+		return
+	}
+
+	docs, err := client.Collection(TAGS_COLLECTION).Where("status", "==", "pending").OrderBy("created_at", firestore.Desc).Documents(c.Request.Context()).GetAll()
+	if err != nil {
+		send500(c, "Failed to list pending tags")
+		return
+	}
+
+	results := make([]Tag, 0)
+	for _, doc := range docs {
+		t, err := docToTag(doc)
+		if err == nil {
+			results = append(results, t)
 		}
-		return ""
 	}
-
-	getTimestamp := func(key string) *time.Time {
-		if val, ok := d[key].(time.Time); ok {
-			return &val
-		}
-		return nil
-	}
-
-	return TagSuggestion{
-		ID:        doc.ID(),
-		Category:  reqStr("category"),
-		Name:      reqStr("name"),
-		UserID:    reqStr("user_id"),
-		CreatedAt: getTimestamp("created_at"),
-	}, nil
+	c.JSON(http.StatusOK, results)
 }
 
 // validateProfileTags enforces existence and multi_select constraints
@@ -672,7 +611,8 @@ func validateProfileTags(ctx context.Context, client FirestoreClient, tags []Pro
 			return fmt.Errorf("Category %s only allows one tag", vt.Category)
 		}
 		// Also verify denormalized data matches source of truth
-		if t.Category != vt.Category || t.Name != vt.Name || t.Slug != vt.Slug {
+		// NOTE: Status is checked during creation/attachment, but here we just verify consistency.
+		if t.Category != vt.Category || t.Name != vt.Name || t.Slug != vt.Slug || t.Status != vt.Status {
 			return fmt.Errorf("Tag %s denormalized data mismatch", t.ID)
 		}
 	}

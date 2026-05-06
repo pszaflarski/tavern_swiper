@@ -32,7 +32,7 @@ func TestProfileNewFields(t *testing.T) {
 		// Mock tag existence
 		col := mock.Collection(TAGS_COLLECTION).(*mockCollection)
 		col.docs = map[string]*mockDoc{
-			"t1": {id: "t1", exists: true, data: map[string]interface{}{"category": "fandom", "name": "Star Wars", "slug": "fandom__star_wars", "multi_select": true}},
+			"t1": {id: "t1", exists: true, data: map[string]interface{}{"category": "fandom", "name": "Star Wars", "slug": "fandom__star_wars", "multi_select": true, "status": "active"}},
 		}
 		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
 
@@ -41,7 +41,7 @@ func TestProfileNewFields(t *testing.T) {
 			Age:         ptrInt(25),
 			IsOC:        ptrBool(true),
 			Fandom: []ProfileTag{
-				{ID: "t1", Category: "fandom", Name: "Star Wars", Slug: "fandom__star_wars"},
+				{ID: "t1", Category: "fandom", Name: "Star Wars", Slug: "fandom__star_wars", Status: "active"},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
@@ -111,14 +111,14 @@ func TestProfileNewFields(t *testing.T) {
 		// Mock the tag existence check
 		col := mock.Collection(TAGS_COLLECTION).(*mockCollection)
 		col.docs = map[string]*mockDoc{
-			"t1": {id: "t1", exists: true, data: map[string]interface{}{"category": "gender", "name": "Male", "slug": "gender__male", "multi_select": false}},
+			"t1": {id: "t1", exists: true, data: map[string]interface{}{"category": "gender", "name": "Male", "slug": "gender__male", "multi_select": false, "status": "active"}},
 		}
 		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
 
 		body := ProfileCreate{
 			DisplayName: "Hero",
 			Gender: []ProfileTag{
-				{ID: "t1", Category: "gender", Name: "Male", Slug: "gender__male"},
+				{ID: "t1", Category: "gender", Name: "Male", Slug: "gender__male", Status: "active"},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
@@ -148,16 +148,16 @@ func TestProfileNewFields(t *testing.T) {
 		mock := &mockClient{collections: make(map[string]*mockCollection)}
 		col := mock.Collection(TAGS_COLLECTION).(*mockCollection)
 		col.docs = map[string]*mockDoc{
-			"t1": {id: "t1", exists: true, data: map[string]interface{}{"category": "gender", "name": "Male", "slug": "gender__male", "multi_select": false}},
-			"t2": {id: "t2", exists: true, data: map[string]interface{}{"category": "gender", "name": "Female", "slug": "gender__female", "multi_select": false}},
+			"t1": {id: "t1", exists: true, data: map[string]interface{}{"category": "gender", "name": "Male", "slug": "gender__male", "multi_select": false, "status": "active"}},
+			"t2": {id: "t2", exists: true, data: map[string]interface{}{"category": "gender", "name": "Female", "slug": "gender__female", "multi_select": false, "status": "active"}},
 		}
 		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
 
 		body := ProfileCreate{
 			DisplayName: "Hero",
 			Gender: []ProfileTag{
-				{ID: "t1", Category: "gender", Name: "Male", Slug: "gender__male"},
-				{ID: "t2", Category: "gender", Name: "Female", Slug: "gender__female"},
+				{ID: "t1", Category: "gender", Name: "Male", Slug: "gender__male", Status: "active"},
+				{ID: "t2", Category: "gender", Name: "Female", Slug: "gender__female", Status: "active"},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
