@@ -14,6 +14,12 @@ jest.mock('../hooks/useProfiles', () => ({
   useUploadProfileImage: jest.fn(),
 }));
 
+jest.mock('../hooks/useTags', () => ({
+  useTagsByCategory: jest.fn().mockReturnValue({ data: [], isLoading: false }),
+  useSearchTags: jest.fn().mockReturnValue({ data: [], isLoading: false }),
+  useCreateTag: jest.fn().mockReturnValue({ mutateAsync: jest.fn(), isPending: false }),
+}));
+
 jest.mock('../hooks/useUser', () => ({
   useUser: jest.fn(),
 }));
@@ -125,7 +131,11 @@ describe('Profile Creation & Editing', () => {
         display_name: 'Gandalf',
         tagline: 'The Grey',
         bio: 'A wizard is never late',
-        gender: 'Male',
+        gender: [],
+        fandom: [],
+        interests: [],
+        race: [],
+        events: [],
         image_urls: ['http://magic.com/gandalf.jpg'],
       },
       isLoading: false,
@@ -137,13 +147,26 @@ describe('Profile Creation & Editing', () => {
     expect(getByTestId('profile-tagline-input').props.value).toBe('The Grey');
   });
 
-  it('selects gender attribute', () => {
+  it('renders tag picker for gender category', () => {
     const { getByTestId } = render(<CreateAndEditProfileScreen />);
-    const maleBtn = getByTestId('profile-gender-Male');
-    
-    fireEvent.press(maleBtn);
-    // Active style check is hard with styled components/complex theme, 
-    // but we can check if it stays functional.
+    const genderPicker = getByTestId('profile-gender-picker');
+    expect(genderPicker).toBeTruthy();
+  });
+
+  it('renders age input field', () => {
+    const { getByTestId } = render(<CreateAndEditProfileScreen />);
+    const ageInput = getByTestId('profile-age-input');
+    expect(ageInput).toBeTruthy();
+    fireEvent.changeText(ageInput, '25');
+    expect(ageInput.props.value).toBe('25');
+  });
+
+  it('toggles OC checkbox', () => {
+    const { getByTestId } = render(<CreateAndEditProfileScreen />);
+    const ocToggle = getByTestId('profile-oc-toggle');
+    fireEvent.press(ocToggle);
+    // Verify it doesn't crash and stays functional
+    expect(ocToggle).toBeTruthy();
   });
 
   it('uploads local images and verifies persistence logic after save', async () => {
