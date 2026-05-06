@@ -8,10 +8,6 @@ steps:
         go mod download
         go test -v ./...
     dir: 'services/router/$_DIR_NAME'
-    volumes:
-      - name: 'go-modules'
-        path: '/go/pkg/mod'
-
   # 2. Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME:$SHORT_SHA', '-t', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest', '.']
