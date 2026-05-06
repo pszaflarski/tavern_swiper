@@ -106,3 +106,106 @@ async def test_list_all_profiles_admin():
             headers={"Authorization": f"Bearer {std_user['token']}"}
         )
         assert fail_resp.status_code == 403, "Non-admin should be forbidden"
+
+
+@pytest.mark.asyncio
+async def test_create_profile_with_gender_tags():
+    """Tests that a profile can be created with categorized gender tags (array of ProfileTag)."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        from .helpers import get_root_admin
+
+        root = await get_root_admin(client)
+        root_headers = {"Authorization": f"Bearer {root['token']}"}
+
+        # 1. Create a gender tag as admin (active)
+        tag_resp = await client.post(
+            f"{PROFILES_URL}/profiles/tags/",
+            headers=root_headers,
+            json={"category": "gender", "name": "Female", "slug": "gender__female"}
+        )
+        assert tag_resp.status_code == 201, f"Tag creation failed: {tag_resp.text}"
+        tag = tag_resp.json()
+        assert tag["status"] == "active"
+
+        # 2. Create a profile with that gender tag
+        user = await register_user(client)
+        profile_resp = await client.post(
+            f"{PROFILES_URL}/profiles/",
+            headers={"Authorization": f"Bearer {user['token']}"},
+            json={
+                "display_name": "Tag Tester",
+                "bio": "Testing categorized tags",
+                "gender": [
+                    {"id": tag["id"], "category": "gender", "name": "Female", "slug": "gender__female", "status": "active"}
+                ],
+            }
+        )
+        assert profile_resp.status_code == 201, f"Profile creation with tag failed: {profile_resp.text}"
+        profile = profile_resp.json()
+
+        # 3. Verify the tag data comes back on the profile
+        assert isinstance(profile["gender"], list)
+        assert len(profile["gender"]) == 1
+        assert profile["gender"][0]["name"] == "Female"
+        assert profile["gender"][0]["slug"] == "gender__female"
+
+        # 4. Verify via GET
+        get_resp = await client.get(
+            f"{PROFILES_URL}/profiles/{profile['profile_id']}",
+            headers={"Authorization": f"Bearer {user['token']}"}
+        )
+        assert get_resp.status_code == 200
+        fetched = get_resp.json()
+        assert len(fetched["gender"]) == 1
+        assert fetched["gender"][0]["name"] == "Female"
+
+
+@pytest.mark.asyncio
+async def test_create_profile_with_empty_gender():
+    """Tests that a profile can be created with an empty gender array."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        user = await register_user(client)
+        resp = await client.post(
+            f"{PROFILES_URL}/profiles/",
+            headers={"Authorization": f"Bearer {user['token']}"},
+            json={
+                "display_name": "No Gender",
+                "gender": [],
+            }
+        )
+        assert resp.status_code == 201, f"Profile with empty gender failed: {resp.text}"
+        profile = resp.json()
+        assert isinstance(profile["gender"], list)
+        assert len(profile["gender"]) == 0
+
+
+@pytest.mark.asyncio
+async def test_create_profile_rejects_string_gender():
+    """Tests that the API rejects a plain string for gender (must be array of ProfileTag)."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        user = await register_user(client)
+        resp = await client.post(
+            f"{PROFILES_URL}/profiles/",
+            headers={"Authorization": f"Bearer {user['token']}"},
+            json={
+                "display_name": "String Gender",
+                "gender": "Male",  # This should be rejected
+            }
+        )
+        assert resp.status_code == 422, f"Expected 422 for string gender, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_user_creates_pending_tag():
+    """Tests that a regular user creating a tag gets a 'pending' status."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        user = await register_user(client)
+        resp = await client.post(
+            f"{PROFILES_URL}/profiles/tags/",
+            headers={"Authorization": f"Bearer {user['token']}"},
+            json={"category": "fandom", "name": f"TestFandom-{uuid.uuid4().hex[:6]}"}
+        )
+        assert resp.status_code == 201, f"User tag creation failed: {resp.text}"
+        tag = resp.json()
+        assert tag["status"] == "pending"
+        assert tag["suggested_by"] == user["uid"]

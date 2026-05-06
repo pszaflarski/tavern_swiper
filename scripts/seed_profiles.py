@@ -127,6 +127,37 @@ def seed_system():
     seeder_token, seeder_uid = get_token(SEEDER_EMAIL, SEEDER_PASSWORD)
     seeder_headers = {"Authorization": f"Bearer {seeder_token}"}
 
+    # Tag cache: maps (category, name) -> {id, category, name, slug, status}
+    tag_cache = {}
+
+    def resolve_tag(category, name):
+        """Create or find a tag and return its ProfileTag dict."""
+        key = (category.lower(), name.strip())
+        if key in tag_cache:
+            return tag_cache[key]
+        
+        # POST /profiles/tags/ — idempotent; returns existing if match found
+        resp = requests.post(
+            f"{PROFILES_URL}/profiles/tags/",
+            json={"category": category, "name": name},
+            headers=seeder_headers,
+            timeout=30,
+        )
+        if resp.status_code in [200, 201]:
+            t = resp.json()
+            tag_obj = {
+                "id": t["id"],
+                "category": t["category"],
+                "name": t["name"],
+                "slug": t["slug"],
+                "status": t["status"],
+            }
+            tag_cache[key] = tag_obj
+            return tag_obj
+        else:
+            print(f"  ⚠️ Failed to resolve tag {category}/{name}: {resp.status_code} {resp.text}")
+            return None
+
     # 2. Read CSV
     print(f"Reading {CSV_PATH}...")
     with open(CSV_PATH, mode='r') as f:
@@ -164,10 +195,17 @@ def seed_system():
         target_uid = user_map[email]["uid"]
         print(f"--- Seeding Profile: {row['name']} for {email} ---")
         
+        # Resolve gender tag(s)
+        gender_tags = []
+        if row.get("gender") and row["gender"].strip():
+            tag = resolve_tag("gender", row["gender"].strip())
+            if tag:
+                gender_tags.append(tag)
+
         profile_data = {
             "display_name": row["name"],
             "bio": row["bio"],
-            "gender": row["gender"],
+            "gender": gender_tags,
             "user_id": target_uid, # Administrative override!
             "is_active": True
         }
