@@ -82,3 +82,8 @@ This project follows a strictly isolated microservice backend. **NEVER** suggest
   2. Perform implementation and verification on the local branch.
   3. Merge to `dev` first, verify builds pass, then promote to `test` and `prod`.
 - This prevents accidental deployments and allows for clean code review.
+
+### Environment & Production Safety
+- **Isolation**: Never perform production changes in the same logical job or command sequence as dev/test changes.
+- **Explicit Permission**: Any modification to `tavern-swiper-prod` requires explicit, isolated user consent (e.g., "Yes, proceed with Prod").
+- **Mandatory Warning**: Every production-modifying action must be preceded by: "⚠️ WARNING: This command will modify the PRODUCTION environment."

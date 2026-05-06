@@ -68,32 +68,58 @@ else
     fi
     ENV_ARG=$ENV_NAME
     
-    echo "🔍 Fetching Cloud Run URLs for [$ENV_NAME] environment..."
-    SERVICES=("auth" "users" "profiles" "discovery" "messages")
-    for SERVICE in "${SERVICES[@]}"; do
-        DEPLOY_NAME="${SERVICE}-${ENV_NAME}"
-        URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
-        
-        # Fallback for 'dev' environment
-        if [[ "$URL" == "NOT_FOUND" && "$ENV_NAME" == "dev" ]]; then
-            URL=$(gcloud run services describe "${SERVICE}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
-        fi
-        
-        if [[ "$URL" == "NOT_FOUND" ]]; then
-            echo "⚠️  Warning: Service ${SERVICE} not found for $ENV_NAME"
-            continue
-        fi
+    echo "🔍 Fetching Cloud Run URLs for [$ENV_NAME] environment via Router..."
+    
+    # 1. Find the Router URL first (one gcloud call)
+    ROUTER_URL=$(gcloud run services describe "router-${ENV_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
+    
+    # Fallback for 'dev' environment if suffixed router doesn't exist
+    if [[ "$ROUTER_URL" == "NOT_FOUND" && "$ENV_NAME" == "dev" ]]; then
+        ROUTER_URL=$(gcloud run services describe "router" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
+    fi
 
-        # Map to environment variables
-        case $SERVICE in
-            auth) export AUTH_SERVICE_URL=$URL ;;
-            users) export USERS_URL=$URL ;;
-            profiles) export PROFILES_URL=$URL ;;
-            discovery) export DISCOVERY_URL=$URL ;;
-            messages) export MESSAGES_URL=$URL ;;
-        esac
-        echo "  ✅ ${SERVICE}: ${URL}"
-    done
+    ROUTES="{}"
+    if [[ "$ROUTER_URL" != "NOT_FOUND" ]]; then
+        echo "  📍 Router: ${ROUTER_URL}"
+        ROUTES=$(curl -sf "${ROUTER_URL}/router/services" || echo "{}")
+    fi
+
+    # 2. Check if we got the routes from the router
+    HAS_ROUTER_DATA=$(echo "$ROUTES" | jq -r 'if .services then "true" else "false" end')
+
+    if [[ "$HAS_ROUTER_DATA" == "true" ]]; then
+        echo "  ✅ Routes fetched from Router"
+        export AUTH_SERVICE_URL=$(echo "$ROUTES" | jq -r '.services.auth // empty')
+        export USERS_URL=$(echo "$ROUTES" | jq -r '.services.users // empty')
+        export PROFILES_URL=$(echo "$ROUTES" | jq -r '.services.profiles // empty')
+        export DISCOVERY_URL=$(echo "$ROUTES" | jq -r '.services.discovery // empty')
+        export MESSAGES_URL=$(echo "$ROUTES" | jq -r '.services.messages // empty')
+    else
+        echo "  ⚠️  Router empty or unreachable. Falling back to slow gcloud discovery..."
+        SERVICES=("auth" "users" "profiles" "discovery" "messages")
+        for SERVICE in "${SERVICES[@]}"; do
+            DEPLOY_NAME="${SERVICE}-${ENV_NAME}"
+            URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
+            
+            if [[ "$URL" == "NOT_FOUND" && "$ENV_NAME" == "dev" ]]; then
+                URL=$(gcloud run services describe "${SERVICE}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
+            fi
+            
+            if [[ "$URL" == "NOT_FOUND" ]]; then
+                echo "    ⚠️  Warning: Service ${SERVICE} not found"
+                continue
+            fi
+
+            case $SERVICE in
+                auth) export AUTH_SERVICE_URL=$URL ;;
+                users) export USERS_URL=$URL ;;
+                profiles) export PROFILES_URL=$URL ;;
+                discovery) export DISCOVERY_URL=$URL ;;
+                messages) export MESSAGES_URL=$URL ;;
+            esac
+            echo "    ✅ ${SERVICE}: ${URL}"
+        done
+    fi
     
     export DISCOVERY_DB="discovery-${ENV_NAME}"
     export MESSAGES_DB="messages-${ENV_NAME}"

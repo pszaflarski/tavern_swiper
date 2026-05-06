@@ -20,7 +20,10 @@ REGION = "us-central1"
 SEEDER_EMAIL = os.getenv("ROOT_EMAIL", "root@tavernswiper.com")
 SEEDER_PASSWORD = os.getenv("ROOT_PASSWORD", "Password123!")
 
+_ROUTER_DATA = None
+
 def get_url(service_name, env="local"):
+    global _ROUTER_DATA
     # Check for explicit environment variable overrides
     env_var = f"{service_name.upper()}_URL"
     if os.getenv(env_var):
@@ -36,7 +39,48 @@ def get_url(service_name, env="local"):
         }
         return f"http://127.0.0.1:{ports.get(service_name)}"
     
-    # Fetch from Cloud Run
+    # 1. Try fetching from Router if not already cached
+    if _ROUTER_DATA is None:
+        try:
+            # Find the Router URL (one gcloud call)
+            deploy_name = f"router-{env}" if env in ["dev", "test"] else "router"
+            router_url = subprocess.check_output([
+                "gcloud", "run", "services", "describe", deploy_name,
+                "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+                "--format", "value(status.url)"
+            ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+            
+            # Query Router
+            print(f"📡 Querying Router at {router_url}...")
+            resp = requests.get(f"{router_url}/router/services", timeout=5)
+            if resp.status_code == 200:
+                _ROUTER_DATA = resp.json().get("services", {})
+                print("✅ Router data cached.")
+            else:
+                _ROUTER_DATA = {} # Empty map on failure
+        except Exception:
+            # Fallback for 'dev' if suffixed router not found
+            if env == "dev":
+                try:
+                    router_url = subprocess.check_output([
+                        "gcloud", "run", "services", "describe", "router",
+                        "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+                        "--format", "value(status.url)"
+                    ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+                    resp = requests.get(f"{router_url}/router/services", timeout=5)
+                    if resp.status_code == 200:
+                        _ROUTER_DATA = resp.json().get("services", {})
+                except Exception:
+                    _ROUTER_DATA = {}
+            else:
+                _ROUTER_DATA = {}
+
+    # 2. Return from router data if available
+    if service_name in _ROUTER_DATA and _ROUTER_DATA[service_name]:
+        return _ROUTER_DATA[service_name]
+
+    # 3. Fallback to slow gcloud discovery
+    print(f"⚠️  {service_name} not in Router. Falling back to slow gcloud discovery...")
     if env == "dev":
         deploy_name = f"{service_name}-dev"
     elif env == "test":
@@ -44,19 +88,15 @@ def get_url(service_name, env="local"):
     else:
         deploy_name = service_name
         
-    region = REGION
-        
     try:
         url = subprocess.check_output([
             "gcloud", "run", "services", "describe", deploy_name,
-            "--platform", "managed", "--region", region, "--project", PROJECT_ID,
+            "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
             "--format", "value(status.url)"
         ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url
     except Exception:
-        # Fallback for 'dev' if suffixed service not found
         if env == "dev":
-            print(f"⚠️  Suffixed service {deploy_name} not found. Falling back to unsuffixed name: {service_name}")
             try:
                 url = subprocess.check_output([
                     "gcloud", "run", "services", "describe", service_name,
@@ -64,8 +104,7 @@ def get_url(service_name, env="local"):
                     "--format", "value(status.url)"
                 ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
                 return url
-            except Exception as e2:
-                print(f"❌ Error fetching URL for fallback {service_name}: {e2}")
+            except Exception:
                 return None
         return None
 
