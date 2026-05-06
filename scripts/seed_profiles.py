@@ -322,6 +322,35 @@ def seed_system():
 
     print("\n✅ Multi-user seeding complete!")
 
+def verify_bucket_permissions(env):
+    """Check that the GCS media bucket has public read access (allUsers objectViewer)."""
+    project = "tavern-swiper-prod" if env == "prod" else "tavern-swiper-dev"
+    bucket_name = f"{project}-media-{env}"
+    print(f"\n🔍 Verifying GCS bucket permissions for {bucket_name}...")
+    try:
+        result = subprocess.run(
+            ["gcloud", "storage", "buckets", "get-iam-policy", f"gs://{bucket_name}", "--format=json"],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode != 0:
+            print(f"  ⚠️ Could not check bucket {bucket_name}: {result.stderr.strip()}")
+            return
+
+        import json as _json
+        policy = _json.loads(result.stdout)
+        bindings = policy.get("bindings", [])
+        has_public = any(
+            "allUsers" in b.get("members", []) and b.get("role") == "roles/storage.objectViewer"
+            for b in bindings
+        )
+        if has_public:
+            print(f"  ✅ {bucket_name} has public read access (allUsers).")
+        else:
+            print(f"  ❌ WARNING: {bucket_name} is MISSING allUsers objectViewer! Images will NOT be publicly accessible.")
+            print(f"     Fix with: gcloud storage buckets add-iam-policy-binding gs://{bucket_name} --member=allUsers --role=roles/storage.objectViewer")
+    except Exception as e:
+        print(f"  ⚠️ Could not verify bucket permissions: {e}")
+
 if __name__ == "__main__":
     env = "dev"
     if len(sys.argv) > 1:
@@ -340,3 +369,4 @@ if __name__ == "__main__":
         sys.exit(1)
         
     seed_system()
+    verify_bucket_permissions(env)
