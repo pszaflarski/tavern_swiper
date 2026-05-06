@@ -191,15 +191,15 @@ function ProfilesScreenInner() {
         />
       ) : (
         <View style={styles.centered}>
-          <Text style={styles.emptyIcon}>📜</Text>
-          <Text style={styles.emptyText}>No heroes have been forged yet.</Text>
+          <Text style={styles.emptyIcon}>🛡️</Text>
+          <Text style={styles.emptyTitle}>Forge Your First Identity</Text>
+          <Text style={styles.emptyDesc}>You must forge an identity before your legend can begin.</Text>
           <TouchableOpacity 
-            style={[styles.addProfileButton, { marginTop: Spacing[6], width: 'auto', paddingHorizontal: Spacing[8] }]} 
+            style={styles.emptyCtaButton} 
             onPress={handleCreate}
             testID="empty-state-add-profile-button"
           >
-            <Ionicons name="flash" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.addProfileText}>Forge Your First Hero</Text>
+            <Text style={styles.emptyCtaText}>FORGE NEW IDENTITY</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -337,13 +337,41 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   emptyIcon: {
-    fontSize: 48,
+    fontSize: 64,
     marginBottom: Spacing[4],
   },
-  emptyText: {
+  emptyTitle: {
+    fontFamily: Fonts.heroic,
+    fontSize: 24,
+    color: Colors.onSurface,
+    marginBottom: Spacing[2],
+  },
+  emptyDesc: {
     fontFamily: Fonts.scribe,
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.outline,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing[8],
+    paddingHorizontal: Spacing[6],
+  },
+  emptyCtaButton: {
+    width: 'auto' as any,
+    paddingHorizontal: Spacing[6],
+    height: 64,
+    borderRadius: Radius.md,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.surfaceContainerLowest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+  },
+  emptyCtaText: {
+    color: Colors.primary,
+    fontFamily: Fonts.scribe,
+    fontWeight: '600' as const,
+    letterSpacing: 1,
   },
   addProfileButton: {
     flexDirection: 'row',
