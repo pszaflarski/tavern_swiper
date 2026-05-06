@@ -70,10 +70,7 @@ func realGetFeedCandidates(ctx context.Context, collection string, excludeIDs []
 
 	start := time.Now()
 
-	pipeline := db.Pipeline().
-		Collection(collection).
-		Select(feedCandidateFields).
-		Limit(limit)
+	pipeline := db.Pipeline().Collection(collection)
 
 	// Only apply the NotEqualAny filter if we have IDs to exclude
 	if len(excludeIDs) > 0 {
@@ -83,6 +80,10 @@ func realGetFeedCandidates(ctx context.Context, collection string, excludeIDs []
 		}
 		pipeline = pipeline.Where(firestore.NotEqualAny("profile_id", excludeVals))
 	}
+
+	pipeline = pipeline.
+		Select(feedCandidateFields).
+		Limit(limit)
 
 	snapshot := pipeline.Execute(ctx)
 	iter := snapshot.Results()
