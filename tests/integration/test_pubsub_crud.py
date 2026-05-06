@@ -37,8 +37,8 @@ async def poll_for_cache(profile_id, expected_name, timeout=15):
         await asyncio.sleep(1)
     return None
 
-async def poll_for_active_status(profile_id, expected_active, timeout=15):
-    """Poll Firestore discovery-test DB for the active status of a profile."""
+async def poll_for_cache_absent(profile_id, timeout=15):
+    """Poll Firestore discovery DB to verify the profile is NOT in cache."""
     db = firestore.Client(project=FIRESTORE_PROJECT, database=DISCOVERY_DB)
     collection = "profiles_profiles_cache"
     
@@ -46,12 +46,10 @@ async def poll_for_active_status(profile_id, expected_active, timeout=15):
     while (asyncio.get_event_loop().time() - start_time) < timeout:
         doc_ref = db.collection(collection).document(profile_id)
         doc = doc_ref.get()
-        if doc.exists:
-            data = doc.to_dict()
-            if data.get("is_active") == expected_active:
-                return data
+        if not doc.exists:
+            return True
         await asyncio.sleep(1)
-    return None
+    return False
 
 async def poll_for_deletion(profile_id, timeout=15):
     """Poll Firestore discovery-test DB until the document is gone."""
@@ -121,62 +119,89 @@ async def test_pubsub_cache_lifecycle(auth_user):
         print("✅ Cache Deletion Verified")
 
 @pytest.mark.asyncio
-async def test_active_profile_switch_propagation(auth_user):
+async def test_cached_profile_has_no_is_active(auth_user):
     """
-    Integration Test: Active Profile Propagation
-    1. Create Profile A -> Verify active in cache
-    2. Create Profile B -> Verify B is active, A is inactive in cache
-    3. Set A Active -> Verify A is active, B is inactive in cache
+    Integration Test: Verify is_active is NOT in the discovery cache.
+    1. Create Profile -> Verify it appears in cache
+    2. Verify is_active field is absent from cached data
     """
     headers = {"Authorization": f"Bearer {auth_user['token']}"}
-    name_a = f"A-{uuid.uuid4().hex[:4]}"
-    name_b = f"B-{uuid.uuid4().hex[:4]}"
+    name = f"NoActive-{uuid.uuid4().hex[:4]}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # --- 1. Create Profile A ---
-        print(f"\nCreating Profile A: {name_a}")
+        print(f"\nCreating profile: {name}")
+        resp = await client.post(
+            f"{PROFILES_URL}/profiles/",
+            headers=headers,
+            json={"display_name": name, "tagline": "is_active test", "gender": []}
+        )
+        assert resp.status_code == 201
+        profile_id = resp.json()["profile_id"]
+
+        print(f"Waiting for cache insertion for {profile_id}...")
+        cached_doc = await poll_for_cache(profile_id, name)
+        assert cached_doc is not None, f"Profile {profile_id} was never cached"
+
+        # Verify is_active is NOT in the cached data
+        assert "is_active" not in cached_doc, \
+            f"is_active should NOT be in discovery cache, but found: {cached_doc.get('is_active')}"
+        print("✅ is_active correctly absent from cache")
+
+        # Cleanup
+        await client.delete(f"{PROFILES_URL}/profiles/{profile_id}", headers=headers)
+
+@pytest.mark.asyncio
+async def test_pubsub_bulk_deletion_purges_cache(auth_user):
+    """
+    Integration Test: Bulk Delete (ALL_DELETED) purges the discovery cache.
+    1. Create two profiles -> Verify both are in cache
+    2. Root admin purges all profiles
+    3. Verify both profiles are removed from cache
+    """
+    headers = {"Authorization": f"Bearer {auth_user['token']}"}
+    name_a = f"BulkA-{uuid.uuid4().hex[:4]}"
+    name_b = f"BulkB-{uuid.uuid4().hex[:4]}"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Create profiles
+        print(f"\nCreating profiles: {name_a}, {name_b}")
         resp_a = await client.post(
             f"{PROFILES_URL}/profiles/",
             headers=headers,
-            json={"display_name": name_a, "tagline": "Test A", "gender": []}
+            json={"display_name": name_a, "tagline": "Bulk test", "gender": []}
         )
         assert resp_a.status_code == 201
         id_a = resp_a.json()["profile_id"]
 
-        print(f"Verifying A is active in cache...")
-        doc_a = await poll_for_active_status(id_a, True)
-        assert doc_a is not None and doc_a["is_active"] is True
-
-        # --- 2. Create Profile B (Auto-deactivates A) ---
-        print(f"Creating Profile B: {name_b}")
         resp_b = await client.post(
             f"{PROFILES_URL}/profiles/",
             headers=headers,
-            json={"display_name": name_b, "tagline": "Test B", "gender": []}
+            json={"display_name": name_b, "tagline": "Bulk test", "gender": []}
         )
         assert resp_b.status_code == 201
         id_b = resp_b.json()["profile_id"]
 
-        print("Verifying B is active and A is inactive in cache...")
-        doc_b = await poll_for_active_status(id_b, True)
-        assert doc_b is not None and doc_b["is_active"] is True
-        
-        doc_a_inactive = await poll_for_active_status(id_a, False)
-        assert doc_a_inactive is not None and doc_a_inactive["is_active"] is False
-        print("✅ Auto-Switch Propagation Verified")
+        # Wait for both to appear in cache
+        cached_a = await poll_for_cache(id_a, name_a)
+        cached_b = await poll_for_cache(id_b, name_b)
+        assert cached_a is not None, f"Profile {id_a} was never cached"
+        assert cached_b is not None, f"Profile {id_b} was never cached"
+        print("✅ Both profiles cached")
 
-        # --- 3. Manual Switch back to A ---
-        print(f"Setting Profile A ({id_a}) as active...")
-        switch_resp = await client.post(
-            f"{PROFILES_URL}/profiles/{id_a}/set_active",
-            headers=headers
-        )
-        assert switch_resp.status_code == 200
+        # Get root admin token for bulk delete
+        from .helpers import get_root_admin
+        root = await get_root_admin(client)
+        admin_headers = {"Authorization": f"Bearer {root['token']}"}
 
-        print("Verifying A is active and B is inactive in cache...")
-        doc_a_active = await poll_for_active_status(id_a, True)
-        assert doc_a_active is not None and doc_a_active["is_active"] is True
-        
-        doc_b_inactive = await poll_for_active_status(id_b, False)
-        assert doc_b_inactive is not None and doc_b_inactive["is_active"] is False
-        print("✅ Manual Switch Propagation Verified")
+        # Purge all profiles
+        print("Purging all profiles...")
+        del_resp = await client.delete(f"{PROFILES_URL}/profiles/", headers=admin_headers)
+        assert del_resp.status_code == 200
+
+        # Verify both are removed from cache
+        print(f"Waiting for cache purge of {id_a} and {id_b}...")
+        deleted_a = await poll_for_deletion(id_a)
+        deleted_b = await poll_for_deletion(id_b)
+        assert deleted_a is True, f"Profile {id_a} was not purged from cache"
+        assert deleted_b is True, f"Profile {id_b} was not purged from cache"
+        print("✅ Bulk Cache Purge Verified")

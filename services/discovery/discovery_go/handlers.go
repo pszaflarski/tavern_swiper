@@ -145,8 +145,6 @@ func handleGetFeed(c *gin.Context) {
 			p.Realm = &val
 		}
 
-		p.IsActive, _ = data["is_active"].(bool)
-
 		// Handle image_urls (coerce null to empty list if needed)
 		if val, ok := data["image_urls"].([]interface{}); ok {
 			p.ImageURLs = []string{}

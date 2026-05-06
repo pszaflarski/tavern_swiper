@@ -60,7 +60,7 @@ var getFeedCandidatesFunc = realGetFeedCandidates
 // feedCandidateFields are the fields projected by the pipeline select stage.
 var feedCandidateFields = []any{
 	"profile_id", "display_name", "bio", "tagline", "gender",
-	"character_class", "realm", "is_active", "image_urls", "talents",
+	"character_class", "realm", "image_urls", "talents",
 }
 
 func realGetFeedCandidates(ctx context.Context, collection string, excludeIDs []string, limit int) ([]FeedCandidate, error) {

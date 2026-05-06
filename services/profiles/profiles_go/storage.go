@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
 )
 
 var (
@@ -72,4 +74,36 @@ func uploadToGCSInternal(ctx context.Context, profileID string, filename string,
 	// For this project, we usually use the public URL pattern if the bucket is public
 	publicURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, objectName)
 	return publicURL, nil
+}
+
+var deleteProfileImagesFunc = func(ctx context.Context, profileID string) error {
+	return deleteProfileImagesInternal(ctx, profileID)
+}
+
+// deleteProfileImagesInternal deletes all GCS objects under profiles/{profileID}/.
+// Returns nil if the profile has no images or the bucket is not configured.
+func deleteProfileImagesInternal(ctx context.Context, profileID string) error {
+	client, err := getStorageClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get storage client: %v", err)
+	}
+	if bucketName == "" {
+		return fmt.Errorf("GCS_BUCKET_NAME environment variable not set")
+	}
+
+	prefix := fmt.Sprintf("profiles/%s/", profileID)
+	it := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: prefix})
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to list objects with prefix %s: %v", prefix, err)
+		}
+		if err := client.Bucket(bucketName).Object(attrs.Name).Delete(ctx); err != nil {
+			log.Printf("[WARN] Failed to delete GCS object %s: %v", attrs.Name, err)
+		}
+	}
+	return nil
 }

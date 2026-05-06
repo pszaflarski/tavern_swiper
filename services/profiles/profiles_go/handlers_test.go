@@ -58,14 +58,17 @@ type mockPublisher struct {
 	PublishedAll      []string
 }
 
-func (m *mockPublisher) PublishUpserted(ctx context.Context, p ProfileOut) {
+func (m *mockPublisher) PublishUpserted(ctx context.Context, p ProfileOut) error {
 	m.PublishedUpserted = append(m.PublishedUpserted, p)
+	return nil
 }
 
-func (m *mockPublisher) PublishDeleted(ctx context.Context, profileID string) {
+func (m *mockPublisher) PublishDeleted(ctx context.Context, profileID string) error {
 	m.PublishedDeleted = append(m.PublishedDeleted, profileID)
+	return nil
 }
 
-func (m *mockPublisher) PublishAllDeleted(ctx context.Context, adminUserID string) {
+func (m *mockPublisher) PublishAllDeleted(ctx context.Context, adminUserID string) error {
 	m.PublishedAll = append(m.PublishedAll, adminUserID)
+	return nil
 }

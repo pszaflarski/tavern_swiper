@@ -117,7 +117,6 @@ func processEvent(ctx context.Context, client FirestoreClient, event *pb.Profile
 			"tagline":      p.Tagline,
 			"bio":          p.Bio,
 			"image_urls":   imageUrls,
-			"is_active":    p.IsActive,
 			"age":          p.Age,
 			"is_oc":        p.IsOc,
 			"gender":       toFirestoreTags(p.Gender),
@@ -144,7 +143,10 @@ func processEvent(ctx context.Context, client FirestoreClient, event *pb.Profile
 
 	case pb.ProfileEvent_ALL_DELETED:
 		log.Printf("🚨 Processing ALL_DELETED from admin: %s", event.GetAllDeleted().AdminUserId)
-		// Admin wipe logic would go here if needed.
+		if err := client.DeleteCollection(ctx, client.Collection(collection), 500); err != nil {
+			return fmt.Errorf("failed to purge discovery cache: %w", err)
+		}
+		log.Printf("✅ Purged all profiles from discovery cache")
 	}
 	return nil
 }

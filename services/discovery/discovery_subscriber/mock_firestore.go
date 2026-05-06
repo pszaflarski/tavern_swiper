@@ -8,7 +8,8 @@ import (
 
 type mockClient struct {
 	FirestoreClient
-	collections map[string]*mockCollection
+	collections          map[string]*mockCollection
+	deleteCollectionCalled bool
 }
 
 func (c *mockClient) Collection(path string) CollectionRef {
@@ -25,6 +26,53 @@ func (c *mockClient) Collection(path string) CollectionRef {
 
 func (c *mockClient) Pipeline() Pipeline {
 	return &mockPipeline{client: c}
+}
+
+func (c *mockClient) Batch() WriteBatch {
+	return &mockBatch{}
+}
+
+func (c *mockClient) GetAll(ctx context.Context, refs []DocumentRef) ([]DocumentSnapshot, error) {
+	return nil, nil
+}
+
+func (c *mockClient) DeleteCollection(ctx context.Context, col CollectionRef, batchSize int) error {
+	c.deleteCollectionCalled = true
+	// Actually clear the docs in the mock collection if it's a mockCollection
+	if mc, ok := col.(*mockCollection); ok {
+		mc.docs = make(map[string]*mockDoc)
+	}
+	return nil
+}
+
+func (c *mockClient) Close() error {
+	return nil
+}
+
+func (c *mockClient) CollectionGroup(id string) Query {
+	return &mockQuery{}
+}
+
+type mockBatch struct {
+	WriteBatch
+}
+
+func (b *mockBatch) Set(dr DocumentRef, data interface{}, opts ...firestore.SetOption) WriteBatch { return b }
+func (b *mockBatch) Update(dr DocumentRef, updates []firestore.Update, opts ...firestore.Precondition) WriteBatch { return b }
+func (b *mockBatch) Delete(dr DocumentRef) WriteBatch { return b }
+func (b *mockBatch) Commit(ctx context.Context) ([]*firestore.WriteResult, error) {
+	return []*firestore.WriteResult{}, nil
+}
+
+type mockQuery struct {
+	Query
+}
+
+func (q *mockQuery) Limit(n int) Query { return q }
+func (q *mockQuery) Where(path, op string, value interface{}) Query { return q }
+func (q *mockQuery) OrderBy(path string, dir firestore.Direction) Query { return q }
+func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
+	return &mockIter{}
 }
 
 type mockCollection struct {
@@ -44,6 +92,19 @@ func (c *mockCollection) Doc(path string) DocumentRef {
 	c.docs[path] = d
 	return d
 }
+
+func (c *mockCollection) Where(path, op string, value interface{}) Query { return &mockQuery{} }
+func (c *mockCollection) Limit(n int) Query { return &mockQuery{} }
+func (c *mockCollection) OrderBy(path string, dir firestore.Direction) Query { return &mockQuery{} }
+func (c *mockCollection) Documents(ctx context.Context) DocumentIterator { return &mockIter{} }
+
+type mockIter struct {
+	DocumentIterator
+}
+
+func (i *mockIter) Next() (DocumentSnapshot, error)         { return nil, nil }
+func (i *mockIter) GetAll() ([]DocumentSnapshot, error)     { return nil, nil }
+func (i *mockIter) Stop()                                   {}
 
 type mockDoc struct {
 	DocumentRef

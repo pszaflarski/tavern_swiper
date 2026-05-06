@@ -7,7 +7,6 @@ type DiscoveryProfile struct {
 	Bio            *string  `json:"bio"`
 	Gender         *string  `json:"gender"`
 	ImageURLs      []string `json:"image_urls"`
-	IsActive       bool     `json:"is_active"`
 	CharacterClass *string  `json:"character_class"`
 	Realm          *string  `json:"realm"`
 	Talents        []string `json:"talents"`

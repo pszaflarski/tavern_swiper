@@ -176,7 +176,9 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 
 	p, _ := docToProfile(doc)
 	if publisher != nil {
-		publisher.PublishUpserted(c.Request.Context(), p)
+		if err := publisher.PublishUpserted(context.Background(), p); err != nil {
+			log.Printf("[ERROR] Failed to publish upserted event for profile %s: %v", p.ProfileID, err)
+		}
 	}
 	c.JSON(http.StatusCreated, p)
 }
@@ -373,7 +375,9 @@ func deactivateOtherProfiles(ctx context.Context, client FirestoreClient, userID
 				p, err := docToProfile(snap)
 				if err == nil {
 					p.IsActive = false
-					publisher.PublishUpserted(ctx, p)
+					if err := publisher.PublishUpserted(context.Background(), p); err != nil {
+						log.Printf("[ERROR] Failed to publish upserted event for deactivated profile %s: %v", p.ProfileID, err)
+					}
 				}
 			}
 		}
@@ -578,7 +582,9 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	newDoc, _ := ref.Get(c.Request.Context())
 	p, _ := docToProfile(newDoc)
 	if publisher != nil {
-		publisher.PublishUpserted(c.Request.Context(), p)
+		if err := publisher.PublishUpserted(context.Background(), p); err != nil {
+			log.Printf("[ERROR] Failed to publish upserted event for profile %s: %v", p.ProfileID, err)
+		}
 	}
 	c.JSON(http.StatusOK, p)
 }
@@ -615,15 +621,22 @@ func handleDeleteProfile(c *gin.Context, publisher Publisher) {
 		return
 	}
 
-	// TODO: Delete GCS images
+	// Delete associated GCS images (best-effort; don't block profile deletion)
+	if err := deleteProfileImagesFunc(c.Request.Context(), id); err != nil {
+		log.Printf("[WARN] Failed to delete GCS images for profile %s: %v", id, err)
+	}
 
 	if _, err := ref.Delete(c.Request.Context()); err != nil {
 		send500(c, "Failed to delete profile")
 		return
 	}
 
+	// Publish deletion event using a detached context so it isn't cancelled
+	// when the HTTP response is sent.
 	if publisher != nil {
-		publisher.PublishDeleted(c.Request.Context(), id)
+		if err := publisher.PublishDeleted(context.Background(), id); err != nil {
+			log.Printf("[ERROR] Failed to publish deletion event for profile %s: %v", id, err)
+		}
 	}
 	c.Status(http.StatusNoContent)
 }
@@ -676,7 +689,9 @@ func handleSetProfileActive(c *gin.Context, publisher Publisher) {
 	newDoc, _ := ref.Get(c.Request.Context())
 	p, _ := docToProfile(newDoc)
 	if publisher != nil {
-		publisher.PublishUpserted(c.Request.Context(), p)
+		if err := publisher.PublishUpserted(context.Background(), p); err != nil {
+			log.Printf("[ERROR] Failed to publish upserted event for profile %s: %v", p.ProfileID, err)
+		}
 	}
 	c.JSON(http.StatusOK, p)
 }
@@ -819,6 +834,18 @@ func handleDeleteAllProfiles(c *gin.Context, publisher Publisher) {
 	}
 
 	log.Printf("[INFO] Admin Purge: cleaning up profiles collection")
+	// Delete GCS images for each profile before purging the collection
+	docs, listErr := client.Collection(COLLECTION).Documents(c.Request.Context()).GetAll()
+	if listErr == nil {
+		for _, doc := range docs {
+			if err := deleteProfileImagesFunc(c.Request.Context(), doc.ID()); err != nil {
+				log.Printf("[WARN] Failed to delete GCS images for profile %s during purge: %v", doc.ID(), err)
+			}
+		}
+	} else {
+		log.Printf("[WARN] Failed to list profiles for GCS cleanup during purge: %v", listErr)
+	}
+	
 	err = client.DeleteCollection(c.Request.Context(), client.Collection(COLLECTION), 500)
 	if err != nil {
 		sendGenericError(c, http.StatusInternalServerError, "Purge failed")
@@ -826,7 +853,9 @@ func handleDeleteAllProfiles(c *gin.Context, publisher Publisher) {
 	}
 
 	if publisher != nil {
-		publisher.PublishAllDeleted(c.Request.Context(), auth.UID)
+		if err := publisher.PublishAllDeleted(context.Background(), auth.UID); err != nil {
+			log.Printf("[ERROR] Failed to publish all deleted event: %v", err)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Purged all profiles"})
 }
@@ -937,7 +966,9 @@ func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 	newDoc, _ := ref.Get(c.Request.Context())
 	p, _ := docToProfile(newDoc)
 	if publisher != nil {
-		publisher.PublishUpserted(c.Request.Context(), p)
+		if err := publisher.PublishUpserted(context.Background(), p); err != nil {
+			log.Printf("[ERROR] Failed to publish upserted event for profile %s: %v", p.ProfileID, err)
+		}
 	}
 	c.JSON(http.StatusOK, p)
 }

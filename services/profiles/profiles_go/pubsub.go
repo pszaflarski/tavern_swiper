@@ -13,9 +13,9 @@ import (
 )
 
 type Publisher interface {
-	PublishUpserted(ctx context.Context, p ProfileOut)
-	PublishDeleted(ctx context.Context, profileID string)
-	PublishAllDeleted(ctx context.Context, adminUserID string)
+	PublishUpserted(ctx context.Context, p ProfileOut) error
+	PublishDeleted(ctx context.Context, profileID string) error
+	PublishAllDeleted(ctx context.Context, adminUserID string) error
 }
 
 type RealPublisher struct {
@@ -43,13 +43,13 @@ func NewPublisher(ctx context.Context) (Publisher, error) {
 	}, nil
 }
 
-func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent) {
+func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent) error {
 	topic := r.client.Topic(r.topicID)
 	
 	payload, err := proto.Marshal(event)
 	if err != nil {
 		log.Printf("[ERROR] Protobuf marshal error: %v", err)
-		return
+		return fmt.Errorf("protobuf marshal error: %w", err)
 	}
 
 	res := topic.Publish(ctx, &pubsub.Message{
@@ -59,12 +59,14 @@ func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent
 	_, err = res.Get(ctx)
 	if err != nil {
 		log.Printf("[ERROR] Failed to publish event: %v", err)
+		return fmt.Errorf("pubsub publish error: %w", err)
 	} else {
 		log.Printf("[INFO] Published event type %v to %s", event.Type, r.topicID)
 	}
+	return nil
 }
 
-func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) {
+func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) error {
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_UPSERTED,
 		Event: &pb.ProfileEvent_Upserted{
@@ -86,7 +88,7 @@ func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) {
 			},
 		},
 	}
-	r.publishEvent(ctx, event)
+	return r.publishEvent(ctx, event)
 }
 
 func toProtoAge(age *int) *int32 {
@@ -112,7 +114,7 @@ func toProtoTags(tags []ProfileTag) []*pb.ProfileTag {
 	return res
 }
 
-func (r *RealPublisher) PublishDeleted(ctx context.Context, profileID string) {
+func (r *RealPublisher) PublishDeleted(ctx context.Context, profileID string) error {
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_DELETED,
 		Event: &pb.ProfileEvent_Deleted{
@@ -121,10 +123,10 @@ func (r *RealPublisher) PublishDeleted(ctx context.Context, profileID string) {
 			},
 		},
 	}
-	r.publishEvent(ctx, event)
+	return r.publishEvent(ctx, event)
 }
 
-func (r *RealPublisher) PublishAllDeleted(ctx context.Context, adminUserID string) {
+func (r *RealPublisher) PublishAllDeleted(ctx context.Context, adminUserID string) error {
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_ALL_DELETED,
 		Event: &pb.ProfileEvent_AllDeleted{
@@ -134,5 +136,5 @@ func (r *RealPublisher) PublishAllDeleted(ctx context.Context, adminUserID strin
 			},
 		},
 	}
-	r.publishEvent(ctx, event)
+	return r.publishEvent(ctx, event)
 }
