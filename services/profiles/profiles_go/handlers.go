@@ -124,18 +124,13 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		return
 	}
 
+	// Collect all tags for validation
+	allTags := collectAllTags(body.Gender, body.Race, body.Fandom, body.Interests, body.Events, body.OtherTags)
+
 	// Finding #4: Tag validation
-	if err := validateProfileTags(c.Request.Context(), client, body.Tags); err != nil {
+	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
 		send400(c, err.Error())
 		return
-	}
-
-	// Logic: Set active and deactivate others
-
-	genderFromTags := extractGenderFromTags(body.Tags)
-	finalGender := body.Gender
-	if finalGender == nil && genderFromTags != "" {
-		finalGender = &genderFromTags
 	}
 
 	data := map[string]interface{}{
@@ -143,14 +138,24 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		"display_name": body.DisplayName,
 		"tagline":      body.Tagline,
 		"bio":          body.Bio,
-		"gender":       finalGender,
 		"image_urls":   body.ImageURLs,
 		"is_active":    true,
 		"age":          body.Age,
 		"is_oc":         body.IsOC,
-		"tags":         tagsToInterface(body.Tags),
+		"gender":       tagsToInterface(body.Gender),
+		"race":         tagsToInterface(body.Race),
+		"fandom":       tagsToInterface(body.Fandom),
+		"interests":    tagsToInterface(body.Interests),
+		"events":       tagsToInterface(body.Events),
 		"created_at":   firestore.ServerTimestamp,
 		"updated_at":   firestore.ServerTimestamp,
+	}
+
+	// Add other tags
+	if body.OtherTags != nil {
+		for cat, tags := range body.OtherTags {
+			data[cat] = tagsToInterface(tags)
+		}
 	}
 
 	ref := client.Collection(COLLECTION).Doc(profileID)
@@ -325,30 +330,21 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		return []ProfileTag{}
 	}
 
-	tags := getTags("tags")
-	gender := getStr("gender")
-	// Backward compat: derive gender from tags if not present
-	if gender == nil {
-		for _, t := range tags {
-			if t.Category == "gender" {
-				gender = &t.Name
-				break
-			}
-		}
-	}
-
 	return ProfileOut{
 		ProfileID:   doc.ID(),
 		UserID:      reqStr("user_id"),
 		DisplayName: reqStr("display_name"),
 		Tagline:     getStr("tagline"),
 		Bio:         getStr("bio"),
-		Gender:      gender,
 		ImageURLs:   getURLs("image_urls"),
 		IsActive:    reqBool("is_active"),
 		Age:         getPtrInt("age"),
 		IsOC:        getPtrBool("is_oc"),
-		Tags:        tags,
+		Gender:      getTags("gender"),
+		Race:        getTags("race"),
+		Fandom:      getTags("fandom"),
+		Interests:   getTags("interests"),
+		Events:      getTags("events"),
 		CreatedAt:   getTimestamp("created_at"),
 		UpdatedAt:   getTimestamp("updated_at"),
 	}, nil
@@ -500,7 +496,32 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 		return
 	}
 
-	updates := make([]firestore.Update, 0)
+	// Collect all current and updated tags for validation
+	existingProfile, _ := docToProfile(doc)
+	
+	newGender := existingProfile.Gender
+	if body.Gender != nil { newGender = *body.Gender }
+	newRace := existingProfile.Race
+	if body.Race != nil { newRace = *body.Race }
+	newFandom := existingProfile.Fandom
+	if body.Fandom != nil { newFandom = *body.Fandom }
+	newInterests := existingProfile.Interests
+	if body.Interests != nil { newInterests = *body.Interests }
+	newEvents := existingProfile.Events
+	if body.Events != nil { newEvents = *body.Events }
+	
+	// TODO: Handle OtherTags merge if needed
+	
+	allTags := collectAllTags(newGender, newRace, newFandom, newInterests, newEvents, existingProfile.OtherTags)
+
+	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
+		send400(c, err.Error())
+		return
+	}
+
+	updates := []firestore.Update{
+		{Path: "updated_at", Value: firestore.ServerTimestamp},
+	}
 	if body.DisplayName != nil {
 		updates = append(updates, firestore.Update{Path: "display_name", Value: *body.DisplayName})
 	}
@@ -509,9 +530,6 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	}
 	if body.Bio != nil {
 		updates = append(updates, firestore.Update{Path: "bio", Value: *body.Bio})
-	}
-	if body.Gender != nil {
-		updates = append(updates, firestore.Update{Path: "gender", Value: *body.Gender})
 	}
 	if body.ImageURLs != nil {
 		updates = append(updates, firestore.Update{Path: "image_urls", Value: *body.ImageURLs})
@@ -525,28 +543,35 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	if body.IsOC != nil {
 		updates = append(updates, firestore.Update{Path: "is_oc", Value: *body.IsOC})
 	}
-	if body.Tags != nil {
-		if err := validateProfileTags(c.Request.Context(), client, *body.Tags); err != nil {
-			send400(c, err.Error())
-			return
-		}
-		updates = append(updates, firestore.Update{Path: "tags", Value: tagsToInterface(*body.Tags)})
-		// Finding #8: Sync gender if tag updated
-		genderFromTags := extractGenderFromTags(*body.Tags)
-		if genderFromTags != "" && body.Gender == nil {
-			updates = append(updates, firestore.Update{Path: "gender", Value: genderFromTags})
+	if body.Gender != nil {
+		updates = append(updates, firestore.Update{Path: "gender", Value: tagsToInterface(*body.Gender)})
+	}
+	if body.Race != nil {
+		updates = append(updates, firestore.Update{Path: "race", Value: tagsToInterface(*body.Race)})
+	}
+	if body.Fandom != nil {
+		updates = append(updates, firestore.Update{Path: "fandom", Value: tagsToInterface(*body.Fandom)})
+	}
+	if body.Interests != nil {
+		updates = append(updates, firestore.Update{Path: "interests", Value: tagsToInterface(*body.Interests)})
+	}
+	if body.Events != nil {
+		updates = append(updates, firestore.Update{Path: "events", Value: tagsToInterface(*body.Events)})
+	}
+	if body.OtherTags != nil {
+		for cat, tags := range *body.OtherTags {
+			updates = append(updates, firestore.Update{Path: cat, Value: tagsToInterface(tags)})
 		}
 	}
 
-	if len(updates) > 0 {
-		updates = append(updates, firestore.Update{Path: "updated_at", Value: firestore.ServerTimestamp})
+	if len(updates) > 1 { // More than just the initial updated_at
 		if _, err := ref.Update(c.Request.Context(), updates); err != nil {
 			send500(c, "Failed to update profile")
 			return
 		}
 
 		if body.IsActive != nil && *body.IsActive {
-			deactivateOtherProfiles(c.Request.Context(), client, profileData["user_id"].(string), id, publisher)
+			deactivateOtherProfiles(c.Request.Context(), client, existingProfile.UserID, id, publisher)
 		}
 	}
 
@@ -966,11 +991,17 @@ func tagsToInterface(tags []ProfileTag) []interface{} {
 	return res
 }
 
-func extractGenderFromTags(tags []ProfileTag) string {
-	for _, t := range tags {
-		if t.Category == "gender" {
-			return t.Name
+func collectAllTags(gender, race, fandom, interests, events []ProfileTag, other map[string][]ProfileTag) []ProfileTag {
+	res := make([]ProfileTag, 0)
+	res = append(res, gender...)
+	res = append(res, race...)
+	res = append(res, fandom...)
+	res = append(res, interests...)
+	res = append(res, events...)
+	if other != nil {
+		for _, tags := range other {
+			res = append(res, tags...)
 		}
 	}
-	return ""
+	return res
 }

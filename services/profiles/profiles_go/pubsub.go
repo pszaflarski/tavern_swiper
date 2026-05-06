@@ -65,8 +65,6 @@ func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent
 }
 
 func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) {
-	// TODO(audit#10): age, is_oc, and tags are not published yet.
-	// Requires protobuf schema update and discovery_subscriber changes.
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_UPSERTED,
 		Event: &pb.ProfileEvent_Upserted{
@@ -77,12 +75,41 @@ func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) {
 				Tagline:     p.Tagline,
 				Bio:         p.Bio,
 				ImageUrls:   p.ImageURLs,
-				Gender:      p.Gender,
 				IsActive:    p.IsActive,
+				Age:         toProtoAge(p.Age),
+				IsOc:        toProtoIsOc(p.IsOC),
+				Gender:      toProtoTags(p.Gender),
+				Race:        toProtoTags(p.Race),
+				Fandom:      toProtoTags(p.Fandom),
+				Interests:   toProtoTags(p.Interests),
+				Events:      toProtoTags(p.Events),
 			},
 		},
 	}
 	r.publishEvent(ctx, event)
+}
+
+func toProtoAge(age *int) *int32 {
+	if age == nil { return nil }
+	val := int32(*age)
+	return &val
+}
+
+func toProtoIsOc(isOC *bool) *bool {
+	return isOC
+}
+
+func toProtoTags(tags []ProfileTag) []*pb.ProfileTag {
+	if tags == nil { return nil }
+	res := make([]*pb.ProfileTag, len(tags))
+	for i, t := range tags {
+		res[i] = &pb.ProfileTag{
+			Id:   t.ID,
+			Name: t.Name,
+			Slug: t.Slug,
+		}
+	}
+	return res
 }
 
 func (r *RealPublisher) PublishDeleted(ctx context.Context, profileID string) {

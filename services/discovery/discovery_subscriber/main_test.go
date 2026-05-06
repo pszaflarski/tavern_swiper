@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	pb "tavern-swiper.app/discovery_subscriber/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -147,22 +148,37 @@ func TestProcessSerializedEvent_ProtoError(t *testing.T) {
 func TestProcessEvent_Upserted(t *testing.T) {
 	skipIfRealDB(t)
 	ctx := context.Background()
+	mock := &mockClient{}
+	
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_UPSERTED,
 		Event: &pb.ProfileEvent_Upserted{
 			Upserted: &pb.ProfileUpserted{
 				ProfileId:   "p1",
 				DisplayName: "Hero",
+				Age:         toPtrInt32(25),
+				Fandom: []*pb.ProfileTag{
+					{Id: "t1", Name: "Star Wars", Slug: "fandom__star_wars"},
+				},
 			},
 		},
 	}
 
-	// Passing nil client: should log and return nil (no crash)
-	err := processEvent(ctx, nil, event)
-	if err != nil {
-		t.Errorf("processEvent failed on UPSERTED with nil client: %v", err)
-	}
+	err := processEvent(ctx, mock, event)
+	assert.NoError(t, err)
+
+	// Verify Firestore data
+	doc := mock.Collection("profiles_profiles_cache").Doc("p1").(*mockDoc)
+	assert.True(t, doc.exists)
+	assert.Equal(t, "Hero", doc.data["display_name"])
+	assert.Equal(t, int32(25), *doc.data["age"].(*int32))
+	
+	fandom := doc.data["fandom"].([]interface{})
+	assert.Len(t, fandom, 1)
+	assert.Equal(t, "Star Wars", fandom[0].(map[string]interface{})["name"])
 }
+
+func toPtrInt32(v int32) *int32 { return &v }
 
 func TestProcessEvent_Deleted(t *testing.T) {
 	skipIfRealDB(t)

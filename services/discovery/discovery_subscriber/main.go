@@ -117,8 +117,14 @@ func processEvent(ctx context.Context, client FirestoreClient, event *pb.Profile
 			"tagline":      p.Tagline,
 			"bio":          p.Bio,
 			"image_urls":   imageUrls,
-			"gender":       p.Gender,
 			"is_active":    p.IsActive,
+			"age":          p.Age,
+			"is_oc":        p.IsOc,
+			"gender":       toFirestoreTags(p.Gender),
+			"race":         toFirestoreTags(p.Race),
+			"fandom":       toFirestoreTags(p.Fandom),
+			"interests":    toFirestoreTags(p.Interests),
+			"events":       toFirestoreTags(p.Events),
 			"updated_at":   firestore.ServerTimestamp,
 		}
 
@@ -140,6 +146,22 @@ func processEvent(ctx context.Context, client FirestoreClient, event *pb.Profile
 		log.Printf("🚨 Processing ALL_DELETED from admin: %s", event.GetAllDeleted().AdminUserId)
 		// Admin wipe logic would go here if needed.
 	}
-
 	return nil
+}
+
+func toFirestoreTags(tags []*pb.ProfileTag) []interface{} {
+	if tags == nil {
+		return []interface{}{}
+	}
+	res := make([]interface{}, len(tags))
+	for i, t := range tags {
+		res[i] = map[string]interface{}{
+			"id":   t.Id,
+			"name": t.Name,
+			"slug": t.Slug,
+			// Note: Category is not in proto but could be inferred or added to proto if needed.
+			// Since they are already keyed by category in the parent map, it might be redundant.
+		}
+	}
+	return res
 }

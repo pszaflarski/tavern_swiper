@@ -6,25 +6,41 @@ type ProfileCreate struct {
 	DisplayName string       `json:"display_name" binding:"required"`
 	Tagline     *string      `json:"tagline"`
 	Bio         *string      `json:"bio"`
-	Gender      *string      `json:"gender"`
 	ImageURLs   []string     `json:"image_urls"`
 	UserID      *string      `json:"user_id"`
 	IsActive    bool         `json:"is_active"`
 	Age         *int         `json:"age"`
 	IsOC        *bool        `json:"is_oc"`
-	Tags        []ProfileTag `json:"tags"`
+	
+	// Categorized tags
+	Gender      []ProfileTag `json:"gender"`
+	Race        []ProfileTag `json:"race"`
+	Fandom      []ProfileTag `json:"fandom"`
+	Interests   []ProfileTag `json:"interests"`
+	Events      []ProfileTag `json:"events"`
+	
+	// OtherTags for dynamic categories
+	OtherTags   map[string][]ProfileTag `json:"other_tags"`
 }
 
 type ProfileUpdate struct {
 	DisplayName *string       `json:"display_name"`
 	Tagline     *string       `json:"tagline"`
 	Bio         *string       `json:"bio"`
-	Gender      *string       `json:"gender"`
 	ImageURLs   *[]string     `json:"image_urls"`
 	IsActive    *bool         `json:"is_active"`
 	Age         *int          `json:"age"`
 	IsOC        *bool         `json:"is_oc"`
-	Tags        *[]ProfileTag `json:"tags"`
+	
+	// Categorized tags
+	Gender      *[]ProfileTag `json:"gender"`
+	Race        *[]ProfileTag `json:"race"`
+	Fandom      *[]ProfileTag `json:"fandom"`
+	Interests   *[]ProfileTag `json:"interests"`
+	Events      *[]ProfileTag `json:"events"`
+	
+	// OtherTags for dynamic categories
+	OtherTags   *map[string][]ProfileTag `json:"other_tags"`
 }
 
 type ProfileBatchRequest struct {
@@ -37,12 +53,21 @@ type ProfileOut struct {
 	DisplayName string       `json:"display_name"`
 	Tagline     *string      `json:"tagline"`
 	Bio         *string      `json:"bio"`
-	Gender      *string      `json:"gender"`
 	ImageURLs   []string     `json:"image_urls"`
 	IsActive    bool         `json:"is_active"`
 	Age         *int         `json:"age"`
 	IsOC        *bool        `json:"is_oc"`
-	Tags        []ProfileTag `json:"tags"`
+	
+	// Categorized tags
+	Gender      []ProfileTag `json:"gender"`
+	Race        []ProfileTag `json:"race"`
+	Fandom      []ProfileTag `json:"fandom"`
+	Interests   []ProfileTag `json:"interests"`
+	Events      []ProfileTag `json:"events"`
+	
+	// OtherTags for dynamic categories
+	OtherTags   map[string][]ProfileTag `json:"other_tags,omitempty"`
+	
 	CreatedAt   *time.Time   `json:"created_at"`
 	UpdatedAt   *time.Time   `json:"updated_at"`
 }

@@ -40,7 +40,7 @@ func TestProfileNewFields(t *testing.T) {
 			DisplayName: "Hero",
 			Age:         ptrInt(25),
 			IsOC:        ptrBool(true),
-			Tags: []ProfileTag{
+			Fandom: []ProfileTag{
 				{ID: "t1", Category: "fandom", Name: "Star Wars", Slug: "fandom__star_wars"},
 			},
 		}
@@ -60,8 +60,8 @@ func TestProfileNewFields(t *testing.T) {
 		json.Unmarshal(w.Body.Bytes(), &res)
 		assert.Equal(t, 25, *res.Age)
 		assert.True(t, *res.IsOC)
-		assert.Len(t, res.Tags, 1)
-		assert.Equal(t, "Star Wars", res.Tags[0].Name)
+		assert.Len(t, res.Fandom, 1)
+		assert.Equal(t, "Star Wars", res.Fandom[0].Name)
 	})
 
 	t.Run("UpdateProfileWithNewFields", func(t *testing.T) {
@@ -117,7 +117,7 @@ func TestProfileNewFields(t *testing.T) {
 
 		body := ProfileCreate{
 			DisplayName: "Hero",
-			Tags: []ProfileTag{
+			Gender: []ProfileTag{
 				{ID: "t1", Category: "gender", Name: "Male", Slug: "gender__male"},
 			},
 		}
@@ -131,16 +131,17 @@ func TestProfileNewFields(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 		var res ProfileOut
 		json.Unmarshal(w.Body.Bytes(), &res)
-		assert.Equal(t, "Male", *res.Gender)
+		assert.Len(t, res.Gender, 1)
+		assert.Equal(t, "Male", res.Gender[0].Name)
 		
 		// Verify Firestore data sync
 		profDoc, _ := mock.Collection(COLLECTION).Doc(res.ProfileID).Get(context.Background())
 		genderVal := profDoc.Data()["gender"]
-		if ptr, ok := genderVal.(*string); ok {
-			assert.Equal(t, "Male", *ptr)
-		} else {
-			assert.Equal(t, "Male", genderVal)
-		}
+		gSlice, ok := genderVal.([]interface{})
+		assert.True(t, ok)
+		assert.Len(t, gSlice, 1)
+		gMap := gSlice[0].(map[string]interface{})
+		assert.Equal(t, "Male", gMap["name"])
 	})
 
 	t.Run("CreateProfile_SingleSelectViolation_Returns400", func(t *testing.T) {
@@ -154,7 +155,7 @@ func TestProfileNewFields(t *testing.T) {
 
 		body := ProfileCreate{
 			DisplayName: "Hero",
-			Tags: []ProfileTag{
+			Gender: []ProfileTag{
 				{ID: "t1", Category: "gender", Name: "Male", Slug: "gender__male"},
 				{ID: "t2", Category: "gender", Name: "Female", Slug: "gender__female"},
 			},
