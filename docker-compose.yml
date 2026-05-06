@@ -236,6 +236,31 @@ services:
     networks:
       - default
 
+  router:
+    build:
+      context: ./services/router/router_go
+    ports:
+      - "8010:8010"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PORT=8010
+      - FIRESTORE_DATABASE_ID=router-dev
+    env_file: ./services/router/router_go/.env
+    volumes:
+      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/router/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 
 networks:
   default:

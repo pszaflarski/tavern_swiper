@@ -133,6 +133,23 @@ A local read-cache of match data populated by the `messages_subscriber` via Pub/
 
 ---
 
+## 🗺️ Router Service
+**Database ID**: `router`
+
+### Collection: `service_routes`
+Stores Cloud Run URLs for all services, keyed by service name and environment/version tags.
+Document ID format: `{service}_{tag}` (e.g., `auth_default`, `profiles_preview`).
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `service` | `string` | Service name (e.g., `auth`, `profiles`). |
+| `tag` | `string` | Version/environment tag (e.g., `default`, `preview`). |
+| `url` | `string` | The full Cloud Run URL for this service. |
+| `created_at` | `timestamp` | Server-side timestamp of creation. |
+| `updated_at` | `timestamp` | Server-side timestamp of last modification. |
+
+---
+
 ## ⚙️ Firestore Index Requirements
 
 Firestore requires **Composite Indexes** for any query that combines multiple fields in `where()` and `order_by()`, or uses specific operators like `array-contains` with ordering.
