@@ -23,7 +23,7 @@ async def create_profile(auth_client):
         resp = await auth_client.post(
             f"{PROFILES_URL}/profiles/",
             headers={"Authorization": f"Bearer {token}"},
-            json={"display_name": name, "tagline": "Test Profile", "gender": "Other"}
+            json={"display_name": name, "tagline": "Test Profile", "gender": []}
         )
         assert resp.status_code == 201
         return resp.json()["profile_id"]
@@ -72,7 +72,7 @@ async def test_match_cache_propagation():
             p_resp = await client.post(
                 f"{PROFILES_URL}/profiles/",
                 headers={"Authorization": f"Bearer {token}"},
-                json={"display_name": f"User-{i}", "tagline": "Tester", "gender": "Other"}
+                json={"display_name": f"User-{i}", "tagline": "Tester", "gender": []}
             )
             assert p_resp.status_code == 201
             profile_id = p_resp.json()["profile_id"]

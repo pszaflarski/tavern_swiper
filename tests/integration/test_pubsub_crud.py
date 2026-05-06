@@ -84,7 +84,7 @@ async def test_pubsub_cache_lifecycle(auth_user):
         create_resp = await client.post(
             f"{PROFILES_URL}/profiles/",
             headers=headers,
-            json={"display_name": initial_name, "tagline": "Pub/Sub Test", "gender": "Other"}
+            json={"display_name": initial_name, "tagline": "Pub/Sub Test", "gender": []}
         )
         assert create_resp.status_code == 201
         profile_id = create_resp.json()["profile_id"]
@@ -138,7 +138,7 @@ async def test_active_profile_switch_propagation(auth_user):
         resp_a = await client.post(
             f"{PROFILES_URL}/profiles/",
             headers=headers,
-            json={"display_name": name_a, "tagline": "Test A", "gender": "Other"}
+            json={"display_name": name_a, "tagline": "Test A", "gender": []}
         )
         assert resp_a.status_code == 201
         id_a = resp_a.json()["profile_id"]
@@ -152,7 +152,7 @@ async def test_active_profile_switch_propagation(auth_user):
         resp_b = await client.post(
             f"{PROFILES_URL}/profiles/",
             headers=headers,
-            json={"display_name": name_b, "tagline": "Test B", "gender": "Other"}
+            json={"display_name": name_b, "tagline": "Test B", "gender": []}
         )
         assert resp_b.status_code == 201
         id_b = resp_b.json()["profile_id"]

@@ -115,7 +115,7 @@ async def create_profile(client: httpx.AsyncClient, token: str, display_name: st
         json={
             "display_name": display_name,
             "bio": f"Profile for {display_name}",
-            "gender": "Other"
+            "gender": []
         }
     )
     assert resp.status_code == 201, f"Profile creation failed: {resp.text}"

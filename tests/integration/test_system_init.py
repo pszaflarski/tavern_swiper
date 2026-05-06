@@ -51,7 +51,7 @@ async def test_root_initialization_flow(auth_token):
                 "display_name": "Archmage Root",
                 "tagline": "Guardian of the Tavern",
                 "bio": "The first soul to manifest in this realm.",
-                "gender": "Other"
+                "gender": []
             }
         )
         assert profile_resp.status_code == 201, f"Profile creation failed: {profile_resp.text}"
@@ -102,7 +102,7 @@ async def test_user_self_registration_flow():
             json={
                 "display_name": "New Adventurer",
                 "bio": "A fresh recruit from the woods.",
-                "gender": "Man"
+                "gender": []
             }
         )
         assert profile_resp.status_code == 201
