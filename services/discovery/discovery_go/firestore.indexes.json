@@ -44,6 +44,14 @@
       ]
     },
     {
+      "collectionGroup": "profiles_profiles_cache",
+      "fieldPath": "profile_id",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
       "collectionGroup": "matches",
       "fieldPath": "profiles",
       "indexes": [
