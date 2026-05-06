@@ -65,6 +65,8 @@ func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent
 }
 
 func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) {
+	// TODO(audit#10): age, is_oc, and tags are not published yet.
+	// Requires protobuf schema update and discovery_subscriber changes.
 	event := &pb.ProfileEvent{
 		Type: pb.ProfileEvent_UPSERTED,
 		Event: &pb.ProfileEvent_Upserted{

@@ -36,11 +36,30 @@ func (c *mockClient) DeleteCollection(ctx context.Context, col CollectionRef, ba
 	return nil
 }
 
+func (c *mockClient) GetAll(ctx context.Context, refs []DocumentRef) ([]DocumentSnapshot, error) {
+	res := make([]DocumentSnapshot, len(refs))
+	for i, ref := range refs {
+		snap, err := ref.Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+		res[i] = snap
+	}
+	return res, nil
+}
+
 type mockCollection struct {
 	CollectionRef
 	path      string
 	docs      map[string]*mockDoc
 	queryRes  []*mockSnap
+	Filters   []filter // Recorded filters for verification
+}
+
+type filter struct {
+	Path  string
+	Op    string
+	Value interface{}
 }
 
 func (c *mockCollection) Doc(path string) DocumentRef {
@@ -56,6 +75,7 @@ func (c *mockCollection) Doc(path string) DocumentRef {
 }
 
 func (c *mockCollection) Where(path, op string, value interface{}) Query {
+	c.Filters = append(c.Filters, filter{Path: path, Op: op, Value: value})
 	return &mockQuery{col: c}
 }
 
@@ -163,7 +183,10 @@ type mockQuery struct {
 }
 
 func (q *mockQuery) Limit(n int) Query { return q }
-func (q *mockQuery) Where(path, op string, value interface{}) Query { return q }
+func (q *mockQuery) Where(path, op string, value interface{}) Query {
+	q.col.Filters = append(q.col.Filters, filter{Path: path, Op: op, Value: value})
+	return q
+}
 func (q *mockQuery) OrderBy(path string, dir firestore.Direction) Query { return q }
 func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 	return q.col.Documents(ctx)

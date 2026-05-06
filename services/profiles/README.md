@@ -23,6 +23,23 @@ Full profile lifecycle management including creation, updates, image uploads wit
   - `GET /profiles/all` — List all profiles (Admin+ only)
   - `DELETE /profiles/` — Purge all profiles (Root Admin only)
 
+### `tags` — Filtering Attributes
+The tags system allows for granular categorization of profiles.
+
+- **Base path**: `/profiles/tags`
+- **Endpoints**:
+  - `GET /:id` — Get tag by ID
+  - `GET /slug/:slug` — Get tag by unique slug
+  - `GET /category/:category` — List all tags in a category
+  - `POST /search` — Case-insensitive prefix search (for autocomplete)
+  - `POST /validate` — Cross-service existence check for tag combinations
+  - `POST /` — Create a new tag (Admin+ only)
+  - `PUT /:id` — Update a tag (Admin+ only)
+  - `DELETE /:id` — Delete a tag (Admin+ only)
+  - `POST /suggest` — Submit a user suggestion for a new tag
+  - `GET /suggestions` — List all suggestions (Admin+ only)
+  - `DELETE /suggestions/:id` — Reject/Delete a suggestion (Admin+ only)
+
 ## Event Publishing
 The Profiles service publishes Protobuf-serialized events to Pub/Sub on every profile mutation:
 - **`UPSERTED`** — Profile created, updated, activated, deactivated, or image added

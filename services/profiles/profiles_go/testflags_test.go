@@ -10,15 +10,6 @@ var useRealDB = flag.Bool("real-db", false, "Use real Firestore database instead
 var gcpProject = flag.String("project", "tavern-swiper-dev", "GCP project for real DB tests")
 var firestoreDB = flag.String("db-id", "profiles-dev", "Firestore database ID for real DB tests")
 
-// skipIfRealDB skips the current test when running against a real Firestore database.
-// Use this for tests that depend on mock internals (pre-seeded data, error injection, etc.)
-func skipIfRealDB(t *testing.T) {
-	t.Helper()
-	if *useRealDB {
-		t.Skip("Skipping mock-only test (run without -real-db)")
-	}
-}
-
 // setupRealDBEnv sets environment variables needed by getDBInternal when using -real-db.
 func setupRealDBEnv(t *testing.T) {
 	t.Helper()

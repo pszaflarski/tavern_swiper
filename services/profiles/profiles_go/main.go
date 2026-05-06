@@ -66,6 +66,25 @@ func main() {
 		p.DELETE("/:id", func(c *gin.Context) { handleDeleteProfile(c, publisher) })
 		p.POST("/:id/image", func(c *gin.Context) { handleUploadProfileImage(c, publisher) })
 		p.DELETE("/", func(c *gin.Context) { handleDeleteAllProfiles(c, publisher) })
+
+		// Tags Group
+		t := p.Group("/tags")
+		{
+			// Concrete paths first to avoid :id wildcard conflict
+			t.POST("/search", handleSearchTags)
+			t.POST("/validate", handleValidateTags)
+			t.POST("/suggest", handleSuggestTag)
+			t.GET("/suggestions", handleListTagSuggestions)
+			t.DELETE("/suggestions/:id", handleDeleteTagSuggestion)
+			t.GET("/by-slug/:slug", handleGetTagBySlug)
+			t.GET("/by-category/:category", handleListTagsByCategory)
+
+			// Admin/CRUD with wildcards last
+			t.POST("/", handleCreateTag)
+			t.GET("/:id", handleGetTag)
+			t.PUT("/:id", handleUpdateTag)
+			t.DELETE("/:id", handleDeleteTag)
+		}
 	}
 
 	log.Printf("[INFO] Profiles Go Service starting on port %s", port)

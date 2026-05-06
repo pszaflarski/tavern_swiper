@@ -26,6 +26,7 @@ This project follows a "Shared Nothing" microservice architecture. Each service 
 - **5 Core Services**: Auth, Profiles, Discovery, Messages, Users — all Go/Gin.
 - **2 Event Workers**: `discovery_subscriber`, `messages_subscriber` — maintain local caches via Pub/Sub.
 - **Event-Driven**: Profile updates and match events propagate via **Google Cloud Pub/Sub** with **Protobuf** serialization.
+- **Granular Tagging**: A centralized `tags` collection supports filterable attributes (Race, Fandom, Interests) with case-insensitive search and denormalized storage on profiles.
 - **Database Isolation**: 10 distinct Firestore databases (5 for `dev`, 5 for `test`).
 - **Truly Keyless**: Local development and Cloud Run deployments use **IAM Impersonation** instead of static service account keys.
 

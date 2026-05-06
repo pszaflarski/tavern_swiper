@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 func setupTest(publisher Publisher) *gin.Engine {
@@ -32,26 +30,28 @@ func setupTest(publisher Publisher) *gin.Engine {
 		p.DELETE("/:id", func(c *gin.Context) { handleDeleteProfile(c, publisher) })
 		p.POST("/:id/image", func(c *gin.Context) { handleUploadProfileImage(c, publisher) })
 		p.DELETE("/", func(c *gin.Context) { handleDeleteAllProfiles(c, publisher) })
+
+		// Tags Group
+		t := p.Group("/tags")
+		{
+			// Concrete paths first to avoid :id wildcard conflict
+			t.POST("/search", handleSearchTags)
+			t.POST("/validate", handleValidateTags)
+			t.POST("/suggest", handleSuggestTag)
+			t.GET("/suggestions", handleListTagSuggestions)
+			t.DELETE("/suggestions/:id", handleDeleteTagSuggestion)
+			t.GET("/by-slug/:slug", handleGetTagBySlug)
+			t.GET("/by-category/:category", handleListTagsByCategory)
+
+			// Admin/CRUD with wildcards last
+			t.POST("/", handleCreateTag)
+			t.GET("/:id", handleGetTag)
+			t.PUT("/:id", handleUpdateTag)
+			t.DELETE("/:id", handleDeleteTag)
+		}
 	}
 
 	return r
-}
-
-func signGoTestToken(uid string, role string) string {
-	now := time.Date(2026, 4, 17, 10, 0, 0, 0, time.UTC)
-	return signGoTestTokenWithTimes(uid, role, now, now.Add(30*time.Minute))
-}
-
-func signGoTestTokenWithTimes(uid string, role string, iat time.Time, exp time.Time) string {
-	claims := jwt.MapClaims{
-		"sub":  uid,
-		"role": role,
-		"iat":  iat.Unix(),
-		"exp":  exp.Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	s, _ := token.SignedString(jwtSecret)
-	return s
 }
 
 type mockPublisher struct {

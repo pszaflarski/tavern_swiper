@@ -70,7 +70,67 @@ func (x ProfileEvent_EventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProfileEvent_EventType.Descriptor instead.
 func (ProfileEvent_EventType) EnumDescriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{3, 0}
+	return file_profile_events_proto_rawDescGZIP(), []int{4, 0}
+}
+
+type ProfileTag struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Slug          string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProfileTag) Reset() {
+	*x = ProfileTag{}
+	mi := &file_profile_events_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProfileTag) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProfileTag) ProtoMessage() {}
+
+func (x *ProfileTag) ProtoReflect() protoreflect.Message {
+	mi := &file_profile_events_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProfileTag.ProtoReflect.Descriptor instead.
+func (*ProfileTag) Descriptor() ([]byte, []int) {
+	return file_profile_events_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ProfileTag) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ProfileTag) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ProfileTag) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
 }
 
 type ProfileUpserted struct {
@@ -81,15 +141,21 @@ type ProfileUpserted struct {
 	Tagline       *string                `protobuf:"bytes,4,opt,name=tagline,proto3,oneof" json:"tagline,omitempty"`
 	Bio           *string                `protobuf:"bytes,5,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
 	ImageUrls     []string               `protobuf:"bytes,6,rep,name=image_urls,json=imageUrls,proto3" json:"image_urls,omitempty"`
-	Gender        *string                `protobuf:"bytes,7,opt,name=gender,proto3,oneof" json:"gender,omitempty"`
-	IsActive      bool                   `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	Age           *int32                 `protobuf:"varint,8,opt,name=age,proto3,oneof" json:"age,omitempty"`
+	IsOc          *bool                  `protobuf:"varint,9,opt,name=is_oc,json=isOc,proto3,oneof" json:"is_oc,omitempty"`
+	Gender        []*ProfileTag          `protobuf:"bytes,10,rep,name=gender,proto3" json:"gender,omitempty"`
+	Race          []*ProfileTag          `protobuf:"bytes,11,rep,name=race,proto3" json:"race,omitempty"`
+	Fandom        []*ProfileTag          `protobuf:"bytes,12,rep,name=fandom,proto3" json:"fandom,omitempty"`
+	Interests     []*ProfileTag          `protobuf:"bytes,13,rep,name=interests,proto3" json:"interests,omitempty"`
+	Events        []*ProfileTag          `protobuf:"bytes,14,rep,name=events,proto3" json:"events,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ProfileUpserted) Reset() {
 	*x = ProfileUpserted{}
-	mi := &file_profile_events_proto_msgTypes[0]
+	mi := &file_profile_events_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -101,7 +167,7 @@ func (x *ProfileUpserted) String() string {
 func (*ProfileUpserted) ProtoMessage() {}
 
 func (x *ProfileUpserted) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[0]
+	mi := &file_profile_events_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -114,7 +180,7 @@ func (x *ProfileUpserted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileUpserted.ProtoReflect.Descriptor instead.
 func (*ProfileUpserted) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{0}
+	return file_profile_events_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ProfileUpserted) GetProfileId() string {
@@ -159,18 +225,60 @@ func (x *ProfileUpserted) GetImageUrls() []string {
 	return nil
 }
 
-func (x *ProfileUpserted) GetGender() string {
-	if x != nil && x.Gender != nil {
-		return *x.Gender
-	}
-	return ""
-}
-
 func (x *ProfileUpserted) GetIsActive() bool {
 	if x != nil {
 		return x.IsActive
 	}
 	return false
+}
+
+func (x *ProfileUpserted) GetAge() int32 {
+	if x != nil && x.Age != nil {
+		return *x.Age
+	}
+	return 0
+}
+
+func (x *ProfileUpserted) GetIsOc() bool {
+	if x != nil && x.IsOc != nil {
+		return *x.IsOc
+	}
+	return false
+}
+
+func (x *ProfileUpserted) GetGender() []*ProfileTag {
+	if x != nil {
+		return x.Gender
+	}
+	return nil
+}
+
+func (x *ProfileUpserted) GetRace() []*ProfileTag {
+	if x != nil {
+		return x.Race
+	}
+	return nil
+}
+
+func (x *ProfileUpserted) GetFandom() []*ProfileTag {
+	if x != nil {
+		return x.Fandom
+	}
+	return nil
+}
+
+func (x *ProfileUpserted) GetInterests() []*ProfileTag {
+	if x != nil {
+		return x.Interests
+	}
+	return nil
+}
+
+func (x *ProfileUpserted) GetEvents() []*ProfileTag {
+	if x != nil {
+		return x.Events
+	}
+	return nil
 }
 
 type ProfileDeleted struct {
@@ -182,7 +290,7 @@ type ProfileDeleted struct {
 
 func (x *ProfileDeleted) Reset() {
 	*x = ProfileDeleted{}
-	mi := &file_profile_events_proto_msgTypes[1]
+	mi := &file_profile_events_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -194,7 +302,7 @@ func (x *ProfileDeleted) String() string {
 func (*ProfileDeleted) ProtoMessage() {}
 
 func (x *ProfileDeleted) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[1]
+	mi := &file_profile_events_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -207,7 +315,7 @@ func (x *ProfileDeleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileDeleted.ProtoReflect.Descriptor instead.
 func (*ProfileDeleted) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{1}
+	return file_profile_events_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ProfileDeleted) GetProfileId() string {
@@ -227,7 +335,7 @@ type AllProfilesDeleted struct {
 
 func (x *AllProfilesDeleted) Reset() {
 	*x = AllProfilesDeleted{}
-	mi := &file_profile_events_proto_msgTypes[2]
+	mi := &file_profile_events_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -239,7 +347,7 @@ func (x *AllProfilesDeleted) String() string {
 func (*AllProfilesDeleted) ProtoMessage() {}
 
 func (x *AllProfilesDeleted) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[2]
+	mi := &file_profile_events_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -252,7 +360,7 @@ func (x *AllProfilesDeleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllProfilesDeleted.ProtoReflect.Descriptor instead.
 func (*AllProfilesDeleted) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{2}
+	return file_profile_events_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AllProfilesDeleted) GetAdminUserId() string {
@@ -284,7 +392,7 @@ type ProfileEvent struct {
 
 func (x *ProfileEvent) Reset() {
 	*x = ProfileEvent{}
-	mi := &file_profile_events_proto_msgTypes[3]
+	mi := &file_profile_events_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -296,7 +404,7 @@ func (x *ProfileEvent) String() string {
 func (*ProfileEvent) ProtoMessage() {}
 
 func (x *ProfileEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[3]
+	mi := &file_profile_events_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -309,7 +417,7 @@ func (x *ProfileEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileEvent.ProtoReflect.Descriptor instead.
 func (*ProfileEvent) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{3}
+	return file_profile_events_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ProfileEvent) GetType() ProfileEvent_EventType {
@@ -379,7 +487,12 @@ var File_profile_events_proto protoreflect.FileDescriptor
 
 const file_profile_events_proto_rawDesc = "" +
 	"\n" +
-	"\x14profile_events.proto\x12\aprofile\"\x9a\x02\n" +
+	"\x14profile_events.proto\x12\aprofile\"D\n" +
+	"\n" +
+	"ProfileTag\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04slug\x18\x03 \x01(\tR\x04slug\"\x98\x04\n" +
 	"\x0fProfileUpserted\x12\x1d\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\x12\x17\n" +
@@ -389,12 +502,20 @@ const file_profile_events_proto_rawDesc = "" +
 	"\x03bio\x18\x05 \x01(\tH\x01R\x03bio\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"image_urls\x18\x06 \x03(\tR\timageUrls\x12\x1b\n" +
-	"\x06gender\x18\a \x01(\tH\x02R\x06gender\x88\x01\x01\x12\x1b\n" +
-	"\tis_active\x18\b \x01(\bR\bisActiveB\n" +
+	"\tis_active\x18\a \x01(\bR\bisActive\x12\x15\n" +
+	"\x03age\x18\b \x01(\x05H\x02R\x03age\x88\x01\x01\x12\x18\n" +
+	"\x05is_oc\x18\t \x01(\bH\x03R\x04isOc\x88\x01\x01\x12+\n" +
+	"\x06gender\x18\n" +
+	" \x03(\v2\x13.profile.ProfileTagR\x06gender\x12'\n" +
+	"\x04race\x18\v \x03(\v2\x13.profile.ProfileTagR\x04race\x12+\n" +
+	"\x06fandom\x18\f \x03(\v2\x13.profile.ProfileTagR\x06fandom\x121\n" +
+	"\tinterests\x18\r \x03(\v2\x13.profile.ProfileTagR\tinterests\x12+\n" +
+	"\x06events\x18\x0e \x03(\v2\x13.profile.ProfileTagR\x06eventsB\n" +
 	"\n" +
 	"\b_taglineB\x06\n" +
-	"\x04_bioB\t\n" +
-	"\a_gender\"/\n" +
+	"\x04_bioB\x06\n" +
+	"\x04_ageB\b\n" +
+	"\x06_is_oc\"/\n" +
 	"\x0eProfileDeleted\x12\x1d\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\"V\n" +
@@ -427,24 +548,30 @@ func file_profile_events_proto_rawDescGZIP() []byte {
 }
 
 var file_profile_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_profile_events_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_profile_events_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_profile_events_proto_goTypes = []any{
 	(ProfileEvent_EventType)(0), // 0: profile.ProfileEvent.EventType
-	(*ProfileUpserted)(nil),     // 1: profile.ProfileUpserted
-	(*ProfileDeleted)(nil),      // 2: profile.ProfileDeleted
-	(*AllProfilesDeleted)(nil),  // 3: profile.AllProfilesDeleted
-	(*ProfileEvent)(nil),        // 4: profile.ProfileEvent
+	(*ProfileTag)(nil),          // 1: profile.ProfileTag
+	(*ProfileUpserted)(nil),     // 2: profile.ProfileUpserted
+	(*ProfileDeleted)(nil),      // 3: profile.ProfileDeleted
+	(*AllProfilesDeleted)(nil),  // 4: profile.AllProfilesDeleted
+	(*ProfileEvent)(nil),        // 5: profile.ProfileEvent
 }
 var file_profile_events_proto_depIdxs = []int32{
-	0, // 0: profile.ProfileEvent.type:type_name -> profile.ProfileEvent.EventType
-	1, // 1: profile.ProfileEvent.upserted:type_name -> profile.ProfileUpserted
-	2, // 2: profile.ProfileEvent.deleted:type_name -> profile.ProfileDeleted
-	3, // 3: profile.ProfileEvent.all_deleted:type_name -> profile.AllProfilesDeleted
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	1, // 0: profile.ProfileUpserted.gender:type_name -> profile.ProfileTag
+	1, // 1: profile.ProfileUpserted.race:type_name -> profile.ProfileTag
+	1, // 2: profile.ProfileUpserted.fandom:type_name -> profile.ProfileTag
+	1, // 3: profile.ProfileUpserted.interests:type_name -> profile.ProfileTag
+	1, // 4: profile.ProfileUpserted.events:type_name -> profile.ProfileTag
+	0, // 5: profile.ProfileEvent.type:type_name -> profile.ProfileEvent.EventType
+	2, // 6: profile.ProfileEvent.upserted:type_name -> profile.ProfileUpserted
+	3, // 7: profile.ProfileEvent.deleted:type_name -> profile.ProfileDeleted
+	4, // 8: profile.ProfileEvent.all_deleted:type_name -> profile.AllProfilesDeleted
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_profile_events_proto_init() }
@@ -452,8 +579,8 @@ func file_profile_events_proto_init() {
 	if File_profile_events_proto != nil {
 		return
 	}
-	file_profile_events_proto_msgTypes[0].OneofWrappers = []any{}
-	file_profile_events_proto_msgTypes[3].OneofWrappers = []any{
+	file_profile_events_proto_msgTypes[1].OneofWrappers = []any{}
+	file_profile_events_proto_msgTypes[4].OneofWrappers = []any{
 		(*ProfileEvent_Upserted)(nil),
 		(*ProfileEvent_Deleted)(nil),
 		(*ProfileEvent_AllDeleted)(nil),
@@ -464,7 +591,7 @@ func file_profile_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_profile_events_proto_rawDesc), len(file_profile_events_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

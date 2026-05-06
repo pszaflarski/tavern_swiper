@@ -89,7 +89,7 @@ func TestProfileTimestamps(t *testing.T) {
 		}
 		
 		payload := ProfileUpdate{
-			DisplayName: strPtr("New Name"),
+			DisplayName: ptrStr("New Name"),
 		}
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest("PUT", "/profiles/"+profileID, bytes.NewBuffer(body))
@@ -116,8 +116,4 @@ func TestProfileTimestamps(t *testing.T) {
 			assert.WithinDuration(t, fixedNow, *resp.UpdatedAt, time.Second)
 		}
 	})
-}
-
-func strPtr(s string) *string {
-	return &s
 }

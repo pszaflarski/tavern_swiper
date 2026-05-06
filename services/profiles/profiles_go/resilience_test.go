@@ -13,21 +13,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
 )
-
-func localSignToken(uid, role string, now time.Time) string {
-	claims := jwt.MapClaims{
-		"sub":  uid,
-		"role": role,
-		"iat":  now.Unix(),
-		"exp":  now.Add(30 * time.Minute).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	s, _ := token.SignedString(jwtSecret)
-	return s
-}
 
 func TestDocToProfileSafety(t *testing.T) {
 	skipIfRealDB(t)
@@ -85,7 +71,7 @@ func TestProfilesResilience_UploadImage(t *testing.T) {
 		}, nil
 	}
 
-	token := localSignToken("u1", "user", fixedNow)
+	token := signGoTestTokenWithTimes("u1", "user", fixedNow, fixedNow.Add(30*time.Minute))
 	imgData := createTestJPEG(1080, 1350)
 
 	body := &bytes.Buffer{}
@@ -112,7 +98,7 @@ func TestProfilesResilience_UploadImage(t *testing.T) {
 	part3.Write(imgDataSmall)
 	writer3.Close()
 
-	adminToken := localSignToken("admin1", "admin", fixedNow)
+	adminToken := signGoTestTokenWithTimes("admin1", "admin", fixedNow, fixedNow.Add(30*time.Minute))
 	req3, _ := http.NewRequest("POST", "/profiles/p1/image", body3)
 	req3.Header.Set("Content-Type", writer3.FormDataContentType())
 	req3.Header.Set("Authorization", "Bearer "+adminToken)
@@ -134,7 +120,7 @@ func TestProfilesResilience_CreateProfileValidation(t *testing.T) {
 
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
-	token := localSignToken("u1", "user", fixedNow)
+	token := signGoTestTokenWithTimes("u1", "user", fixedNow, fixedNow.Add(30*time.Minute))
 
 	longBio := ""
 	for i := 0; i < 16000; i++ {
@@ -165,7 +151,7 @@ func TestProfilesResilience_ActiveProfileFlow(t *testing.T) {
 
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
-	token := localSignToken("u1", "user", fixedNow)
+	token := signGoTestTokenWithTimes("u1", "user", fixedNow, fixedNow.Add(30*time.Minute))
 
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		mockP1 := &mockSnap{
@@ -206,7 +192,7 @@ func TestListMyProfiles(t *testing.T) {
 
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
-	token := localSignToken("u1", "user", fixedNow)
+	token := signGoTestTokenWithTimes("u1", "user", fixedNow, fixedNow.Add(30*time.Minute))
 
 	p1 := &mockSnap{
 		id:     "p1",
@@ -328,7 +314,7 @@ func TestListProfilesForUser_Authorization(t *testing.T) {
 	}
 
 	// 1. Success: User accessing own profiles
-	tokenOwner := localSignToken("u1", "user", fixedNow)
+	tokenOwner := signGoTestTokenWithTimes("u1", "user", fixedNow, fixedNow.Add(30*time.Minute))
 	req1, _ := http.NewRequest("GET", "/profiles/user/u1", nil)
 	req1.Header.Set("Authorization", "Bearer "+tokenOwner)
 	w1 := httptest.NewRecorder()
@@ -338,7 +324,7 @@ func TestListProfilesForUser_Authorization(t *testing.T) {
 	}
 
 	// 2. Failure: User accessing others' profiles
-	tokenOther := localSignToken("u2", "user", fixedNow)
+	tokenOther := signGoTestTokenWithTimes("u2", "user", fixedNow, fixedNow.Add(30*time.Minute))
 	req2, _ := http.NewRequest("GET", "/profiles/user/u1", nil)
 	req2.Header.Set("Authorization", "Bearer "+tokenOther)
 	w2 := httptest.NewRecorder()
@@ -348,7 +334,7 @@ func TestListProfilesForUser_Authorization(t *testing.T) {
 	}
 
 	// 3. Success: Admin accessing others' profiles
-	tokenAdmin := localSignToken("admin1", "admin", fixedNow)
+	tokenAdmin := signGoTestTokenWithTimes("admin1", "admin", fixedNow, fixedNow.Add(30*time.Minute))
 	req3, _ := http.NewRequest("GET", "/profiles/user/u1", nil)
 	req3.Header.Set("Authorization", "Bearer "+tokenAdmin)
 	w3 := httptest.NewRecorder()

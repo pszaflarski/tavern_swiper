@@ -114,7 +114,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 
 	// Validation Ritual: Firestore Limits
 	if err := validateDataForFirestore(body); err != nil {
-		sendGenericError(c, http.StatusBadRequest, err.Error())
+		send400(c, err.Error())
 		return
 	}
 
@@ -124,16 +124,31 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		return
 	}
 
+	// Finding #4: Tag validation
+	if err := validateProfileTags(c.Request.Context(), client, body.Tags); err != nil {
+		send400(c, err.Error())
+		return
+	}
+
 	// Logic: Set active and deactivate others
+
+	genderFromTags := extractGenderFromTags(body.Tags)
+	finalGender := body.Gender
+	if finalGender == nil && genderFromTags != "" {
+		finalGender = &genderFromTags
+	}
 
 	data := map[string]interface{}{
 		"user_id":      targetUID,
 		"display_name": body.DisplayName,
 		"tagline":      body.Tagline,
 		"bio":          body.Bio,
-		"gender":       body.Gender,
+		"gender":       finalGender,
 		"image_urls":   body.ImageURLs,
 		"is_active":    true,
+		"age":          body.Age,
+		"is_oc":         body.IsOC,
+		"tags":         tagsToInterface(body.Tags),
 		"created_at":   firestore.ServerTimestamp,
 		"updated_at":   firestore.ServerTimestamp,
 	}
@@ -231,7 +246,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		return ""
 	}
 
-	// Helper for required bools
+	// reqBool returns bool (default false if missing/wrong type)
 	reqBool := func(key string) bool {
 		if val, ok := d[key].(bool); ok {
 			return val
@@ -250,15 +265,90 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		return nil
 	}
 
+	// Helper for optional ints
+	getPtrInt := func(key string) *int {
+		val := d[key]
+		if val == nil {
+			return nil
+		}
+		if i, ok := val.(*int); ok {
+			return i
+		}
+		if i, ok := val.(int); ok {
+			return &i
+		}
+		if i, ok := val.(int64); ok {
+			res := int(i)
+			return &res
+		}
+		return nil
+	}
+
+	// getPtrBool returns *bool (nil if missing/wrong type)
+	getPtrBool := func(key string) *bool {
+		val := d[key]
+		if val == nil {
+			return nil
+		}
+		if b, ok := val.(*bool); ok {
+			return b
+		}
+		if b, ok := val.(bool); ok {
+			return &b
+		}
+		return nil
+	}
+
+	// Helper for tags
+	getTags := func(key string) []ProfileTag {
+		if val, ok := d[key].([]interface{}); ok {
+			res := make([]ProfileTag, 0)
+			for _, v := range val {
+				if m, ok := v.(map[string]interface{}); ok {
+					id, ok1 := m["id"].(string)
+					cat, ok2 := m["category"].(string)
+					name, ok3 := m["name"].(string)
+					slug, ok4 := m["slug"].(string)
+					if !ok1 || !ok2 || !ok3 || !ok4 {
+						continue // skip malformed tag
+					}
+					res = append(res, ProfileTag{
+						ID:       id,
+						Category: cat,
+						Name:     name,
+						Slug:     slug,
+					})
+				}
+			}
+			return res
+		}
+		return []ProfileTag{}
+	}
+
+	tags := getTags("tags")
+	gender := getStr("gender")
+	// Backward compat: derive gender from tags if not present
+	if gender == nil {
+		for _, t := range tags {
+			if t.Category == "gender" {
+				gender = &t.Name
+				break
+			}
+		}
+	}
+
 	return ProfileOut{
 		ProfileID:   doc.ID(),
 		UserID:      reqStr("user_id"),
 		DisplayName: reqStr("display_name"),
 		Tagline:     getStr("tagline"),
 		Bio:         getStr("bio"),
-		Gender:      getStr("gender"),
+		Gender:      gender,
 		ImageURLs:   getURLs("image_urls"),
 		IsActive:    reqBool("is_active"),
+		Age:         getPtrInt("age"),
+		IsOC:        getPtrBool("is_oc"),
+		Tags:        tags,
 		CreatedAt:   getTimestamp("created_at"),
 		UpdatedAt:   getTimestamp("updated_at"),
 	}, nil
@@ -428,6 +518,24 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	}
 	if body.IsActive != nil {
 		updates = append(updates, firestore.Update{Path: "is_active", Value: *body.IsActive})
+	}
+	if body.Age != nil {
+		updates = append(updates, firestore.Update{Path: "age", Value: *body.Age})
+	}
+	if body.IsOC != nil {
+		updates = append(updates, firestore.Update{Path: "is_oc", Value: *body.IsOC})
+	}
+	if body.Tags != nil {
+		if err := validateProfileTags(c.Request.Context(), client, *body.Tags); err != nil {
+			send400(c, err.Error())
+			return
+		}
+		updates = append(updates, firestore.Update{Path: "tags", Value: tagsToInterface(*body.Tags)})
+		// Finding #8: Sync gender if tag updated
+		genderFromTags := extractGenderFromTags(*body.Tags)
+		if genderFromTags != "" && body.Gender == nil {
+			updates = append(updates, firestore.Update{Path: "gender", Value: genderFromTags})
+		}
 	}
 
 	if len(updates) > 0 {
@@ -840,4 +948,29 @@ func validateDataForFirestore(v interface{}) error {
 		}
 	}
 	return nil
+}
+
+func tagsToInterface(tags []ProfileTag) []interface{} {
+	if tags == nil {
+		return []interface{}{}
+	}
+	res := make([]interface{}, len(tags))
+	for i, t := range tags {
+		res[i] = map[string]interface{}{
+			"id":       t.ID,
+			"category": t.Category,
+			"name":     t.Name,
+			"slug":     t.Slug,
+		}
+	}
+	return res
+}
+
+func extractGenderFromTags(tags []ProfileTag) string {
+	for _, t := range tags {
+		if t.Category == "gender" {
+			return t.Name
+		}
+	}
+	return ""
 }

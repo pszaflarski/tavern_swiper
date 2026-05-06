@@ -13,10 +13,38 @@ This document outlines the Firestore collection schemas and data types used acro
 | `tagline` | `string` (optional) | Catchy hero phrase. |
 | `bio` | `string` (optional) | Detailed hero backstory. |
 | `image_urls` | `array<string>` | GCS URLs for portraits. |
-| `gender` | `string` (optional) | Hero gender. |
+| `gender` | `string` (optional) | Hero gender (legacy/cached). |
+| `age` | `number` (optional) | Hero age. |
+| `is_oc` | `boolean` (optional) | True if Original Character, False if existing IP. |
+| `tags` | `array<object>` | Denormalized tags: `[{id, category, name, slug}]`. |
 | `is_active` | `boolean` | Whether this is the user's primary identity. |
 | `created_at` | `timestamp` | Server-side timestamp set on creation. |
 | `updated_at` | `timestamp` | Server-side timestamp updated on every change. |
+
+### Collection: `tags`
+Source of truth for filterable attributes (gender, race, fandom, etc.).
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `string` | Tag UUID. |
+| `category` | `string` | The attribute type (e.g., `"fandom"`, `"race"`). |
+| `name` | `string` | Human-readable name (e.g., `"Baldur's Gate 3"`). |
+| `name_lower` | `string` | Lowercase name for prefix search. |
+| `slug` | `string` | Unique identifier (e.g., `"fandom__bg3"`). |
+| `multi_select` | `boolean` | If true, multiple tags from this category can be selected. |
+| `created_at` | `timestamp` | Server-side timestamp. |
+| `updated_at` | `timestamp` | Server-side timestamp. |
+
+### Collection: `tag_suggestions`
+User-submitted requests for new tags.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `string` | Suggestion UUID. |
+| `category` | `string` | Proposed category. |
+| `name` | `string` | Proposed name. |
+| `user_id` | `string` | UID of the suggester. |
+| `created_at` | `timestamp` | Server-side timestamp. |
 
 ---
 
@@ -115,6 +143,7 @@ If you disable "In-Memory Sorting" in the services, you MUST provision these ind
 | Service | Collection | Fields | Mode | Reason |
 | :--- | :--- | :--- | :--- | :--- |
 | `Discovery` | `matches` | `profiles` (ARRAY), `created_at` (DESC) | Composite | Listing matches for a profile. |
+| `Profiles` | `tags` | `category` (ASC), `name_lower` (ASC) | Composite | Prefix search for tags in a category. |
 
 > [!IMPORTANT]
 > **In-Memory Sorting Workaround**: To ensure immediate stability in fresh environments (like automated integration tests), some services have been configured to perform sorting in the application layer. This bypasses the need for index provisioning but should be reverted to server-side sorting for massive datasets.
