@@ -120,6 +120,6 @@ describe('Profiles Screen', () => {
     const { getByTestId, getByText } = render(<ProfilesScreen />);
 
     expect(getByTestId('empty-state-add-profile-button')).toBeTruthy();
-    expect(getByText('Forge Your First Hero')).toBeTruthy();
+    expect(getByText('Forge Your First Identity')).toBeTruthy();
   });
 });
