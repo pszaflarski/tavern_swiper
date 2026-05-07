@@ -35,7 +35,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		method := c.Request.Method
 
-		isPublic := path == "/router/health" || 
+		isPublic := path == "/" || path == "/router/health" || 
 			(method == http.MethodGet && strings.HasPrefix(path, "/router/services"))
 
 		if isPublic {
