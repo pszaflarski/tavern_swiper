@@ -6,6 +6,7 @@ interface ProfileContextType {
   activeProfileId: string | undefined;
   setActiveProfileId: (id: string) => void;
   isLoadingActiveProfile: boolean;
+  isLoadingProfiles: boolean;
   refetchActiveProfile: () => void;
   refetchProfiles: () => void;
   profiles: Profile[];
@@ -25,7 +26,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   
   // Pre-fetch all profiles for the user as soon as auth is ready.
   // This populates the React Query cache globally and instantly.
-  const { data: profiles = [], isFetching: isFetchingProfiles, refetch: refetchProfiles } = useProfiles(authReady ? uid : undefined);
+  const { data: profiles = [], isLoading: isLoadingProfiles, refetch: refetchProfiles } = useProfiles(authReady ? uid : undefined);
   
   const activateProfileMutation = useActivateProfile(uid);
 
@@ -43,6 +44,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       activeProfileId, 
       setActiveProfileId, 
       isLoadingActiveProfile,
+      isLoadingProfiles,
       refetchActiveProfile,
       refetchProfiles,
       profiles

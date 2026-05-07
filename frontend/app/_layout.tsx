@@ -86,24 +86,35 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useUser();
+  const { profiles, isLoadingProfiles } = useProfileContext();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return;
+    // Wait for auth and the profile list (but NOT the active-profile query,
+    // which retries 404s and would delay routing by ~4.5s for new users).
+    if (isLoading || isLoadingProfiles) return;
 
     const inAuthGroup = segments[0] === 'auth';
 
-    console.log('[RootLayoutNav] Auth state changed:', { isAuthenticated, isLoading, segment: segments[0] });
+    console.log('[RootLayoutNav] Auth state changed:', { isAuthenticated, isLoading, segment: segments[0], profileCount: profiles?.length });
 
     if (!isAuthenticated && !inAuthGroup) {
       console.log('[RootLayoutNav] Redirecting to /auth');
       router.replace('/auth');
     } else if (isAuthenticated && inAuthGroup) {
-      console.log('[RootLayoutNav] Redirecting to /(tabs)');
-      router.replace('/(tabs)');
+      // If user has no profiles, land them on the Profiles tab
+      // so they can forge their first identity immediately.
+      const hasProfiles = profiles && profiles.length > 0;
+      if (hasProfiles) {
+        console.log('[RootLayoutNav] Redirecting to /(tabs)');
+        router.replace('/(tabs)');
+      } else {
+        console.log('[RootLayoutNav] No profiles — redirecting to /(tabs)/profiles');
+        router.replace('/(tabs)/profiles');
+      }
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, isLoadingProfiles, profiles, segments]);
 
   if (isLoading) {
     return (
