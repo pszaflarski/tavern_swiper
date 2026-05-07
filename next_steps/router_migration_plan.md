@@ -6,7 +6,6 @@ This document outlines the strategy for consolidating multiple microservice endp
 - **Consolidation**: Reduce the number of environment variables in the frontend from 5+ URLs to a single `BASE_API_URL`.
 - **Abstraction**: Allow backend service URLs to change or scale without requiring frontend re-builds.
 - **Versioning**: Implement Cloud Run tags (`latest`, `stable`, `v1`, `v2`) to manage traffic and rollouts safely.
-
 ---
 
 ## 2. Phase 1: Implement the Router Service

@@ -24,24 +24,8 @@ echo "🔧 Pushing environment variables to EAS (environment: $ENV)..."
 echo ""
 
 # --- Service URLs ---
-eas env:create --name EXPO_PUBLIC_AUTH_URL \
-  --value "https://auth-dev-hhqol7siba-uc.a.run.app" \
-  --environment "$ENV" --type string --visibility plaintext
-
-eas env:create --name EXPO_PUBLIC_PROFILES_URL \
-  --value "https://profiles-dev-hhqol7siba-uc.a.run.app" \
-  --environment "$ENV" --type string --visibility plaintext
-
-eas env:create --name EXPO_PUBLIC_DISCOVERY_URL \
-  --value "https://discovery-dev-hhqol7siba-uc.a.run.app" \
-  --environment "$ENV" --type string --visibility plaintext
-
-eas env:create --name EXPO_PUBLIC_MESSAGES_URL \
-  --value "https://messages-dev-hhqol7siba-uc.a.run.app" \
-  --environment "$ENV" --type string --visibility plaintext
-
-eas env:create --name EXPO_PUBLIC_USERS_URL \
-  --value "https://users-dev-hhqol7siba-uc.a.run.app" \
+eas env:create --name EXPO_PUBLIC_ROUTER_URL \
+  --value "https://router-dev-hhqol7siba-uc.a.run.app" \
   --environment "$ENV" --type string --visibility plaintext
 
 # --- Firebase Config ---

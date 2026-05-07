@@ -6,14 +6,48 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 /**
  * Service base URLs — configurable via EXPO_PUBLIC_ env vars.
  */
-const BASE_URLS = {
-  auth: process.env.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:8001',
-  profiles: process.env.EXPO_PUBLIC_PROFILES_URL ?? 'http://localhost:8002',
-  discovery: process.env.EXPO_PUBLIC_DISCOVERY_URL ?? 'http://localhost:8003',
-  swipes: process.env.EXPO_PUBLIC_DISCOVERY_URL ?? 'http://localhost:8003',
-  messages: process.env.EXPO_PUBLIC_MESSAGES_URL ?? 'http://localhost:8005',
-  users: process.env.EXPO_PUBLIC_USERS_URL ?? 'http://localhost:8006',
+let BASE_URLS: Record<string, string> = {
+  auth: 'http://localhost:8001',
+  profiles: 'http://localhost:8002',
+  discovery: 'http://localhost:8003',
+  messages: 'http://localhost:8005',
+  users: 'http://localhost:8006',
 };
+
+let hydrationPromise: Promise<void> | null = null;
+let hydrated = false;
+
+export async function hydrateServiceUrls(): Promise<void> {
+  if (hydrated) return;
+  if (hydrationPromise) return hydrationPromise;
+  
+  const routerUrl = process.env.EXPO_PUBLIC_ROUTER_URL ?? '';
+  if (!routerUrl) {
+    console.warn('[Router] No ROUTER_URL set, using localhost fallbacks');
+    hydrated = true;
+    return;
+  }
+
+  hydrationPromise = (async () => {
+    try {
+      const res = await axios.get(`${routerUrl}/router/services`, {
+        timeout: 5000,
+      });
+      const services = res.data?.services ?? {};
+      for (const key of Object.keys(BASE_URLS)) {
+        if (services[key]) {
+          BASE_URLS[key] = services[key];
+        }
+      }
+      hydrated = true;
+    } catch (err) {
+      console.error('[Router] Failed to fetch service URLs, using fallbacks:', err);
+      hydrated = true; 
+    }
+  })();
+
+  return hydrationPromise;
+}
 
 const TAVERN_TOKEN_KEY = 'tavern_jwt_token';
 const TAVERN_TOKEN_EXPIRY = 'tavern_jwt_expiry';
@@ -196,10 +230,16 @@ export async function getTavernToken(): Promise<string | null> {
  * @param baseURL The service base URL
  * @param useTavernToken Whether to use the Tavern JWT (true) or fallback to Firebase (false)
  */
-function createClient(baseURL: string, useTavernToken: boolean = true) {
-  const client = axios.create({ baseURL, timeout: 10_000 });
+function createClient(baseURLKey: keyof typeof BASE_URLS, useTavernToken: boolean = true) {
+  // We don't set baseURL here because it's dynamic
+  const client = axios.create({ timeout: 10_000 });
 
   client.interceptors.request.use(async (config) => {
+    // Ensure URLs are hydrated
+    await hydrateServiceUrls();
+    // Dynamically set the base URL for this request
+    config.baseURL = BASE_URLS[baseURLKey];
+
     // Auth service always expects Firebase ID Token for verification/login
     // Other services expect the Tavern JWT
     const token = useTavernToken ? await getTavernToken() : await getIdToken();
@@ -235,14 +275,14 @@ function createClient(baseURL: string, useTavernToken: boolean = true) {
 }
 
 // Auth API uses Firebase ID Tokens (as it is the issuer of Tavern Tokens)
-export const authApi = createClient(BASE_URLS.auth, false);
+export const authApi = createClient('auth', false);
 
 // Functional APIs use the custom Tavern JWT
-export const profilesApi = createClient(BASE_URLS.profiles, true);
-export const discoveryApi = createClient(BASE_URLS.discovery, true);
-export const swipesApi = createClient(BASE_URLS.swipes, true);
-export const messagesApi = createClient(BASE_URLS.messages, true);
-export const usersApi = createClient(BASE_URLS.users, true);
+export const profilesApi = createClient('profiles', true);
+export const discoveryApi = createClient('discovery', true);
+export const swipesApi = createClient('discovery', true);
+export const messagesApi = createClient('messages', true);
+export const usersApi = createClient('users', true);
 
 /**
  * Internal state check for development and reset for tests.
@@ -250,12 +290,16 @@ export const usersApi = createClient(BASE_URLS.users, true);
 function validateEnvironment() {
   if (process.env.NODE_ENV === 'test') return;
 
+  // If ROUTER_URL is set, URLs will be hydrated at runtime — no need to warn
+  const routerUrl = process.env.EXPO_PUBLIC_ROUTER_URL ?? '';
+  if (routerUrl) return;
+
   const entries = Object.entries(BASE_URLS) as [string, string][];
   const onLocalhost = entries.filter(([, url]) => url.includes('localhost'));
 
   if (onLocalhost.length > 0) {
     console.warn(
-      '⚠️ Some service URLs are using localhost fallbacks (env vars were not set at build time):',
+      '⚠️ Some service URLs are using localhost fallbacks (no EXPO_PUBLIC_ROUTER_URL set):',
       onLocalhost.map(([name]) => name).join(', ')
     );
   }
@@ -272,6 +316,15 @@ export async function __resetInternalState() {
   pendingTokenExchange = null;
   authInitialized = false;
   authInitializedPromise = null;
+  hydrated = false;
+  hydrationPromise = null;
+  BASE_URLS = {
+    auth: 'http://localhost:8001',
+    profiles: 'http://localhost:8002',
+    discovery: 'http://localhost:8003',
+    messages: 'http://localhost:8005',
+    users: 'http://localhost:8006',
+  };
   try {
     await AsyncStorage.clear();
   } catch (e) {

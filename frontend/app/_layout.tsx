@@ -10,6 +10,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { hydrateServiceUrls } from '../lib/api';
 
 export {
   ErrorBoundary,
@@ -51,6 +52,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (error) throw error;
   }, [error]);
+
+  useEffect(() => {
+    // Start hydrating service URLs in the background as soon as the app starts
+    hydrateServiceUrls().catch(e => console.error('[RootLayout] Hydration error:', e));
+  }, []);
 
   useEffect(() => {
     if (loaded) {

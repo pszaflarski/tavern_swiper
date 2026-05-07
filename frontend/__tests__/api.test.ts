@@ -1,6 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getTavernToken, profilesApi, authApi, performGlobalLogout, __resetInternalState } from '../lib/api';
+import { getTavernToken, profilesApi, authApi, performGlobalLogout, __resetInternalState, hydrateServiceUrls } from '../lib/api';
 import { auth } from '../lib/firebase';
 import { router } from 'expo-router';
 
@@ -58,6 +58,8 @@ describe('API Token Management', () => {
       setImmediate(() => callback(auth.currentUser));
       return jest.fn(); // Unsubscribe
     });
+
+    process.env.EXPO_PUBLIC_ROUTER_URL = 'http://test-router.com';
   });
 
   it('getTavernToken should deduplicate multiple simultaneous calls', async () => {
@@ -112,19 +114,44 @@ describe('API Token Management', () => {
   it('should trigger global logout and redirect on 401 response', async () => {
     const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     
-    // axios is mocked globally at the top of the file.
-    // We need to trigger the response interceptor.
-    // In our manual mock, we can just grab the interceptor callback if we want,
-    // but it's easier to just call performGlobalLogout for now or 
-    // mock the axios instance to return a rejected promise.
-    
-    // Let's test performGlobalLogout directly first as it's what the interceptor calls.
     await performGlobalLogout();
     
     expect(auth.signOut).toHaveBeenCalled();
     expect(AsyncStorage.multiRemove).toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/auth');
     
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('API URL Hydration', () => {
+  beforeEach(async () => {
+    await __resetInternalState();
+    jest.clearAllMocks();
+    process.env.EXPO_PUBLIC_ROUTER_URL = 'http://test-router.com';
+  });
+
+  it('hydrateServiceUrls should deduplicate simultaneous calls', async () => {
+    (axios.get as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { services: { auth: 'http://hydrated-auth' } },
+    });
+
+    const [h1, h2] = await Promise.all([
+      hydrateServiceUrls(),
+      hydrateServiceUrls()
+    ]);
+
+    expect(axios.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('hydrateServiceUrls should fallback to defaults if fetch fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    (axios.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
+
+    await hydrateServiceUrls();
+
+    expect(axios.get).toHaveBeenCalledTimes(1);
     consoleSpy.mockRestore();
   });
 });
