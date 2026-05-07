@@ -36,7 +36,7 @@ const queryClient = new QueryClient({
   },
 });
 
-import { ProfileProvider } from '../context/ProfileContext';
+import { ProfileProvider, useProfileContext } from '../context/ProfileContext';
 import { MatchProvider } from '../context/MatchContext';
 import MatchSplash from '../components/MatchSplash';
 
