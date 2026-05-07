@@ -200,24 +200,21 @@ function TavernScreenInner() {
   if (isAuthenticated && (hasNoProfiles || !activeProfileId) && !isLoadingUser) {
     return (
       <View style={styles.container} testID="tavern-screen-no-profile">
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Tavern Swiper</Text>
-          <Text style={styles.headerSub}>The Hero's Quest</Text>
-        </View>
+        <ScreenHeader title="Tavern Swiper" />
         <View style={styles.centered}>
           <Text style={styles.emptyIcon}>🛡️</Text>
           <Text style={styles.emptyTitle}>{hasNoProfiles ? "Forge Your First Identity" : "Choose Your Hero"}</Text>
           <Text style={styles.emptyDesc}>
             {hasNoProfiles 
-              ? "You must forge an identity to discover other heroes in the realm." 
+              ? "You must forge an identity before your legend can begin." 
               : "You must select an active profile to discover other heroes in the realm."}
           </Text>
           <TouchableOpacity 
-            style={[styles.roundButton, { width: 'auto', paddingHorizontal: Spacing[6], borderRadius: Radius.md }]} 
+            style={styles.emptyCtaButton} 
             onPress={() => router.push(hasNoProfiles ? '/profiles/create_and_edit' : '/profiles')}
             testID="forge-identity-button"
           >
-            <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>
+            <Text style={styles.emptyCtaText}>
               {hasNoProfiles ? "FORGE NEW IDENTITY" : "SELECT ACTIVE HERO"}
             </Text>
           </TouchableOpacity>
@@ -354,15 +351,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.surface,
   },
-  header: {
-    paddingTop: 60,
+  emptyCtaButton: {
+    width: 'auto' as any,
     paddingHorizontal: Spacing[6],
-    paddingBottom: Spacing[4],
+    height: 64,
+    borderRadius: Radius.md,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.surfaceContainerLowest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
   },
-  headerTitle: {
-    fontFamily: Fonts.heroic,
-    fontSize: 28,
-    color: Colors.onSurface,
+  emptyCtaText: {
+    color: Colors.primary,
+    fontFamily: Fonts.scribe,
+    fontWeight: '600' as const,
+    letterSpacing: 1,
   },
   headerSub: {
     fontFamily: Fonts.scribe,
@@ -387,6 +392,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: Spacing[8],
+    paddingHorizontal: Spacing[6],
   },
   actionRow: {
     position: 'absolute',
