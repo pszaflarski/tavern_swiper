@@ -38,6 +38,7 @@ jest.mock('expo-router', () => {
     router: {
       push: jest.fn(),
       back: jest.fn(),
+      replace: jest.fn(),
     },
     Stack: {
       Screen: jest.fn(() => null),
@@ -167,5 +168,23 @@ describe('Conversation Screen', () => {
 
     render(<ConversationScreen />);
     expect(screen.getByText('Reading the scrolls...')).toBeTruthy();
+  });
+
+  it('navigates to messages list when back button is pressed', () => {
+    const { router } = require('expo-router');
+    render(<ConversationScreen />);
+    
+    // The back button is in the headerLeft option of Stack.Screen
+    expect(Stack.Screen).toHaveBeenCalled();
+    const props = (Stack.Screen as jest.Mock).mock.calls[0][0];
+    const HeaderLeft = props.options.headerLeft;
+    
+    // Render the header component to interact with it
+    const { getByTestId } = render(<HeaderLeft />);
+    
+    const backButton = getByTestId('back-button');
+    fireEvent.press(backButton);
+    
+    expect(router.replace).toHaveBeenCalledWith('/(tabs)/messages');
   });
 });

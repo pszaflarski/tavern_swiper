@@ -128,7 +128,7 @@ function ConversationScreenInner() {
           headerShown: true,
           headerTitle: '',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => router.replace('/(tabs)/messages')} style={styles.backButton} testID="back-button">
               <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
               <View style={styles.headerProfile}>
                 {otherProfile?.image_urls?.[0] ? (
