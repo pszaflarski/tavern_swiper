@@ -73,21 +73,17 @@ async def test_auth_boundaries():
         assert purge_resp.status_code == 403, "Non-root admin should not be able to purge users"
 
 @pytest.mark.asyncio
-async def test_bulk_delete_users():
+async def test_bulk_delete_users(auth_token):
     """Tests that the bulk delete endpoint works for identity cleanup."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Create users to delete
         user1 = await register_user(client)
         user2 = await register_user(client)
 
-        # The auth service's bulk delete endpoint does not enforce role checks;
-        # it is an infrastructure/admin endpoint. Verify it executes successfully.
-        admin = await register_user(client)
-
         resp = await client.request(
             "DELETE",
             f"{AUTH_URL}/auth/users/",
-            headers={"Authorization": f"Bearer {admin['token']}"},
+            headers={"Authorization": f"Bearer {auth_token['token']}"},
             json={"uids": [user1["uid"], user2["uid"]]}
         )
         assert resp.status_code == 204, f"Bulk delete failed: {resp.text}"

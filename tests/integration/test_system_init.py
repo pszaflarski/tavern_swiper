@@ -340,10 +340,15 @@ async def test_user_account_management():
         assert resp.json()["email"] == email
         assert resp.json()["is_premium"] is False
 
-        # 2. Update account info (Premium status)
+        # 2. Update account info (Premium status - Should fail)
         resp = await client.put(f"{USERS_URL}/users/me", headers=headers, json={"is_premium": True})
+        assert resp.status_code == 403
+
+        # 3. Update account info (Full name - Should succeed)
+        resp = await client.put(f"{USERS_URL}/users/me", headers=headers, json={"full_name": "New Name"})
         assert resp.status_code == 200
-        assert resp.json()["is_premium"] is True
+        assert resp.json()["full_name"] == "New Name"
+        
         print(f"\nSuccessfully verified user account management for {email}")
 
 @pytest.mark.asyncio

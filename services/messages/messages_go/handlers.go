@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"fmt"
 	"sort"
 	"strings"
@@ -23,12 +25,35 @@ const (
 	COLLECTION_PROFILES              = "profiles"
 )
 
-func verifyProfileOwnership(ctx context.Context, client FirestoreClient, profileID, authUID string) error {
-	doc, err := client.Collection(COLLECTION_PROFILES).Doc(profileID).Get(ctx)
-	if err != nil || !doc.Exists() {
+func verifyProfileOwnership(ctx context.Context, token, profileID, authUID string) error {
+	url := os.Getenv("PROFILES_SERVICE_URL")
+	if url == "" {
+		url = "http://profiles:8002"
+	}
+	
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/profiles/%s", url, profileID), nil)
+	if err != nil {
+		return fmt.Errorf("Failed to create request")
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Failed to fetch profile")
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Profile not found")
 	}
-	if doc.Data()["user_id"] != authUID {
+	
+	var profile map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+		return fmt.Errorf("Failed to parse profile")
+	}
+	
+	if profile["user_id"] != authUID {
 		return fmt.Errorf("Not authorized for this profile")
 	}
 	return nil
@@ -113,7 +138,7 @@ func handleCreateConversation(c *gin.Context) {
 	// 2.1 Verify ownership of at least one profile
 	isOwner := false
 	for _, pid := range pids {
-		if err := verifyProfileOwnership(ctx, client, pid, auth.UID); err == nil {
+		if err := verifyProfileOwnership(ctx, auth.Token, pid, auth.UID); err == nil {
 			isOwner = true
 			break
 		}
@@ -221,7 +246,7 @@ func handleSendMessage(c *gin.Context) {
 	}
 
 	// Verify ownership of the sender profile
-	if err := verifyProfileOwnership(ctx, client, body.SenderProfileID, auth.UID); err != nil && !IsAdmin(auth.Role) {
+	if err := verifyProfileOwnership(ctx, auth.Token, body.SenderProfileID, auth.UID); err != nil && !IsAdmin(auth.Role) {
 		c.JSON(http.StatusForbidden, gin.H{"detail": err.Error()})
 		return
 	}
@@ -315,7 +340,7 @@ func handleGetMessages(c *gin.Context) {
 	pids := parseStringSlice(convDoc.Data()["participant_ids"])
 	isOwner := false
 	for _, pid := range pids {
-		if err := verifyProfileOwnership(ctx, client, pid, auth.UID); err == nil {
+		if err := verifyProfileOwnership(ctx, auth.Token, pid, auth.UID); err == nil {
 			isOwner = true
 			break
 		}
@@ -381,7 +406,7 @@ func handleListConversations(c *gin.Context) {
 		return
 	}
 
-	if err := verifyProfileOwnership(ctx, client, profileID, auth.UID); err != nil && !IsAdmin(auth.Role) {
+	if err := verifyProfileOwnership(ctx, auth.Token, profileID, auth.UID); err != nil && !IsAdmin(auth.Role) {
 		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to view conversations for this profile"})
 		return
 	}
