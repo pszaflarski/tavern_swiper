@@ -263,6 +263,293 @@ const docTemplate = `{
                 }
             }
         },
+        "/tags/": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Create a new tag (Admin only)",
+                "parameters": [
+                    {
+                        "description": "Tag data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.TagCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/by-category/{category}": {
+            "get": {
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List tags in a category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category",
+                        "name": "category",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Tag"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/by-slug/{slug}": {
+            "get": {
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get a tag by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag Slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/pending": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all tags with status \"pending\", ordered by creation date descending.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List pending tags (Admin only)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Tag"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/search": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Search tags by category and name prefix",
+                "parameters": [
+                    {
+                        "description": "Search query",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.TagSearchQuery"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Tag"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/validate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Validate tags existence",
+                "parameters": [
+                    {
+                        "description": "Validation fields",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.TagValidateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.TagValidateResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/{id}": {
+            "get": {
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get a tag by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Update a tag (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.TagUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Delete a tag (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/user/me": {
             "get": {
                 "security": [
@@ -717,6 +1004,14 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "main.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "type": "string"
+                }
+            }
+        },
         "main.ProfileBatchRequest": {
             "type": "object",
             "required": [
@@ -737,14 +1032,33 @@ const docTemplate = `{
                 "display_name"
             ],
             "properties": {
+                "age": {
+                    "type": "integer"
+                },
                 "bio": {
                     "type": "string"
                 },
                 "display_name": {
                     "type": "string"
                 },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
                 "gender": {
-                    "type": "string"
+                    "description": "Categorized tags",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "image_urls": {
                     "type": "array",
@@ -752,8 +1066,33 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "interests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
                 "is_active": {
                     "type": "boolean"
+                },
+                "is_oc": {
+                    "type": "boolean"
+                },
+                "other_tags": {
+                    "description": "OtherTags for dynamic categories",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/main.ProfileTag"
+                        }
+                    }
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "tagline": {
                     "type": "string"
@@ -766,6 +1105,9 @@ const docTemplate = `{
         "main.ProfileOut": {
             "type": "object",
             "properties": {
+                "age": {
+                    "type": "integer"
+                },
                 "bio": {
                     "type": "string"
                 },
@@ -775,8 +1117,24 @@ const docTemplate = `{
                 "display_name": {
                     "type": "string"
                 },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
                 "gender": {
-                    "type": "string"
+                    "description": "Categorized tags",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "image_urls": {
                     "type": "array",
@@ -784,11 +1142,36 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "interests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
                 "is_active": {
                     "type": "boolean"
                 },
+                "is_oc": {
+                    "type": "boolean"
+                },
+                "other_tags": {
+                    "description": "OtherTags for dynamic categories",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/main.ProfileTag"
+                        }
+                    }
+                },
                 "profile_id": {
                     "type": "string"
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "tagline": {
                     "type": "string"
@@ -801,17 +1184,56 @@ const docTemplate = `{
                 }
             }
         },
+        "main.ProfileTag": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "main.ProfileUpdate": {
             "type": "object",
             "properties": {
+                "age": {
+                    "type": "integer"
+                },
                 "bio": {
                     "type": "string"
                 },
                 "display_name": {
                     "type": "string"
                 },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
                 "gender": {
-                    "type": "string"
+                    "description": "Categorized tags",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "image_urls": {
                     "type": "array",
@@ -819,11 +1241,157 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "interests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
                 "is_active": {
                     "type": "boolean"
                 },
+                "is_oc": {
+                    "type": "boolean"
+                },
+                "other_tags": {
+                    "description": "OtherTags for dynamic categories",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/main.ProfileTag"
+                        }
+                    }
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
                 "tagline": {
                     "type": "string"
+                }
+            }
+        },
+        "main.Tag": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"active\" or \"pending\"",
+                    "type": "string"
+                },
+                "suggested_by": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagCreate": {
+            "type": "object",
+            "required": [
+                "category",
+                "name"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagSearchQuery": {
+            "type": "object",
+            "required": [
+                "category",
+                "name"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "name": {
+                    "description": "partial prefix",
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagUpdate": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagValidateRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagValidateResponse": {
+            "type": "object",
+            "properties": {
+                "matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.Tag"
+                    }
+                },
+                "valid": {
+                    "type": "boolean"
                 }
             }
         }

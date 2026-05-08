@@ -1,5 +1,10 @@
 basePath: /profiles
 definitions:
+  main.ErrorResponse:
+    properties:
+      detail:
+        type: string
+    type: object
   main.ProfileBatchRequest:
     properties:
       profile_ids:
@@ -11,18 +16,48 @@ definitions:
     type: object
   main.ProfileCreate:
     properties:
+      age:
+        type: integer
       bio:
         type: string
       display_name:
         type: string
+      events:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      fandom:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       gender:
-        type: string
+        description: Categorized tags
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       image_urls:
         items:
           type: string
         type: array
+      interests:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       is_active:
         type: boolean
+      is_oc:
+        type: boolean
+      other_tags:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/main.ProfileTag'
+          type: array
+        description: OtherTags for dynamic categories
+        type: object
+      race:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       tagline:
         type: string
       user_id:
@@ -32,22 +67,52 @@ definitions:
     type: object
   main.ProfileOut:
     properties:
+      age:
+        type: integer
       bio:
         type: string
       created_at:
         type: string
       display_name:
         type: string
+      events:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      fandom:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       gender:
-        type: string
+        description: Categorized tags
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       image_urls:
         items:
           type: string
         type: array
+      interests:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       is_active:
         type: boolean
+      is_oc:
+        type: boolean
+      other_tags:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/main.ProfileTag'
+          type: array
+        description: OtherTags for dynamic categories
+        type: object
       profile_id:
         type: string
+      race:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       tagline:
         type: string
       updated_at:
@@ -55,22 +120,145 @@ definitions:
       user_id:
         type: string
     type: object
+  main.ProfileTag:
+    properties:
+      category:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+      status:
+        type: string
+    type: object
   main.ProfileUpdate:
     properties:
+      age:
+        type: integer
       bio:
         type: string
       display_name:
         type: string
+      events:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      fandom:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       gender:
-        type: string
+        description: Categorized tags
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       image_urls:
         items:
           type: string
         type: array
+      interests:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       is_active:
         type: boolean
+      is_oc:
+        type: boolean
+      other_tags:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/main.ProfileTag'
+          type: array
+        description: OtherTags for dynamic categories
+        type: object
+      race:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       tagline:
         type: string
+    type: object
+  main.Tag:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      status:
+        description: '"active" or "pending"'
+        type: string
+      suggested_by:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  main.TagCreate:
+    properties:
+      category:
+        type: string
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+    required:
+    - category
+    - name
+    type: object
+  main.TagSearchQuery:
+    properties:
+      category:
+        type: string
+      name:
+        description: partial prefix
+        type: string
+    required:
+    - category
+    - name
+    type: object
+  main.TagUpdate:
+    properties:
+      category:
+        type: string
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      status:
+        type: string
+    type: object
+  main.TagValidateRequest:
+    properties:
+      category:
+        type: string
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  main.TagValidateResponse:
+    properties:
+      matches:
+        items:
+          $ref: '#/definitions/main.Tag'
+        type: array
+      valid:
+        type: boolean
     type: object
 info:
   contact: {}
@@ -449,6 +637,187 @@ paths:
       summary: Health check
       tags:
       - health
+  /tags/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tag data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TagCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.Tag'
+      security:
+      - BearerAuth: []
+      summary: Create a new tag (Admin only)
+      tags:
+      - tags
+  /tags/{id}:
+    delete:
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a tag (Admin only)
+      tags:
+      - tags
+    get:
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Tag'
+      summary: Get a tag by ID
+      tags:
+      - tags
+    put:
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TagUpdate'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Tag'
+      security:
+      - BearerAuth: []
+      summary: Update a tag (Admin only)
+      tags:
+      - tags
+  /tags/by-category/{category}:
+    get:
+      parameters:
+      - description: Category
+        in: path
+        name: category
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+      summary: List tags in a category
+      tags:
+      - tags
+  /tags/by-slug/{slug}:
+    get:
+      parameters:
+      - description: Tag Slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Tag'
+      summary: Get a tag by slug
+      tags:
+      - tags
+  /tags/pending:
+    get:
+      description: Returns all tags with status "pending", ordered by creation date
+        descending.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List pending tags (Admin only)
+      tags:
+      - tags
+  /tags/search:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Search query
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TagSearchQuery'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+      summary: Search tags by category and name prefix
+      tags:
+      - tags
+  /tags/validate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Validation fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TagValidateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.TagValidateResponse'
+      summary: Validate tags existence
+      tags:
+      - tags
   /user/{user_id}:
     get:
       description: Returns all profiles owned by a specific user.

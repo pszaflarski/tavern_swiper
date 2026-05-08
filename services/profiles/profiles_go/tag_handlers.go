@@ -89,7 +89,7 @@ func handleGetTag(c *gin.Context) {
 // @Tags         tags
 // @Param        slug  path  string  true  "Tag Slug"
 // @Success      200  {object}  Tag
-// @Router       /tags/slug/{slug} [get]
+// @Router       /tags/by-slug/{slug} [get]
 func handleGetTagBySlug(c *gin.Context) {
 	slug := c.Param("slug")
 	client, err := getDBFunc(c.Request.Context())
@@ -117,7 +117,7 @@ func handleGetTagBySlug(c *gin.Context) {
 // @Tags         tags
 // @Param        category  path  string  true  "Category"
 // @Success      200  {array}  Tag
-// @Router       /tags/category/{category} [get]
+// @Router       /tags/by-category/{category} [get]
 func handleListTagsByCategory(c *gin.Context) {
 	category := c.Param("category")
 	client, err := getDBFunc(c.Request.Context())
@@ -544,6 +544,16 @@ func docToTag(doc DocumentSnapshot) (Tag, error) {
 	}, nil
 }
 
+// handleListPendingTags godoc
+// @Summary      List pending tags (Admin only)
+// @Description  Returns all tags with status "pending", ordered by creation date descending.
+// @Tags         tags
+// @Produce      json
+// @Success      200  {array}   Tag
+// @Failure      403  {object}  ErrorResponse
+// @Failure      503  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /tags/pending [get]
 func handleListPendingTags(c *gin.Context) {
 	auth := GetAuth(c)
 	if !IsAdmin(auth.Role) {
