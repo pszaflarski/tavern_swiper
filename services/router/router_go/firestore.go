@@ -26,7 +26,7 @@ func getDBInternal(ctx context.Context) (FirestoreClient, error) {
 			dbID = "(default)"
 		}
 		log.Printf("[INFO] Initializing Firestore Client for project: %s, DB: %s", projectID, dbID)
-		
+
 		newDB, err := newFirestoreClient(context.Background(), projectID, dbID)
 		if err == nil {
 			db = newDB

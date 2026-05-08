@@ -39,9 +39,9 @@ func (c *mockClient) DeleteCollection(ctx context.Context, col CollectionRef, ba
 
 type mockCollection struct {
 	CollectionRef
-	path      string
-	docs      map[string]*mockDoc
-	queryRes  []*mockSnap
+	path     string
+	docs     map[string]*mockDoc
+	queryRes []*mockSnap
 }
 
 func (c *mockCollection) Doc(path string) DocumentRef {
@@ -127,8 +127,8 @@ type mockSnap struct {
 	ref    DocumentRef
 }
 
-func (s *mockSnap) Exists() bool                          { return s.exists }
-func (s *mockSnap) Data() map[string]interface{}          { return s.data }
+func (s *mockSnap) Exists() bool                 { return s.exists }
+func (s *mockSnap) Data() map[string]interface{} { return s.data }
 func (s *mockSnap) DataTo(p interface{}) error {
 	// Simple mock implementation of DataTo
 	if m, ok := p.(*ServiceRoute); ok {
@@ -139,8 +139,8 @@ func (s *mockSnap) DataTo(p interface{}) error {
 	}
 	return fmt.Errorf("DataTo not implemented for this type in mock")
 }
-func (s *mockSnap) ID() string                            { return s.id }
-func (s *mockSnap) Ref() DocumentRef        { return s.ref }
+func (s *mockSnap) ID() string       { return s.id }
+func (s *mockSnap) Ref() DocumentRef { return s.ref }
 
 type mockIter struct {
 	DocumentIterator
@@ -172,8 +172,8 @@ type mockQuery struct {
 	col *mockCollection
 }
 
-func (q *mockQuery) Limit(n int) Query { return q }
-func (q *mockQuery) Where(path, op string, value interface{}) Query { return q }
+func (q *mockQuery) Limit(n int) Query                                  { return q }
+func (q *mockQuery) Where(path, op string, value interface{}) Query     { return q }
 func (q *mockQuery) OrderBy(path string, dir firestore.Direction) Query { return q }
 func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 	return q.col.Documents(ctx)
@@ -254,4 +254,3 @@ func (r *mockPipelineResult) Data() map[string]interface{} {
 func (r *mockPipelineResult) Ref() DocumentRef {
 	return r.ref
 }
-

@@ -1,0 +1,23 @@
+{
+  "title": "Go Microservice Coding Standards",
+  "summary": "Mandatory Go coding standards for all Tavern Swiper microservices. Covers file structure, Swagger documentation, error handling, auth middleware, testing patterns, and dependency conventions.",
+  "created": "2026-05-07T22:13:00Z",
+  "updated": "2026-05-07T22:13:00Z",
+  "references": [
+    {
+      "type": "file",
+      "path": "services/profiles/profiles_go/main.go",
+      "description": "Reference implementation for service main.go structure"
+    },
+    {
+      "type": "file",
+      "path": "services/profiles/profiles_go/errors.go",
+      "description": "Standardized error helper pattern"
+    },
+    {
+      "type": "file",
+      "path": "services/profiles/profiles_go/auth.go",
+      "description": "Reference auth middleware implementation"
+    }
+  ]
+}

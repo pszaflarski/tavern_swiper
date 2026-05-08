@@ -69,6 +69,7 @@
 | Discovery | 8003 |
 | Messages | 8005 |
 | Users | 8006 |
+| Router | 8010 |
 
 ### Testing
 - Run `go test -v ./...` from each service directory after backend changes.

@@ -21,7 +21,7 @@ func setupTest() (*gin.Engine, *mockClient) {
 	mockDB := &mockClient{
 		collections: make(map[string]*mockCollection),
 	}
-	
+
 	// Override getDBFunc
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return mockDB, nil
@@ -65,7 +65,7 @@ func TestHandleHealth(t *testing.T) {
 
 func TestHandleListServices(t *testing.T) {
 	r, mockDB := setupTest()
-	
+
 	// Seed mock DB
 	col := mockDB.Collection("service_routes").(*mockCollection)
 	col.queryRes = []*mockSnap{
@@ -89,17 +89,17 @@ func TestHandleListServices(t *testing.T) {
 
 func TestHandleListServicesNullMerge(t *testing.T) {
 	// This test specifically verifies that services present in 'default' but missing in a tag return null.
-	// Since our mock pipeline doesn't filter, we manually simulate the handler logic behavior or 
+	// Since our mock pipeline doesn't filter, we manually simulate the handler logic behavior or
 	// adjust the mock between calls if possible.
 	// Here, we'll verify the handler logic by checking the final response structure.
-	
+
 	r, mockDB := setupTest()
 	col := mockDB.Collection("service_routes").(*mockCollection)
-	
+
 	// In this test, because the mock returns the SAME queryRes for both calls,
 	// we can't easily test "missing in tag" without a smarter mock.
 	// However, we've fixed the code to use safe assertions and Pipeline API.
-	
+
 	col.queryRes = []*mockSnap{
 		{id: "auth_default", data: map[string]interface{}{"service": "auth", "tag": "default", "url": "http://auth"}},
 	}
@@ -112,14 +112,14 @@ func TestHandleListServicesNullMerge(t *testing.T) {
 	var resp map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	services := resp["services"].(map[string]interface{})
-	
+
 	// Because the mock returned the same list for both queries, 'auth' exists in both.
 	assert.Equal(t, "http://auth", services["auth"])
 }
 
 func TestHandleGetService(t *testing.T) {
 	r, mockDB := setupTest()
-	
+
 	doc := mockDB.Collection("service_routes").Doc("auth_default").(*mockDoc)
 	doc.exists = true
 	doc.data = map[string]interface{}{"service": "auth", "tag": "default", "url": "http://auth"}

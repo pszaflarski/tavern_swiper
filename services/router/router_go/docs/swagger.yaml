@@ -1,0 +1,203 @@
+basePath: /router
+definitions:
+  main.ServiceUpdate:
+    properties:
+      tag:
+        type: string
+      url:
+        type: string
+    required:
+    - tag
+    - url
+    type: object
+  main.SingleServiceResponse:
+    properties:
+      service:
+        type: string
+      tag:
+        type: string
+      url:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Dynamic runtime service discovery for Tavern Swiper microservices.
+  title: Router Service API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Returns the health status of the router service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /services:
+    get:
+      description: Returns all services for a specific tag. Includes default fallbacks.
+      parameters:
+      - default: default
+        description: Service tag environment
+        in: query
+        name: tag
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all services
+      tags:
+      - services
+  /services/{service_name}:
+    delete:
+      description: Deletes a specific service route. Admin only.
+      parameters:
+      - description: Service Name
+        in: path
+        name: service_name
+        required: true
+        type: string
+      - description: Service tag environment
+        in: query
+        name: tag
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a service route
+      tags:
+      - services
+    get:
+      description: Returns the routing URL for a specific service by name and tag.
+      parameters:
+      - description: Service Name
+        in: path
+        name: service_name
+        required: true
+        type: string
+      - default: default
+        description: Service tag environment
+        in: query
+        name: tag
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.SingleServiceResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a specific service
+      tags:
+      - services
+    put:
+      consumes:
+      - application/json
+      description: Creates or updates a service route. Admin only.
+      parameters:
+      - description: Service Name
+        in: path
+        name: service_name
+        required: true
+        type: string
+      - description: Route details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ServiceUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upsert a service route
+      tags:
+      - services
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
