@@ -64,6 +64,7 @@ type Pipeline interface {
 	CollectionGroup(id string) Pipeline
 	Select(fields []any) Pipeline
 	Where(filter any) Pipeline
+	Sort(orders []firestore.Ordering) Pipeline
 	Limit(n int) Pipeline
 	Execute(ctx context.Context) PipelineSnapshot
 }
@@ -315,6 +316,7 @@ func (ps *realPipelineSource) CollectionGroup(id string) Pipeline {
 
 func (ps *realPipelineSource) Select(fields []any) Pipeline { return nil }
 func (ps *realPipelineSource) Where(filter any) Pipeline    { return nil }
+func (ps *realPipelineSource) Sort(orders []firestore.Ordering) Pipeline { return nil }
 func (ps *realPipelineSource) Limit(n int) Pipeline         { return nil }
 func (ps *realPipelineSource) Execute(ctx context.Context) PipelineSnapshot { return nil }
 
@@ -332,6 +334,10 @@ func (p *realPipeline) Select(fields []any) Pipeline {
 
 func (p *realPipeline) Where(filter any) Pipeline {
 	return &realPipeline{p.Pipeline.Where(filter.(firestore.BooleanExpression))}
+}
+
+func (p *realPipeline) Sort(orders []firestore.Ordering) Pipeline {
+	return &realPipeline{p.Pipeline.Sort(orders)}
 }
 
 func (p *realPipeline) Limit(n int) Pipeline {

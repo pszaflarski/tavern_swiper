@@ -81,6 +81,12 @@ func realGetFeedCandidates(ctx context.Context, collection string, excludeIDs []
 		pipeline = pipeline.Where(firestore.NotEqualAny("profile_id", excludeVals))
 	}
 
+	// Sort by profile_id for deterministic pagination.
+	// Without this, Pipeline results are non-deterministic per the Firestore docs.
+	pipeline = pipeline.Sort([]firestore.Ordering{
+		firestore.Ascending(firestore.FieldOf("profile_id")),
+	})
+
 	pipeline = pipeline.
 		Select(feedCandidateFields).
 		Limit(limit)

@@ -187,6 +187,7 @@ func (p *mockPipeline) Collection(path string) Pipeline {
 func (p *mockPipeline) CollectionGroup(id string) Pipeline { return p }
 func (p *mockPipeline) Select(fields []any) Pipeline       { return p }
 func (p *mockPipeline) Where(filter any) Pipeline          { return p }
+func (p *mockPipeline) Sort(orders []firestore.Ordering) Pipeline { return p }
 func (p *mockPipeline) Limit(n int) Pipeline               { return p }
 func (p *mockPipeline) Execute(ctx context.Context) PipelineSnapshot {
 	return &mockPipelineSnapshot{col: p.col}

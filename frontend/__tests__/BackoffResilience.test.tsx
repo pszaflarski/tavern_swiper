@@ -151,7 +151,7 @@ describe('Discovery Backoff Resilience', () => {
     await waitFor(() => expect(mockRefetch).toHaveBeenCalledTimes(1));
   });
 
-  it('exhausts the realm after 3 consecutive stale fetches', async () => {
+  it('exhausts the realm after 5 consecutive stale fetches', async () => {
     const { rerender, getByTestId, queryByText, getByText } = render(<TavernScreen />);
     
     await waitFor(() => expect(getByText('Hero 1')).toBeTruthy());
@@ -176,14 +176,34 @@ describe('Discovery Backoff Resilience', () => {
       dataUpdatedAt: 3,
     });
     await act(async () => rerender(<TavernScreen />));
-    act(() => { jest.advanceTimersByTime(30001); });
+    act(() => { jest.advanceTimersByTime(5001); });
     
-    // 3rd Stale Fetch (Exhaustion trigger)
+    // 3rd Stale Fetch
     (useDiscoveryFeed as jest.Mock).mockReturnValue({
       data: mockProfiles,
       isFetching: false,
       refetch: mockRefetch,
       dataUpdatedAt: 4,
+    });
+    await act(async () => rerender(<TavernScreen />));
+    act(() => { jest.advanceTimersByTime(30001); });
+
+    // 4th Stale Fetch
+    (useDiscoveryFeed as jest.Mock).mockReturnValue({
+      data: mockProfiles,
+      isFetching: false,
+      refetch: mockRefetch,
+      dataUpdatedAt: 5,
+    });
+    await act(async () => rerender(<TavernScreen />));
+    act(() => { jest.advanceTimersByTime(30001); });
+    
+    // 5th Stale Fetch (Exhaustion trigger)
+    (useDiscoveryFeed as jest.Mock).mockReturnValue({
+      data: mockProfiles,
+      isFetching: false,
+      refetch: mockRefetch,
+      dataUpdatedAt: 6,
     });
     await act(async () => rerender(<TavernScreen />));
     
@@ -197,5 +217,114 @@ describe('Discovery Backoff Resilience', () => {
     
     // Now currentIndex should be 5, deck.length 5.
     expect(getByText('No Heroes Found')).toBeTruthy();
+  });
+
+  it('auto-recovers from exhaustion after 5 minutes', async () => {
+    const { rerender, getByTestId, getByText, queryByText } = render(<TavernScreen />);
+    
+    await waitFor(() => expect(getByText('Hero 1')).toBeTruthy());
+    const rightBtn = getByTestId('swipe-right-button');
+    
+    // Drive through 5 stale fetches to reach exhaustion
+    fireEvent.press(rightBtn); // Trigger watermark
+    for (let i = 2; i <= 6; i++) {
+      (useDiscoveryFeed as jest.Mock).mockReturnValue({
+        data: mockProfiles,
+        isFetching: false,
+        refetch: mockRefetch,
+        dataUpdatedAt: i,
+      });
+      await act(async () => rerender(<TavernScreen />));
+      if (i < 6) {
+        // Advance past backoff delay between stale fetches
+        act(() => { jest.advanceTimersByTime(i <= 3 ? 5001 : 30001); });
+      }
+    }
+    
+    // Swipe remaining cards to see exhaustion state
+    fireEvent.press(rightBtn);
+    fireEvent.press(rightBtn);
+    fireEvent.press(rightBtn);
+    fireEvent.press(rightBtn);
+    expect(getByText('No Heroes Found')).toBeTruthy();
+    
+    // Now simulate new profiles arriving and the 5-minute auto-recovery firing.
+    // After 5 minutes, exhausted should reset to false.
+    const freshProfiles = [
+      { profile_id: 'p10', display_name: 'New Hero' },
+    ];
+    (useDiscoveryFeed as jest.Mock).mockReturnValue({
+      data: freshProfiles,
+      isFetching: false,
+      refetch: mockRefetch,
+      dataUpdatedAt: 100,
+    });
+
+    // Advance past the 5-minute auto-recovery timer
+    await act(async () => {
+      jest.advanceTimersByTime(5 * 60 * 1000 + 1);
+    });
+
+    // Rerender to pick up the new state
+    await act(async () => rerender(<TavernScreen />));
+
+    // The exhaustion flag should have been cleared by the auto-recovery timer.
+    // The component should now be able to show the new hero.
+    await waitFor(() => expect(getByText('New Hero')).toBeTruthy());
+  });
+
+  it('uses 30s backoff delay for stale counts 3 and 4', async () => {
+    const { rerender, getByTestId, getByText } = render(<TavernScreen />);
+    
+    await waitFor(() => expect(getByText('Hero 1')).toBeTruthy());
+    const rightBtn = getByTestId('swipe-right-button');
+    
+    // 1st Stale Fetch (count=1, delay=5s)
+    fireEvent.press(rightBtn);
+    (useDiscoveryFeed as jest.Mock).mockReturnValue({
+      data: mockProfiles,
+      isFetching: false,
+      refetch: mockRefetch,
+      dataUpdatedAt: 2,
+    });
+    await act(async () => rerender(<TavernScreen />));
+    act(() => { jest.advanceTimersByTime(5001); });
+    
+    // 2nd Stale Fetch (count=2, delay=5s)
+    (useDiscoveryFeed as jest.Mock).mockReturnValue({
+      data: mockProfiles,
+      isFetching: false,
+      refetch: mockRefetch,
+      dataUpdatedAt: 3,
+    });
+    await act(async () => rerender(<TavernScreen />));
+    act(() => { jest.advanceTimersByTime(5001); });
+    
+    // 3rd Stale Fetch (count=3, delay=30s)
+    (useDiscoveryFeed as jest.Mock).mockReturnValue({
+      data: mockProfiles,
+      isFetching: false,
+      refetch: mockRefetch,
+      dataUpdatedAt: 4,
+    });
+    await act(async () => rerender(<TavernScreen />));
+
+    // Now isBackingOff=true with 30s delay.
+    // Advancing only 10s should NOT clear backoff.
+    mockRefetch.mockClear();
+    act(() => { jest.advanceTimersByTime(10000); });
+    await act(async () => rerender(<TavernScreen />));
+
+    // Swipe to trigger a watermark check — should be suppressed by backoff
+    fireEvent.press(rightBtn);
+    expect(mockRefetch).not.toHaveBeenCalled();
+    
+    // Advance remaining 20s+ to clear the 30s backoff
+    mockRefetch.mockClear();
+    act(() => { jest.advanceTimersByTime(20001); });
+    
+    // After backoff clears, the watermark effect fires automatically since
+    // isBackingOff flips to false and we're below the card threshold.
+    await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
   });
 });

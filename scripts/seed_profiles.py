@@ -7,13 +7,17 @@ import subprocess
 import json
 
 # --- Configuration ---
-def get_current_project():
-    try:
-        return subprocess.check_output(["gcloud", "config", "get-value", "project"]).decode("utf-8").strip()
-    except:
-        return "tavern-swiper-dev"
+# Map environment names to GCP project IDs
+PROJECT_MAP = {
+    "local": "tavern-swiper-dev",
+    "dev": "tavern-swiper-dev",
+    "test": "tavern-swiper-dev",
+    "prod": "tavern-swiper-prod",
+}
 
-PROJECT_ID = get_current_project()
+def get_project_id(env):
+    return PROJECT_MAP.get(env, "tavern-swiper-dev")
+
 REGION = "us-central1"
 
 # Primary Seeder (Authenticated first to perform administrative overrides)
@@ -41,12 +45,14 @@ def get_url(service_name, env="local"):
     
     # 1. Try fetching from Router if not already cached
     if _ROUTER_DATA is None:
+        project_id = get_project_id(env)
         try:
-            # Find the Router URL (one gcloud call)
-            deploy_name = f"router-{env}" if env in ["dev", "test"] else "router"
+            # Standard suffix: router-dev, router-test, router-prod
+            deploy_name = f"router-{env}"
+            
             router_url = subprocess.check_output([
                 "gcloud", "run", "services", "describe", deploy_name,
-                "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+                "--platform", "managed", "--region", REGION, "--project", project_id,
                 "--format", "value(status.url)"
             ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
             
@@ -57,22 +63,22 @@ def get_url(service_name, env="local"):
                 _ROUTER_DATA = resp.json().get("services", {})
                 print("✅ Router data cached.")
             else:
-                _ROUTER_DATA = {} # Empty map on failure
+                _ROUTER_DATA = {} 
         except Exception:
-            # Fallback for 'dev' if suffixed router not found
-            if env == "dev":
-                try:
-                    router_url = subprocess.check_output([
-                        "gcloud", "run", "services", "describe", "router",
-                        "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
-                        "--format", "value(status.url)"
-                    ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-                    resp = requests.get(f"{router_url}/router/services", timeout=5)
-                    if resp.status_code == 200:
-                        _ROUTER_DATA = resp.json().get("services", {})
-                except Exception:
+            # Fallback: try unsuffixed 'router'
+            try:
+                router_url = subprocess.check_output([
+                    "gcloud", "run", "services", "describe", "router",
+                    "--platform", "managed", "--region", REGION, "--project", project_id,
+                    "--format", "value(status.url)"
+                ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+                resp = requests.get(f"{router_url}/router/services", timeout=5)
+                if resp.status_code == 200:
+                    _ROUTER_DATA = resp.json().get("services", {})
+                    print("✅ Router data cached (via unsuffixed service).")
+                else:
                     _ROUTER_DATA = {}
-            else:
+            except Exception:
                 _ROUTER_DATA = {}
 
     # 2. Return from router data if available
@@ -81,32 +87,35 @@ def get_url(service_name, env="local"):
 
     # 3. Fallback to slow gcloud discovery
     print(f"⚠️  {service_name} not in Router. Falling back to slow gcloud discovery...")
+    project_id = get_project_id(env)
+    
     if env == "dev":
         deploy_name = f"{service_name}-dev"
     elif env == "test":
         deploy_name = f"{service_name}-test"
+    elif env == "prod":
+        deploy_name = f"{service_name}-prod"
     else:
         deploy_name = service_name
         
     try:
         url = subprocess.check_output([
             "gcloud", "run", "services", "describe", deploy_name,
-            "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+            "--platform", "managed", "--region", REGION, "--project", project_id,
             "--format", "value(status.url)"
         ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url
     except Exception:
-        if env == "dev":
-            try:
-                url = subprocess.check_output([
-                    "gcloud", "run", "services", "describe", service_name,
-                    "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
-                    "--format", "value(status.url)"
-                ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-                return url
-            except Exception:
-                return None
-        return None
+        # Fallback: try unsuffixed name
+        try:
+            url = subprocess.check_output([
+                "gcloud", "run", "services", "describe", service_name,
+                "--platform", "managed", "--region", REGION, "--project", project_id,
+                "--format", "value(status.url)"
+            ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+            return url
+        except Exception:
+            return None
 
 # These will be set in the __main__ block
 AUTH_URL = None
@@ -363,7 +372,7 @@ def seed_system():
 
 def verify_bucket_permissions(env):
     """Check that the GCS media bucket has public read access (allUsers objectViewer)."""
-    project = "tavern-swiper-prod" if env == "prod" else "tavern-swiper-dev"
+    project = get_project_id(env)
     bucket_name = f"{project}-media-{env}"
     print(f"\n🔍 Verifying GCS bucket permissions for {bucket_name}...")
     try:

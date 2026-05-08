@@ -33,7 +33,7 @@ function TavernScreenInner() {
   const [loadTimedOut, setLoadTimedOut] = useState(false);
   const WATERMARK = 3;
 
-  const [staleFetchCount, setStaleFetchCount] = useState(0);
+  const staleFetchCountRef = useRef(0);
   const [isBackingOff, setIsBackingOff] = useState(false);
   const deckRef = useRef<Profile[]>([]);
 
@@ -93,20 +93,25 @@ function TavernScreenInner() {
       const isUseless = deckRef.current.length > 0 && newUnique.length === 0;
 
       if (isUseless) {
-        const nextCount = staleFetchCount + 1;
-        setStaleFetchCount(nextCount);
+        const nextCount = staleFetchCountRef.current + 1;
+        staleFetchCountRef.current = nextCount;
         
-        if (nextCount >= 3) {
+        if (nextCount >= 5) {
           setExhausted(true);
           setIsBackingOff(false);
+          // Auto-recover after 5 minutes to catch newly-added profiles
+          setTimeout(() => {
+            setExhausted(false);
+            staleFetchCountRef.current = 0;
+          }, 5 * 60 * 1000);
         } else {
           setIsBackingOff(true);
-          const delay = nextCount === 1 ? 5000 : 30000;
+          const delay = nextCount <= 2 ? 5000 : 30000;
           setTimeout(() => setIsBackingOff(false), delay);
         }
       } else {
         // We found new heroes! Reset backoff and add them.
-        setStaleFetchCount(0);
+        staleFetchCountRef.current = 0;
         setIsBackingOff(false);
         
         if (newUnique.length > 0) {
@@ -166,7 +171,7 @@ function TavernScreenInner() {
     setDeck([]);
     setCurrentIndex(0);
     setExhausted(false);
-    setStaleFetchCount(0);
+    staleFetchCountRef.current = 0;
     setIsBackingOff(false);
     queryClient.invalidateQueries({ queryKey: ['discovery'] });
     queryClient.invalidateQueries({ queryKey: ['profiles', 'me', 'active'] });
