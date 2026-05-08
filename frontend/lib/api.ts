@@ -7,11 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * Service base URLs — configurable via EXPO_PUBLIC_ env vars.
  */
 let BASE_URLS: Record<string, string> = {
-  auth: 'http://localhost:8001',
-  profiles: 'http://localhost:8002',
-  discovery: 'http://localhost:8003',
-  messages: 'http://localhost:8005',
-  users: 'http://localhost:8006',
+  auth: '',
+  profiles: '',
+  discovery: '',
+  messages: '',
+  users: '',
 };
 
 let hydrationPromise: Promise<void> | null = null;
