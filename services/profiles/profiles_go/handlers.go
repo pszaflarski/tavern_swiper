@@ -57,7 +57,8 @@ func handleListAllProfiles(c *gin.Context) {
 
 	docs, err := client.Collection(COLLECTION).Documents(c.Request.Context()).GetAll()
 	if err != nil {
-		send500(c, fmt.Sprintf("Failed to fetch profiles: %v", err))
+		log.Printf("[ERROR] Failed to fetch profiles: %v", err)
+		send500(c, "Failed to fetch profiles")
 		return
 	}
 
@@ -161,7 +162,8 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	ref := client.Collection(COLLECTION).Doc(profileID)
 
 	if _, err := ref.Set(c.Request.Context(), data); err != nil {
-		send500(c, fmt.Sprintf("Failed to create profile: %v", err))
+		log.Printf("[ERROR] Failed to create profile: %v", err)
+		send500(c, "Failed to create profile")
 		return
 	}
 
@@ -940,7 +942,7 @@ func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 	publicURL, err := uploadToGCS(gcpCtx, id, filename, "image/jpeg", bytes.NewReader(normalizedData))
 	if err != nil {
 		log.Printf("[ERROR] GCS upload failed for profile %s: %v (took %v)", id, err, time.Since(startTime))
-		send503(c, fmt.Sprintf("Storage error: %v", err))
+		send503(c, "Storage error")
 		return
 	}
 	log.Printf("[INFO] Image uploaded to GCS for profile %s: %s (took %v)", id, publicURL, time.Since(startTime))

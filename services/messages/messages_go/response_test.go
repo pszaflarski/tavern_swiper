@@ -27,6 +27,7 @@ func TestSuccessResponseStructure(t *testing.T) {
 		
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "id", Value: convID}}
 		
 		body := MessageCreate{SenderProfileID: senderID, Content: "Structure Test"}
@@ -71,6 +72,7 @@ func TestSuccessResponseStructure(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "profile_id", Value: profileID}}
 		
 		handleListConversations(c)
@@ -106,6 +108,7 @@ func TestErrorResponseStructure(t *testing.T) {
 	t.Run("422_UnprocessableEntity", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		
 		// Missing required fields
 		body := map[string]interface{}{"something": "else"}
@@ -129,6 +132,7 @@ func TestErrorResponseStructure(t *testing.T) {
 	t.Run("400_BadRequest_MalformedJSON", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		
 		c.Request, _ = http.NewRequest("POST", "/messages/conversations", bytes.NewBufferString("{invalid-json"))
 		c.Request.Header.Set("Content-Type", "application/json")
@@ -156,7 +160,12 @@ func TestEmptyArrayConsistency(t *testing.T) {
 	t.Run("GetMessages_EmptyArray", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "id", Value: "non-existent"}}
+		
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc("non-existent").Set(context.Background(), map[string]interface{}{
+			"participant_ids": []interface{}{"p1", "p2"},
+		})
 		
 		handleGetMessages(c)
 		
@@ -168,6 +177,7 @@ func TestEmptyArrayConsistency(t *testing.T) {
 	t.Run("ListConversations_EmptyArray", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "profile_id", Value: "lonely-user"}}
 		
 		handleListConversations(c)

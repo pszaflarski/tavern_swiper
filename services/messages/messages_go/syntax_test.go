@@ -30,6 +30,7 @@ func TestFirestoreSyntax(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		
 		body := ConversationCreate{ParticipantProfileIDs: []string{p1, p2}}
 		b, _ := json.Marshal(body)

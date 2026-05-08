@@ -42,9 +42,20 @@ func (m *mockAuthClient) ListUsers(ctx context.Context) ([]string, error) {
 // --- Setup ---
 
 func setupTest() *gin.Engine {
+	return setupTestWithRole("admin")
+}
+
+func setupTestWithRole(role string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	authGrp := r.Group("/auth")
+	
+	// Mock auth middleware to inject role for tests
+	authGrp.Use(func(c *gin.Context) {
+		c.Set("auth", AuthData{UID: "test-uid", Role: role, Email: "test@test.com"})
+		c.Next()
+	})
+	
 	{
 		authGrp.GET("/health", healthHandler)
 		authGrp.POST("/verify", verifyTokenHandler)
@@ -477,7 +488,7 @@ func TestDeleteUsersBulk(t *testing.T) {
 
 func TestDeleteAll(t *testing.T) {
 	skipIfRealDB(t)
-	r := setupTest()
+	r := setupTestWithRole("root_admin")
 	// Mock DeleteAll Success (This is 25th test)
 	getAuthFunc = func(ctx context.Context) (AuthClient, error) {
 		return &mockAuthClient{

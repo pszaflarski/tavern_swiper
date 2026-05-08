@@ -46,6 +46,17 @@ func handleHealth(c *gin.Context) {
 // @Failure      500  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /feed/{profile_id} [get]
+
+func verifyProfileOwnership(ctx context.Context, client FirestoreClient, profileID, authUID string) error {
+	doc, err := client.Collection(PROFILES_CACHE).Doc(profileID).Get(ctx)
+	if err != nil || !doc.Exists() {
+		return fmt.Errorf("Profile not found")
+	}
+	if doc.Data()["user_id"] != authUID {
+		return fmt.Errorf("Not authorized for this profile")
+	}
+	return nil
+}
 func handleGetFeed(c *gin.Context) {
 	profileID := c.Param("profile_id")
 	auth := GetAuth(c)
@@ -292,6 +303,7 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 // @Security     BearerAuth
 // @Router       /matches/{id} [get]
 func handleGetMatch(c *gin.Context) {
+	auth := GetAuth(c)
 	id := c.Param("id")
 	ctx := context.Background()
 	client, err := getDBFunc(ctx)
@@ -308,6 +320,18 @@ func handleGetMatch(c *gin.Context) {
 
 	data := doc.Data()
 	profiles := parseProfiles(data["profiles"])
+
+	isOwner := false
+	for _, pid := range profiles {
+		if err := verifyProfileOwnership(ctx, client, pid, auth.UID); err == nil {
+			isOwner = true
+			break
+		}
+	}
+	if !isOwner && !IsAdmin(auth.Role) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to view this match"})
+		return
+	}
 
 	var createdAt string
 	if t, ok := data["created_at"].(time.Time); ok {
@@ -335,6 +359,7 @@ func handleGetMatch(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /matches/profile/{profile_id} [get]
 func handleListMatchesForProfile(c *gin.Context) {
+	auth := GetAuth(c)
 	profileID := c.Param("profile_id")
 	ctx := context.Background()
 	client, err := getDBFunc(ctx)
@@ -343,15 +368,17 @@ func handleListMatchesForProfile(c *gin.Context) {
 		return
 	}
 
-	// FIXME: In production, we should verify the user owns the profile_id. 
-	// For now, it's open to all logged-in users to allow for discovery.
+	if err := verifyProfileOwnership(ctx, client, profileID, auth.UID); err != nil && !IsAdmin(auth.Role) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to list matches for this profile"})
+		return
+	}
+
 	iter := client.Collection(MATCHES_COLLECTION).Where("profiles", "array-contains", profileID).Documents(ctx)
 	docs, err := iter.GetAll()
 	if err != nil {
 		log.Printf("[ERROR] Failed to list matches for profile %s: %v", profileID, err)
-		// Include the exact error message to help diagnose missing indexes or permission issues in CI/CD
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"detail": fmt.Sprintf("Failed to query matches: %v", err),
+			"detail": "Failed to query matches",
 			"error_type": "firestore_query_error",
 		})
 		return
@@ -388,6 +415,12 @@ func handleListMatchesForProfile(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /all [delete]
 func handleDeleteAll(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Admin authorization required"})
+		return
+	}
+
 	ctx := context.Background()
 	client, err := getDBFunc(ctx)
 	if err != nil {

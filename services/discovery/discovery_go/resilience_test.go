@@ -85,6 +85,11 @@ func TestHandleListMatches_MalformedMatch(t *testing.T) {
 						},
 					},
 				},
+				PROFILES_CACHE: {
+					docs: map[string]*mockDoc{
+						"p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}},
+					},
+				},
 			},
 		}, nil
 	}
@@ -280,6 +285,11 @@ func TestEmptyArrayConsistency(t *testing.T) {
 			return &mockClient{
 				collections: map[string]*mockCollection{
 					MATCHES_COLLECTION: {},
+					PROFILES_CACHE: {
+						docs: map[string]*mockDoc{
+							"lonely-user": {id: "lonely-user", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "lonely-user"}},
+						},
+					},
 				},
 			}, nil
 		}

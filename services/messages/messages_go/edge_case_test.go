@@ -21,6 +21,7 @@ func TestEdgeCaseProtections(t *testing.T) {
 	t.Run("CreateConversation_SelfMessaging", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		
 		body := ConversationCreate{ParticipantProfileIDs: []string{"hero1", "hero1"}}
 		b, _ := json.Marshal(body)
@@ -37,6 +38,7 @@ func TestEdgeCaseProtections(t *testing.T) {
 	t.Run("CreateConversation_InvalidParticipantCount", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		
 		body := ConversationCreate{ParticipantProfileIDs: []string{"hero1", "hero2", "hero3"}}
 		b, _ := json.Marshal(body)
@@ -53,6 +55,7 @@ func TestEdgeCaseProtections(t *testing.T) {
 	t.Run("SendMessage_EmptyOrWhitespace", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "id", Value: "c1"}}
 		
 		body := MessageCreate{SenderProfileID: "p1", Content: "   "}
@@ -70,6 +73,7 @@ func TestEdgeCaseProtections(t *testing.T) {
 	t.Run("SendMessage_MaxLength", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "id", Value: "c1"}}
 		
 		longContent := strings.Repeat("a", 2001)

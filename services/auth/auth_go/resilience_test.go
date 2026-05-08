@@ -137,7 +137,7 @@ func TestAuthResilience_LoginInvalidPassword(t *testing.T) {
 }
 
 func TestAuthResilience_DeleteUserSuccess(t *testing.T) {
-	r := setupTest()
+	r := setupTestWithRole("admin")
 
 	deletedUID := ""
 	getAuthFunc = func(ctx context.Context) (AuthClient, error) {
@@ -162,7 +162,7 @@ func TestAuthResilience_DeleteUserSuccess(t *testing.T) {
 }
 
 func TestAuthResilience_DeleteAllUserSuccess(t *testing.T) {
-	r := setupTest()
+	r := setupTestWithRole("root_admin")
 
 	listed := false
 	getAuthFunc = func(ctx context.Context) (AuthClient, error) {

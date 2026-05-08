@@ -360,16 +360,24 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	// Create new
+	isPremium := body.IsPremium
+	isDeleted := body.IsDeleted
+	if body.UserType == User {
+		isPremium = false
+		isDeleted = false
+	}
+
 	newData := map[string]interface{}{
 		"email":      body.Email,
 		"user_type":  string(body.UserType),
-		"is_premium": body.IsPremium,
-		"is_deleted": body.IsDeleted,
+		"is_premium": isPremium,
+		"is_deleted": isDeleted,
 		"created_at": firestore.ServerTimestamp,
 	}
 	_, err = docRef.Set(ctx, newData)
 	if err != nil {
-		httpError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create user record: %v", err))
+		log.Printf("[ERROR] Failed to create user record: %v", err)
+		httpError(c, http.StatusInternalServerError, "Failed to create user record")
 		return
 	}
 	var u UserOut
@@ -412,6 +420,8 @@ func purgeAllUsersHandler(c *gin.Context) {
 		if len(uids) > 0 {
 			payload, _ := json.Marshal(map[string]interface{}{"uids": uids})
 			req, _ := http.NewRequest("DELETE", authSvc+"/auth/users/", bytes.NewBuffer(payload))
+			req.Header.Set("Authorization", "Bearer "+GetAuth(c).Token)
+			req.Header.Set("Content-Type", "application/json")
 			_, _ = http.DefaultClient.Do(req)
 		}
 

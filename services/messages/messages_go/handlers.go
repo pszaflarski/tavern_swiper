@@ -20,7 +20,19 @@ const (
 	COLLECTION_CONVERSATIONS         = "conversations"
 	COLLECTION_PROFILE_CONVERSATIONS = "profile_conversations"
 	COLLECTION_CACHE                 = "discovery_matches_cache"
+	COLLECTION_PROFILES              = "profiles"
 )
+
+func verifyProfileOwnership(ctx context.Context, client FirestoreClient, profileID, authUID string) error {
+	doc, err := client.Collection(COLLECTION_PROFILES).Doc(profileID).Get(ctx)
+	if err != nil || !doc.Exists() {
+		return fmt.Errorf("Profile not found")
+	}
+	if doc.Data()["user_id"] != authUID {
+		return fmt.Errorf("Not authorized for this profile")
+	}
+	return nil
+}
 
 func parseStringSlice(val interface{}) []string {
 	if val == nil {
@@ -65,6 +77,7 @@ func handleHealth(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /conversations [post]
 func handleCreateConversation(c *gin.Context) {
+	auth := GetAuth(c)
 	var body ConversationCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error()})
@@ -97,7 +110,20 @@ func handleCreateConversation(c *gin.Context) {
 	sort.Strings(pids)
 	participantsKey := strings.Join(pids, "_")
 
-	// 2. Check for existing conversation with this key
+	// 2.1 Verify ownership of at least one profile
+	isOwner := false
+	for _, pid := range pids {
+		if err := verifyProfileOwnership(ctx, client, pid, auth.UID); err == nil {
+			isOwner = true
+			break
+		}
+	}
+	if !isOwner && !IsAdmin(auth.Role) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized. Must own at least one profile."})
+		return
+	}
+
+	// 3. Check for existing conversation with this key
 	iter := client.Collection(COLLECTION_CONVERSATIONS).Where("participants_key", "==", participantsKey).Limit(1).Documents(ctx)
 	docs, err := iter.GetAll()
 	if err == nil && len(docs) > 0 {
@@ -167,6 +193,7 @@ func handleCreateConversation(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /conversations/{id}/messages [post]
 func handleSendMessage(c *gin.Context) {
+	auth := GetAuth(c)
 	convID := c.Param("id")
 	var body MessageCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -190,6 +217,12 @@ func handleSendMessage(c *gin.Context) {
 	client, err := getDBFunc(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Internal server error"})
+		return
+	}
+
+	// Verify ownership of the sender profile
+	if err := verifyProfileOwnership(ctx, client, body.SenderProfileID, auth.UID); err != nil && !IsAdmin(auth.Role) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": err.Error()})
 		return
 	}
 
@@ -263,12 +296,32 @@ func handleSendMessage(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /conversations/{id}/messages [get]
 func handleGetMessages(c *gin.Context) {
+	auth := GetAuth(c)
 	convID := c.Param("id")
 	ctx := context.Background()
 
 	client, err := getDBFunc(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Database error"})
+		return
+	}
+
+	// Verify caller owns at least one participating profile
+	convDoc, err := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Get(ctx)
+	if err != nil || !convDoc.Exists() {
+		c.JSON(http.StatusNotFound, gin.H{"detail": "Conversation not found"})
+		return
+	}
+	pids := parseStringSlice(convDoc.Data()["participant_ids"])
+	isOwner := false
+	for _, pid := range pids {
+		if err := verifyProfileOwnership(ctx, client, pid, auth.UID); err == nil {
+			isOwner = true
+			break
+		}
+	}
+	if !isOwner && !IsAdmin(auth.Role) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to read these messages"})
 		return
 	}
 
@@ -318,12 +371,18 @@ func handleGetMessages(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /conversations/profile/{profile_id} [get]
 func handleListConversations(c *gin.Context) {
+	auth := GetAuth(c)
 	profileID := c.Param("profile_id")
 	ctx := context.Background()
 
 	client, err := getDBFunc(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Database error"})
+		return
+	}
+
+	if err := verifyProfileOwnership(ctx, client, profileID, auth.UID); err != nil && !IsAdmin(auth.Role) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to view conversations for this profile"})
 		return
 	}
 

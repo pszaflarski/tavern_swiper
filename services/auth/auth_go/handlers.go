@@ -241,6 +241,12 @@ func firebaseAuthREST(c *gin.Context, action string) {
 // @Security     BearerAuth
 // @Router       /users/{uid} [delete]
 func deleteUserHandler(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		httpError(c, http.StatusForbidden, "Admin authorization required")
+		return
+	}
+
 	uid := c.Param("uid")
 	authClient, err := getAuthFunc(c.Request.Context())
 	if err != nil {
@@ -268,6 +274,12 @@ func deleteUserHandler(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /users/ [delete]
 func deleteUsersBulkHandler(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		httpError(c, http.StatusForbidden, "Admin authorization required")
+		return
+	}
+
 	var body BulkDeleteRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		validationError(c, err)
@@ -303,6 +315,12 @@ func deleteUsersBulkHandler(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /all [delete]
 func deleteAllHandler(c *gin.Context) {
+	auth := GetAuth(c)
+	if auth.Role != "root_admin" {
+		httpError(c, http.StatusForbidden, "Root Admin authorization required")
+		return
+	}
+
 	authClient, err := getAuthFunc(c.Request.Context())
 	if err != nil {
 		httpError(c, http.StatusInternalServerError, "Failed to initialize auth client")

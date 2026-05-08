@@ -42,6 +42,7 @@ func TestHandleCreateConversation(t *testing.T) {
 		
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		
 		body := ConversationCreate{ParticipantProfileIDs: []string{"p1", "p2"}}
 		b, _ := json.Marshal(body)
@@ -80,6 +81,7 @@ func TestHandleCreateConversation(t *testing.T) {
 		
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		
 		body := ConversationCreate{ParticipantProfileIDs: []string{"unmatched1", "unmatched2"}}
 		b, _ := json.Marshal(body)
@@ -115,6 +117,7 @@ func TestHandleSendMessage(t *testing.T) {
 		
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "id", Value: convID}}
 		
 		body := MessageCreate{SenderProfileID: senderID, Content: "Hello World"}
@@ -173,6 +176,7 @@ func TestHandleListConversations(t *testing.T) {
 		
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
 		c.Params = []gin.Param{{Key: "profile_id", Value: profileID}}
 		
 		handleListConversations(c)

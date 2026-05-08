@@ -19,6 +19,14 @@ func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}
+	if key == "JWT_SECRET" {
+		projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		isEmulator := os.Getenv("FIREBASE_AUTH_EMULATOR_HOST") != ""
+		isDevProject := strings.HasSuffix(projectID, "-dev")
+		if !isEmulator && !isDevProject && !strings.HasSuffix(os.Args[0], ".test") {
+			panic("CRITICAL: " + key + " is missing in non-dev environment. Failing hard.")
+		}
+	}
 	return fallback
 }
 
@@ -34,7 +42,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			// Health check bypass
-			if c.Request.URL.Path == "/discovery/health" {
+			if c.Request.URL.Path == "/messages/health" {
 				c.Next()
 				return
 			}
