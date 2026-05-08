@@ -5,14 +5,17 @@ import subprocess
 import json
 import time
 
-# --- Configuration ---
-def get_current_project():
-    try:
-        return subprocess.check_output(["gcloud", "config", "get-value", "project"]).decode("utf-8").strip()
-    except:
-        return "tavern-swiper-dev"
+# Map environment names to GCP project IDs
+PROJECT_MAP = {
+    "local": "tavern-swiper-dev",
+    "dev": "tavern-swiper-dev",
+    "test": "tavern-swiper-dev",
+    "prod": "tavern-swiper-prod",
+}
 
-PROJECT_ID = get_current_project()
+def get_project_id(env):
+    return PROJECT_MAP.get(env, "tavern-swiper-dev")
+
 REGION = "us-central1"
 
 # Admin account for seeding
@@ -45,13 +48,17 @@ def get_service_url(service_name, env="dev"):
         env_suffix = "-dev"
     elif env == "test":
         env_suffix = "-test"
+    elif env == "prod":
+        env_suffix = "-prod"
     
     deploy_name = f"{service_name}{env_suffix}"
+    
+    project_id = get_project_id(env)
     
     try:
         url = subprocess.check_output([
             "gcloud", "run", "services", "describe", deploy_name,
-            "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+            "--platform", "managed", "--region", REGION, "--project", project_id,
             "--format", "value(status.url)"
         ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         return url
@@ -60,7 +67,7 @@ def get_service_url(service_name, env="dev"):
         try:
             url = subprocess.check_output([
                 "gcloud", "run", "services", "describe", service_name,
-                "--platform", "managed", "--region", REGION, "--project", PROJECT_ID,
+                "--platform", "managed", "--region", REGION, "--project", project_id,
                 "--format", "value(status.url)"
             ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
             return url
