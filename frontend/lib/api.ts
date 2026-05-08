@@ -23,9 +23,7 @@ export async function hydrateServiceUrls(): Promise<void> {
   
   const routerUrl = process.env.EXPO_PUBLIC_ROUTER_URL ?? '';
   if (!routerUrl) {
-    console.warn('[Router] No ROUTER_URL set, using localhost fallbacks');
-    hydrated = true;
-    return;
+    throw new Error('EXPO_PUBLIC_ROUTER_URL is not set. Service discovery cannot proceed.');
   }
 
   hydrationPromise = (async () => {
@@ -41,8 +39,8 @@ export async function hydrateServiceUrls(): Promise<void> {
       }
       hydrated = true;
     } catch (err) {
-      console.error('[Router] Failed to fetch service URLs, using fallbacks:', err);
-      hydrated = true; 
+      console.error('[Router] Failed to fetch service URLs:', err);
+      throw new Error(`Failed to hydrate service URLs from router: ${err}`);
     }
   })();
 

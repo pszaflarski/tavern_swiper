@@ -145,13 +145,18 @@ describe('API URL Hydration', () => {
     expect(axios.get).toHaveBeenCalledTimes(1);
   });
 
-  it('hydrateServiceUrls should fallback to defaults if fetch fails', async () => {
+  it('hydrateServiceUrls should throw if fetch fails', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     (axios.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
 
-    await hydrateServiceUrls();
+    await expect(hydrateServiceUrls()).rejects.toThrow('Failed to hydrate service URLs from router');
 
     expect(axios.get).toHaveBeenCalledTimes(1);
     consoleSpy.mockRestore();
+  });
+
+  it('hydrateServiceUrls should throw if ROUTER_URL is missing', async () => {
+    delete process.env.EXPO_PUBLIC_ROUTER_URL;
+    await expect(hydrateServiceUrls()).rejects.toThrow('EXPO_PUBLIC_ROUTER_URL is not set');
   });
 });
