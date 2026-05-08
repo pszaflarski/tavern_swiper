@@ -45,11 +45,11 @@ func main() {
 		auth.POST("/verify", verifyTokenHandler)
 		auth.POST("/register", registerHandler)
 		auth.POST("/login", loginHandler)
+		auth.POST("/dev-mint", devMintHandler)
 
 		protected := auth.Group("/")
 		protected.Use(AuthMiddleware())
 		{
-			protected.POST("/dev-mint", devMintHandler)
 			protected.DELETE("/users/:uid", deleteUserHandler)
 			protected.DELETE("/users/", deleteUsersBulkHandler)
 			protected.DELETE("/all", deleteAllHandler)
