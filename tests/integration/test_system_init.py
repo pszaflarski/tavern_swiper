@@ -7,13 +7,6 @@ from .helpers import register_user, get_root_admin, AUTH_URL, USERS_URL, PROFILE
 
 TEST_EMAIL = f"root-test-{uuid.uuid4().hex[:8]}@example.com"
 
-@pytest.fixture(scope="module")
-async def auth_token():
-    """Fixture to ensure root admin exists and return its token and UID."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        root = await get_root_admin(client)
-        return root
-
 @pytest.mark.asyncio
 async def test_root_initialization_flow(auth_token):
     """
