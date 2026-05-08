@@ -322,7 +322,7 @@ func TestSnapshotsParity(t *testing.T) {
 									return &mockSnapshot{
 										id: "test-user-123", exists: true,
 										data: map[string]interface{}{
-											"email": "test@e.com", "is_premium": true, "user_type": "user", "is_deleted": false, 
+											"email": "test@e.com", "full_name": "New Name", "user_type": "user", "is_deleted": false, 
 											"created_at": time.Date(2026, 4, 17, 10, 0, 0, 0, time.UTC),
 										},
 									}, nil
@@ -336,7 +336,7 @@ func TestSnapshotsParity(t *testing.T) {
 				},
 			}, nil
 		}
-		body, _ := json.Marshal(map[string]interface{}{"is_premium": true})
+		body, _ := json.Marshal(map[string]interface{}{"full_name": "New Name"})
 		req, _ := http.NewRequest("PUT", "/users/me", bytes.NewBuffer(body))
 		req.Header.Set("Authorization", "Bearer "+token)
 		w = httptest.NewRecorder()

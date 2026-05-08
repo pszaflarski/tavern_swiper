@@ -176,6 +176,16 @@ func updateMeHandler(c *gin.Context) {
 		return
 	}
 
+	// SECURITY: Block self-promotion and premium toggling before hitting the database
+	if body.IsPremium != nil {
+		httpError(c, http.StatusForbidden, "Cannot change your own premium status. Contact an administrator.")
+		return
+	}
+	if body.UserType != nil {
+		httpError(c, http.StatusForbidden, "Cannot change your own role. Contact an administrator.")
+		return
+	}
+
 	db, err := getDBFunc(c.Request.Context())
 	if err != nil {
 		httpError(c, http.StatusInternalServerError, "Database unavailable")
@@ -190,12 +200,7 @@ func updateMeHandler(c *gin.Context) {
 	}
 
 	updates := []firestore.Update{}
-	if body.IsPremium != nil {
-		updates = append(updates, firestore.Update{Path: "is_premium", Value: *body.IsPremium})
-	}
-	if body.UserType != nil {
-		updates = append(updates, firestore.Update{Path: "user_type", Value: string(*body.UserType)})
-	}
+
 	if body.FullName != nil {
 		updates = append(updates, firestore.Update{Path: "full_name", Value: *body.FullName})
 	}
@@ -214,6 +219,69 @@ func updateMeHandler(c *gin.Context) {
 	doc, _ = docRef.Get(c.Request.Context())
 	var u UserOut
 	mapToUserOut(auth.UID, doc.Data(), &u)
+	c.JSON(http.StatusOK, u)
+}
+
+// adminUpdateUserHandler godoc
+// @Summary      Admin update user
+// @Description  Updates fields on any user's record. Admin or Root Admin only.
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        uid   path      string      true  "Target user UID"
+// @Param        body  body      UserUpdate  true  "Fields to update"
+// @Success      200   {object}  UserOut
+// @Failure      403   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Failure      422   {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /{uid} [put]
+func adminUpdateUserHandler(c *gin.Context) {
+	targetUID := c.Param("uid")
+	
+	var body UserUpdate
+	if err := c.ShouldBindJSON(&body); err != nil {
+		validationError(c, err)
+		return
+	}
+
+	db, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	docRef := db.Collection("users").Doc(targetUID)
+	doc, err := docRef.Get(c.Request.Context())
+	if err != nil || !doc.Exists() {
+		httpError(c, http.StatusNotFound, "User not found")
+		return
+	}
+
+	updates := []firestore.Update{}
+	if body.IsPremium != nil {
+		updates = append(updates, firestore.Update{Path: "is_premium", Value: *body.IsPremium})
+	}
+	if body.UserType != nil {
+		updates = append(updates, firestore.Update{Path: "user_type", Value: string(*body.UserType)})
+	}
+	if body.FullName != nil {
+		updates = append(updates, firestore.Update{Path: "full_name", Value: *body.FullName})
+	}
+	updates = append(updates, firestore.Update{Path: "updated_at", Value: firestore.ServerTimestamp})
+
+	if len(updates) > 0 {
+		_, err = docRef.Update(c.Request.Context(), updates)
+		if err != nil {
+			httpError(c, http.StatusInternalServerError, "Failed to update record")
+			return
+		}
+	}
+
+	// Refetch for return
+	doc, _ = docRef.Get(c.Request.Context())
+	var u UserOut
+	mapToUserOut(targetUID, doc.Data(), &u)
 	c.JSON(http.StatusOK, u)
 }
 

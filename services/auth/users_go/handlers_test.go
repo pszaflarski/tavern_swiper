@@ -52,6 +52,7 @@ func setupTest() *gin.Engine {
 				admin.GET("/", listUsersHandler)
 				admin.PATCH("/:uid/restore", restoreUserHandler)
 				admin.DELETE("/:uid", deleteUserHandler)
+				admin.PUT("/:uid", adminUpdateUserHandler)
 			}
 
 			// Root Admin restricted

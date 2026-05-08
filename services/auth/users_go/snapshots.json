@@ -117,8 +117,9 @@
   "test_update_me_success": {
     "created_at": "2026-04-17T10:00:00Z",
     "email": "test@e.com",
+    "full_name": "New Name",
     "is_deleted": false,
-    "is_premium": true,
+    "is_premium": false,
     "uid": "test-user-123",
     "user_type": "user"
   },

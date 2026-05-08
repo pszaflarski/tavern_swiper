@@ -403,3 +403,87 @@ func TestEmptyArrayConsistency(t *testing.T) {
 		}
 	})
 }
+
+func TestUsersResilience_UpdateMeRoleEscalationBlocked(t *testing.T) {
+	skipIfRealDB(t)
+	r := setupTest()
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{}, nil
+	}
+
+	payload := map[string]interface{}{"user_type": "root_admin"}
+	jsonBody, _ := json.Marshal(payload)
+	token := signGoTestToken("u1", User, "u1@e.com")
+
+	req, _ := http.NewRequest("PUT", "/users/me", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected 403, got %d", w.Code)
+	}
+}
+
+func TestUsersResilience_UpdateMePremiumEscalationBlocked(t *testing.T) {
+	skipIfRealDB(t)
+	r := setupTest()
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{}, nil
+	}
+
+	payload := map[string]interface{}{"is_premium": true}
+	jsonBody, _ := json.Marshal(payload)
+	token := signGoTestToken("u1", User, "u1@e.com")
+
+	req, _ := http.NewRequest("PUT", "/users/me", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected 403, got %d", w.Code)
+	}
+}
+
+func TestUsersResilience_AdminUpdateUserSuccess(t *testing.T) {
+	skipIfRealDB(t)
+	r := setupTest()
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{
+			collectionFunc: func(path string) CollectionRef {
+				return &mockCollection{
+					docFunc: func(p string) DocumentRef {
+						return &mockDoc{
+							getFunc: func(ctx context.Context) (DocumentSnapshot, error) {
+								if p == "target-uid" {
+									return &mockSnapshot{exists: true, data: map[string]interface{}{"email": "target@e.com", "user_type": "user", "is_premium": false}}, nil
+								}
+								return &mockSnapshot{exists: false}, nil
+							},
+							updateFunc: func(ctx context.Context, updates []firestore.Update, opts ...firestore.Precondition) (*firestore.WriteResult, error) {
+								return nil, nil
+							},
+						}
+					},
+				}
+			},
+		}, nil
+	}
+
+	payload := map[string]interface{}{"user_type": "admin", "is_premium": true}
+	jsonBody, _ := json.Marshal(payload)
+	token := signGoTestToken("admin-uid", Admin, "admin@e.com")
+
+	req, _ := http.NewRequest("PUT", "/users/target-uid", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+}
