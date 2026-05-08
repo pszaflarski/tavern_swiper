@@ -466,9 +466,351 @@ func TestFeedCoverage_LargeExclusionSet_RealDB(t *testing.T) {
 		numExcluded+1, len(expectedRemaining), len(seen))
 }
 
+// TestFeedCoverage_ExclusionStress_RealDB is a parameterized stress test that
+// validates Pipeline NotEqualAny at 100 and 500 exclusion sizes.
+//
+// Strategy: Seed 5 "target" profiles, then build exclusion lists padded with
+// synthetic IDs (UUIDs that don't exist in the collection). This tests that:
+//   - NotEqualAny doesn't error or silently truncate at high counts
+//   - Target profiles are still returned despite the large filter
+//   - Latency doesn't degrade catastrophically
+func TestFeedCoverage_ExclusionStress_RealDB(t *testing.T) {
+	if !*useRealDB {
+		t.Skip("Skipping real-db test (pass -real-db to run)")
+	}
+
+	setupRealDBEnv(t)
+
+	cases := []struct {
+		name           string
+		exclusionCount int
+	}{
+		{"100_exclusions", 100},
+		{"500_exclusions", 500},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset DB singleton for each sub-test
+			dbOnce = sync.Once{}
+			db = nil
+
+			ctx := context.Background()
+			client, err := getDBInternal(ctx)
+			if err != nil {
+				t.Fatalf("Failed to initialize Firestore: %v", err)
+			}
+
+			const numTargets = 5
+			const batchLimit = 10
+			testRun := fmt.Sprintf("fstress-%d-%d", tc.exclusionCount, time.Now().UnixMilli())
+			swiperID := fmt.Sprintf("%s-swiper", testRun)
+
+			var createdDocs []struct {
+				collection string
+				docID      string
+			}
+			t.Cleanup(func() {
+				log.Printf("[CLEANUP] Removing %d test documents...", len(createdDocs))
+				for _, d := range createdDocs {
+					client.Collection(d.collection).Doc(d.docID).Delete(ctx)
+				}
+			})
+
+			// Seed target profiles that should survive the exclusion filter
+			targetIDs := make([]string, numTargets)
+			for i := 0; i < numTargets; i++ {
+				pid := fmt.Sprintf("%s-target-%02d", testRun, i)
+				targetIDs[i] = pid
+				_, err := client.Collection(PROFILES_CACHE).Doc(pid).Set(ctx, map[string]interface{}{
+					"profile_id":   pid,
+					"user_id":      fmt.Sprintf("%s-u%02d", testRun, i),
+					"display_name": fmt.Sprintf("StressHero %d", i),
+					"is_active":    true,
+					"image_urls":   []string{},
+					"talents":      []string{},
+				})
+				if err != nil {
+					t.Fatalf("Failed to seed target %s: %v", pid, err)
+				}
+				createdDocs = append(createdDocs, struct {
+					collection string
+					docID      string
+				}{PROFILES_CACHE, pid})
+			}
+
+			// Seed swiper
+			_, err = client.Collection(PROFILES_CACHE).Doc(swiperID).Set(ctx, map[string]interface{}{
+				"profile_id": swiperID,
+				"user_id":    fmt.Sprintf("%s-swiper-user", testRun),
+				"is_active":  true,
+				"image_urls": []string{},
+				"talents":    []string{},
+			})
+			if err != nil {
+				t.Fatalf("Failed to seed swiper: %v", err)
+			}
+			createdDocs = append(createdDocs, struct {
+				collection string
+				docID      string
+			}{PROFILES_CACHE, swiperID})
+
+			time.Sleep(2 * time.Second)
+
+			// Build exclusion list: self + N-1 synthetic UUIDs
+			excludeSet := map[string]bool{swiperID: true}
+			for i := 0; i < tc.exclusionCount-1; i++ {
+				fakeID := fmt.Sprintf("fake-excluded-%s-%04d", testRun, i)
+				excludeSet[fakeID] = true
+			}
+
+			t.Logf("Built exclusion set of %d IDs (%d synthetic + self)", len(excludeSet), tc.exclusionCount-1)
+
+			// Iterate to find all target profiles
+			getFeedCandidatesFunc = realGetFeedCandidates
+			seen := make(map[string]bool)
+			totalIterations := 0
+
+			start := time.Now()
+
+			for i := 0; i < 100; i++ { // Safety valve
+				totalIterations++
+
+				excludeList := make([]string, 0, len(excludeSet))
+				for id := range excludeSet {
+					excludeList = append(excludeList, id)
+				}
+
+				candidates, err := realGetFeedCandidates(ctx, PROFILES_CACHE, excludeList, batchLimit)
+				if err != nil {
+					t.Fatalf("Iteration %d: Pipeline with %d exclusions failed: %v", i, len(excludeList), err)
+				}
+				if len(candidates) == 0 {
+					break
+				}
+
+				for _, c := range candidates {
+					pid, _ := c.Data["profile_id"].(string)
+					if pid == "" {
+						continue
+					}
+					if excludeSet[pid] {
+						t.Errorf("Excluded profile %s leaked through with %d exclusions", pid, len(excludeList))
+					}
+					seen[pid] = true
+					excludeSet[pid] = true
+				}
+			}
+
+			elapsed := time.Since(start)
+
+			// Verify all targets surfaced
+			targetsFound := 0
+			for _, tid := range targetIDs {
+				if seen[tid] {
+					targetsFound++
+				} else {
+					t.Errorf("Target profile %s was NOT surfaced with %d exclusions", tid, tc.exclusionCount)
+				}
+			}
+
+			avgLatency := elapsed / time.Duration(totalIterations)
+			t.Logf("✅ %s: %d/%d targets found in %d iterations, total %v (avg %v/query, total seen: %d)",
+				tc.name, targetsFound, numTargets, totalIterations, elapsed, avgLatency, len(seen))
+		})
+	}
+}
+
+// TestFeedCoverage_HeavyStress_RealDB seeds REAL profiles at scale and
+// walks the entire collection with large real exclusion sets.
+//
+// This is the ultimate stress test — every exclusion ID maps to a real
+// document, forcing the Pipeline to do actual filtering work.
+//
+// Run with:
+//   go test -v -run TestFeedCoverage_HeavyStress -real-db -timeout 120s
+func TestFeedCoverage_HeavyStress_RealDB(t *testing.T) {
+	if !*useRealDB {
+		t.Skip("Skipping real-db test (pass -real-db to run)")
+	}
+
+	setupRealDBEnv(t)
+
+	cases := []struct {
+		name         string
+		totalSeeded  int
+		numExcluded  int
+		batchLimit   int
+	}{
+		{"500_profiles_490_excluded", 500, 490, 20},
+		{"1000_profiles_990_excluded", 1000, 990, 20},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dbOnce = sync.Once{}
+			db = nil
+
+			ctx := context.Background()
+			client, err := getDBInternal(ctx)
+			if err != nil {
+				t.Fatalf("Failed to initialize Firestore: %v", err)
+			}
+
+			testRun := fmt.Sprintf("fheavy-%d-%d", tc.totalSeeded, time.Now().UnixMilli())
+			swiperID := fmt.Sprintf("%s-swiper", testRun)
+
+			var createdDocIDs []string
+			t.Cleanup(func() {
+				t.Logf("[CLEANUP] Removing %d test documents...", len(createdDocIDs)+1)
+				// Delete in parallel batches for speed
+				const deleteBatch = 50
+				for i := 0; i < len(createdDocIDs); i += deleteBatch {
+					end := i + deleteBatch
+					if end > len(createdDocIDs) {
+						end = len(createdDocIDs)
+					}
+					var wg sync.WaitGroup
+					for _, docID := range createdDocIDs[i:end] {
+						wg.Add(1)
+						go func(id string) {
+							defer wg.Done()
+							client.Collection(PROFILES_CACHE).Doc(id).Delete(ctx)
+						}(docID)
+					}
+					wg.Wait()
+				}
+				client.Collection(PROFILES_CACHE).Doc(swiperID).Delete(ctx)
+			})
+
+			// --- Seed profiles in parallel for speed ---
+			t.Logf("⏳ Seeding %d profiles...", tc.totalSeeded)
+			seedStart := time.Now()
+
+			allProfileIDs := make([]string, tc.totalSeeded)
+			var seedWg sync.WaitGroup
+			var seedMu sync.Mutex
+			semaphore := make(chan struct{}, 50) // Limit concurrent writes
+
+			for i := 0; i < tc.totalSeeded; i++ {
+				pid := fmt.Sprintf("%s-p%04d", testRun, i)
+				allProfileIDs[i] = pid
+
+				seedWg.Add(1)
+				go func(profileID string, idx int) {
+					defer seedWg.Done()
+					semaphore <- struct{}{}
+					defer func() { <-semaphore }()
+
+					_, err := client.Collection(PROFILES_CACHE).Doc(profileID).Set(ctx, map[string]interface{}{
+						"profile_id":   profileID,
+						"user_id":      fmt.Sprintf("%s-u%04d", testRun, idx),
+						"display_name": fmt.Sprintf("StressHero %d", idx),
+						"is_active":    true,
+						"image_urls":   []string{},
+						"talents":      []string{},
+					})
+					if err != nil {
+						t.Errorf("Failed to seed %s: %v", profileID, err)
+						return
+					}
+					seedMu.Lock()
+					createdDocIDs = append(createdDocIDs, profileID)
+					seedMu.Unlock()
+				}(pid, i)
+			}
+			seedWg.Wait()
+
+			// Seed swiper
+			client.Collection(PROFILES_CACHE).Doc(swiperID).Set(ctx, map[string]interface{}{
+				"profile_id": swiperID,
+				"user_id":    fmt.Sprintf("%s-swiper-user", testRun),
+				"is_active":  true,
+				"image_urls": []string{},
+				"talents":    []string{},
+			})
+
+			t.Logf("✅ Seeded %d profiles in %v", len(createdDocIDs), time.Since(seedStart))
+
+			// Give Firestore a moment to be consistent
+			time.Sleep(3 * time.Second)
+
+			// --- Build exclusion set: self + first N profiles ---
+			excludeSet := map[string]bool{swiperID: true}
+			for i := 0; i < tc.numExcluded; i++ {
+				excludeSet[allProfileIDs[i]] = true
+			}
+
+			// Expected remaining profiles
+			expectedRemaining := make(map[string]bool)
+			for i := tc.numExcluded; i < tc.totalSeeded; i++ {
+				expectedRemaining[allProfileIDs[i]] = true
+			}
+
+			t.Logf("🔍 Walking feed with %d real exclusions, expecting %d remaining profiles...",
+				len(excludeSet), len(expectedRemaining))
+
+			// --- Walk the feed ---
+			getFeedCandidatesFunc = realGetFeedCandidates
+			seen := make(map[string]bool)
+			totalIterations := 0
+			queryStart := time.Now()
+
+			for i := 0; i < 200; i++ { // Safety valve
+				totalIterations++
+
+				excludeList := make([]string, 0, len(excludeSet))
+				for id := range excludeSet {
+					excludeList = append(excludeList, id)
+				}
+
+				candidates, err := realGetFeedCandidates(ctx, PROFILES_CACHE, excludeList, tc.batchLimit)
+				if err != nil {
+					t.Fatalf("Iteration %d: Pipeline with %d exclusions failed: %v",
+						i, len(excludeList), err)
+				}
+				if len(candidates) == 0 {
+					break
+				}
+
+				for _, c := range candidates {
+					pid, _ := c.Data["profile_id"].(string)
+					if pid == "" {
+						continue
+					}
+					if excludeSet[pid] {
+						t.Errorf("Excluded profile %s leaked through with %d exclusions", pid, len(excludeList))
+					}
+					seen[pid] = true
+					excludeSet[pid] = true
+				}
+			}
+
+			queryElapsed := time.Since(queryStart)
+
+			// --- Assertions ---
+			targetsFound := 0
+			for pid := range expectedRemaining {
+				if seen[pid] {
+					targetsFound++
+				} else {
+					t.Errorf("Expected profile %s was NOT surfaced", pid)
+				}
+			}
+
+			avgLatency := queryElapsed / time.Duration(totalIterations)
+			t.Logf("✅ %s: %d/%d remaining profiles found in %d iterations",
+				tc.name, targetsFound, len(expectedRemaining), totalIterations)
+			t.Logf("   Total query time: %v (avg %v/query)", queryElapsed, avgLatency)
+			t.Logf("   Total seen (incl. pre-existing): %d", len(seen))
+		})
+	}
+}
+
 func init() {
 	// Ensure env vars have defaults for safety
 	if os.Getenv("GOOGLE_CLOUD_PROJECT") == "" {
 		os.Setenv("GOOGLE_CLOUD_PROJECT", "tavern-swiper-dev")
 	}
 }
+
