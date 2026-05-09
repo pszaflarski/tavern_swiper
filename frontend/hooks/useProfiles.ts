@@ -71,13 +71,7 @@ export function useActiveProfile(userId: string | null | undefined, enabled: boo
     },
     enabled: enabled && !!userId,
     staleTime: 0,
-    retry: (failureCount, error: any) => {
-      // Retry on 404s briefly (3 times) to handle auto-activation ritual delays
-      if (error.response?.status === 404 && failureCount < 3) return true;
-      if (failureCount < 2) return true; // Retry once for other errors
-      return false;
-    },
-    retryDelay: 1500,
+    retry: 1,
   });
 }
 

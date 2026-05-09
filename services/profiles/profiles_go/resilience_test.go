@@ -266,7 +266,7 @@ func (m *manualMockCol) Where(path, op string, value interface{}) Query {
 func (m *manualMockCol) Limit(n int) Query { return m }
 
 func (m *manualMockCol) Documents(ctx context.Context) DocumentIterator {
-	if m.isActiveQuery {
+	if m.isActiveQuery || m.mockP1 == nil {
 		return &mockIter{snaps: []*mockSnap{}}
 	}
 	return &mockIter{snaps: []*mockSnap{m.mockP1}}
@@ -341,5 +341,37 @@ func TestListProfilesForUser_Authorization(t *testing.T) {
 	r.ServeHTTP(w3, req3)
 	if w3.Code != http.StatusOK {
 		t.Errorf("Expected 200 for admin, got %d", w3.Code)
+	}
+}
+
+func TestActiveProfileFlow_NoProfiles(t *testing.T) {
+	skipIfRealDB(t)
+	jwtSecret = []byte("super-secret-tavern-key-123")
+	fixedNow := time.Date(2026, 4, 17, 10, 5, 0, 0, time.UTC)
+	oldNow := _now
+	_now = func() time.Time { return fixedNow }
+	defer func() { _now = oldNow }()
+
+	mockPub := &mockPublisher{}
+	r := setupTest(mockPub)
+	token := signGoTestTokenWithTimes("u-empty", "user", fixedNow, fixedNow.Add(30*time.Minute))
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &manualMockClient{
+			mockP1: nil, // Simulate no profiles
+		}, nil
+	}
+
+	req, _ := http.NewRequest("GET", "/profiles/user/me/active", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	if w.Body.String() != "null\n" && w.Body.String() != "null" {
+		t.Errorf("Expected 'null' response body, got '%s'", w.Body.String())
 	}
 }

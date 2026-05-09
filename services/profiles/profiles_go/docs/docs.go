@@ -604,18 +604,9 @@ const docTemplate = `{
                 "summary": "Get my active profile",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Returns the active profile, or null if none exist",
                         "schema": {
                             "$ref": "#/definitions/main.ProfileOut"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
                         }
                     },
                     "503": {

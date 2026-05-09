@@ -878,15 +878,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Returns the active profile, or null if none exist
           schema:
             $ref: '#/definitions/main.ProfileOut'
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "503":
           description: Service Unavailable
           schema:

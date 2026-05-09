@@ -763,8 +763,7 @@ func handleGetProfilesBatch(c *gin.Context) {
 // @Description  Returns the authenticated user's active profile. Auto-activates one if none is active.
 // @Tags         profiles
 // @Produce      json
-// @Success      200  {object}  ProfileOut
-// @Failure      404  {object}  map[string]string
+// @Success      200  {object}  ProfileOut  "Returns the active profile, or null if none exist"
 // @Failure      503  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /user/me/active [get]
@@ -798,7 +797,10 @@ func handleGetMyActiveProfile(c *gin.Context) {
 
 	docAny, err := iterAny.Next()
 	if err != nil {
-		send404(c, "Profile not found")
+		// User has zero profiles — this is a valid state, not an error.
+		// Return 200 with null body so the frontend treats it as "no data"
+		// rather than an error that triggers retries.
+		c.JSON(http.StatusOK, nil)
 		return
 	}
 

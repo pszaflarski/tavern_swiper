@@ -19,6 +19,7 @@ function TavernScreenInner() {
   const { 
     activeProfileId, 
     isLoadingActiveProfile, 
+    isLoadingProfiles,
     refetchActiveProfile,
     profiles,
     refetchProfiles
@@ -180,7 +181,7 @@ function TavernScreenInner() {
   };
 
 
-  if (isLoadingUser || isLoadingActiveProfile || isInitialLoad) {
+  if (isLoadingUser || isLoadingActiveProfile || isLoadingProfiles || isInitialLoad) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
