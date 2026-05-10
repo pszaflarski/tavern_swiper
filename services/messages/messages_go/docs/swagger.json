@@ -1,10 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Conversation and messaging between matched profiles.",
-        "title": "Messages Service API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
     "basePath": "/messages",
     "paths": {

@@ -1,10 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "User record management, roles, and admin operations.",
-        "title": "Users Service API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
     "basePath": "/users",
     "paths": {
@@ -249,6 +246,68 @@
             }
         },
         "/{uid}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates fields on any user's record. Admin or Root Admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Admin update user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Target user UID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.UserUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.UserOut"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -376,6 +435,9 @@
                 "email": {
                     "type": "string"
                 },
+                "full_name": {
+                    "type": "string"
+                },
                 "is_deleted": {
                     "type": "boolean"
                 },
@@ -400,6 +462,9 @@
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "full_name": {
                     "type": "string"
                 },
                 "is_deleted": {
@@ -432,6 +497,9 @@
         "main.UserUpdate": {
             "type": "object",
             "properties": {
+                "full_name": {
+                    "type": "string"
+                },
                 "is_premium": {
                     "type": "boolean"
                 },

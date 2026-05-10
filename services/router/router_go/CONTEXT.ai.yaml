@@ -1,0 +1,40 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: router
+boundary: router
+port: 8010
+database: router-{env}
+base_path: /router
+
+collections:
+  owned:
+    - service_routes  # doc ID format: {service}_{tag}
+
+pubsub:
+  publishes: []
+  consumes: []
+
+endpoints:
+  public:
+    - GET /router/health
+    - GET /router/swagger/*
+    - GET /router/services                    # list all service URLs
+  authenticated:
+    - GET /router/services/{service_name}     # get URL for specific service
+    - PUT /router/services/{service_name}     # upsert service URL
+    - DELETE /router/services/{service_name}  # delete service entry
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - JWT_SECRET
+    - GOOGLE_CLOUD_PROJECT
+  services: []
+
+testing:
+  unit: "go test -v ./..."
+
+notes:
+  - Service registry for dynamic URL resolution
+  - Used by frontend switch_env.sh to discover Cloud Run URLs
+  - Used by frontend cloudbuild.yaml to inject backend URLs at build time
+  - The /services endpoint (list all) is public for frontend consumption

@@ -1,0 +1,51 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: discovery
+boundary: discovery
+port: 8003
+database: discovery-{env}
+base_path: /discovery
+
+collections:
+  owned:
+    - swipes
+    - matches
+  cache:
+    - profiles_profiles_cache  # populated by discovery_subscriber from profiles events
+
+pubsub:
+  publishes:
+    - topic: "{env}-discovery-match-events-v1"
+      events: [match_created]
+      format: protobuf
+  consumes: []  # discovery_subscriber handles consumption
+
+endpoints:
+  public:
+    - GET /discovery/health
+    - GET /discovery/swagger/*
+  authenticated:
+    - GET /discovery/feed/{profile_id}            # get discovery feed
+    - POST /discovery/swipe/                       # submit a swipe (auto-checks for match)
+    - GET /discovery/matches/{id}                  # get match by ID
+    - GET /discovery/matches/profile/{profile_id}  # get all matches for profile
+    - DELETE /discovery/all                        # admin purge
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - PUBSUB_PROJECT_ID
+    - PUBSUB_TOPIC_ID
+    - JWT_SECRET
+    - GOOGLE_CLOUD_PROJECT
+  services: []
+
+testing:
+  unit: "go test -v ./..."
+  integration: "go test -v -run TestIntegration -args -real-db"
+
+notes:
+  - Feed generation reads from profiles_profiles_cache (NOT from profiles service)
+  - Feed excludes current user's profiles and already-swiped profiles
+  - Match detection is automatic on swipe (checks for reciprocal RIGHT swipe)
+  - Match IDs are deterministic: match_{sorted_profile_ids}
+  - Uses Firestore Pipeline API for feed queries with deterministic ordering

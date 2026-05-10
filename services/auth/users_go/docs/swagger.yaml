@@ -20,6 +20,8 @@ definitions:
     properties:
       email:
         type: string
+      full_name:
+        type: string
       is_deleted:
         type: boolean
       is_premium:
@@ -36,6 +38,8 @@ definitions:
       created_at:
         type: string
       email:
+        type: string
+      full_name:
         type: string
       is_deleted:
         type: boolean
@@ -60,6 +64,8 @@ definitions:
     - RootAdmin
   main.UserUpdate:
     properties:
+      full_name:
+        type: string
       is_premium:
         type: boolean
       user_type:
@@ -67,9 +73,6 @@ definitions:
     type: object
 info:
   contact: {}
-  description: User record management, roles, and admin operations.
-  title: Users Service API
-  version: "1.0"
 paths:
   /:
     delete:
@@ -176,6 +179,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete a user
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: Updates fields on any user's record. Admin or Root Admin only.
+      parameters:
+      - description: Target user UID
+        in: path
+        name: uid
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.UserUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.UserOut'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Admin update user
       tags:
       - admin
   /{uid}/restore:

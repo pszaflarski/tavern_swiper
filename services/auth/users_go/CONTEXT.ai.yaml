@@ -1,0 +1,47 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: users
+boundary: auth
+port: 8006
+database: users-{env}
+base_path: /users
+
+collections:
+  owned:
+    - users  # shared with auth_go (same boundary)
+
+pubsub:
+  publishes: []
+  consumes: []
+
+endpoints:
+  public:
+    - GET /users/health
+    - GET /users/swagger/*
+    - GET /users/root-admin-exists
+  authenticated:
+    - GET /users/me                   # self
+    - PUT /users/me                   # self (restricted fields — cannot change role/premium)
+    - POST /users/                    # self (auto-init), admin (create), root_admin (claim)
+    - GET /users/                     # admin+ (list all)
+    - PUT /users/{uid}                # admin+ (update role/premium)
+    - DELETE /users/{uid}             # admin+ (soft/hard delete)
+    - PATCH /users/{uid}/restore      # admin+ (restore soft-deleted)
+    - DELETE /users/                  # root_admin (purge all users + Firebase Auth)
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - JWT_SECRET
+    - GOOGLE_CLOUD_PROJECT
+  services:
+    - auth_go (DELETE /auth/users/ — for cascading Firebase Auth deletion)
+
+testing:
+  unit: "go test -v ./..."
+  integration: "go test -v -run TestIntegration -args -real-db"
+
+notes:
+  - RBAC roles: user, admin, root_admin
+  - PUT /users/me has field restrictions — users cannot change their own role or premium status
+  - Admin updates must use PUT /users/{uid} endpoint
+  - Purge (DELETE /users/) cascades to Firebase Auth via auth_go

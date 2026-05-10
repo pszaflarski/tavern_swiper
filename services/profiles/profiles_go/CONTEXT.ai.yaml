@@ -1,0 +1,59 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: profiles
+boundary: profiles
+port: 8002
+database: profiles-{env}
+base_path: /profiles
+
+collections:
+  owned:
+    - profiles
+    - tags
+    - tag_suggestions
+
+pubsub:
+  publishes:
+    - topic: "{env}-profiles-profile-events-v1"
+      events: [profile_upserted, profile_deleted, profiles_purged]
+      format: protobuf (proto/profile_events.proto)
+  consumes: []
+
+endpoints:
+  public:
+    - GET /profiles/health
+    - GET /profiles/swagger/*
+  authenticated:
+    - GET /profiles/all                    # list all profiles
+    - POST /profiles/                      # create profile
+    - GET /profiles/{id}                   # get by ID
+    - PUT /profiles/{id}                   # update profile
+    - DELETE /profiles/{id}                # delete profile
+    - POST /profiles/{id}/set_active       # set as active profile
+    - POST /profiles/{id}/image            # upload portrait image
+    - GET /profiles/user/me                # get current user's profiles
+    - GET /profiles/user/{user_id}         # get profiles by user ID
+    - GET /profiles/user/me/active         # get active profile
+    - POST /profiles/batch                 # batch get profiles by IDs
+    - DELETE /profiles/                    # admin purge all
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - GCS_BUCKET_NAME
+    - PUBSUB_PROJECT_ID
+    - PUBSUB_TOPIC_ID
+    - JWT_SECRET
+  services: []
+  external:
+    - Google Cloud Storage (profile images)
+    - Google Cloud Pub/Sub (profile events)
+
+testing:
+  unit: "go test -v ./..."
+  integration: "go test -v -run TestIntegration -args -real-db"
+
+notes:
+  - Publishes Pub/Sub events on profile create/update/delete
+  - Tags system supports categories (gender, race, fandom, interests)
+  - Images uploaded to GCS with public read access
+  - The active profile endpoint returns 200 with null body for users with no profiles

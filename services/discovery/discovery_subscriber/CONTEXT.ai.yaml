@@ -1,0 +1,42 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: discovery_subscriber
+boundary: discovery
+port: 8007
+database: discovery-{env}
+type: event_worker
+
+collections:
+  owned:
+    - profiles_profiles_cache  # local read-cache of profiles data
+
+pubsub:
+  publishes: []
+  consumes:
+    - topic: "{env}-profiles-profile-events-v1"
+      subscription: "{env}-discovery-subscriber-sub"
+      source: profiles_go
+      events: [profile_upserted, profile_deleted, profiles_purged]
+      format: protobuf (proto/profile_events.proto)
+
+endpoints:
+  public:
+    - GET /               # health check
+    - POST /              # Pub/Sub push handler (receives profile events)
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - GOOGLE_CLOUD_PROJECT
+    - PUBSUB_EMULATOR_HOST  # local dev only
+  services: []
+
+testing:
+  unit: "go test -v ./..."
+
+notes:
+  - Receives Pub/Sub push messages from profiles service
+  - Maintains profiles_profiles_cache collection in discovery DB
+  - On profile_upserted: upserts doc in cache
+  - On profile_deleted: deletes doc from cache
+  - On profiles_purged: deletes entire cache collection
+  - In local Docker, uses cmd/local/main.go with pull-based subscription

@@ -1,0 +1,331 @@
+# API Contracts — Complete API Surface & Cross-Service Flows
+# This is the single source of truth for the entire API surface.
+# For detailed request/response schemas, see per-service swagger docs.
+
+services:
+
+  auth:
+    base_path: /auth
+    port: 8001
+    swagger: /auth/swagger/index.html
+    endpoints:
+      - method: GET
+        path: /auth/health
+        auth: none
+        description: Health check
+
+      - method: POST
+        path: /auth/register
+        auth: none
+        body: { email: string, password: string }
+        returns: { idToken: string, localId: string }
+        description: Create Firebase Auth user via Identity Toolkit REST API
+
+      - method: POST
+        path: /auth/login
+        auth: none
+        body: { email: string, password: string }
+        returns: { idToken: string, localId: string }
+        description: Authenticate with email/password
+
+      - method: POST
+        path: /auth/verify
+        auth: none
+        body: { idToken: string }
+        returns: { token: string }
+        description: Exchange Firebase ID token for Tavern JWT
+
+      - method: POST
+        path: /auth/dev-mint
+        auth: none
+        restrict: dev/test environments only
+        body: { uid: string, role: string }
+        returns: { token: string }
+        description: Mint long-lived JWT for testing
+
+      - method: DELETE
+        path: /auth/users/{uid}
+        auth: admin
+        description: Delete a single Firebase Auth user
+
+      - method: DELETE
+        path: /auth/users/
+        auth: admin
+        body: { uids: string[] }
+        description: Bulk delete Firebase Auth users
+
+      - method: DELETE
+        path: /auth/all
+        auth: root_admin
+        description: Delete ALL Firebase Auth users
+
+  users:
+    base_path: /users
+    port: 8006
+    swagger: /users/swagger/index.html
+    endpoints:
+      - method: GET
+        path: /users/root-admin-exists
+        auth: none
+        returns: { exists: bool }
+
+      - method: GET
+        path: /users/me
+        auth: self
+        returns: User
+        description: Get or auto-initialize authenticated user record
+
+      - method: PUT
+        path: /users/me
+        auth: self
+        body: { display_name?: string, active_profile_id?: string }
+        restricted_fields: [user_type, is_premium]
+        description: Update own user record (cannot change role/premium)
+
+      - method: POST
+        path: /users/
+        auth: self|admin|root_admin
+        description: Create user record (role depends on caller)
+
+      - method: GET
+        path: /users/
+        auth: admin
+        returns: User[]
+
+      - method: PUT
+        path: /users/{uid}
+        auth: admin
+        body: { user_type?: string, is_premium?: bool }
+        description: Admin-only field updates (role, premium)
+
+      - method: DELETE
+        path: /users/{uid}
+        auth: admin
+
+      - method: PATCH
+        path: /users/{uid}/restore
+        auth: admin
+
+      - method: DELETE
+        path: /users/
+        auth: root_admin
+        description: Purge all users + cascade to Firebase Auth
+
+  profiles:
+    base_path: /profiles
+    port: 8002
+    swagger: /profiles/swagger/index.html
+    endpoints:
+      - method: GET
+        path: /profiles/all
+        auth: user
+        returns: Profile[]
+
+      - method: POST
+        path: /profiles/
+        auth: user
+        body: Profile
+        publishes: profile_upserted event
+
+      - method: GET
+        path: /profiles/{id}
+        auth: user
+        returns: Profile
+
+      - method: PUT
+        path: /profiles/{id}
+        auth: owner
+        body: Profile (partial)
+        publishes: profile_upserted event
+
+      - method: DELETE
+        path: /profiles/{id}
+        auth: owner
+        publishes: profile_deleted event
+
+      - method: POST
+        path: /profiles/{id}/set_active
+        auth: owner
+        description: Set this profile as the user's active identity
+
+      - method: POST
+        path: /profiles/{id}/image
+        auth: owner
+        body: multipart/form-data (image file)
+        description: Upload portrait image to GCS
+
+      - method: GET
+        path: /profiles/user/me
+        auth: self
+        returns: Profile[]
+        description: All profiles for current user
+
+      - method: GET
+        path: /profiles/user/me/active
+        auth: self
+        returns: Profile | null
+        description: Active profile (200 with null body if none)
+
+      - method: GET
+        path: /profiles/user/{user_id}
+        auth: user
+        returns: Profile[]
+
+      - method: POST
+        path: /profiles/batch
+        auth: user
+        body: { ids: string[] }
+        returns: Profile[]
+
+      - method: DELETE
+        path: /profiles/
+        auth: admin
+        publishes: profiles_purged event
+
+  discovery:
+    base_path: /discovery
+    port: 8003
+    swagger: /discovery/swagger/index.html
+    endpoints:
+      - method: GET
+        path: /discovery/feed/{profile_id}
+        auth: user
+        returns: CachedProfile[]
+        description: Get discovery feed (excludes own profiles and already-swiped)
+
+      - method: POST
+        path: /discovery/swipe/
+        auth: user
+        body: { swiper_profile_id: string, swiped_profile_id: string, direction: "left"|"right" }
+        returns: { match?: Match }
+        publishes: match_created event (if mutual swipe)
+        description: Submit swipe. Auto-detects match on mutual RIGHT swipe.
+
+      - method: GET
+        path: /discovery/matches/{id}
+        auth: user
+        returns: Match
+
+      - method: GET
+        path: /discovery/matches/profile/{profile_id}
+        auth: user
+        returns: Match[]
+
+      - method: DELETE
+        path: /discovery/all
+        auth: admin
+
+  messages:
+    base_path: /messages
+    port: 8005
+    swagger: /messages/swagger/index.html
+    endpoints:
+      - method: POST
+        path: /messages/conversations
+        auth: user
+        body: { profile_id: string, other_profile_id: string }
+        requires: valid match in discovery_matches_cache
+        returns: Conversation
+
+      - method: POST
+        path: /messages/conversations/{id}/messages
+        auth: participant
+        body: { content: string, profile_id: string }
+        returns: Message
+
+      - method: GET
+        path: /messages/conversations/{id}/messages
+        auth: participant
+        returns: Message[]
+
+      - method: GET
+        path: /messages/conversations/profile/{profile_id}
+        auth: user
+        returns: Conversation[]
+        description: All conversations for a profile (with last message preview)
+
+      - method: DELETE
+        path: /messages/
+        auth: admin
+
+  router:
+    base_path: /router
+    port: 8010
+    swagger: /router/swagger/index.html
+    endpoints:
+      - method: GET
+        path: /router/services
+        auth: none
+        returns: { services: { [name]: url } }
+
+      - method: GET
+        path: /router/services/{service_name}
+        auth: user
+        returns: ServiceRoute
+
+      - method: PUT
+        path: /router/services/{service_name}
+        auth: admin
+        body: { url: string, tag?: string }
+
+      - method: DELETE
+        path: /router/services/{service_name}
+        auth: admin
+
+# ──────────────────────────────────────────────
+# Cross-Service Flows
+# ──────────────────────────────────────────────
+
+flows:
+
+  user_registration:
+    description: New user signs up and creates first profile
+    steps:
+      - actor: frontend
+        call: POST /auth/register
+        result: Firebase Auth user created, idToken returned
+      - actor: frontend
+        call: POST /auth/verify { idToken }
+        result: Tavern JWT issued
+      - actor: frontend
+        call: GET /users/me
+        result: User record auto-initialized in users DB
+      - actor: frontend
+        call: POST /profiles/ { display_name, bio, ... }
+        result: Profile created in profiles DB
+      - actor: profiles_go
+        event: profile_upserted → Pub/Sub
+        result: discovery_subscriber caches profile in discovery DB
+      - actor: frontend
+        call: PUT /users/me { active_profile_id }
+        result: Active profile set, discovery feed now works
+
+  match_lifecycle:
+    description: Two users match and start a conversation
+    steps:
+      - actor: user_A
+        call: POST /discovery/swipe/ { direction:"right", swiper:A, swiped:B }
+        result: Swipe recorded. No match yet (B hasn't swiped A).
+      - actor: user_B
+        call: POST /discovery/swipe/ { direction:"right", swiper:B, swiped:A }
+        result: Reciprocal swipe detected → Match created (match_A_B)
+      - actor: discovery_go
+        event: match_created → Pub/Sub
+        result: messages_subscriber caches match in messages DB
+      - actor: user_A
+        call: POST /messages/conversations { profile_id:A, other_profile_id:B }
+        precondition: Match exists in discovery_matches_cache
+        result: Conversation created with both participants
+      - actor: user_A
+        call: POST /messages/conversations/{conv_id}/messages { content:"Hello!" }
+        result: Message sent, conversation last_message updated
+
+  environment_reset:
+    description: Clear and reseed a dev/test environment
+    steps:
+      - actor: admin
+        call: ".venv/bin/python3 scripts/clear_system.py dev"
+        result: All Firestore data + GCS media purged for dev databases
+      - actor: admin
+        call: ".venv/bin/python3 scripts/seed_profiles.py dev"
+        result: Sample profiles created with images uploaded to GCS

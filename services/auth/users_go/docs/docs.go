@@ -256,6 +256,68 @@ const docTemplate = `{
             }
         },
         "/{uid}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates fields on any user's record. Admin or Root Admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Admin update user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Target user UID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.UserUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.UserOut"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -383,6 +445,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "full_name": {
+                    "type": "string"
+                },
                 "is_deleted": {
                     "type": "boolean"
                 },
@@ -407,6 +472,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "full_name": {
                     "type": "string"
                 },
                 "is_deleted": {
@@ -439,6 +507,9 @@ const docTemplate = `{
         "main.UserUpdate": {
             "type": "object",
             "properties": {
+                "full_name": {
+                    "type": "string"
+                },
                 "is_premium": {
                     "type": "boolean"
                 },
@@ -459,12 +530,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
 	BasePath:         "/users",
 	Schemes:          []string{},
-	Title:            "Users Service API",
-	Description:      "User record management, roles, and admin operations.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
