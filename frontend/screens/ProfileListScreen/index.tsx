@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import { styles } from './styles';
 
 function ProfilesScreenInner() {
   const { uid, isLoading: isLoadingUser } = useUser();
@@ -215,4 +216,3 @@ export default function ProfilesScreen() {
   );
 }
 
-import { styles } from './styles';

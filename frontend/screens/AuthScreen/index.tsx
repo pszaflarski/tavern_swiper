@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Fonts, Spacing } from '../../theme';
+import { styles } from './styles';
 import { auth } from '../../lib/firebase';
 import {
   signInWithEmailAndPassword,
@@ -245,4 +245,3 @@ export default function AuthScreen() {
   );
 }
 
-import { styles } from './styles';

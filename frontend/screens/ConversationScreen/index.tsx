@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   FlatList, 
   TextInput, 
   TouchableOpacity, 
@@ -12,15 +11,17 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage } from '../../hooks/useMessages';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import { MESSAGES } from '../../constants';
+import { styles } from './styles';
 
-const INPUT_BAR_HEIGHT = 56; // Tighter base height for the input bar content
+const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
 
 function ConversationScreenInner() {
   const { id: conversationId } = useLocalSearchParams<{ id: string }>();
@@ -229,4 +230,3 @@ export default function ConversationScreen() {
   );
 }
 
-import { styles } from './styles';

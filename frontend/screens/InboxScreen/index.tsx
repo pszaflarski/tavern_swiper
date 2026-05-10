@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
@@ -10,6 +10,7 @@ import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { router } from 'expo-router';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import { styles } from './styles';
 
 function MessagesScreenInner() {
   const { uid } = useUser();
@@ -174,4 +175,3 @@ export default function MessagesScreen() {
   );
 }
 
-import { styles } from './styles';

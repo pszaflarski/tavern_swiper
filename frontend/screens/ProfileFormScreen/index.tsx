@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   ScrollView,
@@ -17,7 +16,8 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Fonts, Spacing } from '../../theme';
+import { PROFILE } from '../../constants';
 import { useCreateProfile, useUpdateProfile, useProfile, useUploadProfileImage, ProfileTag } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,9 +25,10 @@ import { ImageCropperModal } from '../../components/ImageCropperModal';
 import { prepareImageUpload } from '../../lib/imageProcessing';
 import { TagPicker, ProfileTagData } from '../../components/TagPicker';
 import * as FileSystem from 'expo-file-system';
+import { styles } from './styles';
 
-const GRID_SPACING = Spacing[3];
-const MAX_ITEM_WIDTH = 150; // Cap width to keep thumbnails small
+const GRID_SPACING = PROFILE.GRID_SPACING;
+const MAX_ITEM_WIDTH = PROFILE.MAX_ITEM_WIDTH;
 
 export default function CreateAndEditProfileScreen() {
   const { width } = useWindowDimensions();
@@ -494,4 +495,3 @@ export default function CreateAndEditProfileScreen() {
   );
 }
 
-import { styles } from './styles';

@@ -1,11 +1,12 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SwipeDeck from '../../components/SwipeDeck';
 import ScreenHeader from '../../components/ScreenHeader';
-import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Fonts, Spacing } from '../../theme';
+import { DISCOVERY } from '../../constants';
 import { useDiscoveryFeed, useProfiles, Profile } from '../../hooks/useProfiles';
 import { useSwipe } from '../../hooks/useSwipe';
 import { useUser } from '../../hooks/useUser';
@@ -13,6 +14,7 @@ import { useProfileContext } from '../../context/ProfileContext';
 import { useMatch } from '../../context/MatchContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import { styles } from './styles';
 
 function TavernScreenInner() {
   const { user, isAuthenticated, isLoading: isLoadingUser } = useUser();
@@ -32,7 +34,7 @@ function TavernScreenInner() {
   const [showDetails, setShowDetails] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   const [loadTimedOut, setLoadTimedOut] = useState(false);
-  const WATERMARK = 3;
+  const { WATERMARK, MAX_STALE_FETCHES, BACKOFF_SHORT_MS, BACKOFF_LONG_MS, RECOVERY_MS, LOAD_TIMEOUT_MS } = DISCOVERY;
 
   const staleFetchCountRef = useRef(0);
   const [isBackingOff, setIsBackingOff] = useState(false);
@@ -43,7 +45,7 @@ function TavernScreenInner() {
     deckRef.current = deck;
   }, [deck]);
 
-  const { data: batch, isFetching, refetch: refetchDiscovery, dataUpdatedAt } = useDiscoveryFeed(activeProfileId, isAuthenticated, 10);
+  const { data: batch, isFetching, refetch: refetchDiscovery, dataUpdatedAt } = useDiscoveryFeed(activeProfileId, isAuthenticated, DISCOVERY.BATCH_SIZE);
   
   // Refresh data whenever screen gains focus
   useRefreshOnFocus(React.useCallback(() => {
@@ -73,7 +75,7 @@ function TavernScreenInner() {
   // Loading timeout effect
   useEffect(() => {
     if (isInitialLoad) {
-      const timer = setTimeout(() => setLoadTimedOut(true), 8000);
+      const timer = setTimeout(() => setLoadTimedOut(true), LOAD_TIMEOUT_MS);
       return () => clearTimeout(timer);
     }
     setLoadTimedOut(false);
@@ -97,17 +99,17 @@ function TavernScreenInner() {
         const nextCount = staleFetchCountRef.current + 1;
         staleFetchCountRef.current = nextCount;
         
-        if (nextCount >= 5) {
+        if (nextCount >= MAX_STALE_FETCHES) {
           setExhausted(true);
           setIsBackingOff(false);
-          // Auto-recover after 5 minutes to catch newly-added profiles
+          // Auto-recover after cooldown to catch newly-added profiles
           setTimeout(() => {
             setExhausted(false);
             staleFetchCountRef.current = 0;
-          }, 5 * 60 * 1000);
+          }, RECOVERY_MS);
         } else {
           setIsBackingOff(true);
-          const delay = nextCount <= 2 ? 5000 : 30000;
+          const delay = nextCount <= 2 ? BACKOFF_SHORT_MS : BACKOFF_LONG_MS;
           setTimeout(() => setIsBackingOff(false), delay);
         }
       } else {
@@ -342,4 +344,3 @@ export default function TavernScreen() {
   );
 }
 
-import { styles } from './styles';
