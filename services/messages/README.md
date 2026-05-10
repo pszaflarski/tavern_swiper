@@ -1,97 +1,152 @@
-# Messages Service
+# Messages Service Boundary
 
-The Messages service handles real-time messaging between matched profiles in Tavern Swiper. It contains two independently deployed containers: a REST API for conversation and message CRUD, and an event-driven subscriber that caches match data locally.
+The Messages boundary is the **end of the event pipeline**. It receives match events from the Discovery boundary and uses them to gate conversation creation — two profiles can only message each other if a verified match exists.
+
+## Position in the System
+
+```
+┌───────────────────┐                           ┌──────────────────────────────────┐
+│ Discovery Boundary│  Pub/Sub (match events)    │       Messages Boundary          │
+│   discovery_go    │ ─────────────────────────→ │                                  │
+│   :8003           │  topic: {env}-discovery-    │  ┌──────────────────────────┐    │
+└───────────────────┘  match-events-v1            │  │ messages_subscriber      │    │
+                                                  │  │ writes to:               │    │
+  Match created when                              │  │ discovery_matches_cache   │    │
+  two profiles swipe                              │  └───────────┬──────────────┘    │
+  RIGHT on each other                             │              │ verifies          │
+                                                  │  ┌───────────┴──────────────┐    │
+  ┌──────────┐  conversations/messages            │  │ messages_go  :8005       │    │
+  │ Frontend │ ←─────────────────────────────────→│  │ owns: conversations,     │    │
+  └──────────┘                                    │  │   messages (sub-coll),   │    │
+                                                  │  │   profile_conversations  │    │
+                                                  │  └──────────────────────────┘    │
+                                                  └──────────────────────────────────┘
+```
 
 ## Containers
 
 ### `messages_go` — Messages API
-Manages conversations and messages between matched profiles. Conversations are gated by match verification — two profiles can only start a conversation if a mutual match exists.
+
+Manages conversations and messages between matched profiles. **Conversations are gated by match verification** — two profiles can only start a conversation if a mutual match exists in the local `discovery_matches_cache`.
 
 - **Port**: `8005`
 - **Base path**: `/messages`
+- **Database**: `messages-{env}`
 - **Key endpoints**:
-  - `POST /messages/conversations` — Create a 1-on-1 conversation (requires a valid match between the two profiles; idempotent)
-  - `GET /messages/conversations/profile/:profile_id` — List all conversations for a profile, sorted by most recent activity
-  - `POST /messages/conversations/:id/messages` — Send a message in a conversation (sender must be a participant; content validated and sanitized)
-  - `GET /messages/conversations/:id/messages` — Get all messages in a conversation, ordered by creation time
+  - `POST /messages/conversations` — Create a 1-on-1 conversation (idempotent; requires valid match in `discovery_matches_cache`)
+  - `GET /messages/conversations/profile/{profile_id}` — List all conversations for a profile, sorted by most recent activity
+  - `POST /messages/conversations/{id}/messages` — Send a message (sender must be a participant)
+  - `GET /messages/conversations/{id}/messages` — Get all messages in a conversation, ordered by creation time
   - `DELETE /messages/` — Purge all conversations, messages, and mappings (Admin+ only)
 
 ### `messages_subscriber` — Match Event Subscriber
-Listens for match events via Pub/Sub push and maintains a local `discovery_matches_cache` collection in the Messages Firestore database. This allows the messages service to verify match existence without cross-service queries.
 
-- **Subscribes to**: `discovery-match-events-v1` topic
+Listens for match events published by the **Discovery boundary** via Pub/Sub and maintains a local `discovery_matches_cache` collection. This allows the messages service to verify that a match exists **without querying the discovery service at runtime**.
+
+- **Port**: `8008`
+- **Subscribes to**: `{env}-discovery-match-events-v1` topic (published by `discovery_go`)
 - **Handles events**:
   - `CREATED` — Cache a new match (match_id, profile_ids, timestamps)
   - `DELETED` — Remove a match from the local cache
-- **Protocol**: Protobuf (`MatchEvent`)
+- **Protocol**: Protobuf (`proto/match_events.proto`)
+
+## Cross-Service Dependencies
+
+### This boundary receives from:
+| Source | What | Mechanism |
+|--------|------|-----------|
+| **Discovery boundary** (`discovery_go`) | Match data (match_id, profile_ids) | Pub/Sub events on `{env}-discovery-match-events-v1` → `messages_subscriber` writes to `discovery_matches_cache` |
+
+### This boundary provides to:
+| Consumer | What | Mechanism |
+|----------|------|-----------|
+| **Frontend** | Conversations, messages | Direct API calls to `messages_go` |
+
+### This boundary depends on:
+| Dependency | What For | How |
+|-----------|---------|-----|
+| **Auth boundary** | JWT verification | Local JWT check via shared `JWT_SECRET` (no network call) |
 
 ## Data Model
-- **`conversations`** — Top-level conversation docs with participant info and denormalized last-message fields
-- **`conversations/{id}/messages`** — Sub-collection of messages per conversation
-- **`profile_conversations`** — Mapping collection for efficient per-profile conversation listing
-- **`discovery_matches_cache`** — Local cache of match data from the Discovery service
+
+**Database**: `messages-{env}`
+
+### Collection: `conversations`
+| Field | Type | Description |
+|-------|------|-------------|
+| `participants` | array | Both profile IDs |
+| `participants_key` | string | Deterministic: `{sorted_pid1}_{sorted_pid2}` (deduplication) |
+| `match_id` | string | Discovery match ID that authorized this conversation |
+| `last_message_content` | string | Denormalized preview |
+| `last_message_at` | timestamp | For sort ordering |
+| `last_message_sender_id` | string | Profile ID of last sender |
+| `created_at` | timestamp | Server-side timestamp |
+
+### Sub-collection: `conversations/{id}/messages`
+| Field | Type | Description |
+|-------|------|-------------|
+| `content` | string | Message text |
+| `sender_profile_id` | string | Sending profile ID |
+| `created_at` | timestamp | Server-side timestamp |
+
+### Collection: `profile_conversations`
+Lookup index for efficient per-profile conversation listing. Document ID: `{profile_id}_{conversation_id}`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `profile_id` | string | Profile ID |
+| `conversation_id` | string | Parent conversation ID |
+| `other_profile_id` | string | The other participant |
+| `last_message_at` | timestamp | Denormalized for sorting |
+
+### Collection: `discovery_matches_cache` (populated by `messages_subscriber`)
+| Field | Type | Description |
+|-------|------|-------------|
+| Document ID | string | Match ID from discovery service |
+| `profiles` | array | Both matched profile IDs |
+| `created_at` | timestamp | Match creation time |
 
 ## Event Flow
+
 ```
 Discovery Service → Pub/Sub (match events) → Messages Subscriber → Firestore (discovery_matches_cache)
                                                                           ↑
-Messages API (create conversation) verifies match from ───────────────────┘
+Messages API (create conversation) verifies match from ──────────────────┘
 ```
+
+### Conversation Creation Logic
+1. Validate both profile IDs are provided
+2. Build deterministic `participants_key` from sorted profile IDs
+3. Check for existing conversation with same `participants_key` (idempotent)
+4. Look up match in `discovery_matches_cache` — **reject if no match exists**
+5. Create conversation doc + `profile_conversations` index entries in a batch write
 
 ## Running
 
-### With Air (hot-reload)
-
-```bash
-# messages_go
-cd services/messages/messages_go
-air
-
-# messages_subscriber
-cd services/messages/messages_subscriber
-air
-```
-
 ### With Docker Compose
-
 ```bash
-# From the repo root — starts messages, subscriber, and all dependencies
 docker compose up messages messages-subscriber
 ```
 
-### Standalone Docker
-
+### With Air (hot-reload)
 ```bash
-# messages_go
-docker build -t messages-go ./services/messages/messages_go
-docker run -p 8005:8005 messages-go
-
-# messages_subscriber
-docker build -t messages-subscriber ./services/messages/messages_subscriber
-docker run -p 8008:8080 messages-subscriber
+cd services/messages/messages_go && air
+cd services/messages/messages_subscriber && air
 ```
 
 ## Testing
-
 ```bash
-# messages_go — unit tests (mocks)
-cd services/messages/messages_go
-go test ./...
+# messages_go
+cd services/messages/messages_go && go test -v ./...
 
-# messages_go — integration tests against real Firestore
-go test ./... -run Integration -real-db
-
-# messages_subscriber — unit tests
-cd services/messages/messages_subscriber
-go test ./...
+# messages_subscriber
+cd services/messages/messages_subscriber && go test -v ./...
 ```
 
 ## Tech Stack
-- **Language**: Go
-- **Framework**: Gin + CORS
-- **Auth**: JWT middleware (Tavern JWT)
-- **Database**: Firestore (conversations, messages sub-collections, profile_conversations, discovery_matches_cache)
-- **Messaging**: Google Cloud Pub/Sub (subscribe to match events)
-- **Serialization**: Protocol Buffers
-- **Docs**: Swagger UI via swag (`/messages/swagger/`)
+- **Language**: Go (Gin + CORS)
+- **Auth**: JWT middleware (Tavern JWT, local verification)
+- **Database**: Firestore `messages-{env}` (conversations, messages sub-collections, profile_conversations, discovery_matches_cache)
+- **Events**: Pub/Sub + Protobuf (consumes match events from discovery)
+- **Docs**: Swagger UI at `/messages/swagger/`
 - **Deployment**: Cloud Run via Cloud Build
