@@ -6,6 +6,41 @@ A fantasy-themed dating app with a **strictly isolated, zero-trust microservice 
 
 ---
 
+## 🚀 Quick Start
+
+Get the full backend running locally in 5 steps:
+
+```bash
+# 1. Clone and enter the project
+git clone https://github.com/pszaflarski/tavern_swiper.git
+cd tavern_swiper
+
+# 2. Set up GCP credentials (one-time — see "Truly Keyless Configuration" below)
+gcloud auth application-default login \
+  --impersonate-service-account=tavern-swiper-sa@tavern-swiper-dev.iam.gserviceaccount.com
+
+# 3. Create .env files from templates
+for dir in services/auth/auth_go services/auth/users_go services/profiles/profiles_go \
+           services/discovery/discovery_go services/messages/messages_go services/router/router_go; do
+    cp "$dir/.env.example" "$dir/.env"
+done
+cp frontend/.env.example frontend/.env
+# Then edit each .env to fill in real values (JWT_SECRET, Firebase keys, etc.)
+
+# 4. Start the backend
+docker compose up --build
+
+# 5. Start the frontend (separate terminal)
+cd frontend
+npm install
+npx expo start
+```
+
+> [!IMPORTANT]
+> **Step 3 is critical.** All `.env` files are gitignored for security. You must create them from the `.env.example` templates. See the [Environment Variables](#environment-variables) section for details.
+
+---
+
 ## Documentation
 
 | Document | Description |
@@ -23,11 +58,11 @@ A fantasy-themed dating app with a **strictly isolated, zero-trust microservice 
 
 This project follows a "Shared Nothing" microservice architecture. Each service is a completely self-contained unit with its own logic, dependencies, and **dedicated Firestore database instance**.
 
-- **5 Core Services**: Auth, Profiles, Discovery, Messages, Users — all Go/Gin.
+- **6 Core Services**: Auth, Profiles, Discovery, Messages, Users, Router — all Go/Gin.
 - **2 Event Workers**: `discovery_subscriber`, `messages_subscriber` — maintain local caches via Pub/Sub.
 - **Event-Driven**: Profile updates and match events propagate via **Google Cloud Pub/Sub** with **Protobuf** serialization.
 - **Granular Tagging**: A centralized `tags` collection supports filterable attributes (Race, Fandom, Interests) with case-insensitive search and denormalized storage on profiles.
-- **Database Isolation**: 10 distinct Firestore databases (5 for `dev`, 5 for `test`).
+- **Database Isolation**: 12 distinct Firestore databases (6 for `dev`, 6 for `test`).
 - **Truly Keyless**: Local development and Cloud Run deployments use **IAM Impersonation** instead of static service account keys.
 
 For full details, see [docs/architecture.md](docs/architecture.md).
@@ -41,6 +76,7 @@ For full details, see [docs/architecture.md](docs/architecture.md).
 - Google Cloud SDK (`gcloud`)
 - A Google Cloud Project (`tavern-swiper-dev`)
 - Go 1.25+ (for backend development)
+- Node.js 18+ and npm (for frontend development)
 - Python 3.10+ (for administrative scripts and integration testing)
 
 ### 2. Virtual Environment (Strict Isolation)
@@ -52,8 +88,8 @@ python3 -m venv .venv
 # Always activate before running any python scripts or pip commands
 source .venv/bin/activate
 
-# Install shared administrative dependencies
-pip install google-cloud-firestore firebase-admin requests
+# Install all dependencies (admin scripts + integration tests)
+pip install -r requirements.txt
 ```
 
 ### 3. Truly Keyless Configuration
@@ -82,7 +118,33 @@ gcloud auth application-default login --impersonate-service-account=tavern-swipe
 **Inside Docker Compose**:
 The `docker-compose.yml` is configured to mount your host's `~/.config/gcloud` directory. The containers use your impersonated ADC to authenticate with Google Cloud services (Firestore, GCS).
 
-### 4. Start the Backend (Docker)
+### 4. Environment Variables
+
+All `.env` files are **gitignored** for security. Each service ships a `.env.example` template that must be copied and filled in.
+
+```bash
+# Copy all templates at once
+for dir in services/auth/auth_go services/auth/users_go services/profiles/profiles_go \
+           services/discovery/discovery_go services/messages/messages_go services/router/router_go; do
+    cp "$dir/.env.example" "$dir/.env"
+done
+cp frontend/.env.example frontend/.env
+```
+
+> [!IMPORTANT]
+> **JWT_SECRET**: All backend services **must** share the same `JWT_SECRET` value. This enables local JWT verification — each service validates tokens independently using a shared HMAC secret, avoiding per-request calls to the Auth service.
+>
+> For local development, use any strong random string. For production, secrets are managed via Google Cloud Secret Manager and injected through Cloud Build substitution variables.
+
+| Variable | Where | Description |
+| :--- | :--- | :--- |
+| `JWT_SECRET` | All services | Shared HMAC secret for Tavern JWT signing/verification. **Must be identical across all services.** |
+| `FIREBASE_WEB_API_KEY` | `auth_go`, `frontend` | Firebase project Web API key (from Firebase Console). |
+| `FIRESTORE_DATABASE_ID` | Each service | Environment-specific DB name (e.g., `profiles-dev`, `discovery-dev`). |
+| `GCS_BUCKET_NAME` | `profiles_go` | GCS bucket for profile images (e.g., `tavern-swiper-dev-media-dev`). |
+| `PUBSUB_TOPIC_ID` | `profiles_go`, `discovery_go` | Pub/Sub topic names for event publishing. |
+
+### 5. Start the Backend (Docker)
 From the root directory:
 ```bash
 docker compose up --build
@@ -122,9 +184,11 @@ Several convenience scripts are available in the `scripts/` directory to assist 
 
 | Script | Usage | Purpose |
 | :--- | :--- | :--- |
-| `clear_system.py` | `python3 scripts/clear_system.py [dev/test]` | Purges Firestore and GCS data. Add `--clear-firebase` to also wipe Auth. |
-| `delete_user.py` | `python3 scripts/delete_user.py <email>` | Deletes a single identity from Firebase Auth by email. |
-| `seed_profiles.py` | `python3 scripts/seed_profiles.py [dev/test]` | Populates the realm with authentic sample hero identities. |
+| `clear_system.py` | `.venv/bin/python3 scripts/clear_system.py [dev/test]` | Purges Firestore and GCS data. Add `--clear-firebase` to also wipe Auth. |
+| `delete_user.py` | `.venv/bin/python3 scripts/delete_user.py <email>` | Deletes a single identity from Firebase Auth by email. |
+| `seed_profiles.py` | `.venv/bin/python3 scripts/seed_profiles.py [dev/test]` | Populates the realm with authentic sample hero identities. |
+| `setup-databases.sh` | `bash scripts/setup-databases.sh [dev/test/prod]` | Creates all Firestore databases and applies indexes. |
+| `switch_env.sh` | `bash scripts/switch_env.sh [local/dev/test]` | Switches frontend to point at a different backend environment. |
 
 ---
 

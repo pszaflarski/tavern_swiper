@@ -4,7 +4,7 @@ This document provides a technical overview of the Tavern Swiper application, co
 
 ## 1. System Overview
 
-Tavern Swiper is a hero-discovery application where users "forge" identities and discover other heroes (swipe). It consists of a **React Native (Expo)** frontend and a **Go (Gin)** backend composed of five core microservices and two event-driven subscribers.
+Tavern Swiper is a hero-discovery application where users "forge" identities and discover other heroes (swipe). It consists of a **React Native (Expo)** frontend and a **Go (Gin)** backend composed of six core microservices and two event-driven subscribers.
 
 ### Backend Microservices
 All services are built with Go and the Gin framework, utilizing Firestore for persistent storage.
@@ -16,6 +16,7 @@ All services are built with Go and the Gin framework, utilizing Firestore for pe
 | **Discovery** | 8003 | Logic for hero "feeds". Filters profiles from its local cache, handles swipe actions and match detection. Publishes match events via Pub/Sub. |
 | **Messages** | 8005 | Conversation management and messaging between matched heroes. |
 | **Users** | 8006 | General user metadata (premium status, active profile ID, roles). |
+| **Router** | 8010 | Service registry. Stores Cloud Run URLs for all services, enables dynamic frontend environment switching. |
 
 ### Event-Driven Subscribers (Internal Workers)
 Subscribers consume Pub/Sub events to maintain local read-caches across service boundaries, avoiding direct cross-service database access.
@@ -61,6 +62,7 @@ graph TD
         Discovery[Discovery Service :8003]
         Messages[Messages Service :8005]
         Users[Users Service :8006]
+        Router[Router Service :8010]
     end
 
     subgraph "Event Workers"
@@ -78,6 +80,7 @@ graph TD
         DB_D[(Firestore: discovery)]
         DB_M[(Firestore: messages)]
         DB_U[(Firestore: users)]
+        DB_R[(Firestore: router)]
         GCS[Cloud Storage: Media]
     end
 
@@ -93,6 +96,7 @@ graph TD
     FE --> Discovery
     FE --> Messages
     FE --> Users
+    FE --> Router
 
     %% Pub/Sub event flows
     Profiles -.->|profile events| PubSub
@@ -110,6 +114,7 @@ graph TD
     Discovery --- DB_D
     Messages --- DB_M
     Users --- DB_U
+    Router --- DB_R
     Profiles --> GCS
 ```
 

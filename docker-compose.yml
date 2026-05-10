@@ -13,7 +13,7 @@ services:
       - ALLOW_LONG_LIVED_TOKENS=true
     env_file: ./services/auth/auth_go/.env
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - default
     deploy:
@@ -40,7 +40,7 @@ services:
       - PUBSUB_PROJECT_ID=tavern-swiper-dev
     env_file: ./services/profiles/profiles_go/.env
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - default
     deploy:
@@ -68,7 +68,7 @@ services:
       - PUBSUB_TOPIC_ID=dev-discovery-match-events-v1
     env_file: ./services/discovery/discovery_go/.env
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - default
     deploy:
@@ -95,7 +95,7 @@ services:
       - PORT=8005
     env_file: ./services/messages/messages_go/.env
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - default
     deploy:
@@ -122,7 +122,7 @@ services:
       - PORT=8006
     env_file: ./services/auth/users_go/.env
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - default
     deploy:
@@ -163,7 +163,7 @@ services:
       - PORT=8007
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     depends_on:
       pubsub-emulator:
         condition: service_healthy
@@ -186,7 +186,7 @@ services:
       - PORT=8008
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     depends_on:
       pubsub-emulator:
         condition: service_healthy
@@ -248,7 +248,7 @@ services:
       - FIRESTORE_DATABASE_ID=router-dev
     env_file: ./services/router/router_go/.env
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - default
     deploy:

@@ -1,39 +1,5 @@
 basePath: /discovery
 definitions:
-  main.DiscoveryProfile:
-    properties:
-      bio:
-        type: string
-      character_class:
-        type: string
-      display_name:
-        type: string
-      gender:
-        type: string
-      image_urls:
-        items:
-          type: string
-        type: array
-      is_active:
-        type: boolean
-      profile_id:
-        type: string
-      realm:
-        type: string
-      tagline:
-        type: string
-      talents:
-        items:
-          type: string
-        type: array
-    type: object
-  main.FeedResponse:
-    properties:
-      profiles:
-        items:
-          $ref: '#/definitions/main.DiscoveryProfile'
-        type: array
-    type: object
   main.MatchOut:
     properties:
       created_at:
@@ -79,9 +45,6 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Hero feed generation, swipe recording, and match management.
-  title: Discovery Service API
-  version: "1.0"
 paths:
   /all:
     delete:
@@ -106,53 +69,6 @@ paths:
       summary: Purge all discovery data
       tags:
       - admin
-  /feed/{profile_id}:
-    get:
-      consumes:
-      - application/json
-      description: Returns a curated list of active profiles the caller hasn't swiped
-        on yet.
-      parameters:
-      - description: Caller's Profile ID
-        in: path
-        name: profile_id
-        required: true
-        type: string
-      - default: 10
-        description: Max profiles to return
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/main.FeedResponse'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get discovery feed
-      tags:
-      - feed
   /health:
     get:
       description: Returns the health status of the discovery service.

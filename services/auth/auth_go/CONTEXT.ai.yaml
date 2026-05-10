@@ -1,0 +1,46 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: auth
+boundary: auth
+port: 8001
+database: users-{env}
+base_path: /auth
+
+collections:
+  owned:
+    - users  # shared with users_go (same boundary)
+
+pubsub:
+  publishes: []
+  consumes: []
+
+endpoints:
+  public:
+    - GET /auth/health
+    - GET /auth/swagger/*
+    - POST /auth/register
+    - POST /auth/login
+    - POST /auth/verify
+  authenticated:
+    - DELETE /auth/users/{uid}        # admin
+    - DELETE /auth/users/             # admin (bulk by UID list)
+    - DELETE /auth/all                # root_admin (purge all Firebase Auth)
+    - POST /auth/dev-mint             # dev/test only (long-lived JWT minting)
+
+dependencies:
+  env_vars:
+    - USERS_DATABASE_ID
+    - FIREBASE_WEB_API_KEY
+    - JWT_SECRET
+    - GOOGLE_CLOUD_PROJECT
+  services: []
+  external:
+    - Firebase Auth (Identity Toolkit REST API)
+
+testing:
+  unit: "go test -v ./..."
+  integration: "go test -v -run TestIntegration -args -real-db"
+
+notes:
+  - Auth issues Tavern JWTs that all other services verify locally
+  - Uses Firebase Auth REST API (not Admin SDK) for register/login
+  - The verify endpoint accepts a Firebase ID token and returns a Tavern JWT

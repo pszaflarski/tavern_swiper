@@ -1,0 +1,47 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: messages
+boundary: messages
+port: 8005
+database: messages-{env}
+base_path: /messages
+
+collections:
+  owned:
+    - conversations
+    - conversations/{id}/messages  # sub-collection
+    - profile_conversations        # lookup index
+  cache:
+    - discovery_matches_cache      # populated by messages_subscriber from match events
+
+pubsub:
+  publishes: []
+  consumes: []  # messages_subscriber handles consumption
+
+endpoints:
+  public:
+    - GET /messages/health
+    - GET /messages/swagger/*
+  authenticated:
+    - POST /messages/conversations                       # create conversation (requires match)
+    - POST /messages/conversations/{id}/messages          # send message
+    - GET /messages/conversations/{id}/messages            # list messages in conversation
+    - GET /messages/conversations/profile/{profile_id}    # list conversations for profile
+    - DELETE /messages/                                    # admin purge
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - JWT_SECRET
+    - GOOGLE_CLOUD_PROJECT
+  services: []
+
+testing:
+  unit: "go test -v ./..."
+  integration: "go test -v -run TestIntegration -args -real-db"
+
+notes:
+  - Conversation creation requires a valid match in discovery_matches_cache
+  - Participants key is deterministic: sorted {pid1}_{pid2} for deduplication
+  - Profile conversations use compound doc IDs: {profile_id}_{conversation_id}
+  - Last message metadata is denormalized onto conversation document
+  - Messages are a sub-collection under conversations (not flat)

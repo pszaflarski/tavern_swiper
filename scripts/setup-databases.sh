@@ -22,7 +22,7 @@ echo "🚀 Setting up Firestore Enterprise databases for: $ENV"
 echo "📍 Region: $REGION"
 echo "🆔 Project: $PROJECT"
 
-DATABASES=("auth" "users" "profiles" "discovery" "messages")
+DATABASES=("users" "profiles" "discovery" "messages" "router")
 
 for DB_BASE in "${DATABASES[@]}"; do
   DB_ID="${DB_BASE}-${ENV}"

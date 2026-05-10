@@ -1,0 +1,41 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: messages_subscriber
+boundary: messages
+port: 8008
+database: messages-{env}
+type: event_worker
+
+collections:
+  owned:
+    - discovery_matches_cache  # local read-cache of match data
+
+pubsub:
+  publishes: []
+  consumes:
+    - topic: "{env}-discovery-match-events-v1"
+      subscription: "{env}-messages-subscriber-sub"
+      source: discovery_go
+      events: [match_created, match_deleted]
+      format: protobuf (proto/match_events.proto)
+
+endpoints:
+  public:
+    - GET /               # health check
+    - POST /              # Pub/Sub push handler (receives match events)
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - GOOGLE_CLOUD_PROJECT
+    - PUBSUB_EMULATOR_HOST  # local dev only
+  services: []
+
+testing:
+  unit: "go test -v ./..."
+
+notes:
+  - Receives Pub/Sub push messages from discovery service
+  - Maintains discovery_matches_cache collection in messages DB
+  - On match_created: upserts match doc in cache
+  - On match_deleted: deletes match doc from cache
+  - Messages service checks this cache before allowing conversation creation

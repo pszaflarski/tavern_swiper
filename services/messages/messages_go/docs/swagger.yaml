@@ -61,9 +61,6 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Conversation and messaging between matched profiles.
-  title: Messages Service API
-  version: "1.0"
 paths:
   /:
     delete:

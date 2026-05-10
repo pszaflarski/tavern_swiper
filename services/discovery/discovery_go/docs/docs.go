@@ -52,77 +52,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/feed/{profile_id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns a curated list of active profiles the caller hasn't swiped on yet.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "feed"
-                ],
-                "summary": "Get discovery feed",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Caller's Profile ID",
-                        "name": "profile_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Max profiles to return",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/main.FeedResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/health": {
             "get": {
                 "description": "Returns the health status of the discovery service.",
@@ -321,58 +250,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "main.DiscoveryProfile": {
-            "type": "object",
-            "properties": {
-                "bio": {
-                    "type": "string"
-                },
-                "character_class": {
-                    "type": "string"
-                },
-                "display_name": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "image_urls": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "profile_id": {
-                    "type": "string"
-                },
-                "realm": {
-                    "type": "string"
-                },
-                "tagline": {
-                    "type": "string"
-                },
-                "talents": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "main.FeedResponse": {
-            "type": "object",
-            "properties": {
-                "profiles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/main.DiscoveryProfile"
-                    }
-                }
-            }
-        },
         "main.MatchOut": {
             "type": "object",
             "properties": {
@@ -449,12 +326,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
 	BasePath:         "/discovery",
 	Schemes:          []string{},
-	Title:            "Discovery Service API",
-	Description:      "Hero feed generation, swipe recording, and match management.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
