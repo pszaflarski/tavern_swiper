@@ -1,30 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profilesApi, discoveryApi } from '../lib/api';
 
-export interface ProfileTag {
-  id: string;
-  category: string;
-  name: string;
-  slug: string;
-  status: string;
-}
-
-export interface Profile {
-  profile_id: string;
-  user_id: string;
-  display_name: string;
-  tagline?: string;
-  bio?: string;
-  image_urls: string[];
-  gender: ProfileTag[];
-  fandom: ProfileTag[];
-  interests: ProfileTag[];
-  race: ProfileTag[];
-  events: ProfileTag[];
-  age?: number;
-  is_oc?: boolean;
-  is_active: boolean;
-}
+import { Profile, ProfileTag } from '../types';
+export type { Profile, ProfileTag };
 
 /**
  * Custom hook to fetch the discovery feed from the Discovery service.

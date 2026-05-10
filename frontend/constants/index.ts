@@ -1,0 +1,20 @@
+export const DISCOVERY = {
+  WATERMARK: 3,
+  MAX_STALE_FETCHES: 5,
+  BACKOFF_SHORT_MS: 5_000,
+  BACKOFF_LONG_MS: 30_000,
+  RECOVERY_MS: 5 * 60 * 1000,
+  LOAD_TIMEOUT_MS: 8_000,
+  BATCH_SIZE: 10,
+} as const;
+
+export const PROFILE = {
+  MAX_IMAGES: 6,
+  MAX_ITEM_WIDTH: 150,
+  GRID_SPACING: 12,
+} as const;
+
+export const MESSAGES = {
+  MAX_MESSAGE_LENGTH: 500,
+  INPUT_BAR_HEIGHT: 56,
+} as const;

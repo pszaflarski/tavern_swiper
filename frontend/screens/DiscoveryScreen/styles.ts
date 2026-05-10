@@ -1,0 +1,170 @@
+import { StyleSheet, Platform } from 'react-native';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+  },
+  deckWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+  },
+  emptyCtaButton: {
+    width: 'auto' as any,
+    paddingHorizontal: Spacing[6],
+    height: 64,
+    borderRadius: Radius.md,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.surfaceContainerLowest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+  },
+  emptyCtaText: {
+    color: Colors.primary,
+    fontFamily: Fonts.scribe,
+    fontWeight: '600' as const,
+    letterSpacing: 1,
+  },
+  headerSub: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
+    marginTop: Spacing[1],
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: Spacing[4],
+  },
+  emptyTitle: {
+    fontFamily: Fonts.heroic,
+    fontSize: 24,
+    color: Colors.onSurface,
+    marginBottom: Spacing[2],
+  },
+  emptyDesc: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing[8],
+    paddingHorizontal: Spacing[6],
+  },
+  actionRow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing[10],
+    paddingTop: Spacing[6],
+    paddingBottom: Spacing[10],
+    backgroundColor: 'transparent', // Overlay on top of image
+    zIndex: 10,
+  },
+  roundButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    backgroundColor: Colors.surfaceContainerLowest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+  },
+  roundButtonText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  infoButton: {
+    position: 'absolute',
+    bottom: 44, // Moved down to align with the bottom edge of the action buttons
+    right: Spacing[6],
+    zIndex: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Subtle background for the icon
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailsOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13, 17, 15, 0.9)', // Deep dark grimoire tint
+    zIndex: 5,
+    paddingTop: 80, // Respect header height
+  },
+  detailsScroll: {
+    flex: 1,
+  },
+  detailsContent: {
+    paddingHorizontal: Spacing[6],
+    paddingBottom: Spacing[10],
+  },
+  detailsName: {
+    fontFamily: Fonts.heroic,
+    fontSize: 32,
+    color: Colors.primary,
+    marginBottom: Spacing[1],
+  },
+  detailsTagline: {
+    fontFamily: Fonts.scribe,
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: Colors.tertiary,
+    marginBottom: Spacing[6],
+  },
+  detailsLabel: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    color: Colors.outline,
+    marginBottom: Spacing[2],
+  },
+  detailsBio: {
+    fontFamily: Fonts.scribe,
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.onSurface,
+    marginBottom: Spacing[6],
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.outlineVariant,
+    width: '100%',
+    marginVertical: Spacing[6],
+    opacity: 0.3,
+  },
+  swipeErrorBanner: {
+    position: 'absolute',
+    top: 100,
+    left: Spacing[6],
+    right: Spacing[6],
+    backgroundColor: 'rgba(211, 47, 47, 0.9)',
+    padding: Spacing[3],
+    borderRadius: Radius.md,
+    zIndex: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.waxSeal,
+  },
+  swipeErrorText: {
+    color: '#FFFFFF',
+    fontFamily: Fonts.scribe,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+});

@@ -1,0 +1,157 @@
+import { StyleSheet, Platform } from 'react-native';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    padding: Spacing[6],
+  },
+  card: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    padding: Spacing[8],
+    borderRadius: Radius.xl,
+    ...Shadow.waxSeal,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
+  title: {
+    fontFamily: Fonts.heroic,
+    fontSize: 32,
+    color: Colors.primary,
+    textAlign: 'center',
+    marginBottom: Spacing[2],
+  },
+  subtitle: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.outline,
+    textAlign: 'center',
+    marginBottom: Spacing[8],
+  },
+  inputContainer: {
+    marginBottom: Spacing[4],
+  },
+  label: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: Spacing[1],
+    marginLeft: Spacing[1],
+  },
+  input: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderRadius: Radius.md,
+    padding: Spacing[4],
+    fontFamily: Fonts.scribe,
+    color: Colors.onSurface,
+    fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderRadius: Radius.md,
+  },
+  passwordInput: {
+    flex: 1,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  eyeIcon: {
+    paddingHorizontal: Spacing[3],
+  },
+  errorText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.error,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: Spacing[2],
+    marginBottom: Spacing[2],
+  },
+  button: {
+    backgroundColor: Colors.primary,
+    padding: Spacing[4],
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    marginTop: Spacing[4],
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.onPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  toggle: {
+    marginTop: Spacing[6],
+    alignItems: 'center',
+  },
+  toggleText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.secondary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    padding: Spacing[4],
+    borderRadius: Radius.full,
+    marginBottom: Spacing[4],
+  },
+  googleIcon: {
+    marginRight: Spacing[2],
+  },
+  googleButtonText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing[4],
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.outlineVariant,
+  },
+  dividerText: {
+    fontFamily: Fonts.scribe,
+    color: Colors.outline,
+    paddingHorizontal: Spacing[3],
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+});
