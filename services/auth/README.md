@@ -21,7 +21,7 @@ Handles Firebase Auth identity operations: user registration, login, token verif
 ### `users_go` — User Records API
 Manages user account records in Firestore with RBAC (user, admin, root_admin).
 
-- **Port**: `8082`
+- **Port**: `8006`
 - **Base path**: `/users`
 - **Key endpoints**:
   - `GET /users/me` — Get or auto-initialize the authenticated user's record
@@ -63,7 +63,7 @@ docker run -p 8001:8001 auth-go
 
 # users_go
 docker build -t users-go ./services/auth/users_go
-docker run -p 8082:8082 users-go
+docker run -p 8006:8006 users-go
 ```
 
 ## Testing

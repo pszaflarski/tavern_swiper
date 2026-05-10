@@ -18,7 +18,16 @@ The frontend uses its own Cloud Build config at `frontend/cloudbuild.yaml`:
 4. Deploys the containerized frontend to Cloud Run.
 
 ### Triggering Deployments
-Push to `main` to trigger Cloud Build pipelines for both backend services and the frontend.
+
+> [!IMPORTANT]
+> **`main` is NOT a deploy branch.** Pushing to `main` does not trigger any deployment.
+
+The three deploy branches are `dev`, `test`, and `prod`. Each has Cloud Build triggers that auto-deploy on push:
+- `dev` → deploys to `tavern-swiper-dev` (development)
+- `test` → deploys to `tavern-swiper-dev` (test databases)
+- `prod` → deploys to `tavern-swiper-prod` (production)
+
+**Workflow**: Create a feature branch → merge to `dev` → verify → promote to `test` → verify → promote to `prod`.
 
 ---
 
@@ -46,12 +55,12 @@ cd frontend && npm test
 ### 4. Push to GitHub
 
 > [!WARNING]
-> **Never push directly to `main` or `test`.** These branches have automated Cloud Build triggers. Always use feature branches and open a Pull Request.
+> **Never push directly to `dev`, `test`, or `prod`.** These branches have automated Cloud Build triggers. Always use feature branches and merge via Pull Request.
 
 ```bash
 git checkout -b <type>/<description>
 git push origin <branch-name>
-# Open a PR for merge into main or test
+# Open a PR for merge into dev
 ```
 
 Cloud Build will automatically:
@@ -105,10 +114,11 @@ Since we use Firestore Enterprise, **automatic single-field indexing is disabled
 
 ### 1. Index Source of Truth
 Each service maintains its own `firestore.indexes.json` file:
-- `services/profiles_go/firestore.indexes.json`
-- `services/discovery_go/firestore.indexes.json`
-- `services/messages_go/firestore.indexes.json`
-- `services/users_go/firestore.indexes.json`
+- `services/profiles/profiles_go/firestore.indexes.json`
+- `services/discovery/discovery_go/firestore.indexes.json`
+- `services/messages/messages_go/firestore.indexes.json`
+- `services/auth/users_go/firestore.indexes.json`
+- `services/router/router_go/firestore.indexes.json`
 
 ### 2. Bootstrapping an Environment
 To create all required Firestore Enterprise databases and apply their initial indexes:

@@ -181,7 +181,7 @@ gcloud firestore indexes composite create \
 
 This project uses **Database-per-Service** isolation. In Google Cloud, this is achieved by creating multiple Firestore databases within the same project.
 
-- **Dev Suffix**: (none) e.g., `profiles`, `messages`.
+- **Dev Suffix**: `-dev` e.g., `profiles-dev`, `messages-dev`.
 - **Test Suffix**: `-test` e.g., `profiles-test`, `messages-test`.
 
 Each service is injected with the `FIRESTORE_DATABASE_ID` environment variable at runtime.

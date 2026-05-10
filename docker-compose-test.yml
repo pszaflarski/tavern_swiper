@@ -11,7 +11,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     deploy:
@@ -37,7 +37,7 @@ services:
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - PUBSUB_TOPIC_ID=dev-profiles-profile-events-v1
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     deploy:
@@ -55,6 +55,8 @@ services:
       context: ./services/discovery/discovery_go
     ports:
       - "8003:8003"
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     deploy:
@@ -88,7 +90,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     deploy:
@@ -114,7 +116,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:
-      - /home/peter/.config/gcloud:/root/.config/gcloud:ro
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
       - tavern-net
     deploy:

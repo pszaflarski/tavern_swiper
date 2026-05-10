@@ -38,6 +38,7 @@ tmp/
 # Environment & Logs
 .env
 .env.*
+!.env.example
 *.log
 *_log.txt
 test_clean.py
