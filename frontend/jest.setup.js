@@ -114,6 +114,7 @@ jest.mock('firebase/auth', () => ({
     { credential: jest.fn(() => ({ providerId: 'google.com' })) }
   ),
   signOut: jest.fn(),
+  getAdditionalUserInfo: jest.fn((userCred) => userCred?.additionalUserInfo ?? null),
   onAuthStateChanged: jest.fn((auth, callback) => {
     callback({ uid: 'test-uid' });
     return jest.fn(); // Unsubscribe

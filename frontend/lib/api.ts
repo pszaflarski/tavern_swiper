@@ -110,7 +110,7 @@ export async function performGlobalLogout() {
     tokenExpiryTime = 0;
     
     // 1. Sign out from Firebase
-    await auth.signOut().catch(e => console.error('[Auth] Firebase signOut failed:', e));
+    await auth.signOut().catch((e: unknown) => console.error('[Auth] Firebase signOut failed:', e));
     
     // 2. Clear local storage
     await clearTavernSession();

@@ -2,7 +2,6 @@ import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Dimensions,
   Image,
   TouchableOpacity,
@@ -19,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../theme';
+import { styles } from './SwipeDeck.styles';
 
 const ROTATION_FACTOR = 15;
 
@@ -216,162 +216,3 @@ export default function SwipeDeck({ profiles, onSwipeLeft, onSwipeRight }: Swipe
   );
 }
 
-const styles = StyleSheet.create({
-  deckContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  card: {
-    position: 'absolute',
-    height: '100%',
-    backgroundColor: Colors.background,
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imagePlaceholderText: {
-    fontSize: 72,
-  },
-  indicatorContainer: {
-    position: 'absolute',
-    top: 60,
-    left: Spacing[4],
-    right: Spacing[4],
-    flexDirection: 'row',
-    gap: Spacing[1],
-    zIndex: 100,
-  },
-  indicator: {
-    flex: 1,
-    height: 3,
-    borderRadius: Radius.full,
-  },
-  overlayLabel: {
-    position: 'absolute',
-    top: 150,
-    paddingHorizontal: Spacing[5],
-    paddingVertical: Spacing[2],
-    borderWidth: 3,
-    borderRadius: Radius.sm,
-    zIndex: 10,
-  },
-  heroInfo: {
-    position: 'absolute',
-    bottom: 150,
-    left: Spacing[6],
-    right: Spacing[6],
-    zIndex: 20,
-  },
-  heroName: {
-    fontFamily: Fonts.heroic,
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  heroTagline: {
-    fontFamily: Fonts.scribe,
-    fontSize: 18,
-    fontStyle: 'italic',
-    color: '#FFFFFF',
-    marginTop: Spacing[1],
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  overlayRight: {
-    left: Spacing[5],
-    borderColor: Colors.tertiary,
-    transform: [{ rotate: '-15deg' }],
-  },
-  overlayLeft: {
-    right: Spacing[5],
-    borderColor: Colors.error,
-    transform: [{ rotate: '15deg' }],
-  },
-  overlayTextRight: {
-    fontFamily: Fonts.heroic,
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.tertiary,
-  },
-  overlayTextLeft: {
-    fontFamily: Fonts.heroic,
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.error,
-  },
-  info: {
-    padding: Spacing[5],
-    backgroundColor: Colors.surfaceContainerLowest,
-    gap: Spacing[2],
-  },
-  name: {
-    fontFamily: Fonts.heroic,
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.onSurface,
-  },
-  characterClass: {
-    fontFamily: Fonts.scribe,
-    fontSize: 13,
-    color: Colors.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  tagline: {
-    fontFamily: Fonts.scribe,
-    fontSize: 15,
-    color: Colors.onSurfaceVariant,
-    fontStyle: 'italic',
-  },
-  talentsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing[2],
-    marginTop: Spacing[1],
-  },
-  sigil: {
-    backgroundColor: Colors.tertiaryContainer,
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[1],
-    borderRadius: Radius.sm,
-  },
-  sigilText: {
-    fontFamily: Fonts.scribe,
-    fontSize: 12,
-    color: Colors.onTertiaryContainer,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing[10],
-    gap: Spacing[3],
-  },
-  emptyTitle: {
-    fontFamily: Fonts.heroic,
-    fontSize: 24,
-    color: Colors.onSurface,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontFamily: Fonts.scribe,
-    fontSize: 15,
-    color: Colors.onSurfaceVariant,
-    textAlign: 'center',
-  },
-});

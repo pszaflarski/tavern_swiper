@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import AccountScreen from '../../app/(tabs)/account';
+import AccountScreen from '../../screens/AccountScreen';
 import { auth } from '../../lib/firebase';
 
 // Mock firebase

@@ -1,6 +1,7 @@
 import {
   GoogleAuthProvider,
   signInWithPopup,
+  getAdditionalUserInfo,
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { usersApi } from './api';
@@ -27,7 +28,7 @@ export async function signInWithGoogle(): Promise<void> {
   }
 
   // For new users: auto-populate full_name from Google profile
-  const isNewUser = (userCred as any).additionalUserInfo?.isNewUser;
+  const isNewUser = getAdditionalUserInfo(userCred)?.isNewUser;
   if (isNewUser && userCred.user.displayName) {
     setTimeout(async () => {
       try {

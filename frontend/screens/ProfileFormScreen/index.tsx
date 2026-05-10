@@ -22,6 +22,7 @@ import { useCreateProfile, useUpdateProfile, useProfile, useUploadProfileImage, 
 import { useUser } from '../../hooks/useUser';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageCropperModal } from '../../components/ImageCropperModal';
+import { useImageSlots } from './useImageSlots';
 import { prepareImageUpload } from '../../lib/imageProcessing';
 import { TagPicker, ProfileTagData } from '../../components/TagPicker';
 import * as FileSystem from 'expo-file-system';
@@ -54,12 +55,19 @@ export default function CreateAndEditProfileScreen() {
   const [interestsTags, setInterestsTags] = useState<ProfileTagData[]>([]);
   const [raceTags, setRaceTags] = useState<ProfileTagData[]>([]);
   const [eventsTags, setEventsTags] = useState<ProfileTagData[]>([]);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  
-  // Image Processing State
-  const [isCropperVisible, setIsCropperVisible] = useState(false);
-  const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
-  const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
+  const {
+    imageUrls,
+    setImageUrls,
+    isCropperVisible,
+    setIsCropperVisible,
+    pendingImageUri,
+    setPendingImageUri,
+    setActiveSlotIndex,
+    pickImage,
+    handleCropComplete,
+    removeImage,
+    cleanupCache,
+  } = useImageSlots();
 
   // Initialise form if editing
   useEffect(() => {
@@ -78,65 +86,8 @@ export default function CreateAndEditProfileScreen() {
     }
   }, [existingProfile]);
 
-  const pickImage = async (index: number) => {
-    if (imageUrls.length >= 6 && !imageUrls[index]) {
-      Alert.alert('Full Arsenal', 'A hero can only carry six relics of their past.');
-      return;
-    }
-
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (permissionResult.granted === false) {
-      Alert.alert('Vision Denied', 'The camera roll requires your permission to reveal its secrets.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false, // Always false — our ImageCropperModal handles cropping uniformly
-      quality: 1, // Keep original quality for the cropper; we compress in the pipeline
-    });
-
-    if (!result.canceled) {
-      setPendingImageUri(result.assets[0].uri);
-      setActiveSlotIndex(index);
-      setIsCropperVisible(true);
-    }
-  };
-
-  const handleCropComplete = (processedUri: string) => {
-    const newImages = [...imageUrls];
-    if (activeSlotIndex !== null) {
-      newImages[activeSlotIndex] = processedUri;
-    } else {
-      newImages.push(processedUri);
-    }
-    setImageUrls(newImages);
-  };
-
-  const removeImage = (index: number) => {
-    const newImages = [...imageUrls];
-    newImages.splice(index, 1);
-    setImageUrls(newImages);
-  };
-
   const uploadImage = useUploadProfileImage();
   const [isUploading, setIsUploading] = useState(false);
-
-  // Helper to convert local URIs to Blobs/Files for upload
-  // Now uses the unified imageProcessing service
-  const cleanupCache = async (uris: string[]) => {
-    if (Platform.OS === 'web') return;
-    for (const uri of uris) {
-      if (uri.startsWith('file://')) {
-        try {
-          await FileSystem.deleteAsync(uri, { idempotent: true });
-        } catch (e) {
-          console.warn('Failed to purge temporary vision:', uri);
-        }
-      }
-    }
-  };
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -244,7 +195,7 @@ export default function CreateAndEditProfileScreen() {
           headerTitleStyle: { fontFamily: Fonts.heroic, color: Colors.onSurface },
           headerTintColor: Colors.primary,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+            <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/profiles' as any)} style={styles.headerButton}>
               <Ionicons name="close" size={24} color={Colors.outline} />
             </TouchableOpacity>
           ),

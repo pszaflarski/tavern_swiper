@@ -2,6 +2,7 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   linkWithCredential,
+  getAdditionalUserInfo,
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { usersApi } from './api';
@@ -62,7 +63,7 @@ export async function signInWithGoogle(): Promise<void> {
   }
 
   // 5. For new users: auto-populate full_name from Google profile
-  const isNewUser = userCred.additionalUserInfo?.isNewUser;
+  const isNewUser = getAdditionalUserInfo(userCred)?.isNewUser;
   if (isNewUser && userCred.user.displayName) {
     setTimeout(async () => {
       try {

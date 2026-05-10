@@ -27,13 +27,13 @@ function ProfilesScreenInner() {
 
   const handleEdit = (profileId: string) => {
     router.push({
-      pathname: '/profiles/create_and_edit',
+      pathname: '/profiles/form',
       params: { id: profileId }
     } as any);
   };
 
   const handleCreate = () => {
-    router.push('/profiles/create_and_edit');
+    router.push('/profiles/form' as any);
   };
 
   const handleDelete = (profileId: string, displayName: string) => {

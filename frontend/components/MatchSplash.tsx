@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Image,
   TouchableOpacity,
   useWindowDimensions,
+  StyleSheet,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -22,6 +22,7 @@ import { useMatch } from '../context/MatchContext';
 import { useProfileContext } from '../context/ProfileContext';
 import { useCreateConversation } from '../hooks/useMessages';
 import { router } from 'expo-router';
+import { styles } from './MatchSplash.styles';
 
 export default function MatchSplash() {
   const { isMatchVisible, hideMatch, matchedProfile, clearMatchedProfile } = useMatch();
@@ -221,121 +222,3 @@ export default function MatchSplash() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing[6],
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-  },
-  glow: {
-    position: 'absolute',
-    width: '150%',
-    aspectRatio: 1,
-    borderRadius: 999,
-    backgroundColor: Colors.secondary,
-    opacity: 0.12,
-    zIndex: -1,
-  },
-  textContainer: {
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: Spacing[8],
-  },
-  matchTitle: {
-    fontFamily: Fonts.heroic,
-    fontSize: 36,
-    color: Colors.tertiary,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 10,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  matchSubtitle: {
-    fontFamily: Fonts.scribe,
-    fontSize: 16,
-    color: Colors.onSurfaceVariant,
-    marginTop: Spacing[1],
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  cardsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginBottom: Spacing[8],
-  },
-  card: {
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    borderColor: Colors.tertiary,
-    ...Shadow.waxSeal,
-    elevation: 20,
-    overflow: 'hidden',
-  },
-  imageWrapper: {
-    flex: 1,
-    backgroundColor: Colors.surfaceVariant,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emoji: {
-    fontSize: 28,
-  },
-  cardLabel: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingVertical: Spacing[1],
-    paddingHorizontal: Spacing[2],
-    alignItems: 'center',
-  },
-  cardLabelText: {
-    fontFamily: Fonts.heroic,
-    fontSize: 13,
-    color: Colors.onPrimary,
-    fontWeight: '700',
-  },
-  actions: {
-    width: '100%',
-    gap: Spacing[2],
-  },
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing[4],
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.primaryFixedDim,
-    ...Shadow.waxSeal,
-  },
-  primaryButtonText: {
-    fontFamily: Fonts.heroic,
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.onPrimary,
-    letterSpacing: 1.2,
-  },
-  secondaryButton: {
-    paddingVertical: Spacing[3],
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    fontFamily: Fonts.scribe,
-    fontSize: 15,
-    color: Colors.onSurfaceVariant,
-    textDecorationLine: 'underline',
-  },
-});
