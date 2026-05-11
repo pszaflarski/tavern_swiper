@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es';
-import { createDiePhysicsShape, getDieFaceNormals, getTopVertexIndex, DICE_TYPES, computeFaceMapping } from './diceConfig';
+import { createDiePhysicsShape, getDieFaceNormals, DICE_TYPES, computeFaceMapping } from './diceConfig';
 
 const SETTLE_THRESHOLD = 0.08;
 const MAX_FRAMES = 600;
@@ -145,16 +145,64 @@ export function preSimulate(dieType, halfW, halfH) {
     }
   }
 
-  // Detect result: d4 uses top VERTEX, others use top FACE
-  let topIndex;
-  if (dieType === 'd4') {
-    topIndex = getTopVertexIndex(die);
+  // Detect result face
+  const faceNormals = getDieFaceNormals(dieType);
+  const worldUp = new CANNON.Vec3(0, 1, 0);
+  let resultIndex;
+
+  if (DICE_TYPES[dieType].isBottom) {
+    // d4: result is the BOTTOM face (most downward-pointing normal)
+    let bestDot = Infinity;
+    resultIndex = 0;
+    for (let i = 0; i < faceNormals.length; i++) {
+      const n = faceNormals[i];
+      const wn = die.quaternion.vmult(new CANNON.Vec3(n[0], n[1], n[2]));
+      const dot = wn.dot(worldUp);
+      if (dot < bestDot) { bestDot = dot; resultIndex = i; }
+    }
+
+    // ─── Flip-over animation: reveal the bottom face ───
+    const lastFrame = frames[frames.length - 1];
+    const finalQ = new CANNON.Quaternion(lastFrame.qx, lastFrame.qy, lastFrame.qz, lastFrame.qw);
+
+    // Pause before flip (20 frames ≈ 0.33s)
+    for (let i = 0; i < 20; i++) frames.push({ ...lastFrame });
+
+    // Compute target: rotate 180° around world X axis
+    const flipQ = new CANNON.Quaternion();
+    flipQ.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI);
+    const targetQ = flipQ.mult(finalQ);
+
+    // Flip frames with ease-in-out + vertical arc (50 frames ≈ 0.83s)
+    const FLIP_FRAMES = 50;
+    const ARC_HEIGHT = 1.8;
+    for (let i = 0; i <= FLIP_FRAMES; i++) {
+      const t = i / FLIP_FRAMES;
+      // Ease in-out cubic
+      const te = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      // SLERP quaternion
+      const q = new CANNON.Quaternion();
+      finalQ.slerp(targetQ, te, q);
+
+      // Arc position (sine curve up and back down)
+      const y = lastFrame.py + ARC_HEIGHT * Math.sin(t * Math.PI);
+
+      frames.push({
+        px: lastFrame.px, py: y, pz: lastFrame.pz,
+        qx: q.x, qy: q.y, qz: q.z, qw: q.w,
+      });
+    }
+
+    // Hold at flipped position (20 frames ≈ 0.33s)
+    const flippedFrame = frames[frames.length - 1];
+    for (let i = 0; i < 20; i++) frames.push({ ...flippedFrame });
   } else {
-    const faceNormals = getDieFaceNormals(dieType);
-    topIndex = getTopFaceIndex(die, faceNormals);
+    // All others: result is the TOP face (most upward-pointing normal)
+    resultIndex = getTopFaceIndex(die, faceNormals);
   }
 
-  return { frames, topIndex };
+  return { frames, resultIndex };
 }
 
 // Re-export for convenience

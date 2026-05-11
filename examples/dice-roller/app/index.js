@@ -24,8 +24,8 @@ function DiceScene({ triggerRef, onResult, dieType }) {
 
   useEffect(() => {
     triggerRef.current = (desiredValue) => {
-      const { frames, topIndex } = preSimulate(dieType, worldHalfW, worldHalfH);
-      const mapping = computeFaceMapping(dieType, topIndex, desiredValue);
+      const { frames, resultIndex } = preSimulate(dieType, worldHalfW, worldHalfH);
+      const mapping = computeFaceMapping(dieType, resultIndex, desiredValue);
       setFaceMapping(mapping);
       framesRef.current = frames;
       frameIndexRef.current = 0;

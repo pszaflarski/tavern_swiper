@@ -110,32 +110,12 @@ function setPentagonUVs(geo) {
 
 // ─── Die type definitions ───
 export const DICE_TYPES = {
-  d4:  { sides: 4,  label: 'D4',  color: '#E91E63', trisPerFace: 1, vertsPerFace: 3,  usePips: false, isVertex: true },
-  d6:  { sides: 6,  label: 'D6',  color: '#2196F3', trisPerFace: 2, vertsPerFace: 6,  usePips: true,  isVertex: false },
-  d8:  { sides: 8,  label: 'D8',  color: '#4CAF50', trisPerFace: 1, vertsPerFace: 3,  usePips: false, isVertex: false },
-  d12: { sides: 12, label: 'D12', color: '#FF9800', trisPerFace: 3, vertsPerFace: 9,  usePips: false, isVertex: false },
-  d20: { sides: 20, label: 'D20', color: '#9C27B0', trisPerFace: 1, vertsPerFace: 3,  usePips: false, isVertex: false },
+  d4:  { sides: 4,  label: 'D4',  color: '#E91E63', trisPerFace: 1, vertsPerFace: 3,  isBottom: true },
+  d6:  { sides: 6,  label: 'D6',  color: '#2196F3', trisPerFace: 2, vertsPerFace: 6 },
+  d8:  { sides: 8,  label: 'D8',  color: '#4CAF50', trisPerFace: 1, vertsPerFace: 3 },
+  d12: { sides: 12, label: 'D12', color: '#FF9800', trisPerFace: 3, vertsPerFace: 9 },
+  d20: { sides: 20, label: 'D20', color: '#9C27B0', trisPerFace: 1, vertsPerFace: 3 },
 };
-
-// ─── D4 vertex data ───
-// TetrahedronGeometry vertices (normalized to DIE_RADIUS)
-const TETRA_VERTS = [
-  [1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]
-].map(v => {
-  const len = Math.sqrt(3);
-  return v.map(c => (c / len) * DIE_RADIUS);
-});
-
-// Face indices from Three.js TetrahedronGeometry
-const TETRA_FACE_VERTS = [[2,1,0], [0,3,2], [1,3,0], [2,3,1]];
-
-// Which faces are adjacent to each vertex (faces that CONTAIN the vertex)
-const TETRA_VERTEX_FACES = [
-  [0, 1, 2], // vertex 0
-  [0, 2, 3], // vertex 1
-  [0, 1, 3], // vertex 2
-  [1, 2, 3], // vertex 3
-];
 
 export function createDieGeometry(dieType) {
   if (dieType === 'd6') return new THREE.BoxGeometry(DIE_RADIUS * 2, DIE_RADIUS * 2, DIE_RADIUS * 2);
@@ -177,53 +157,35 @@ export function createDiePhysicsShape(dieType) {
 }
 
 /**
- * For d4: find which vertex is pointing UP.
+ * Compute face mapping so desiredValue ends up on the correct face.
+ * - d4: desiredValue goes on BOTTOM face (face-down, not visible)
+ * - d6: desiredValue goes on TOP face, opposite face = 7 - desired
+ * - d8, d12, d20: desiredValue goes on TOP face
+ *
+ * @param {string} dieType
+ * @param {number} resultFaceIndex - the face index that is "result" (bottom for d4, top for others)
+ * @param {number} desiredValue
  */
-export function getTopVertexIndex(body) {
-  let bestY = -Infinity;
-  let bestIdx = 0;
-  for (let i = 0; i < TETRA_VERTS.length; i++) {
-    const v = TETRA_VERTS[i];
-    const wv = body.quaternion.vmult(new CANNON.Vec3(v[0], v[1], v[2]));
-    const worldY = body.position.y + wv.y;
-    if (worldY > bestY) { bestY = worldY; bestIdx = i; }
-  }
-  return bestIdx;
-}
-
-/**
- * Compute face mapping. For d4, uses vertex-based mapping (3 visible faces show desired number).
- */
-export function computeFaceMapping(dieType, topIndex, desiredValue) {
-  const config = DICE_TYPES[dieType];
-  const sides = config.sides;
+export function computeFaceMapping(dieType, resultFaceIndex, desiredValue) {
+  const sides = DICE_TYPES[dieType].sides;
   const mapping = new Array(sides).fill(0);
 
-  if (dieType === 'd4') {
-    // topIndex is a VERTEX index. The 3 adjacent faces show the desired value.
-    const adjFaces = TETRA_VERTEX_FACES[topIndex];
-    const oppFace = [0,1,2,3].find(f => !adjFaces.includes(f));
-    adjFaces.forEach(f => { mapping[f] = desiredValue; });
-    // Bottom face shows a different number
-    const others = [1,2,3,4].filter(v => v !== desiredValue);
-    mapping[oppFace] = others[Math.floor(Math.random() * others.length)];
-    return mapping;
-  }
+  // Place desired value on the result face
+  mapping[resultFaceIndex] = desiredValue;
 
   if (dieType === 'd6') {
+    // d6: opposite faces sum to 7
     const OPP = { 0:1, 1:0, 2:3, 3:2, 4:5, 5:4 };
-    mapping[topIndex] = desiredValue;
-    mapping[OPP[topIndex]] = 7 - desiredValue;
+    mapping[OPP[resultFaceIndex]] = 7 - desiredValue;
     const used = new Set([desiredValue, 7 - desiredValue]);
     const rem = [1,2,3,4,5,6].filter(v => !used.has(v));
-    [0,1,2,3,4,5].filter(i => i !== topIndex && i !== OPP[topIndex]).forEach((idx, i) => { mapping[idx] = rem[i]; });
+    [0,1,2,3,4,5].filter(i => i !== resultFaceIndex && i !== OPP[resultFaceIndex]).forEach((idx, i) => { mapping[idx] = rem[i]; });
     return mapping;
   }
 
-  // d8, d12, d20: put desired on top, shuffle rest
-  mapping[topIndex] = desiredValue;
+  // All other dice: shuffle remaining values onto remaining faces
   const rem = Array.from({ length: sides }, (_, i) => i + 1).filter(v => v !== desiredValue);
   for (let i = rem.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i+1)); [rem[i], rem[j]] = [rem[j], rem[i]]; }
-  [... Array(sides).keys()].filter(i => i !== topIndex).forEach((idx, i) => { mapping[idx] = rem[i]; });
+  [...Array(sides).keys()].filter(i => i !== resultFaceIndex).forEach((idx, i) => { mapping[idx] = rem[i]; });
   return mapping;
 }
