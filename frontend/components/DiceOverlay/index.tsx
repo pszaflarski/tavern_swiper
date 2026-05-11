@@ -83,7 +83,7 @@ function DiceScene({ dieType, desiredValue, onResult }) {
  * DiceScene auto-triggers the simulation on mount, so no cross-reconciler
  * ref timing issues.
  */
-export default function DiceOverlay({ visible, dieType, desiredValue, onResult, onDismiss }) {
+export default function DiceOverlay({ visible, dieType, rollKey, desiredValue, onResult, onDismiss }) {
   const handleResult = useCallback((value) => {
     if (onResult) onResult(value);
   }, [onResult]);
@@ -93,7 +93,7 @@ export default function DiceOverlay({ visible, dieType, desiredValue, onResult, 
   return (
     <View style={styles.overlay} pointerEvents="none">
       <Canvas
-        key={`${dieType}-${Date.now()}`}
+        key={`${dieType}-${rollKey}`}
         orthographic
         camera={{
           position: [0, 20, 0.001],

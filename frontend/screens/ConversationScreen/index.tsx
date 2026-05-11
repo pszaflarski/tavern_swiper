@@ -13,7 +13,7 @@ import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
-import { useInvolvedMatches, useConversationMessages, useSendMessage } from '../../hooks/useMessages';
+import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, DiceRollResult } from '../../hooks/useMessages';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
@@ -24,6 +24,7 @@ import { MESSAGES } from '../../constants';
 import { styles } from './styles';
 
 const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
+const DICE_BAR_HEIGHT = 48; // DiceTypeBar approx height (padding + chip + border)
 
 function ConversationScreenInner() {
   const { id: conversationId } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +32,9 @@ function ConversationScreenInner() {
   const [messageText, setMessageText] = useState('');
   const [diceBarOpen, setDiceBarOpen] = useState(false);
   const [rollingDie, setRollingDie] = useState<string | null>(null);
+  const [diceResult, setDiceResult] = useState<DiceRollResult | null>(null);
+  const [hiddenMessageId, setHiddenMessageId] = useState<string | null>(null);
+  const [rollKey, setRollKey] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
 
@@ -49,8 +53,14 @@ function ConversationScreenInner() {
   const otherProfile = conversation?.otherProfile;
 
   // Get messages
-  const { data: messages = [], isLoading: isLoadingMessages } = useConversationMessages(conversationId);
+  const { data: messages = [], isLoading: isLoadingMessages } = useConversationMessages(
+    conversationId,
+    // Pause polling while the dice animation is playing to prevent the
+    // event message from appearing before the roll finishes.
+    rollingDie !== null,
+  );
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
+  const { mutateAsync: rollDice, invalidateAfterRoll } = useRollDice();
 
   const handleSend = useCallback(() => {
     if (!messageText.trim() || !activeProfileId || !conversationId) return;
@@ -63,12 +73,13 @@ function ConversationScreenInner() {
     setMessageText('');
   }, [messageText, activeProfileId, conversationId, sendMessage]);
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
+  // Track whether we've done the initial scroll (instant) vs new messages (animated)
+  const hasScrolledRef = useRef(false);
+
+  const handleContentSizeChange = useCallback(() => {
+    if (messages.length === 0) return;
+    flatListRef.current?.scrollToEnd({ animated: hasScrolledRef.current });
+    hasScrolledRef.current = true;
   }, [messages.length]);
 
   const navigation = useNavigation();
@@ -112,10 +123,13 @@ function ConversationScreenInner() {
     };
   });
 
+  // Extra height for the dice bar when open
+  const diceBarExtra = diceBarOpen ? DICE_BAR_HEIGHT : 0;
+
   // Animated style for the FlatList spacer.
   // Precisely mirrors the footer's height for smooth scrolling.
   const listBottomSpacerStyle = useAnimatedStyle(() => ({
-    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
+    height: INPUT_BAR_HEIGHT + diceBarExtra + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
   }));
 
   if (isLoadingInbox && !conversation) {
@@ -167,12 +181,55 @@ function ConversationScreenInner() {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={hiddenMessageId ? messages.filter(m => m.message_id !== hiddenMessageId) : messages}
           keyExtractor={(item) => item.message_id}
           contentContainerStyle={styles.messageList}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
+          onContentSizeChange={handleContentSizeChange}
           renderItem={({ item }) => {
+            // Event messages — centered gold pill (dice rolls, etc.)
+            if (item.type === 'event') {
+              // Parse dice roll pattern: "{name} rolled a {number} on a {diceType}"
+              const diceMatch = item.content.match(/^(.+?) rolled a (\d+) on a (d\d+)$/);
+
+              return (
+                <View style={styles.eventContainer}>
+                  <View style={styles.eventBubble}>
+                    {diceMatch ? (
+                      <Text style={styles.eventText}>
+                        <Text style={styles.eventHighlight}>{diceMatch[1]}</Text>
+                        {' rolled a '}
+                        <Text style={styles.eventHighlight}>{diceMatch[2]}</Text>
+                        {' on a '}
+                        <Text style={styles.eventHighlight}>{diceMatch[3]}</Text>
+                      </Text>
+                    ) : (
+                      <Text style={styles.eventText}>{item.content}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.timestamp}>
+                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              );
+            }
+
+            // System messages — centered muted pill
+            if (item.type === 'system') {
+              return (
+                <View style={styles.systemContainer}>
+                  <View style={styles.systemBubble}>
+                    <Text style={styles.systemText}>{item.content}</Text>
+                  </View>
+                  <Text style={styles.timestamp}>
+                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              );
+            }
+
+            // User messages — left/right aligned bubbles
             const isMe = item.sender_profile_id === activeProfileId;
             return (
               <View style={[styles.messageBubbleContainer, isMe ? styles.myMessageContainer : styles.theirMessageContainer]}>
@@ -204,8 +261,31 @@ function ConversationScreenInner() {
         {/* Dice type bar — slides up above the input when toggled */}
         {diceBarOpen && (
           <DiceTypeBar
-            onSelectDie={(dieType: string) => {
-              setRollingDie(dieType);
+            onSelectDie={async (dieType: string) => {
+              if (!activeProfileId || !conversationId) return;
+              try {
+                // If a prior roll is still showing, clean it up first
+                if (rollingDie) {
+                  setHiddenMessageId(null);
+                  invalidateAfterRoll();
+                }
+                // 1. Call the backend for an authoritative roll
+                const result = await rollDice({
+                  dieType,
+                  conversationId,
+                  profileId: activeProfileId,
+                });
+                // 2. Hide the event message the backend just wrote
+                if (result.message_id) {
+                  setHiddenMessageId(result.message_id);
+                }
+                // 3. Show the overlay with the predetermined result
+                setDiceResult(result);
+                setRollingDie(dieType);
+                setRollKey(k => k + 1);
+              } catch (err) {
+                console.error('🎲 Dice roll failed:', err);
+              }
             }}
           />
         )}
@@ -267,12 +347,21 @@ function ConversationScreenInner() {
       <DiceOverlay
         visible={rollingDie !== null}
         dieType={rollingDie ?? 'd6'}
+        rollKey={rollKey}
+        desiredValue={diceResult?.result}
         onResult={(value: number) => {
-          // TODO: Future — send dice roll as a special message type
-          console.log(`🎲 Rolled ${rollingDie}: ${value}`);
+          console.log(`\ud83c\udfb2 Rolled ${rollingDie}: ${value}`);
+          // Reveal the event message now that the animation is done.
+          // The overlay stays visible until the user dismisses or re-rolls.
+          setHiddenMessageId(null);
+          invalidateAfterRoll();
         }}
         onDismiss={() => {
+          // Clean up — also reveal any hidden message if dismissed early
+          setHiddenMessageId(null);
           setRollingDie(null);
+          setDiceResult(null);
+          invalidateAfterRoll();
         }}
       />
     </View>

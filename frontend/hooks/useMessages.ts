@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profilesApi, discoveryApi, messagesApi } from '../lib/api';
 import { Profile } from './useProfiles';
@@ -32,6 +32,13 @@ export interface Message {
   content: string;
   type: string;
   sent_at: string;
+}
+
+export interface DiceRollResult {
+  type: string;
+  result: number;
+  conversation_id?: string;
+  message_id?: string;
 }
 
 export interface UnifiedMatch extends Match {
@@ -76,8 +83,9 @@ export function useConversations(profileId: string | undefined) {
 
 /**
  * Hook to fetch messages for a specific conversation.
+ * @param pausePolling When true, suppresses the 5s polling interval (e.g. during dice animations).
  */
-export function useConversationMessages(conversationId: string | undefined) {
+export function useConversationMessages(conversationId: string | undefined, pausePolling: boolean = false) {
   return useQuery<Message[]>({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
@@ -86,7 +94,7 @@ export function useConversationMessages(conversationId: string | undefined) {
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!conversationId,
-    refetchInterval: 5000, // Poll every 5 seconds for "real-time" feel
+    refetchInterval: pausePolling ? false : 5000, // Poll every 5 seconds for "real-time" feel
   });
 }
 
@@ -111,6 +119,49 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
+}
+
+/**
+ * Hook to roll dice via the backend.
+ * Returns the authoritative roll result so the frontend can animate it.
+ * Does NOT auto-invalidate messages — the caller should call
+ * invalidateAfterRoll() after the dice animation completes.
+ */
+export function useRollDice() {
+  const queryClient = useQueryClient();
+  const pendingConvIdRef = useRef<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async ({ dieType, conversationId, profileId }: {
+      dieType: string;
+      conversationId: string;
+      profileId: string;
+    }) => {
+      pendingConvIdRef.current = conversationId;
+      const res = await messagesApi.post('/messages/roll-dice', {
+        type: dieType,
+        conversation_id: conversationId,
+        profile_id: profileId,
+      });
+      return res.data as DiceRollResult;
+    },
+    // Deliberately no onSuccess invalidation — we delay it until animation ends
+  });
+
+  /**
+   * Call this after the dice animation finishes to reveal the event message
+   * that the backend already wrote to Firestore.
+   */
+  const invalidateAfterRoll = useCallback(() => {
+    const convId = pendingConvIdRef.current;
+    if (convId) {
+      queryClient.invalidateQueries({ queryKey: ['messages', convId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      pendingConvIdRef.current = null;
+    }
+  }, [queryClient]);
+
+  return { ...mutation, invalidateAfterRoll };
 }
 
 /**
