@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -195,15 +195,22 @@ export default function CreateAndEditProfileScreen() {
           headerTitleStyle: { fontFamily: Fonts.heroic, color: Colors.onSurface },
           headerTintColor: Colors.primary,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/profiles' as any)} style={styles.headerButton}>
+            <Pressable 
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/profiles' as any)} 
+              style={({ pressed }) => [styles.headerButton, pressed && { opacity: 0.7 }]}
+              testID="profile-header-close-button"
+            >
               <Ionicons name="close" size={24} color={Colors.outline} />
-            </TouchableOpacity>
+            </Pressable>
           ),
           headerRight: () => (
-            <TouchableOpacity
+            <Pressable
               onPress={handleSave}
               disabled={isPending}
-              style={styles.headerButton}
+              style={({ pressed }) => [
+                styles.headerButton,
+                (isPending || pressed) && { opacity: 0.7 }
+              ]}
               testID="profile-header-save-button"
               accessibilityLabel="Save profile"
               accessibilityRole="button"
@@ -213,7 +220,7 @@ export default function CreateAndEditProfileScreen() {
               ) : (
                 <Text style={styles.saveActionText}>Save</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           ),
         }}
       />
@@ -233,19 +240,25 @@ export default function CreateAndEditProfileScreen() {
                       style={styles.gridImage}
                       resizeMode="cover"
                     />
-                    <TouchableOpacity
-                      style={styles.removeSeal}
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.removeSeal,
+                        pressed && { opacity: 0.7 }
+                      ]}
                       onPress={() => removeImage(index)}
                       testID={`profile-image-remove-${index}`}
                       accessibilityLabel={`Remove image ${index + 1}`}
                       accessibilityRole="button"
                     >
                       <Ionicons name="close-circle" size={20} color={Colors.error} />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 ) : (
-                  <TouchableOpacity
-                    style={styles.emptySlot}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.emptySlot,
+                      pressed && { opacity: 0.7 }
+                    ]}
                     onPress={() => pickImage(index)}
                     testID={`profile-image-add-button-${index}`}
                     accessibilityLabel={`Add image to slot ${index + 1}`}
@@ -255,7 +268,7 @@ export default function CreateAndEditProfileScreen() {
                       <Ionicons name="camera" size={24} color={Colors.surfaceVariant} />
                       <Text style={styles.addLabel}>Add</Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
             );
@@ -372,22 +385,28 @@ export default function CreateAndEditProfileScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <TouchableOpacity
-            style={styles.ocToggleRow}
+          <Pressable
+            style={({ pressed }) => [
+              styles.ocToggleRow,
+              pressed && { opacity: 0.7 }
+            ]}
             onPress={() => setIsOC(!isOC)}
             testID="profile-oc-toggle"
-            activeOpacity={0.7}
           >
             <View style={[styles.ocCheckbox, isOC && styles.ocCheckboxActive]}>
               {isOC && <Ionicons name="checkmark" size={14} color={Colors.onPrimary} />}
             </View>
             <Text style={styles.ocLabel}>Original Character (OC)</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.forgeButton, isPending && styles.forgeButtonDisabled]}
+      <Pressable
+        style={({ pressed }) => [
+          styles.forgeButton, 
+          isPending && styles.forgeButtonDisabled,
+          pressed && !isPending && { opacity: 0.8 }
+        ]}
         onPress={handleSave}
         testID="profile-forge-button"
         disabled={isPending}
@@ -402,7 +421,7 @@ export default function CreateAndEditProfileScreen() {
             </Text>
           </>
         )}
-      </TouchableOpacity>
+      </Pressable>
 
       {Platform.OS === 'web' && (
         <input

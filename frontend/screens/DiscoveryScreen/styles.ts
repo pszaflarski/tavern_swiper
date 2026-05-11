@@ -82,6 +82,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadow.waxSeal,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   roundButtonText: {
     fontSize: 24,
@@ -89,15 +90,16 @@ export const styles = StyleSheet.create({
   },
   infoButton: {
     position: 'absolute',
-    bottom: 44, // Moved down to align with the bottom edge of the action buttons
+    bottom: 44, 
     right: Spacing[6],
     zIndex: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Subtle background for the icon
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    borderRadius: 24,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   detailsOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Image, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
@@ -7,12 +7,13 @@ import { useProfiles } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useInvolvedMatches, useCreateConversation } from '../../hooks/useMessages';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import { styles } from './styles';
 
 function MessagesScreenInner() {
+  const router = useRouter();
   const { uid } = useUser();
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const { data: myProfiles = [], isLoading: isLoadingMyProfiles, refetch: refetchProfiles } = useProfiles(uid);
@@ -59,13 +60,14 @@ function MessagesScreenInner() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.profileTabsContent}>
               {(myProfiles || []).map((profile) => (
-                <TouchableOpacity 
+                <Pressable 
                   key={profile.profile_id} 
                   testID={`profile-tab-${profile.profile_id}`}
                   onPress={() => setActiveProfileId(profile.profile_id)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.profileTab, 
-                    activeProfileId === profile.profile_id && styles.activeProfileTab
+                    activeProfileId === profile.profile_id && styles.activeProfileTab,
+                    pressed && { opacity: 0.8 }
                   ]}
                 >
                   {profile.image_urls?.[0] ? (
@@ -81,7 +83,7 @@ function MessagesScreenInner() {
                       {profile.display_name}
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </Pressable>
               ))}
                {(!myProfiles || myProfiles.length === 0) && (
                 <Text style={styles.emptyText}>No identities forged yet.</Text>
@@ -104,10 +106,13 @@ function MessagesScreenInner() {
             <View style={styles.newMatchesContainer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.newMatchesContent}>
                 {(newMatches || []).map((match) => (
-                  <TouchableOpacity 
+                  <Pressable 
                     key={match.id} 
                     testID={`new-match-${match.id}`}
-                    style={styles.newMatchItem}
+                    style={({ pressed }) => [
+                      styles.newMatchItem,
+                      pressed && { opacity: 0.7 }
+                    ]}
                     onPress={() => match.otherProfile?.profile_id && handleMatchPress(match.otherProfile.profile_id)}
                   >
                     {match.otherProfile?.image_urls?.[0] ? (
@@ -116,7 +121,7 @@ function MessagesScreenInner() {
                       <AvatarFallback size={100} style={styles.newMatchImage} />
                     )}
                     <Text style={styles.newMatchName} numberOfLines={1}>{match.otherProfile?.display_name || 'Mysterious Soul'}</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
                 {(!newMatches || newMatches.length === 0) && (
                   <Text style={styles.emptyText}>The stars reflect no new paths today.</Text>
@@ -130,10 +135,13 @@ function MessagesScreenInner() {
             </View>
             <View style={styles.inboxContainer}>
               {(inbox || []).map((convo) => (
-                <TouchableOpacity 
+                <Pressable 
                   key={convo.id} 
                   testID={`inbox-item-${convo.id}`}
-                  style={styles.inboxItem}
+                  style={({ pressed }) => [
+                    styles.inboxItem,
+                    pressed && { opacity: 0.7 }
+                  ]}
                   onPress={() => handleConversationPress(convo.id)}
                 >
                   <View style={styles.inboxContent}>
@@ -149,7 +157,7 @@ function MessagesScreenInner() {
                       </Text>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </Pressable>
               ))}
               {(!inbox || inbox.length === 0) && (
                 <View style={{ paddingVertical: Spacing[10], alignItems: 'center' }}>

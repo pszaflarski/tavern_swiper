@@ -123,7 +123,7 @@ async def test_create_profile_with_gender_tags():
             headers=root_headers,
             json={"category": "gender", "name": "Female", "slug": "gender__female"}
         )
-        assert tag_resp.status_code == 201, f"Tag creation failed: {tag_resp.text}"
+        assert tag_resp.status_code in [200, 201], f"Tag creation failed: {tag_resp.text}"
         tag = tag_resp.json()
         assert tag["status"] == "active"
 

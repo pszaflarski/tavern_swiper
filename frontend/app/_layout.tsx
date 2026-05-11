@@ -37,6 +37,7 @@ const queryClient = new QueryClient({
   },
 });
 
+import { AuthProvider } from '../context/AuthContext';
 import { ProfileProvider, useProfileContext } from '../context/ProfileContext';
 import { MatchProvider } from '../context/MatchContext';
 import MatchSplash from '../components/MatchSplash';
@@ -72,18 +73,19 @@ export default function RootLayout() {
 
   if (error) {
     console.error('[RootLayout] Font loading error:', error);
-    // Let the ErrorBoundary handled it if it's thrown, but we'll also log here.
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
         <QueryClientProvider client={queryClient}>
-          <ProfileProvider>
-            <MatchProvider>
-              <RootLayoutNav />
-            </MatchProvider>
-          </ProfileProvider>
+          <AuthProvider>
+            <ProfileProvider>
+              <MatchProvider>
+                <RootLayoutNav />
+              </MatchProvider>
+            </ProfileProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>

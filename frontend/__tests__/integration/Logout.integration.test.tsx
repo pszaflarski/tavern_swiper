@@ -3,6 +3,7 @@ import { useUser } from '../../hooks/useUser';
 import { auth } from '../../lib/firebase';
 import { clearTavernSession } from '../../lib/api';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { AuthProvider } from '../../context/AuthContext';
 import React from 'react';
 
 // Mock dependencies
@@ -30,7 +31,9 @@ describe('Logout Integration', () => {
   let queryClient: QueryClient;
 
   const createWrapper = (client: QueryClient) => ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <AuthProvider>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </AuthProvider>
   );
 
   beforeEach(() => {

@@ -103,10 +103,12 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
     ...Shadow.waxSeal,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   inboxContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: Spacing[2],
   },
   inboxBanner: {
     width: 32,

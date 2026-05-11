@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { View, Text, FlatList, Pressable, Image, ActivityIndicator, Platform } from 'react-native';
+import { Stack, useRouter, Link } from 'expo-router';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
@@ -66,10 +66,11 @@ function ProfilesScreenInner() {
 
     return (
       <View style={styles.cardContainer}>
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({ pressed }) => [
             styles.profileCard,
-            isActive && styles.activeProfileCard
+            isActive && styles.activeProfileCard,
+            pressed && { opacity: 0.9 }
           ]}
           onPress={() => setActiveProfileId(item.profile_id)}
           testID={`profile-item-${item.profile_id}`}
@@ -97,25 +98,31 @@ function ProfilesScreenInner() {
           </View>
 
           <View style={styles.cardActions}>
-            <TouchableOpacity 
-              style={styles.actionButton} 
+            <Pressable 
+              style={({ pressed }) => [
+                styles.actionButton,
+                pressed && { opacity: 0.7 }
+              ]}
               onPress={() => handleEdit(item.profile_id)}
-              testID={`edit-profile-${item.profile_id}`}
+              testID="edit-profile-button"
               accessibilityLabel={`Edit ${item.display_name} profile`}
               accessibilityRole="button"
             >
-              <Ionicons name="pencil" size={20} color={Colors.outline} />
-            </TouchableOpacity>
+              <Ionicons name="pencil" size={24} color={Colors.outline} />
+            </Pressable>
             
-            <TouchableOpacity 
-              style={styles.actionButton} 
+            <Pressable 
+              style={({ pressed }) => [
+                styles.actionButton,
+                pressed && { opacity: 0.7 }
+              ]}
               onPress={() => handleDelete(item.profile_id, item.display_name)}
-              testID={`delete-profile-${item.profile_id}`}
+              testID="delete-profile-button"
               accessibilityLabel={`Delete ${item.display_name} profile`}
               accessibilityRole="button"
             >
-              <Ionicons name="trash-outline" size={20} color={Colors.error} />
-            </TouchableOpacity>
+              <Ionicons name="trash-outline" size={24} color={Colors.error} />
+            </Pressable>
 
             <View style={styles.selectionIndicator}>
               <Ionicons 
@@ -125,24 +132,28 @@ function ProfilesScreenInner() {
               />
             </View>
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   };
 
   const renderFooter = () => (
-    <TouchableOpacity 
-      style={styles.addProfileButton} 
-      onPress={handleCreate}
-      testID="add-profile-button"
-      accessibilityLabel="Forge new identity"
-      accessibilityRole="button"
-    >
-      <View style={styles.addIconContainer}>
-        <Ionicons name="add" size={32} color={Colors.primary} />
-      </View>
-      <Text style={styles.addProfileText}>Forge New Identity</Text>
-    </TouchableOpacity>
+    <Link href="/profiles/form" asChild>
+      <Pressable 
+        style={({ pressed }) => [
+          styles.addProfileButton,
+          pressed && { opacity: 0.7 }
+        ]}
+        testID="add-profile-button"
+        accessibilityLabel="Forge new identity"
+        accessibilityRole="button"
+      >
+        <View style={styles.addIconContainer}>
+          <Ionicons name="add" size={32} color={Colors.primary} />
+        </View>
+        <Text style={styles.addProfileText}>Forge New Identity</Text>
+      </Pressable>
+    </Link>
   );
 
   if (isActuallyLoading) {
@@ -195,13 +206,16 @@ function ProfilesScreenInner() {
           <Text style={styles.emptyIcon}>🛡️</Text>
           <Text style={styles.emptyTitle}>Forge Your First Identity</Text>
           <Text style={styles.emptyDesc}>You must forge an identity before your legend can begin.</Text>
-          <TouchableOpacity 
-            style={styles.emptyCtaButton} 
+          <Pressable 
+            style={({ pressed }) => [
+              styles.emptyCtaButton,
+              pressed && { opacity: 0.7 }
+            ]} 
             onPress={handleCreate}
             testID="empty-state-add-profile-button"
           >
             <Text style={styles.emptyCtaText}>FORGE NEW IDENTITY</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </View>

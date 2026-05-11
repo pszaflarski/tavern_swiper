@@ -4,7 +4,7 @@ import {
   Text, 
   FlatList, 
   TextInput, 
-  TouchableOpacity, 
+  Pressable, 
   Platform, 
   Image,
   ActivityIndicator,
@@ -129,7 +129,11 @@ function ConversationScreenInner() {
           headerShown: true,
           headerTitle: '',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.replace('/(tabs)/messages')} style={styles.backButton} testID="back-button">
+            <Pressable 
+              onPress={() => router.replace('/(tabs)/messages')} 
+              style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]} 
+              testID="back-button"
+            >
               <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
               <View style={styles.headerProfile}>
                 {otherProfile?.image_urls?.[0] ? (
@@ -144,7 +148,7 @@ function ConversationScreenInner() {
                   <Text style={styles.headerStatus}>Online in the tavern</Text>
                 </View>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           ),
           headerStyle: { backgroundColor: Colors.surface },
           headerShadowVisible: false,
@@ -204,8 +208,12 @@ function ConversationScreenInner() {
             maxLength={500}
             testID="message-input"
           />
-          <TouchableOpacity 
-            style={[styles.sendButton, !messageText.trim() && styles.sendButtonDisabled]} 
+          <Pressable 
+            style={({ pressed }) => [
+              styles.sendButton, 
+              !messageText.trim() && styles.sendButtonDisabled,
+              pressed && !isSending && { opacity: 0.7 }
+            ]} 
             onPress={handleSend}
             disabled={!messageText.trim() || isSending}
             testID="send-button"
@@ -215,7 +223,7 @@ function ConversationScreenInner() {
             ) : (
               <Ionicons name="send" size={20} color={Colors.onPrimary} />
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </Animated.View>
     </View>

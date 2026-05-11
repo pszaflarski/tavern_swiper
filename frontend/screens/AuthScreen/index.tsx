@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -142,15 +142,18 @@ export default function AuthScreen() {
             : 'Join the ranks of heroes seeking companionship.'}
         </Text>
 
-        <TouchableOpacity
-          style={[styles.googleButton, loading && styles.buttonDisabled]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.googleButton,
+            (loading || pressed) && styles.buttonDisabled
+          ]}
           onPress={handleGoogleSignIn}
           disabled={loading}
           testID="auth-google-button"
         >
           <Ionicons name="logo-google" size={20} color={Colors.primary} style={styles.googleIcon} />
           <Text style={styles.googleButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
+        </Pressable>
 
         <View style={styles.dividerContainer}>
           <View style={styles.divider} />
@@ -190,9 +193,12 @@ export default function AuthScreen() {
               secureTextEntry={!isPasswordVisible}
               testID="auth-password-input"
             />
-            <TouchableOpacity
+            <Pressable
               onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-              style={styles.eyeIcon}
+              style={({ pressed }) => [
+                styles.eyeIcon,
+                pressed && { opacity: 0.7 }
+              ]}
               testID="auth-password-toggle"
             >
               <Ionicons
@@ -200,7 +206,7 @@ export default function AuthScreen() {
                 size={20}
                 color={Colors.primary}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -210,8 +216,11 @@ export default function AuthScreen() {
           </Text>
         )}
 
-        <TouchableOpacity
-          style={[styles.button, (loading || authLoading) && styles.buttonDisabled]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            (loading || authLoading || pressed) && styles.buttonDisabled
+          ]}
           onPress={handleAuth}
           disabled={loading || authLoading}
           testID="auth-submit-button"
@@ -223,10 +232,13 @@ export default function AuthScreen() {
               {isLogin ? 'Enter Tavern' : 'Claim Your Title'}
             </Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
-          style={styles.toggle}
+        <Pressable
+          style={({ pressed }) => [
+            styles.toggle,
+            pressed && { opacity: 0.7 }
+          ]}
           onPress={() => {
             setIsLogin(!isLogin);
             setError(null);
@@ -239,7 +251,7 @@ export default function AuthScreen() {
               ? "New to the realm? Sign up instead"
               : "Already have a title? Log in here"}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );

@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
 
 export const styles = StyleSheet.create({
@@ -18,6 +18,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing[10],
     borderRadius: Radius.full,
     ...Shadow.waxSeal,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   logoutButtonText: {
     fontFamily: Fonts.scribe,

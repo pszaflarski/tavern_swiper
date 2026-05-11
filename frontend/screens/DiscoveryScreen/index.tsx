@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SwipeDeck from '../../components/SwipeDeck';
@@ -57,12 +57,16 @@ function TavernScreenInner() {
         {loadTimedOut && (
           <>
             <Text style={styles.emptyDesc}>The scrying spell is taking longer than expected.</Text>
-            <TouchableOpacity 
-              style={[styles.roundButton, { width: 'auto', paddingHorizontal: Spacing[4], height: 40, marginTop: Spacing[4] }]}
+            <Pressable 
+              style={({ pressed }) => [
+                styles.roundButton, 
+                { width: 'auto', paddingHorizontal: Spacing[4], height: 40, marginTop: Spacing[4] },
+                pressed && { opacity: 0.7 }
+              ]}
               onPress={() => { refetchDiscovery(); setLoadTimedOut(false); }}
             >
               <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>TRY AGAIN</Text>
-            </TouchableOpacity>
+            </Pressable>
           </>
         )}
       </View>
@@ -83,15 +87,15 @@ function TavernScreenInner() {
               ? "You must forge an identity before your legend can begin." 
               : "You must select an active profile to discover other heroes in the realm."}
           </Text>
-          <TouchableOpacity 
-            style={styles.emptyCtaButton} 
+          <Pressable 
+            style={({ pressed }) => [styles.emptyCtaButton, pressed && { opacity: 0.7 }]} 
             onPress={() => router.push((hasNoProfiles ? '/profiles/form' : '/profiles') as any)}
             testID="forge-identity-button"
           >
             <Text style={styles.emptyCtaText}>
               {hasNoProfiles ? "FORGE NEW IDENTITY" : "SELECT ACTIVE HERO"}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
@@ -110,9 +114,9 @@ function TavernScreenInner() {
                  : "The realm is quiet tonight. Try again later."}
              </Text>
              {!isFetching && (
-               <TouchableOpacity onPress={handleRecast} style={{ marginTop: Spacing[4] }}>
+               <Pressable onPress={handleRecast} style={({ pressed }) => [{ marginTop: Spacing[4] }, pressed && { opacity: 0.7 }]}>
                   <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>RE-CAST SCRYING SPELL</Text>
-               </TouchableOpacity>
+               </Pressable>
              )}
           </View>
         ) : (
@@ -159,35 +163,45 @@ function TavernScreenInner() {
             </View>
           )}
 
-          <TouchableOpacity 
-            style={styles.infoButton} 
+          <Pressable 
+            style={({ pressed }) => [
+              styles.infoButton,
+              pressed && { opacity: 0.7 }
+            ]}
             onPress={() => setShowDetails(!showDetails)} 
             testID="profile-info-button"
-            activeOpacity={0.7}
           >
             <Ionicons 
               name={showDetails ? "close-circle-outline" : "information-circle-outline"} 
               size={28} 
               color={Colors.onSurface} 
             />
-          </TouchableOpacity>
+          </Pressable>
           <View style={styles.actionRow}>
-            <TouchableOpacity 
-              style={[styles.roundButton, { borderColor: Colors.error }]} 
+            <Pressable 
+              style={({ pressed }) => [
+                styles.roundButton, 
+                { borderColor: Colors.error },
+                pressed && { opacity: 0.7 }
+              ]} 
               onPress={() => currentProfile && handleSwipeLeft(currentProfile.profile_id)}
               testID="swipe-left-button"
               disabled={!activeProfileId}
             >
               <Text style={[styles.roundButtonText, { color: Colors.error }]}>✕</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.roundButton, { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] }]} 
+            </Pressable>
+            <Pressable 
+              style={({ pressed }) => [
+                styles.roundButton, 
+                { borderColor: Colors.tertiary, transform: [{ scale: 1.2 }] },
+                pressed && { opacity: 0.7 }
+              ]} 
               onPress={() => currentProfile && handleSwipeRight(currentProfile.profile_id)}
               testID="swipe-right-button"
               disabled={!activeProfileId}
             >
               <Text style={[styles.roundButtonText, { color: Colors.tertiary }]}>❤️</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </>
       )}

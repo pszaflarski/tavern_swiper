@@ -3,7 +3,7 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
+  Pressable,
   useWindowDimensions,
   StyleSheet,
 } from 'react-native';
@@ -203,19 +203,25 @@ export default function MatchSplash() {
 
         {/* Actions */}
         <Animated.View entering={ZoomIn.delay(1200)} style={styles.actions}>
-          <TouchableOpacity 
-            style={styles.primaryButton}
+          <Pressable 
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && { opacity: 0.8 }
+            ]}
             onPress={handleInitiateConversation}
           >
             <Text style={styles.primaryButtonText}>INITIATE CONVERSATION</Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity 
-            style={styles.secondaryButton}
+          <Pressable 
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed && { opacity: 0.8 }
+            ]}
             onPress={hideMatch}
           >
             <Text style={styles.secondaryButtonText}>Return to the Tavern</Text>
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
       </View>
     </Animated.View>

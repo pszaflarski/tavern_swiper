@@ -103,7 +103,8 @@ export const styles = StyleSheet.create({
     gap: Spacing[2],
   },
   actionButton: {
-    padding: Spacing[2],
+    padding: Spacing[4],
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   selectionIndicator: {
     marginLeft: Spacing[1],

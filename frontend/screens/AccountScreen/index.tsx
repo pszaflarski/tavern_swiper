@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 import { useRouter } from 'expo-router';
 
@@ -28,13 +28,16 @@ function AccountScreenInner() {
       <ScreenHeader title="Account" />
 
       <View style={styles.content}>
-        <TouchableOpacity 
-          style={styles.logoutButton} 
+        <Pressable 
+          style={({ pressed }) => [
+            styles.logoutButton,
+            pressed && { opacity: 0.7 }
+          ]}
           onPress={handleLogout}
           testID="logout-button"
         >
           <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
