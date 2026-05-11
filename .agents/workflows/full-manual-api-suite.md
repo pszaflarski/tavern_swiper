@@ -54,7 +54,8 @@ The output gives you the base URLs for all services. The Swagger UIs are at:
 
 ## Phase 3: Manual Browser Tests
 
-Open each Swagger UI in the browser and execute the following test cases. For authenticated endpoints, use the Tavern JWT from Step 2 (the `Bearer <token>` printed by `create_root_admin.py`).
+Open an **Incognito window** and navigate to each Swagger UI. Execute the following test cases. For authenticated endpoints, use the Tavern JWT from Step 2 (the `Bearer <token>` printed by `create_root_admin.py`).
+
 
 ### Test 1: Health Checks (All Services)
 **Goal**: Verify all 5 services are alive and responding.

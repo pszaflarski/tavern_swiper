@@ -26,7 +26,7 @@ Use this workflow to ingest sample profile assets (images, etc.) into a test use
    ```
 
 3. Verify the results in the browser:
-   - Navigate to `http://localhost:8081/profiles`.
+   - Open an **Incognito window** and navigate to `http://localhost:8081/profiles`.
    - Log in as the test user.
    - Confirm the 6 images appear in the 3x2 grid.
 

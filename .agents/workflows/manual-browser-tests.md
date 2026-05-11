@@ -58,19 +58,20 @@ Wait for the dev server to report `Web is waiting on http://localhost:8081`.
 
 > [!CAUTION]
 > **Browser Automation Rules — MUST be included in every browser_subagent Task prompt:**
-> 1. **After every login click**, wait 3 seconds, then **press Escape** to dismiss the browser's password-save dialog. This dialog blocks all clicks on the underlying page if not dismissed.
-> 2. Wait an additional 3 seconds after Escape before interacting with any UI elements.
-> 3. If any click appears to not register, try pressing Escape first, then retry the click.
+> 1. **MANDATORY**: Always open the browser in an **Incognito window** (or equivalent clean session) to prevent interference from existing browser profiles or cached credentials.
+> 2. **After verifying the app has successfully navigated to the main screen post-login**, wait 2 seconds, then **press the Escape key** to dismiss the browser's password-save dialog. This dialog blocks all clicks on the underlying page if not dismissed.
+> 3. Wait an additional 2 seconds after Escape before interacting with any UI elements.
+> 4. If any click appears to not register, try pressing Escape first, then retry the click.
 
 ### Test A: Login as Standard User (Valerius the Bold)
 
-1. Navigate to `http://localhost:8081`
+1. Open an **Incognito window** and navigate to `http://localhost:8081`
 2. Wait for the login screen to load — confirm the "Sign In" title and email/password fields are visible
 3. Enter email `user1@example.com` and password `Password123!` using the `auth-email-input` and `auth-password-input` fields
 4. Click the "Enter Tavern" button (`auth-submit-button`)
-5. **MANDATORY**: Wait 3 seconds, then press Escape to dismiss any browser password-save dialog
-6. Wait an additional 3s for navigation to complete
-7. **Verify**: App navigates to the main Tavern (Discovery) tab
+5. Wait for the app to navigate to the main Tavern (Discovery) tab.
+6. **MANDATORY**: Once the Tavern tab is visible, wait 2 seconds, then **press Escape** to dismiss any browser password-save dialog.
+7. **Verify**: App navigates successfully and remains interactive.
 
 ### Test B: Verify Discovery Feed & Profile Details (Valerius)
 
@@ -133,9 +134,9 @@ Wait for the dev server to report `Web is waiting on http://localhost:8081`.
 
 1. On the login screen, enter email `user2@example.com` and password `Password123!`
 2. Click "Enter Tavern"
-3. **MANDATORY**: Wait 3 seconds, then press Escape to dismiss any browser password-save dialog
-4. Wait an additional 3s for navigation to complete
-5. **Verify**: App navigates to the main screen
+3. Wait for the app to navigate to the main screen.
+4. **MANDATORY**: Once the main screen is visible, wait 2 seconds, then **press Escape** to dismiss any browser password-save dialog.
+5. **Verify**: App navigates to the main screen.
 
 ### Test H: Verify Multi-Profile Switching
 
@@ -157,8 +158,8 @@ Wait for the dev server to report `Web is waiting on http://localhost:8081`.
 
 1. Navigate to Account tab → Logout
 2. Login as `admin@example.com` / `Password123!`
-3. **MANDATORY**: Wait 3 seconds, then press Escape to dismiss any browser password-save dialog
-4. Wait an additional 3s for navigation to complete
+3. Wait for the app to navigate to the Profiles tab.
+4. **MANDATORY**: Once the Profiles tab is visible, wait 2 seconds, then **press Escape** to dismiss any browser password-save dialog.
 5. Click the "Profiles" tab
 5. **Verify**: Two profiles listed — **Thrain Ironfoot** and **Borin Stonehammer**
 6. Click on the Tavern tab
