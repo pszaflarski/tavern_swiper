@@ -25,6 +25,7 @@ message ProfileUpserted {
   repeated ProfileTag fandom = 12;
   repeated ProfileTag interests = 13;
   repeated ProfileTag events = 14;
+  repeated ProfileTag looking_for = 15;
 }
 
 message ProfileDeleted {

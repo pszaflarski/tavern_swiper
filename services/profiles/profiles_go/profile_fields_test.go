@@ -208,4 +208,112 @@ func TestProfileNewFields(t *testing.T) {
 
 		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
+
+	t.Run("CreateProfile_LookingForSyncedToFirestore", func(t *testing.T) {
+		mock := &mockClient{collections: make(map[string]*mockCollection)}
+		col := mock.Collection(TAGS_COLLECTION).(*mockCollection)
+		col.docs = map[string]*mockDoc{
+			"lf1": {id: "lf1", exists: true, data: map[string]interface{}{"category": "looking_for", "name": "New Friends", "slug": "looking_for__new_friends", "multi_select": true, "status": "active"}},
+			"lf2": {id: "lf2", exists: true, data: map[string]interface{}{"category": "looking_for", "name": "Roleplay", "slug": "looking_for__roleplay", "multi_select": true, "status": "active"}},
+		}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
+
+		body := ProfileCreate{
+			DisplayName: "Quest Seeker",
+			LookingFor: []ProfileTag{
+				{ID: "lf1", Category: "looking_for", Name: "New Friends", Slug: "looking_for__new_friends", Status: "active"},
+				{ID: "lf2", Category: "looking_for", Name: "Roleplay", Slug: "looking_for__roleplay", Status: "active"},
+			},
+		}
+		jsonBody, _ := json.Marshal(body)
+
+		req, _ := http.NewRequest("POST", "/profiles/", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+		var res ProfileOut
+		json.Unmarshal(w.Body.Bytes(), &res)
+		assert.Len(t, res.LookingFor, 2)
+		assert.Equal(t, "New Friends", res.LookingFor[0].Name)
+		assert.Equal(t, "Roleplay", res.LookingFor[1].Name)
+
+		// Verify Firestore data sync
+		profDoc, _ := mock.Collection(COLLECTION).Doc(res.ProfileID).Get(context.Background())
+		lfVal := profDoc.Data()["looking_for"]
+		lfSlice, ok := lfVal.([]interface{})
+		assert.True(t, ok)
+		assert.Len(t, lfSlice, 2)
+		lfMap := lfSlice[0].(map[string]interface{})
+		assert.Equal(t, "New Friends", lfMap["name"])
+	})
+
+	t.Run("UpdateProfile_LookingForTags", func(t *testing.T) {
+		mock := &mockClient{collections: map[string]*mockCollection{
+			COLLECTION: {
+				docs: map[string]*mockDoc{
+					"p-lf": {
+						id: "p-lf",
+						exists: true,
+						data: map[string]interface{}{
+							"user_id":      "user-123",
+							"display_name": "Quest Seeker",
+						},
+					},
+				},
+			},
+			TAGS_COLLECTION: {
+				docs: map[string]*mockDoc{
+					"lf3": {id: "lf3", exists: true, data: map[string]interface{}{"category": "looking_for", "name": "Join a Clan", "slug": "looking_for__join_a_clan", "multi_select": true, "status": "active"}},
+				},
+			},
+		}}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
+
+		lfTags := []ProfileTag{
+			{ID: "lf3", Category: "looking_for", Name: "Join a Clan", Slug: "looking_for__join_a_clan", Status: "active"},
+		}
+		body := ProfileUpdate{
+			LookingFor: &lfTags,
+		}
+		jsonBody, _ := json.Marshal(body)
+
+		req, _ := http.NewRequest("PUT", "/profiles/p-lf", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if !assert.Equal(t, http.StatusOK, w.Code) {
+			t.Logf("Response: %s", w.Body.String())
+			return
+		}
+		var res ProfileOut
+		json.Unmarshal(w.Body.Bytes(), &res)
+		assert.Len(t, res.LookingFor, 1)
+		assert.Equal(t, "Join a Clan", res.LookingFor[0].Name)
+	})
+
+	t.Run("CreateProfile_NoLookingFor_DefaultsEmpty", func(t *testing.T) {
+		mock := &mockClient{collections: make(map[string]*mockCollection)}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
+
+		body := ProfileCreate{
+			DisplayName: "Minimalist",
+		}
+		jsonBody, _ := json.Marshal(body)
+
+		req, _ := http.NewRequest("POST", "/profiles/", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+		var res ProfileOut
+		json.Unmarshal(w.Body.Bytes(), &res)
+		assert.Empty(t, res.LookingFor)
+	})
 }

@@ -149,6 +149,7 @@ type ProfileUpserted struct {
 	Fandom        []*ProfileTag          `protobuf:"bytes,12,rep,name=fandom,proto3" json:"fandom,omitempty"`
 	Interests     []*ProfileTag          `protobuf:"bytes,13,rep,name=interests,proto3" json:"interests,omitempty"`
 	Events        []*ProfileTag          `protobuf:"bytes,14,rep,name=events,proto3" json:"events,omitempty"`
+	LookingFor    []*ProfileTag          `protobuf:"bytes,15,rep,name=looking_for,json=lookingFor,proto3" json:"looking_for,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -277,6 +278,13 @@ func (x *ProfileUpserted) GetInterests() []*ProfileTag {
 func (x *ProfileUpserted) GetEvents() []*ProfileTag {
 	if x != nil {
 		return x.Events
+	}
+	return nil
+}
+
+func (x *ProfileUpserted) GetLookingFor() []*ProfileTag {
+	if x != nil {
+		return x.LookingFor
 	}
 	return nil
 }
@@ -492,7 +500,7 @@ const file_profile_events_proto_rawDesc = "" +
 	"ProfileTag\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04slug\x18\x03 \x01(\tR\x04slug\"\x98\x04\n" +
+	"\x04slug\x18\x03 \x01(\tR\x04slug\"\xce\x04\n" +
 	"\x0fProfileUpserted\x12\x1d\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\x12\x17\n" +
@@ -510,7 +518,9 @@ const file_profile_events_proto_rawDesc = "" +
 	"\x04race\x18\v \x03(\v2\x13.profile.ProfileTagR\x04race\x12+\n" +
 	"\x06fandom\x18\f \x03(\v2\x13.profile.ProfileTagR\x06fandom\x121\n" +
 	"\tinterests\x18\r \x03(\v2\x13.profile.ProfileTagR\tinterests\x12+\n" +
-	"\x06events\x18\x0e \x03(\v2\x13.profile.ProfileTagR\x06eventsB\n" +
+	"\x06events\x18\x0e \x03(\v2\x13.profile.ProfileTagR\x06events\x124\n" +
+	"\vlooking_for\x18\x0f \x03(\v2\x13.profile.ProfileTagR\n" +
+	"lookingForB\n" +
 	"\n" +
 	"\b_taglineB\x06\n" +
 	"\x04_bioB\x06\n" +
@@ -558,20 +568,21 @@ var file_profile_events_proto_goTypes = []any{
 	(*ProfileEvent)(nil),        // 5: profile.ProfileEvent
 }
 var file_profile_events_proto_depIdxs = []int32{
-	1, // 0: profile.ProfileUpserted.gender:type_name -> profile.ProfileTag
-	1, // 1: profile.ProfileUpserted.race:type_name -> profile.ProfileTag
-	1, // 2: profile.ProfileUpserted.fandom:type_name -> profile.ProfileTag
-	1, // 3: profile.ProfileUpserted.interests:type_name -> profile.ProfileTag
-	1, // 4: profile.ProfileUpserted.events:type_name -> profile.ProfileTag
-	0, // 5: profile.ProfileEvent.type:type_name -> profile.ProfileEvent.EventType
-	2, // 6: profile.ProfileEvent.upserted:type_name -> profile.ProfileUpserted
-	3, // 7: profile.ProfileEvent.deleted:type_name -> profile.ProfileDeleted
-	4, // 8: profile.ProfileEvent.all_deleted:type_name -> profile.AllProfilesDeleted
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	1,  // 0: profile.ProfileUpserted.gender:type_name -> profile.ProfileTag
+	1,  // 1: profile.ProfileUpserted.race:type_name -> profile.ProfileTag
+	1,  // 2: profile.ProfileUpserted.fandom:type_name -> profile.ProfileTag
+	1,  // 3: profile.ProfileUpserted.interests:type_name -> profile.ProfileTag
+	1,  // 4: profile.ProfileUpserted.events:type_name -> profile.ProfileTag
+	1,  // 5: profile.ProfileUpserted.looking_for:type_name -> profile.ProfileTag
+	0,  // 6: profile.ProfileEvent.type:type_name -> profile.ProfileEvent.EventType
+	2,  // 7: profile.ProfileEvent.upserted:type_name -> profile.ProfileUpserted
+	3,  // 8: profile.ProfileEvent.deleted:type_name -> profile.ProfileDeleted
+	4,  // 9: profile.ProfileEvent.all_deleted:type_name -> profile.AllProfilesDeleted
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_profile_events_proto_init() }

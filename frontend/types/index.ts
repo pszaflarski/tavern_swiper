@@ -18,6 +18,7 @@ export interface Profile {
   interests: ProfileTag[];
   race: ProfileTag[];
   events: ProfileTag[];
+  looking_for: ProfileTag[];
   age?: number;
   is_oc?: boolean;
   is_active: boolean;

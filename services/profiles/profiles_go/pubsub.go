@@ -85,6 +85,7 @@ func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) error
 				Fandom:      toProtoTags(p.Fandom),
 				Interests:   toProtoTags(p.Interests),
 				Events:      toProtoTags(p.Events),
+				LookingFor:  toProtoTags(p.LookingFor),
 			},
 		},
 	}

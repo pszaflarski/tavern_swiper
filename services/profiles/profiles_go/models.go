@@ -18,6 +18,7 @@ type ProfileCreate struct {
 	Fandom      []ProfileTag `json:"fandom"`
 	Interests   []ProfileTag `json:"interests"`
 	Events      []ProfileTag `json:"events"`
+	LookingFor  []ProfileTag `json:"looking_for"`
 	
 	// OtherTags for dynamic categories
 	OtherTags   map[string][]ProfileTag `json:"other_tags"`
@@ -38,6 +39,7 @@ type ProfileUpdate struct {
 	Fandom      *[]ProfileTag `json:"fandom"`
 	Interests   *[]ProfileTag `json:"interests"`
 	Events      *[]ProfileTag `json:"events"`
+	LookingFor  *[]ProfileTag `json:"looking_for"`
 	
 	// OtherTags for dynamic categories
 	OtherTags   *map[string][]ProfileTag `json:"other_tags"`
@@ -64,6 +66,7 @@ type ProfileOut struct {
 	Fandom      []ProfileTag `json:"fandom"`
 	Interests   []ProfileTag `json:"interests"`
 	Events      []ProfileTag `json:"events"`
+	LookingFor  []ProfileTag `json:"looking_for"`
 	
 	// OtherTags for dynamic categories
 	OtherTags   map[string][]ProfileTag `json:"other_tags,omitempty"`

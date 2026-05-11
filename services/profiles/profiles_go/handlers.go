@@ -126,7 +126,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	}
 
 	// Collect all tags for validation
-	allTags := collectAllTags(body.Gender, body.Race, body.Fandom, body.Interests, body.Events, body.OtherTags)
+	allTags := collectAllTags(body.Gender, body.Race, body.Fandom, body.Interests, body.Events, body.LookingFor, body.OtherTags)
 
 	// Finding #4: Tag validation
 	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
@@ -148,6 +148,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		"fandom":       tagsToInterface(body.Fandom),
 		"interests":    tagsToInterface(body.Interests),
 		"events":       tagsToInterface(body.Events),
+		"looking_for":  tagsToInterface(body.LookingFor),
 		"created_at":   firestore.ServerTimestamp,
 		"updated_at":   firestore.ServerTimestamp,
 	}
@@ -349,6 +350,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		Fandom:      getTags("fandom"),
 		Interests:   getTags("interests"),
 		Events:      getTags("events"),
+		LookingFor:  getTags("looking_for"),
 		CreatedAt:   getTimestamp("created_at"),
 		UpdatedAt:   getTimestamp("updated_at"),
 	}, nil
@@ -515,10 +517,12 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	if body.Interests != nil { newInterests = *body.Interests }
 	newEvents := existingProfile.Events
 	if body.Events != nil { newEvents = *body.Events }
+	newLookingFor := existingProfile.LookingFor
+	if body.LookingFor != nil { newLookingFor = *body.LookingFor }
 	
 	// TODO: Handle OtherTags merge if needed
 	
-	allTags := collectAllTags(newGender, newRace, newFandom, newInterests, newEvents, existingProfile.OtherTags)
+	allTags := collectAllTags(newGender, newRace, newFandom, newInterests, newEvents, newLookingFor, existingProfile.OtherTags)
 
 	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
 		send400(c, err.Error())
@@ -563,6 +567,9 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	}
 	if body.Events != nil {
 		updates = append(updates, firestore.Update{Path: "events", Value: tagsToInterface(*body.Events)})
+	}
+	if body.LookingFor != nil {
+		updates = append(updates, firestore.Update{Path: "looking_for", Value: tagsToInterface(*body.LookingFor)})
 	}
 	if body.OtherTags != nil {
 		for cat, tags := range *body.OtherTags {
@@ -1026,13 +1033,14 @@ func tagsToInterface(tags []ProfileTag) []interface{} {
 	return res
 }
 
-func collectAllTags(gender, race, fandom, interests, events []ProfileTag, other map[string][]ProfileTag) []ProfileTag {
+func collectAllTags(gender, race, fandom, interests, events, lookingFor []ProfileTag, other map[string][]ProfileTag) []ProfileTag {
 	res := make([]ProfileTag, 0)
 	res = append(res, gender...)
 	res = append(res, race...)
 	res = append(res, fandom...)
 	res = append(res, interests...)
 	res = append(res, events...)
+	res = append(res, lookingFor...)
 	if other != nil {
 		for _, tags := range other {
 			res = append(res, tags...)
