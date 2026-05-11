@@ -6,7 +6,6 @@ import { TEXTURE_SETS } from './diceTextures';
 
 /**
  * Load a static PNG texture from an Expo asset require().
- * Uses expo-asset to resolve the URI, then Three.js TextureLoader to load it.
  */
 function loadStaticTexture(requireSource, flipY = true) {
   const asset = Asset.fromModule(requireSource);
@@ -19,7 +18,6 @@ function loadStaticTexture(requireSource, flipY = true) {
 
 /**
  * DiceMesh — renders any platonic solid die with static PNG face textures.
- * No runtime canvas generation — fully native-compatible.
  */
 export default function DiceMesh({ meshRef, dieType, faceMapping }) {
   const config = DICE_TYPES[dieType];
@@ -30,7 +28,6 @@ export default function DiceMesh({ meshRef, dieType, faceMapping }) {
   const materials = useMemo(() => {
     const values = faceMapping || Array.from({ length: config.sides }, (_, i) => i + 1);
     const textureSet = TEXTURE_SETS[dieType];
-    // flipY: true for square (d6 default UVs), false for triangle/pentagon (custom UVs)
     const flipY = dieType === 'd6';
 
     return values.map(v => {
@@ -41,12 +38,7 @@ export default function DiceMesh({ meshRef, dieType, faceMapping }) {
   }, [dieType, mappingKey]);
 
   useEffect(() => {
-    return () => {
-      materials.forEach(m => {
-        if (m.map) m.map.dispose();
-        m.dispose();
-      });
-    };
+    return () => { materials.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); };
   }, [materials]);
 
   return <mesh ref={meshRef} geometry={geometry} material={materials} castShadow receiveShadow />;

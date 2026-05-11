@@ -154,5 +154,16 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing[2],
     fontStyle: 'italic',
-  }
+  },
+  diceToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing[2],
+  },
+  diceToggleActive: {
+    backgroundColor: Colors.tertiaryContainer,
+  },
 });

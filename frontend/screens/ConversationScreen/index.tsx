@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import DiceOverlay from '../../components/DiceOverlay';
+import DiceTypeBar from '../../components/DiceOverlay/DiceTypeBar';
 import { MESSAGES } from '../../constants';
 import { styles } from './styles';
 
@@ -27,6 +29,8 @@ function ConversationScreenInner() {
   const { id: conversationId } = useLocalSearchParams<{ id: string }>();
   const { activeProfileId } = useProfileContext();
   const [messageText, setMessageText] = useState('');
+  const [diceBarOpen, setDiceBarOpen] = useState(false);
+  const [rollingDie, setRollingDie] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
 
@@ -197,6 +201,15 @@ function ConversationScreenInner() {
       )}
 
       <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle]}>
+        {/* Dice type bar — slides up above the input when toggled */}
+        {diceBarOpen && (
+          <DiceTypeBar
+            onSelectDie={(dieType: string) => {
+              setRollingDie(dieType);
+            }}
+          />
+        )}
+
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -208,6 +221,29 @@ function ConversationScreenInner() {
             maxLength={500}
             testID="message-input"
           />
+          <Pressable
+            style={({ pressed }) => [
+              styles.diceToggle,
+              diceBarOpen && styles.diceToggleActive,
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={() => {
+              if (diceBarOpen) {
+                // Close everything
+                setDiceBarOpen(false);
+                setRollingDie(null);
+              } else {
+                setDiceBarOpen(true);
+              }
+            }}
+            testID="dice-toggle-button"
+          >
+            <Ionicons
+              name="dice-outline"
+              size={22}
+              color={diceBarOpen ? Colors.tertiary : Colors.outline}
+            />
+          </Pressable>
           <Pressable 
             style={({ pressed }) => [
               styles.sendButton, 
@@ -226,6 +262,19 @@ function ConversationScreenInner() {
           </Pressable>
         </View>
       </Animated.View>
+
+      {/* Dice overlay — renders on top of everything */}
+      <DiceOverlay
+        visible={rollingDie !== null}
+        dieType={rollingDie ?? 'd6'}
+        onResult={(value: number) => {
+          // TODO: Future — send dice roll as a special message type
+          console.log(`🎲 Rolled ${rollingDie}: ${value}`);
+        }}
+        onDismiss={() => {
+          setRollingDie(null);
+        }}
+      />
     </View>
   );
 }
