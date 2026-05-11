@@ -59,7 +59,8 @@ Wait for the dev server to report `Web is waiting on http://localhost:8081`.
 > [!CAUTION]
 > **Browser Automation Rules — MUST be included in every browser_subagent Task prompt:**
 > 1. **MANDATORY**: Always open the browser in an **Incognito window** (or equivalent clean session) to prevent interference from existing browser profiles or cached credentials.
-> 2. **After verifying the app has successfully navigated to the main screen post-login**, wait 2 seconds, then **press the Escape key** to dismiss the browser's password-save dialog. This dialog blocks all clicks on the underlying page if not dismissed.
+> 2. **Best Practice**: For automated runs via `browser_subagent`, it is highly recommended to use an **isolated Chromium binary** and a **dedicated test profile path** configured in the IDE settings. This prevents state leakage and ensures consistent performance.
+> 3. **After verifying the app has successfully navigated to the main screen post-login**, wait 2 seconds, then **press the Escape key** to dismiss the browser's password-save dialog. This dialog blocks all clicks on the underlying page if not dismissed.
 > 3. Wait an additional 2 seconds after Escape before interacting with any UI elements.
 > 4. If any click appears to not register, try pressing Escape first, then retry the click.
 

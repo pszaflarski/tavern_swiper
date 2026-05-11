@@ -36,6 +36,7 @@
 5. **NO AUTO-DOCKER**: Never run `docker compose up/build` or `tests/run_integration_tests.sh --local` without explicit user permission. Risk of OOM.
 6. **FEATURE BRANCHES ONLY**: Never commit directly to `dev`, `test`, or `prod` without user approval.
 7. **ZERO-TRUST AUTH**: Every endpoint (except `/auth/login`, `/auth/register`, and health/swagger) must verify the Tavern JWT. Each service has its own `auth.go` middleware.
+8. **BROWSER ISOLATION**: Always use an isolated Chromium binary and dedicated profile path for `browser_subagent` tasks to prevent profile leakage and session conflicts.
 
 ## JWT Architecture
 
