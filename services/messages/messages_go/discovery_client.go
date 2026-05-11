@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -20,17 +19,13 @@ type DiscoveryClient interface {
 }
 
 type realDiscoveryClient struct {
-	baseURL    string
 	httpClient *http.Client
 }
 
+// NewDiscoveryClient creates a client for the discovery service.
+// The base URL is resolved at runtime from the router.
 func NewDiscoveryClient() DiscoveryClient {
-	url := os.Getenv("DISCOVERY_SERVICE_URL")
-	if url == "" {
-		url = "http://discovery:8003"
-	}
 	return &realDiscoveryClient{
-		baseURL: url,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -38,7 +33,8 @@ func NewDiscoveryClient() DiscoveryClient {
 }
 
 func (c *realDiscoveryClient) GetMatch(matchID string, token string) (*DiscoveryMatch, error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/discovery/matches/%s", c.baseURL, matchID), nil)
+	baseURL := serviceURLs.Get("discovery")
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/discovery/matches/%s", baseURL, matchID), nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	resp, err := c.httpClient.Do(req)
@@ -59,7 +55,8 @@ func (c *realDiscoveryClient) GetMatch(matchID string, token string) (*Discovery
 }
 
 func (c *realDiscoveryClient) ListMatchesForProfile(profileID string, token string) ([]DiscoveryMatch, error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/discovery/matches/profile/%s", c.baseURL, profileID), nil)
+	baseURL := serviceURLs.Get("discovery")
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/discovery/matches/profile/%s", baseURL, profileID), nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	resp, err := c.httpClient.Do(req)

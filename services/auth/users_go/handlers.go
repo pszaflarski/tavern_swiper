@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -396,10 +395,7 @@ func purgeAllUsersHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	db, _ := getDBFunc(ctx)
 	
-	authSvc := os.Getenv("AUTH_SERVICE_URL")
-	if authSvc == "" {
-		authSvc = "http://localhost:8001"
-	}
+	authSvc := serviceURLs.Get("auth")
 
 	// L2: Paginated purge for users
 	for {
@@ -485,8 +481,7 @@ func deleteUserHandler(c *gin.Context) {
 	}
 
 	if hard {
-		authSvc := os.Getenv("AUTH_SERVICE_URL")
-		if authSvc == "" { authSvc = "http://localhost:8001" }
+		authSvc := serviceURLs.Get("auth")
 		req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/auth/users/%s", authSvc, targetUID), nil)
 		http.DefaultClient.Do(req)
 		docRef.Delete(c.Request.Context())

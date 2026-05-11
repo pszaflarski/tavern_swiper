@@ -65,7 +65,6 @@ services:
           memory: 128M
     environment:
       - FIRESTORE_DATABASE_ID=discovery-test
-      - AUTH_SERVICE_URL=http://auth:8001
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
@@ -89,6 +88,8 @@ services:
       - FIRESTORE_DATABASE_ID=messages-test
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - ROUTER_SERVICE_URL=http://router:8010
+      - ROUTER_TAG=default
     volumes:
       - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -99,6 +100,8 @@ services:
           memory: 128M
     depends_on:
       profiles:
+        condition: service_healthy
+      router:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8005/messages/health"]
@@ -115,6 +118,34 @@ services:
       - FIRESTORE_DATABASE_ID=users-test
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - ROUTER_SERVICE_URL=http://router:8010
+      - ROUTER_TAG=default
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      router:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/users/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  router:
+    build:
+      context: ./services/router/router_go
+    ports:
+      - "8010:8010"
+    environment:
+      - FIRESTORE_DATABASE_ID=router-dev
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:
       - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     networks:
@@ -124,7 +155,7 @@ services:
         limits:
           memory: 128M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8006/users/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8010/router/health"]
       interval: 10s
       timeout: 5s
       retries: 3

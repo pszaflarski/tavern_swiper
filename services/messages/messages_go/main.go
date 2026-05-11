@@ -23,7 +23,10 @@ func main() {
 		port = "8005"
 	}
 
-	// Initialize cross-service clients
+	// Resolve service URLs from the router (hard fail if unavailable)
+	initServiceURLs()
+
+	// Initialize cross-service clients (URLs come from the router)
 	profilesClient = NewProfilesClient()
 
 	r := gin.Default()

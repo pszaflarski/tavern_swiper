@@ -25,6 +25,9 @@ func main() {
 		port = "8082" // Default for Users service
 	}
 
+	// Resolve service URLs from the router (hard fail if unavailable)
+	initServiceURLs()
+
 	r := gin.Default()
 
 	// Middleware

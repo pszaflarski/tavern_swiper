@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -20,18 +19,13 @@ type ProfilesClient interface {
 }
 
 type realProfilesClient struct {
-	baseURL    string
 	httpClient *http.Client
 }
 
 // NewProfilesClient creates a client for the profiles service.
+// The base URL is resolved at runtime from the router.
 func NewProfilesClient() ProfilesClient {
-	url := os.Getenv("PROFILES_SERVICE_URL")
-	if url == "" {
-		url = "http://profiles:8002"
-	}
 	return &realProfilesClient{
-		baseURL: url,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -39,7 +33,8 @@ func NewProfilesClient() ProfilesClient {
 }
 
 func (c *realProfilesClient) GetProfile(profileID string, token string) (*ProfileInfo, error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/profiles/%s", c.baseURL, profileID), nil)
+	baseURL := serviceURLs.Get("profiles")
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/profiles/%s", baseURL, profileID), nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	resp, err := c.httpClient.Do(req)
