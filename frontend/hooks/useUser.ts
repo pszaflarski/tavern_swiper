@@ -50,8 +50,8 @@ export function useUser() {
   const logout = async () => {
     console.log('[useUser] Initiating global logout...');
     try {
-      // 1. Trigger external sign-outs (non-blocking)
-      Promise.allSettled([
+      // 1. Await external sign-outs to prevent race conditions
+      await Promise.allSettled([
         signOutFromGoogle(),
         auth.signOut(),
       ]).then(() => console.log('[useUser] External sign-outs completed.'));

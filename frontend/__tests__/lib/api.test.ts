@@ -9,7 +9,12 @@ jest.mock('axios', () => {
   const mockInstance = {
     interceptors: {
       request: { use: jest.fn(), eject: jest.fn() },
-      response: { use: jest.fn(), eject: jest.fn() },
+      response: { 
+        use: jest.fn((success, error) => {
+          (mockInstance as any)._errorHandler = error;
+        }), 
+        eject: jest.fn() 
+      },
     },
     post: jest.fn(() => Promise.resolve({ data: {}, status: 200 })),
     get: jest.fn(() => Promise.resolve({ data: {}, status: 200 })),
@@ -106,6 +111,27 @@ describe('API Token Management', () => {
     consoleSpy.mockRestore();
   });
 
+  it('getTavernToken should ignore AsyncStorage token if UID does not match', async () => {
+    (auth as any).currentUser = { uid: 'current-uid', getIdToken: mockGetIdToken };
+    const now = Date.now();
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key) => {
+      if (key === 'tavern_jwt_token') return Promise.resolve('stale-token');
+      if (key === 'tavern_jwt_expiry') return Promise.resolve((now + 100000).toString());
+      if (key === 'tavern_uid') return Promise.resolve('old-uid');
+      return Promise.resolve(null);
+    });
+
+    mockGetIdToken.mockResolvedValue('firebase-token');
+    (axios.post as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { token: 'new-token', uid: 'current-uid' },
+    });
+
+    const token = await getTavernToken();
+    expect(token).toBe('new-token'); // It should exchange for a new token, ignoring the stale one
+    expect(axios.post).toHaveBeenCalled();
+  });
+
   it('axios instances should be initialized with correct base URLs', async () => {
     expect(authApi).toBeDefined();
     expect(profilesApi).toBeDefined();
@@ -119,6 +145,32 @@ describe('API Token Management', () => {
     expect(auth.signOut).toHaveBeenCalled();
     expect(AsyncStorage.multiRemove).toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/auth');
+    
+    consoleSpy.mockRestore();
+  });
+
+  it('response interceptor should retry once on 401 before global logout', async () => {
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    
+    // The mock axios.create returns the same mockInstance. We captured the handler during import.
+    const mockInstance = profilesApi as any;
+    const errorHandler = mockInstance._errorHandler;
+    
+    const mockRequest = jest.fn().mockRejectedValue(new Error('Retry failed'));
+    (mockInstance as any).request = mockRequest;
+
+    const error = {
+      response: { status: 401 },
+      config: { url: '/profiles/me', headers: { Authorization: 'Bearer stale-token' } },
+    } as any;
+
+    await expect(errorHandler(error)).rejects.toBe(error);
+
+    expect(error.config._retried).toBe(true);
+    expect(error.config.headers.Authorization).toBeUndefined(); // Should be deleted
+    expect(mockRequest).toHaveBeenCalledWith(error.config);
+    expect(AsyncStorage.multiRemove).toHaveBeenCalled(); // Clears stale cache
+    expect(auth.signOut).toHaveBeenCalled(); // performGlobalLogout is called when retry fails
     
     consoleSpy.mockRestore();
   });

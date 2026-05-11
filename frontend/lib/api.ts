@@ -92,6 +92,8 @@ export async function getIdToken(): Promise<string | null> {
 export async function clearTavernSession(): Promise<void> {
   cachedTavernToken = null;
   tokenExpiryTime = 0;
+  cachedTokenUid = null;
+  pendingTokenExchange = null;
   try {
     await AsyncStorage.multiRemove([TAVERN_TOKEN_KEY, TAVERN_TOKEN_EXPIRY, TAVERN_UID_KEY]);
   } catch (e) {
@@ -137,13 +139,15 @@ export async function getPersistedUid(): Promise<string | null> {
  */
 let cachedTavernToken: string | null = null;
 let tokenExpiryTime: number = 0; // ms
+let cachedTokenUid: string | null = null;
 let pendingTokenExchange: Promise<string | null> | null = null;
 
 export async function getTavernToken(): Promise<string | null> {
   const now = Date.now();
+  const currentUid = auth.currentUser?.uid ?? null;
   
-  // 1. Check in-memory cache first
-  if (cachedTavernToken && now < tokenExpiryTime - 30_000) {
+  // 1. Check in-memory cache first (must match current user)
+  if (cachedTavernToken && now < tokenExpiryTime - 30_000 && cachedTokenUid === currentUid) {
     return cachedTavernToken;
   }
 
@@ -152,11 +156,13 @@ export async function getTavernToken(): Promise<string | null> {
     try {
       const storedToken = await AsyncStorage.getItem(TAVERN_TOKEN_KEY);
       const storedExpiry = await AsyncStorage.getItem(TAVERN_TOKEN_EXPIRY);
+      const storedUid = await AsyncStorage.getItem(TAVERN_UID_KEY);
       if (storedToken && storedExpiry) {
         const expiry = parseInt(storedExpiry, 10);
-        if (now < expiry - 30_000) {
+        if (now < expiry - 30_000 && storedUid === currentUid) {
           cachedTavernToken = storedToken;
           tokenExpiryTime = expiry;
+          cachedTokenUid = currentUid;
           return cachedTavernToken;
         }
       }
@@ -195,6 +201,7 @@ export async function getTavernToken(): Promise<string | null> {
         
         cachedTavernToken = token;
         tokenExpiryTime = expiry;
+        cachedTokenUid = auth.currentUser?.uid ?? null;
         
         // Save to storage (wrapped in a check for mock environments that might not return a promise)
         const storagePromise = AsyncStorage.multiSet([
@@ -259,7 +266,23 @@ function createClient(baseURLKey: keyof typeof BASE_URLS, useTavernToken: boolea
           // Only trigger auto-logout if we aren't already on the auth screen 
           // and if it's not a verification attempt (which we handle locally)
           const isAuthService = error.config.url?.includes('/auth/');
-          if (!isAuthService) {
+          if (!isAuthService && !error.config._retried) {
+            // Clear all stale token state before retry
+            cachedTavernToken = null;
+            tokenExpiryTime = 0;
+            cachedTokenUid = null;
+            pendingTokenExchange = null;
+            try {
+              await AsyncStorage.multiRemove([TAVERN_TOKEN_KEY, TAVERN_TOKEN_EXPIRY, TAVERN_UID_KEY]);
+            } catch (_) { /* best-effort */ }
+            // Remove stale Authorization header so the request interceptor re-acquires
+            delete error.config.headers?.Authorization;
+            error.config._retried = true;
+            try {
+              return await client.request(error.config);
+            } catch (retryError) {
+              // Retry also failed — now trigger logout
+            }
             await performGlobalLogout();
           }
         }
@@ -311,6 +334,7 @@ export async function __resetInternalState() {
   
   cachedTavernToken = null;
   tokenExpiryTime = 0;
+  cachedTokenUid = null;
   pendingTokenExchange = null;
   authInitialized = false;
   authInitializedPromise = null;
