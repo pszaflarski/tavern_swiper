@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -67,7 +69,7 @@ func (m *mockCollection) Limit(n int) Query {
 }
 
 func (c *mockCollection) OrderBy(path string, dir firestore.Direction) Query {
-	return &mockQuery{col: c} // Mocking order as no-op
+	return &mockQuery{col: c, orderByField: path, orderByDir: dir}
 }
 
 func (c *mockCollection) Documents(ctx context.Context) DocumentIterator {
@@ -209,9 +211,11 @@ func (i *mockIter) Stop() {}
 
 type mockQuery struct {
 	Query
-	col     *mockCollection
-	filters []filter
-	limit   int
+	col          *mockCollection
+	filters      []filter
+	limit        int
+	orderByField string
+	orderByDir   firestore.Direction
 }
 
 func (q *mockQuery) Limit(n int) Query { q.limit = n; return q }
@@ -221,7 +225,9 @@ func (q *mockQuery) Where(path, op string, value interface{}) Query {
 }
 
 func (q *mockQuery) OrderBy(path string, dir firestore.Direction) Query {
-	return q // Mocking order as no-op
+	q.orderByField = path
+	q.orderByDir = dir
+	return q
 }
 
 func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
@@ -269,6 +275,28 @@ func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 	}
 	if q.limit > 0 && len(snaps) > q.limit {
 		snaps = snaps[:q.limit]
+	}
+	// Sort by orderBy field if set (mirrors real Firestore behavior)
+	if q.orderByField != "" {
+		sort.SliceStable(snaps, func(i, j int) bool {
+			vi := snaps[i].data[q.orderByField]
+			vj := snaps[j].data[q.orderByField]
+			ti, okI := vi.(time.Time)
+			tj, okJ := vj.(time.Time)
+			if okI && okJ {
+				if q.orderByDir == firestore.Desc {
+					return ti.After(tj)
+				}
+				return ti.Before(tj)
+			}
+			// Fallback: string comparison
+			si := fmt.Sprintf("%v", vi)
+			sj := fmt.Sprintf("%v", vj)
+			if q.orderByDir == firestore.Desc {
+				return si > sj
+			}
+			return si < sj
+		})
 	}
 	return &mockIter{snaps: snaps}
 }
