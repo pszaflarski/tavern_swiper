@@ -23,6 +23,9 @@ func main() {
 		port = "8005"
 	}
 
+	// Initialize cross-service clients
+	profilesClient = NewProfilesClient()
+
 	r := gin.Default()
 
 	config := cors.DefaultConfig()
@@ -46,6 +49,9 @@ func main() {
 		// Messages for a specific conversation
 		m.POST("/conversations/:id/messages", handleSendMessage)
 		m.GET("/conversations/:id/messages", handleGetMessages)
+
+		// Dice
+		m.POST("/roll-dice", handleRollDice)
 
 		// Admin
 		m.DELETE("/", handleDeleteAllMessages)

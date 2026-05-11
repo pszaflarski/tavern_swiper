@@ -2,16 +2,25 @@ package main
 
 import "time"
 
+// Valid message types
+const (
+	MessageTypeUser   = "user"
+	MessageTypeSystem = "system"
+	MessageTypeEvent  = "event"
+)
+
 type MessageCreate struct {
-	SenderProfileID string `json:"sender_profile_id" binding:"required"`
+	SenderProfileID string `json:"sender_profile_id"` // Required for user messages, omitted for system/event
 	Content         string `json:"content" binding:"required"`
+	Type            string `json:"type"` // "user" (default), "system", "event"
 }
 
 type MessageOut struct {
 	MessageID       string `json:"message_id"`
 	ConversationID  string `json:"conversation_id"`
-	SenderProfileID string `json:"sender_profile_id"`
+	SenderProfileID string `json:"sender_profile_id,omitempty"`
 	Content         string `json:"content"`
+	Type            string `json:"type"`
 	SentAt          string `json:"sent_at"`
 }
 
@@ -22,7 +31,8 @@ type ConversationCreate struct {
 type LastMessageInfo struct {
 	Content         string `json:"content"`
 	SentAt          string `json:"sent_at"`
-	SenderProfileID string `json:"sender_profile_id"`
+	SenderProfileID string `json:"sender_profile_id,omitempty"`
+	Type            string `json:"type"`
 }
 
 type ConversationOut struct {
@@ -47,11 +57,13 @@ type Conversation struct {
 	LastMessageText     string    `firestore:"last_message_text,omitempty"`
 	LastMessageSentAt   time.Time `firestore:"last_message_sent_at,omitempty"`
 	LastMessageSenderID string    `firestore:"last_message_sender_id,omitempty"`
+	LastMessageType     string    `firestore:"last_message_type,omitempty"`
 }
 
 type Message struct {
 	SentBy    string    `firestore:"sent_by"`
 	Content   string    `firestore:"content"`
+	Type      string    `firestore:"type"`
 	CreatedAt time.Time `firestore:"created_at"`
 	UpdatedAt time.Time `firestore:"updated_at"`
 }
@@ -61,3 +73,28 @@ type ProfileConversation struct {
 	ConversationID string `firestore:"conversation_id"`
 	Role           string `firestore:"role"`
 }
+
+// --- Dice Roll models ---
+
+// ValidDiceTypes maps dice type strings to their maximum roll values.
+var ValidDiceTypes = map[string]int{
+	"d4":  4,
+	"d6":  6,
+	"d8":  8,
+	"d12": 12,
+	"d20": 20,
+}
+
+type DiceRollRequest struct {
+	DiceType       string `json:"type" binding:"required"`         // d4, d6, d8, d12, d20
+	ConversationID string `json:"conversation_id"`                 // Optional — if present, posts an event message
+	ProfileID      string `json:"profile_id"`                      // Required when conversation_id is set
+}
+
+type DiceRollResponse struct {
+	DiceType       string `json:"type"`
+	Result         int    `json:"result"`
+	ConversationID string `json:"conversation_id,omitempty"`
+	MessageID      string `json:"message_id,omitempty"` // Set when conversation_id was provided
+}
+

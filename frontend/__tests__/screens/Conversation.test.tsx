@@ -79,6 +79,7 @@ describe('Conversation Screen', () => {
       conversation_id: 'c1',
       sender_profile_id: 'p2',
       content: 'Greetings, traveler!',
+      type: 'user',
       sent_at: new Date(Date.now() - 10000).toISOString(),
     },
     {
@@ -86,6 +87,7 @@ describe('Conversation Screen', () => {
       conversation_id: 'c1',
       sender_profile_id: 'p1',
       content: 'Well met!',
+      type: 'user',
       sent_at: new Date().toISOString(),
     },
   ];

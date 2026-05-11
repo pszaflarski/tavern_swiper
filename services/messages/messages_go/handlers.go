@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"log"
+	"math/big"
 	"net/http"
 	"fmt"
 	"sort"
@@ -14,6 +16,10 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
 )
+
+// profilesClient is the client used to call the profiles service.
+// Injected as a package variable for testability.
+var profilesClient ProfilesClient
 
 const (
 	COLLECTION_MESSAGES              = "messages"
@@ -161,7 +167,7 @@ func handleCreateConversation(c *gin.Context) {
 
 // handleSendMessage godoc
 // @Summary      Send a message
-// @Description  Sends a message in a conversation. Sender must be a participant.
+// @Description  Sends a message in a conversation. For type "user" (default), sender must be a participant. For type "system" or "event", admin authorization is required and sender_profile_id is optional.
 // @Tags         messages
 // @Accept       json
 // @Produce      json
@@ -174,7 +180,7 @@ func handleCreateConversation(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /conversations/{id}/messages [post]
 func handleSendMessage(c *gin.Context) {
-	_ = GetAuth(c) // Auth verified by middleware; profile_conversations gates authorization
+	auth := GetAuth(c)
 	convID := c.Param("id")
 	var body MessageCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -182,7 +188,30 @@ func handleSendMessage(c *gin.Context) {
 		return
 	}
 
-	// 1. Content Sanitization and Validation
+	// 1. Normalize message type (default to "user")
+	msgType := strings.TrimSpace(body.Type)
+	if msgType == "" {
+		msgType = MessageTypeUser
+	}
+
+	// Validate message type
+	switch msgType {
+	case MessageTypeUser, MessageTypeSystem, MessageTypeEvent:
+		// valid
+	default:
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": fmt.Sprintf("Invalid message type: %s. Must be one of: user, system, event", msgType)})
+		return
+	}
+
+	// 2. Authorization: non-user message types require admin
+	if msgType != MessageTypeUser {
+		if !IsAdmin(auth.Role) {
+			c.JSON(http.StatusForbidden, gin.H{"detail": "Admin or Root Admin authorization required for non-user messages"})
+			return
+		}
+	}
+
+	// 3. Content Sanitization and Validation
 	content := strings.TrimSpace(body.Content)
 	if len(content) == 0 {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": "Message content cannot be empty"})
@@ -201,42 +230,55 @@ func handleSendMessage(c *gin.Context) {
 		return
 	}
 
-	// Authorization: profile_conversations participation check below
-	// ensures only conversation participants can send messages.
-
-	// Verify participant exists
-	pcID := fmt.Sprintf("%s_%s", body.SenderProfileID, convID)
-	pcSnap, err := client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID).Get(ctx)
-	if err != nil || !pcSnap.Exists() {
-		c.JSON(http.StatusForbidden, gin.H{"detail": "Not a participant in this conversation"})
-		return
+	// 4. Authorization: participant check (user messages only)
+	if msgType == MessageTypeUser {
+		// User messages require a sender who is a participant
+		if strings.TrimSpace(body.SenderProfileID) == "" {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": "sender_profile_id is required for user messages"})
+			return
+		}
+		pcID := fmt.Sprintf("%s_%s", body.SenderProfileID, convID)
+		pcSnap, err := client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID).Get(ctx)
+		if err != nil || !pcSnap.Exists() {
+			c.JSON(http.StatusForbidden, gin.H{"detail": "Not a participant in this conversation"})
+			return
+		}
 	}
+	// Non-user types (system, event) skip participant validation — admin already verified above
 
-	// 2. Prepare Batch Write for Atomicity
+	// 5. Prepare Batch Write for Atomicity
 	messageID := uuid.New().String()
 	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
 	batch := client.Batch()
 
 	// Create Message in sub-collection
-	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(messageID), map[string]interface{}{
-		"sent_by":    body.SenderProfileID,
+	msgData := map[string]interface{}{
 		"content":    body.Content,
+		"type":       msgType,
 		"created_at": firestore.ServerTimestamp,
 		"updated_at": firestore.ServerTimestamp,
-	})
+	}
+	if body.SenderProfileID != "" {
+		msgData["sent_by"] = body.SenderProfileID
+	}
+	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(messageID), msgData)
 
 	// Update denormalized parent fields in Conversation
-	batch.Set(convRef, map[string]interface{}{
-		"updated_at":             firestore.ServerTimestamp,
-		"last_message_id":        messageID,
-		"last_message_text":      body.Content,
-		"last_message_sent_at":   firestore.ServerTimestamp,
-		"last_message_sender_id": body.SenderProfileID,
-	}, firestore.MergeAll)
+	convUpdate := map[string]interface{}{
+		"updated_at":           firestore.ServerTimestamp,
+		"last_message_id":      messageID,
+		"last_message_text":    body.Content,
+		"last_message_sent_at": firestore.ServerTimestamp,
+		"last_message_type":    msgType,
+	}
+	if body.SenderProfileID != "" {
+		convUpdate["last_message_sender_id"] = body.SenderProfileID
+	} else {
+		convUpdate["last_message_sender_id"] = ""
+	}
+	batch.Set(convRef, convUpdate, firestore.MergeAll)
 
 	// Update denormalized updated_at in ProfileConversation mappings for sorting
-	// Note: We need the other participant IDs to do this. We can get them from the conversation doc or just assume 1-on-1 for now.
-	// The handlesendmessage doesn't have the pids, so let's fetch the conversation participants.
 	convSnap, err := convRef.Get(ctx)
 	if err == nil && convSnap.Exists() {
 		pids := parseStringSlice(convSnap.Data()["participant_ids"])
@@ -259,6 +301,7 @@ func handleSendMessage(c *gin.Context) {
 		ConversationID:  convID,
 		SenderProfileID: body.SenderProfileID,
 		Content:         body.Content,
+		Type:            msgType,
 		SentAt:          _now().Format(time.RFC3339), // Approximate server time for client
 	})
 }
@@ -326,11 +369,20 @@ func handleGetMessages(c *gin.Context) {
 		d := doc.Data()
 		tVal, _ := d["created_at"].(time.Time)
 
+		// Safely extract optional fields — sent_by may be absent for system messages
+		senderID, _ := d["sent_by"].(string)
+		content, _ := d["content"].(string)
+		msgType, _ := d["type"].(string)
+		if msgType == "" {
+			msgType = MessageTypeUser // Backward compat: existing messages without type are "user"
+		}
+
 		results = append(results, MessageOut{
 			MessageID:       doc.ID(),
 			ConversationID:  convID,
-			SenderProfileID: d["sent_by"].(string),
-			Content:         d["content"].(string),
+			SenderProfileID: senderID,
+			Content:         content,
+			Type:            msgType,
 			SentAt:          tVal.Format(time.RFC3339),
 		})
 	}
@@ -412,10 +464,17 @@ func handleListConversations(c *gin.Context) {
 		var lastMsg *LastMessageInfo
 		if mid, ok := d["last_message_id"].(string); ok && mid != "" {
 			sentAtT, _ := d["last_message_sent_at"].(time.Time)
+			senderID, _ := d["last_message_sender_id"].(string)
+			lastMsgType, _ := d["last_message_type"].(string)
+			if lastMsgType == "" {
+				lastMsgType = MessageTypeUser
+			}
+			lastMsgText, _ := d["last_message_text"].(string)
 			lastMsg = &LastMessageInfo{
-				Content:         d["last_message_text"].(string),
+				Content:         lastMsgText,
 				SentAt:          sentAtT.Format(time.RFC3339),
-				SenderProfileID: d["last_message_sender_id"].(string),
+				SenderProfileID: senderID,
+				Type:            lastMsgType,
 			}
 		}
 
@@ -535,4 +594,135 @@ func handleDeleteAllMessages(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// rollDie generates a cryptographically random roll for the given dice max value.
+func rollDie(max int) int {
+	n, _ := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	return int(n.Int64()) + 1 // 1 to max inclusive
+}
+
+// handleRollDice godoc
+// @Summary      Roll dice
+// @Description  Rolls a die of the specified type. If conversation_id is provided, posts the result as an event message to that conversation. The caller must be a participant in the conversation.
+// @Tags         dice
+// @Accept       json
+// @Produce      json
+// @Param        body  body      DiceRollRequest  true  "Dice roll payload"
+// @Success      200   {object}  DiceRollResponse
+// @Failure      403   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /roll-dice [post]
+func handleRollDice(c *gin.Context) {
+	auth := GetAuth(c)
+	var body DiceRollRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error()})
+		return
+	}
+
+	// 1. Validate dice type
+	diceType := strings.ToLower(strings.TrimSpace(body.DiceType))
+	maxVal, ok := ValidDiceTypes[diceType]
+	if !ok {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": fmt.Sprintf("Invalid dice type: %s. Must be one of: d4, d6, d8, d12, d20", body.DiceType)})
+		return
+	}
+
+	// 2. Roll the die
+	result := rollDie(maxVal)
+
+	convID := strings.TrimSpace(body.ConversationID)
+	profileID := strings.TrimSpace(body.ProfileID)
+
+	// 3. If no conversation, just return the roll
+	if convID == "" {
+		c.JSON(http.StatusOK, DiceRollResponse{
+			DiceType: diceType,
+			Result:   result,
+		})
+		return
+	}
+
+	// 4. Conversation mode: validate profile_id is provided
+	if profileID == "" {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": "profile_id is required when conversation_id is provided"})
+		return
+	}
+
+	ctx := context.Background()
+	client, err := getDBFunc(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Internal server error"})
+		return
+	}
+
+	// 5. Verify participant exists in the conversation
+	pcID := fmt.Sprintf("%s_%s", profileID, convID)
+	pcSnap, err := client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID).Get(ctx)
+	if err != nil || !pcSnap.Exists() {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not a participant in this conversation"})
+		return
+	}
+
+	// 6. Fetch the profile's display name from the profiles service
+	displayName := "An adventurer" // Fallback if profiles service is unavailable
+	if profilesClient != nil {
+		profile, err := profilesClient.GetProfile(profileID, auth.Token)
+		if err != nil {
+			log.Printf("[WARN] Failed to fetch profile %s for dice roll: %v", profileID, err)
+		} else if profile != nil && profile.DisplayName != "" {
+			displayName = profile.DisplayName
+		}
+	}
+
+	// 7. Post an event message to the conversation
+	eventContent := fmt.Sprintf("%s rolled a %d on a %s", displayName, result, diceType)
+	messageID := uuid.New().String()
+	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
+	batch := client.Batch()
+
+	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(messageID), map[string]interface{}{
+		"content":    eventContent,
+		"type":       MessageTypeEvent,
+		"sent_by":    profileID,
+		"created_at": firestore.ServerTimestamp,
+		"updated_at": firestore.ServerTimestamp,
+	})
+
+	batch.Set(convRef, map[string]interface{}{
+		"updated_at":             firestore.ServerTimestamp,
+		"last_message_id":        messageID,
+		"last_message_text":      eventContent,
+		"last_message_sent_at":   firestore.ServerTimestamp,
+		"last_message_sender_id": profileID,
+		"last_message_type":      MessageTypeEvent,
+	}, firestore.MergeAll)
+
+	// Update denormalized updated_at in ProfileConversation mappings
+	convSnap, err := convRef.Get(ctx)
+	if err == nil && convSnap.Exists() {
+		pids := parseStringSlice(convSnap.Data()["participant_ids"])
+		for _, pid := range pids {
+			pcID := fmt.Sprintf("%s_%s", pid, convID)
+			batch.Update(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), []firestore.Update{
+				{Path: "updated_at", Value: firestore.ServerTimestamp},
+			})
+		}
+	}
+
+	if _, err := batch.Commit(ctx); err != nil {
+		log.Printf("[ERROR] Failed to commit dice roll message batch: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to post dice roll message"})
+		return
+	}
+
+	c.JSON(http.StatusOK, DiceRollResponse{
+		DiceType:       diceType,
+		Result:         result,
+		ConversationID: convID,
+		MessageID:      messageID,
+	})
 }

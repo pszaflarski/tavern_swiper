@@ -12,7 +12,8 @@ export interface Match {
 export interface LastMessageInfo {
   content: string;
   sent_at: string;
-  sender_profile_id: string;
+  sender_profile_id?: string;
+  type: string;
 }
 
 export interface Conversation {
@@ -27,8 +28,9 @@ export interface Conversation {
 export interface Message {
   message_id: string;
   conversation_id: string;
-  sender_profile_id: string;
+  sender_profile_id?: string;
   content: string;
+  type: string;
   sent_at: string;
 }
 

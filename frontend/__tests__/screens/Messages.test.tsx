@@ -55,7 +55,8 @@ describe('Messages Screen', () => {
       last_message: { 
         content: 'Hello there!', 
         sent_at: new Date().toISOString(),
-        sender_profile_id: 'p3'
+        sender_profile_id: 'p3',
+        type: 'user',
       },
     },
   ];

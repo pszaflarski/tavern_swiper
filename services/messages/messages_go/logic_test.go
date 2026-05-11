@@ -194,3 +194,275 @@ func TestHandleListConversations(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleSendSystemMessage(t *testing.T) {
+	skipIfRealDB(t)
+	gin.SetMode(gin.TestMode)
+
+	t.Run("AdminCanSendSystemMessage", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+
+		convID := "conv123"
+
+		// Setup conversation (system sender is NOT a participant)
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), map[string]interface{}{
+			"id":              convID,
+			"participant_ids": []interface{}{"p1", "p2"},
+		})
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
+		c.Params = []gin.Param{{Key: "id", Value: convID}}
+
+		body := map[string]string{"content": "It started to rain", "type": "system"}
+		b, _ := json.Marshal(body)
+		c.Request, _ = http.NewRequest("POST", "/conversations/"+convID+"/messages", bytes.NewBuffer(b))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handleSendMessage(c)
+
+		if w.Code != http.StatusCreated {
+			t.Errorf("Expected 201, got %d. Body: %s", w.Code, w.Body.String())
+		}
+
+		var resp MessageOut
+		json.Unmarshal(w.Body.Bytes(), &resp)
+
+		if resp.Type != "system" {
+			t.Errorf("Expected type 'system', got '%s'", resp.Type)
+		}
+		if resp.SenderProfileID != "" {
+			t.Errorf("Expected empty sender_profile_id for system message, got '%s'", resp.SenderProfileID)
+		}
+		if resp.Content != "It started to rain" {
+			t.Errorf("Expected content 'It started to rain', got '%s'", resp.Content)
+		}
+
+		// Verify denormalization on parent includes type
+		convSnap, _ := mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Get(context.Background())
+		data := convSnap.Data()
+		if data["last_message_type"] != "system" {
+			t.Errorf("Denormalized last_message_type should be 'system', got %v", data["last_message_type"])
+		}
+		if data["last_message_sender_id"] != "" {
+			t.Errorf("Denormalized last_message_sender_id should be empty for system, got %v", data["last_message_sender_id"])
+		}
+	})
+
+	t.Run("AdminCanSendEventMessage", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+
+		convID := "conv456"
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), map[string]interface{}{
+			"id":              convID,
+			"participant_ids": []interface{}{"p1", "p2"},
+		})
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "root_admin"})
+		c.Params = []gin.Param{{Key: "id", Value: convID}}
+
+		body := map[string]string{"content": "A mysterious stranger appeared", "type": "event"}
+		b, _ := json.Marshal(body)
+		c.Request, _ = http.NewRequest("POST", "/conversations/"+convID+"/messages", bytes.NewBuffer(b))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handleSendMessage(c)
+
+		if w.Code != http.StatusCreated {
+			t.Errorf("Expected 201, got %d. Body: %s", w.Code, w.Body.String())
+		}
+
+		var resp MessageOut
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		if resp.Type != "event" {
+			t.Errorf("Expected type 'event', got '%s'", resp.Type)
+		}
+	})
+
+	t.Run("NonAdminRejectedForSystemMessage", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+
+		convID := "conv789"
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "user"})
+		c.Params = []gin.Param{{Key: "id", Value: convID}}
+
+		body := map[string]string{"content": "Trying to be system", "type": "system"}
+		b, _ := json.Marshal(body)
+		c.Request, _ = http.NewRequest("POST", "/conversations/"+convID+"/messages", bytes.NewBuffer(b))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handleSendMessage(c)
+
+		if w.Code != http.StatusForbidden {
+			t.Errorf("Expected 403, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("InvalidTypeRejected", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
+		c.Params = []gin.Param{{Key: "id", Value: "conv123"}}
+
+		body := map[string]string{"content": "Bad type", "type": "announcement"}
+		b, _ := json.Marshal(body)
+		c.Request, _ = http.NewRequest("POST", "/conversations/conv123/messages", bytes.NewBuffer(b))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handleSendMessage(c)
+
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Errorf("Expected 422, got %d", w.Code)
+		}
+	})
+
+	t.Run("UserMessageWithoutSenderRejected", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "user"})
+		c.Params = []gin.Param{{Key: "id", Value: "conv123"}}
+
+		// type defaults to "user", no sender_profile_id
+		body := map[string]string{"content": "No sender"}
+		b, _ := json.Marshal(body)
+		c.Request, _ = http.NewRequest("POST", "/conversations/conv123/messages", bytes.NewBuffer(b))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handleSendMessage(c)
+
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Errorf("Expected 422, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("DefaultTypeIsUser", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+
+		convID := "conv_default"
+		senderID := "p1"
+
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), Conversation{ID: convID})
+		mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(senderID+"_"+convID).Set(context.Background(), ProfileConversation{
+			ProfileID: senderID, ConversationID: convID,
+		})
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "user"})
+		c.Params = []gin.Param{{Key: "id", Value: convID}}
+
+		// No type field — should default to "user"
+		body := map[string]string{"content": "Hello", "sender_profile_id": senderID}
+		b, _ := json.Marshal(body)
+		c.Request, _ = http.NewRequest("POST", "/conversations/"+convID+"/messages", bytes.NewBuffer(b))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handleSendMessage(c)
+
+		if w.Code != http.StatusCreated {
+			t.Errorf("Expected 201, got %d. Body: %s", w.Code, w.Body.String())
+		}
+
+		var resp MessageOut
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		if resp.Type != "user" {
+			t.Errorf("Expected default type 'user', got '%s'", resp.Type)
+		}
+	})
+
+	t.Run("SystemMessageAppearsInGetMessages", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+
+		convID := "conv_with_system"
+		now := time.Now()
+
+		// Create conversation
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), map[string]interface{}{
+			"id":              convID,
+			"participant_ids": []interface{}{"p1", "p2"},
+		})
+
+		// Add a user message and a system message to the sub-collection
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES).Doc("msg1").Set(context.Background(), map[string]interface{}{
+			"sent_by":    "p1",
+			"content":    "Hello there",
+			"type":       "user",
+			"created_at": now,
+		})
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES).Doc("msg2").Set(context.Background(), map[string]interface{}{
+			"content":    "A thunderstorm rolls in",
+			"type":       "system",
+			"created_at": now.Add(1 * time.Minute),
+		})
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "admin"})
+		c.Params = []gin.Param{{Key: "id", Value: convID}}
+		c.Request, _ = http.NewRequest("GET", "/conversations/"+convID+"/messages", nil)
+
+		handleGetMessages(c)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
+		}
+
+		var msgs []MessageOut
+		json.Unmarshal(w.Body.Bytes(), &msgs)
+
+		if len(msgs) != 2 {
+			t.Fatalf("Expected 2 messages, got %d", len(msgs))
+		}
+
+		// First message should be user type
+		if msgs[0].Type != "user" {
+			t.Errorf("Expected first message type 'user', got '%s'", msgs[0].Type)
+		}
+		if msgs[0].SenderProfileID != "p1" {
+			t.Errorf("Expected first message sender 'p1', got '%s'", msgs[0].SenderProfileID)
+		}
+
+		// Second message should be system type with no sender
+		if msgs[1].Type != "system" {
+			t.Errorf("Expected second message type 'system', got '%s'", msgs[1].Type)
+		}
+		if msgs[1].SenderProfileID != "" {
+			t.Errorf("Expected empty sender for system message, got '%s'", msgs[1].SenderProfileID)
+		}
+		if msgs[1].Content != "A thunderstorm rolls in" {
+			t.Errorf("Expected system message content, got '%s'", msgs[1].Content)
+		}
+	})
+}
+
