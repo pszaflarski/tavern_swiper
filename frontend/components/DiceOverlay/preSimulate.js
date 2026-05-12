@@ -75,7 +75,7 @@ function getTopFaceIndex(body, faceNormals) {
  * @param {string} dieType - 'd4' | 'd6' | 'd8' | 'd12' | 'd20'
  * @param {number} halfW - half-width of playing field
  * @param {number} halfH - half-height of playing field
- * @returns {{ frames, topFaceIndex }}
+ * @returns {{ frames: Array<{px:number,py:number,pz:number,qx:number,qy:number,qz:number,qw:number}>, resultIndex: number }}
  */
 export function preSimulate(dieType, halfW, halfH) {
   const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -40, 0) });

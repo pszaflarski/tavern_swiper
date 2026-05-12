@@ -1,25 +1,38 @@
-import React, { Suspense, useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import DiceMesh from './DiceMesh';
 import { preSimulate, computeFaceMapping } from './preSimulate';
 import { DICE_TYPES } from './diceConfig';
 
+type DieType = 'd4' | 'd6' | 'd8' | 'd12' | 'd20';
+
+interface DiceSceneProps {
+  dieType: DieType;
+  desiredValue?: number;
+  onResult: (value: number) => void;
+}
+
+interface Frame {
+  px: number; py: number; pz: number;
+  qx: number; qy: number; qz: number; qw: number;
+}
+
 /**
  * DiceScene — auto-triggers a roll on mount (no external trigger needed).
  * Since the Canvas only mounts when visible=true, this fires automatically.
  */
-function DiceScene({ dieType, desiredValue, onResult }) {
+function DiceScene({ dieType, desiredValue, onResult }: DiceSceneProps) {
   const { viewport } = useThree();
-  const meshRef = useRef();
+  const meshRef = useRef(null);
 
-  const framesRef = useRef(null);
+  const framesRef = useRef<Frame[] | null>(null);
   const frameIndexRef = useRef(0);
   const playingRef = useRef(false);
   const doneRef = useRef(false);
-  const resultValueRef = useRef(null);
+  const resultValueRef = useRef<number | null>(null);
 
-  const [faceMapping, setFaceMapping] = useState(null);
+  const [faceMapping, setFaceMapping] = useState<number[] | null>(null);
 
   const worldHalfW = viewport.width / 2;
   const worldHalfH = viewport.height / 2;
@@ -49,12 +62,13 @@ function DiceScene({ dieType, desiredValue, onResult }) {
     const idx = frameIndexRef.current;
     if (idx >= frames.length) {
       playingRef.current = false;
-      onResult(resultValueRef.current);
+      if (resultValueRef.current !== null) onResult(resultValueRef.current);
       return;
     }
     const f = frames[idx];
-    meshRef.current.position.set(f.px, f.py, f.pz);
-    meshRef.current.quaternion.set(f.qx, f.qy, f.qz, f.qw);
+    const mesh = meshRef.current as any;
+    mesh.position.set(f.px, f.py, f.pz);
+    mesh.quaternion.set(f.qx, f.qy, f.qz, f.qw);
     frameIndexRef.current++;
   });
 
@@ -70,11 +84,18 @@ function DiceScene({ dieType, desiredValue, onResult }) {
         <shadowMaterial opacity={0} />
       </mesh>
 
-      <Suspense fallback={null}>
-        <DiceMesh meshRef={meshRef} dieType={dieType} faceMapping={faceMapping} />
-      </Suspense>
+      <DiceMesh meshRef={meshRef} dieType={dieType} faceMapping={faceMapping} />
     </>
   );
+}
+
+interface DiceOverlayProps {
+  visible: boolean;
+  dieType: DieType;
+  rollKey: string | number;
+  desiredValue?: number;
+  onResult?: (value: number) => void;
+  onDismiss?: () => void;
 }
 
 /**
@@ -85,8 +106,8 @@ function DiceScene({ dieType, desiredValue, onResult }) {
  * DiceScene auto-triggers the simulation on mount, so no cross-reconciler
  * ref timing issues.
  */
-export default function DiceOverlay({ visible, dieType, rollKey, desiredValue, onResult, onDismiss }) {
-  const handleResult = useCallback((value) => {
+export default function DiceOverlay({ visible, dieType, rollKey, desiredValue, onResult, onDismiss }: DiceOverlayProps) {
+  const handleResult = useCallback((value: number) => {
     if (onResult) onResult(value);
   }, [onResult]);
 

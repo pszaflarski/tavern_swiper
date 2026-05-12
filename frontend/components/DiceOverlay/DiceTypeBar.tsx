@@ -5,20 +5,26 @@ import { Colors, Fonts, Spacing, Radius } from '../../theme';
 import { DICE_TYPES } from './diceConfig';
 import { TEXTURE_SETS } from './diceTextures';
 
-const DIE_ORDER = ['d4', 'd6', 'd8', 'd12', 'd20'];
+type DieType = 'd4' | 'd6' | 'd8' | 'd12' | 'd20';
+
+const DIE_ORDER: DieType[] = ['d4', 'd6', 'd8', 'd12', 'd20'];
+
+interface DiceTypeBarProps {
+  onSelectDie: (dieType: DieType) => void;
+}
 
 /**
  * DiceTypeBar — horizontal row of die-type chips.
  * Appears above the input bar when the dice toggle is active.
  */
-export default function DiceTypeBar({ onSelectDie }) {
+export default function DiceTypeBar({ onSelectDie }: DiceTypeBarProps) {
   // Preload ALL dice textures on mount so useTexture never suspends.
   // On native, downloadAsync() copies bundled assets to cache.
   // On web, this is nearly free (assets are already URL-accessible).
   useEffect(() => {
     const assets: ReturnType<typeof Asset.fromModule>[] = [];
     for (const dieType of DIE_ORDER) {
-      const set = TEXTURE_SETS[dieType];
+      const set = TEXTURE_SETS[dieType] as Record<number, number>;
       const sides = DICE_TYPES[dieType].sides;
       for (let i = 1; i <= sides; i++) {
         assets.push(Asset.fromModule(set[i]));
