@@ -54,7 +54,22 @@ jest.mock('../../hooks/useMessages', () => ({
   useInvolvedMatches: jest.fn(),
   useConversationMessages: jest.fn(),
   useSendMessage: jest.fn(),
+  useRollDice: jest.fn(() => ({
+    mutateAsync: jest.fn(),
+    invalidateAfterRoll: jest.fn(),
+  })),
 }));
+
+// DiceOverlay uses @react-three/fiber, three.js, cannon-es — none of which
+// work in the Jest jsdom environment. Mock the entire component tree.
+jest.mock('../../components/DiceOverlay', () => {
+  const React = require('react');
+  return { __esModule: true, default: () => null };
+});
+jest.mock('../../components/DiceOverlay/DiceTypeBar', () => {
+  const React = require('react');
+  return { __esModule: true, default: ({ onSelectDie }: any) => null };
+});
 
 describe('Conversation Screen', () => {
   const mockConversationId = 'c1';
