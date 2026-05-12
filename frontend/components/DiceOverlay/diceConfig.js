@@ -118,7 +118,7 @@ export const DICE_TYPES = {
 };
 
 export function createDieGeometry(dieType) {
-  if (dieType === 'd6') return new THREE.BoxGeometry(DIE_RADIUS * 2, DIE_RADIUS * 2, DIE_RADIUS * 2);
+  if (dieType === 'd6') return new THREE.BoxGeometry(DIE_RADIUS * 1.5, DIE_RADIUS * 1.5, DIE_RADIUS * 1.5);
 
   const GeoClass = { d4: THREE.TetrahedronGeometry, d8: THREE.OctahedronGeometry, d12: THREE.DodecahedronGeometry, d20: THREE.IcosahedronGeometry }[dieType];
   const config = DICE_TYPES[dieType];
@@ -148,7 +148,7 @@ export function getDieFaceNormals(dieType) {
 }
 
 export function createDiePhysicsShape(dieType) {
-  if (dieType === 'd6') return new CANNON.Box(new CANNON.Vec3(DIE_RADIUS, DIE_RADIUS, DIE_RADIUS));
+  if (dieType === 'd6') return new CANNON.Box(new CANNON.Vec3(DIE_RADIUS * 0.75, DIE_RADIUS * 0.75, DIE_RADIUS * 0.75));
   const GeoClass = { d4: THREE.TetrahedronGeometry, d8: THREE.OctahedronGeometry, d12: THREE.DodecahedronGeometry, d20: THREE.IcosahedronGeometry }[dieType];
   const geo = new GeoClass(DIE_RADIUS, 0);
   const { vertices, faces } = extractConvexData(geo);
