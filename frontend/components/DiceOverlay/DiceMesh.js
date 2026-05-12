@@ -5,6 +5,11 @@ import { Asset } from 'expo-asset';
 import { createDieGeometry, DICE_TYPES } from './diceConfig';
 import { TEXTURE_SETS } from './diceTextures';
 
+// Match R3F native's file-system import pattern (Expo 54 compat)
+let fs;
+try { fs = require('expo-file-system/legacy'); }
+catch { fs = require('expo-file-system'); }
+
 /**
  * Load a texture from a require() asset ID using the same technique as
  * R3F native's patched TextureLoader (expo-asset + RN Image.getSize + expo-gl).
@@ -18,12 +23,21 @@ async function loadNativeTexture(requireId, flipY) {
   const asset = await Asset.fromModule(requireId).downloadAsync();
   let uri = asset.localUri || asset.uri;
 
-  // 2. Get image dimensions via RN's Image.getSize
+  // 2. Unpack assets in Android Release Mode — localUri may be a raw path
+  //    without a scheme (no 'file://'). Image.getSize can't read those,
+  //    so copy to the cache directory first. (Matches R3F's getAsset logic.)
+  if (!uri.includes(':')) {
+    const file = `${fs.cacheDirectory}ExponentAsset-${asset.hash}.${asset.type}`;
+    await fs.copyAsync({ from: uri, to: file });
+    uri = file;
+  }
+
+  // 3. Get image dimensions via RN's Image.getSize
   const { width, height } = await new Promise((resolve, reject) =>
     RNImage.getSize(uri, (w, h) => resolve({ width: w, height: h }), reject),
   );
 
-  // 3. Build a texture that expo-gl's texImage2D understands
+  // 4. Build a texture that expo-gl's texImage2D understands
   const texture = new THREE.Texture();
   texture.image = {
     data: { localUri: uri },  // Special format for EXGLImageUtils::loadImage

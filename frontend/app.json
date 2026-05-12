@@ -49,7 +49,8 @@
           "android": {
             "buildArchs": ["arm64-v8a"],
             "enableProguardInReleaseBuilds": true,
-            "shrinkResources": true
+            "shrinkResources": true,
+            "extraProguardRules": "-keep class expo.modules.** { *; }\n-keep class * extends expo.modules.kotlin.views.ExpoView { <init>(...); }\n-keep class * extends android.view.View { <init>(android.content.Context, expo.modules.kotlin.AppContext); }\n-keepclassmembers class * { @expo.modules.kotlin.records.Field *; }"
           }
         }
       ],
