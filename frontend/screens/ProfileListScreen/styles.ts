@@ -161,7 +161,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   addProfileButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing[4],
@@ -172,19 +171,6 @@ export const styles = StyleSheet.create({
     borderStyle: 'dashed',
     marginTop: Spacing[2],
     marginBottom: Spacing[10],
+    minHeight: 64,
   },
-  addIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.surfaceContainerLow,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing[4],
-  },
-  addProfileText: {
-    fontFamily: Fonts.heroic,
-    fontSize: 18,
-    color: Colors.primary,
-  }
 });

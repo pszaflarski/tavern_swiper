@@ -148,10 +148,7 @@ function ProfilesScreenInner() {
         accessibilityLabel="Forge new identity"
         accessibilityRole="button"
       >
-        <View style={styles.addIconContainer}>
-          <Ionicons name="add" size={32} color={Colors.primary} />
-        </View>
-        <Text style={styles.addProfileText}>Forge New Identity</Text>
+        <Ionicons name="add" size={36} color={Colors.primary} />
       </Pressable>
     </Link>
   );

@@ -103,10 +103,9 @@ describe('Profiles Screen', () => {
   });
 
   it('renders forge identity button at the bottom', () => {
-    const { getByTestId, getByText } = render(<ProfilesScreen />);
+    const { getByTestId } = render(<ProfilesScreen />);
     
     expect(getByTestId('add-profile-button')).toBeTruthy();
-    expect(getByText('Forge New Identity')).toBeTruthy();
   });
 
   it('shows forge your first hero when list is empty', () => {

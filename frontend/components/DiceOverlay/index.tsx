@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useRef, useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import DiceMesh from './DiceMesh';
@@ -70,7 +70,9 @@ function DiceScene({ dieType, desiredValue, onResult }) {
         <shadowMaterial opacity={0} />
       </mesh>
 
-      <DiceMesh meshRef={meshRef} dieType={dieType} faceMapping={faceMapping} />
+      <Suspense fallback={null}>
+        <DiceMesh meshRef={meshRef} dieType={dieType} faceMapping={faceMapping} />
+      </Suspense>
     </>
   );
 }

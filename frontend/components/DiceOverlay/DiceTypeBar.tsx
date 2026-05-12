@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { Platform, View, Text, Pressable, StyleSheet } from 'react-native';
+import { Asset } from 'expo-asset';
 import { Colors, Fonts, Spacing, Radius } from '../../theme';
 import { DICE_TYPES } from './diceConfig';
+import { TEXTURE_SETS } from './diceTextures';
 
 const DIE_ORDER = ['d4', 'd6', 'd8', 'd12', 'd20'];
 
@@ -10,6 +12,23 @@ const DIE_ORDER = ['d4', 'd6', 'd8', 'd12', 'd20'];
  * Appears above the input bar when the dice toggle is active.
  */
 export default function DiceTypeBar({ onSelectDie }) {
+  // Preload ALL dice textures on mount so useTexture never suspends.
+  // On native, downloadAsync() copies bundled assets to cache.
+  // On web, this is nearly free (assets are already URL-accessible).
+  useEffect(() => {
+    const assets: ReturnType<typeof Asset.fromModule>[] = [];
+    for (const dieType of DIE_ORDER) {
+      const set = TEXTURE_SETS[dieType];
+      const sides = DICE_TYPES[dieType].sides;
+      for (let i = 1; i <= sides; i++) {
+        assets.push(Asset.fromModule(set[i]));
+      }
+    }
+    if (Platform.OS !== 'web') {
+      Promise.all(assets.map(a => a.downloadAsync())).catch(() => {});
+    }
+  }, []);
+
   return (
     <View style={styles.container}>
       {DIE_ORDER.map(dieType => {
