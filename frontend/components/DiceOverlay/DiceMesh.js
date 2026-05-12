@@ -1,56 +1,48 @@
-import { useMemo, useEffect, useState } from 'react';
-import { Platform, Image as RNImage } from 'react-native';
+import { useMemo, useEffect, useState, useRef } from 'react';
+import { Image as RNImage } from 'react-native';
 import * as THREE from 'three';
 import { Asset } from 'expo-asset';
 import { createDieGeometry, DICE_TYPES } from './diceConfig';
 import { TEXTURE_SETS } from './diceTextures';
 
 /**
- * Load a single texture from a local file URI using the R3F-native polyfilled
- * global.Image (which expo-gl provides). Falls back to a solid-color texture
- * if loading fails, so the app never crashes.
+ * Load a texture from a require() asset ID using the same technique as
+ * R3F native's patched TextureLoader (expo-asset + RN Image.getSize + expo-gl).
+ *
+ * We can't rely on the R3F polyfill because Metro bundles multiple copies
+ * of Three.js ("THREE.WARNING: Multiple instances of Three.js being imported"),
+ * so only R3F's internal copy gets patched — not ours.
  */
-function loadTextureFromUri(uri, flipY) {
-  return new Promise((resolve) => {
-    // R3F native polyfills globalThis.Image for expo-gl texture upload.
-    // If the polyfill isn't available, fall back to a blank texture.
-    if (typeof globalThis.Image === 'undefined') {
-      console.warn('DiceMesh: globalThis.Image not polyfilled, using fallback texture');
-      const fallback = new THREE.DataTexture(
-        new Uint8Array([200, 200, 200, 255]), 1, 1, THREE.RGBAFormat,
-      );
-      fallback.needsUpdate = true;
-      resolve(fallback);
-      return;
-    }
+async function loadNativeTexture(requireId, flipY) {
+  // 1. Download the bundled asset to local storage (same as R3F's getAsset)
+  const asset = await Asset.fromModule(requireId).downloadAsync();
+  let uri = asset.localUri || asset.uri;
 
-    const img = new globalThis.Image();
-    img.onload = () => {
-      const tex = new THREE.Texture(img);
-      tex.flipY = flipY;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.needsUpdate = true;
-      resolve(tex);
-    };
-    img.onerror = () => {
-      console.warn('DiceMesh: Failed to load texture from', uri);
-      const fallback = new THREE.DataTexture(
-        new Uint8Array([200, 200, 200, 255]), 1, 1, THREE.RGBAFormat,
-      );
-      fallback.needsUpdate = true;
-      resolve(fallback);
-    };
-    img.src = uri;
-  });
+  // 2. Get image dimensions via RN's Image.getSize
+  const { width, height } = await new Promise((resolve, reject) =>
+    RNImage.getSize(uri, (w, h) => resolve({ width: w, height: h }), reject),
+  );
+
+  // 3. Build a texture that expo-gl's texImage2D understands
+  const texture = new THREE.Texture();
+  texture.image = {
+    data: { localUri: uri },  // Special format for EXGLImageUtils::loadImage
+    width,
+    height,
+  };
+  texture.flipY = flipY;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  texture.isDataTexture = true;  // Forces non-DOM upload path in expo-gl
+
+  return texture;
 }
 
 /**
  * DiceMesh (NATIVE) — renders any platonic solid die with static PNG textures.
  *
- * Does NOT use @react-three/drei. Instead, resolves assets via expo-asset,
- * then loads textures through the R3F-native polyfilled globalThis.Image.
- * This approach works reliably in both Expo Go and production AAB builds
- * because it bypasses THREE.TextureLoader (which needs document.createElement).
+ * Uses expo-asset + RN Image.getSize + expo-gl for texture loading.
+ * No @react-three/drei, no THREE.TextureLoader, no DOM dependencies.
  */
 export default function DiceMesh({ meshRef, dieType, faceMapping }) {
   const config = DICE_TYPES[dieType];
@@ -60,37 +52,31 @@ export default function DiceMesh({ meshRef, dieType, faceMapping }) {
 
   const [allTextures, setAllTextures] = useState(null);
 
-  // Download assets and load textures manually
+  // Load ALL face textures for this die type once
   useEffect(() => {
     let cancelled = false;
+    const flipY = dieType === 'd6';
+    const sides = config.sides;
 
-    async function loadAll() {
-      const sides = config.sides;
-      const flipY = dieType === 'd6';
+    Promise.all(
+      Array.from({ length: sides }, (_, i) =>
+        loadNativeTexture(textureSet[i + 1], flipY).catch(err => {
+          console.warn('DiceMesh: texture load error for face', i + 1, err);
+          const fb = new THREE.DataTexture(
+            new Uint8Array([200, 200, 200, 255]), 1, 1, THREE.RGBAFormat,
+          );
+          fb.needsUpdate = true;
+          return fb;
+        }),
+      ),
+    ).then(textures => {
+      if (!cancelled) setAllTextures(textures);
+    });
 
-      // 1. Resolve expo-asset modules and download to local storage
-      const assets = Array.from({ length: sides }, (_, i) =>
-        Asset.fromModule(textureSet[i + 1]),
-      );
-      await Promise.all(assets.map(a => a.downloadAsync()));
-
-      if (cancelled) return;
-
-      // 2. Load each texture from the local file URI
-      const uris = assets.map(a => a.localUri || a.uri);
-      const textures = await Promise.all(
-        uris.map(uri => loadTextureFromUri(uri, flipY)),
-      );
-
-      if (cancelled) return;
-      setAllTextures(textures);
-    }
-
-    loadAll().catch(err => console.warn('DiceMesh loadAll failed:', err));
     return () => { cancelled = true; };
   }, [dieType, config.sides, textureSet]);
 
-  // Rearrange materials based on faceMapping
+  // Rearrange materials based on faceMapping (no new texture loads)
   const materials = useMemo(() => {
     if (!allTextures) return null;
     const values = faceMapping || Array.from({ length: config.sides }, (_, i) => i + 1);
@@ -103,12 +89,10 @@ export default function DiceMesh({ meshRef, dieType, faceMapping }) {
     );
   }, [faceMapping, allTextures, config.sides]);
 
-  // Dispose materials on change
   useEffect(() => {
     return () => { if (materials) materials.forEach(m => m.dispose()); };
   }, [materials]);
 
-  // Don't render until textures are ready
   if (!materials) return null;
 
   return <mesh ref={meshRef} geometry={geometry} material={materials} castShadow receiveShadow />;
