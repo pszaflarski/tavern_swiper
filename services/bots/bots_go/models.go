@@ -29,6 +29,7 @@ type BotProfileOut struct {
 	BotUserID    string    `json:"bot_user_id"`
 	ProfileID    string    `json:"profile_id"`
 	BehaviorType string    `json:"behavior_type,omitempty"`
+	AgentName    string    `json:"agent_name,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -48,6 +49,7 @@ type BotProfileCreate struct {
 	IsOC         *bool                   `json:"is_oc"`
 	ImageLinks   []string                `json:"image_links"`
 	BehaviorType string                  `json:"behavior_type,omitempty"` // e.g. "tavern_keeper", "quest_giver"
+	AgentName    string                  `json:"agent_name,omitempty"`    // e.g. "barkeep-bob-agent"
 	Gender       []ProfileTag            `json:"gender"`
 	Race         []ProfileTag            `json:"race"`
 	Fandom       []ProfileTag            `json:"fandom"`

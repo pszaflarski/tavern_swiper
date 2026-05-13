@@ -36,6 +36,9 @@ definitions:
     properties:
       age:
         type: integer
+      agent_name:
+        description: e.g. "barkeep-bob-agent"
+        type: string
       behavior_type:
         description: e.g. "tavern_keeper", "quest_giver"
         type: string
@@ -86,6 +89,8 @@ definitions:
     type: object
   main.BotProfileOut:
     properties:
+      agent_name:
+        type: string
       behavior_type:
         type: string
       bot_profile_id:

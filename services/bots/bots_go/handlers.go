@@ -467,6 +467,9 @@ func mapToBotProfileOut(id string, data map[string]interface{}) BotProfileOut {
 	if v, ok := data["behavior_type"].(string); ok {
 		bp.BehaviorType = v
 	}
+	if v, ok := data["agent_name"].(string); ok {
+		bp.AgentName = v
+	}
 	if v, ok := data["created_at"].(time.Time); ok {
 		bp.CreatedAt = v
 	}
@@ -581,6 +584,9 @@ func handleCreateBotProfile(c *gin.Context) {
 	if body.BehaviorType != "" {
 		botProfileData["behavior_type"] = body.BehaviorType
 	}
+	if body.AgentName != "" {
+		botProfileData["agent_name"] = body.AgentName
+	}
 
 	_, err = client.Collection(BOT_PROFILES_COLLECTION).Doc(botProfileID).Set(c.Request.Context(), botProfileData)
 	if err != nil {
@@ -590,6 +596,7 @@ func handleCreateBotProfile(c *gin.Context) {
 	// Include the bot_profile metadata in the response
 	profResp["bot_profile_id"] = botProfileID
 	profResp["behavior_type"] = body.BehaviorType
+	profResp["agent_name"] = body.AgentName
 
 	c.JSON(http.StatusCreated, profResp)
 }

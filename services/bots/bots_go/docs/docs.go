@@ -555,6 +555,10 @@ const docTemplate = `{
                 "age": {
                     "type": "integer"
                 },
+                "agent_name": {
+                    "description": "e.g. \"barkeep-bob-agent\"",
+                    "type": "string"
+                },
                 "behavior_type": {
                     "description": "e.g. \"tavern_keeper\", \"quest_giver\"",
                     "type": "string"
@@ -627,6 +631,9 @@ const docTemplate = `{
         "main.BotProfileOut": {
             "type": "object",
             "properties": {
+                "agent_name": {
+                    "type": "string"
+                },
                 "behavior_type": {
                     "type": "string"
                 },
