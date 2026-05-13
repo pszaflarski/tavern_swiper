@@ -86,8 +86,8 @@ async def test_bot_profile_creation_with_image(root_admin):
         bot_id = reg_resp.json()["bot_id"]
 
         # 2. Create Profile with Image Link
-        # Use a small reliable public image URL for the test (a Github raw asset from the repo itself)
-        public_image_url = "https://raw.githubusercontent.com/pszaflarski/tavern_swiper/main/frontend/assets/icon.png"
+        # Use a small reliable public image URL (httpbin always serves a valid PNG)
+        public_image_url = "https://httpbin.org/image/png"
         
         profile_payload = {
             "display_name": "Profile Bot's Real Name",
