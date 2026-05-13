@@ -2,8 +2,15 @@ basePath: /bots
 definitions:
   main.BotCreate:
     properties:
+      behavior_type:
+        description: e.g. "tavern_keeper", "quest_giver"
+        type: string
       bio:
         type: string
+      config:
+        additionalProperties: true
+        description: Per-instance behavior tuning knobs
+        type: object
       display_name:
         type: string
       slug:
@@ -15,8 +22,13 @@ definitions:
     type: object
   main.BotOut:
     properties:
+      behavior_type:
+        type: string
       bot_id:
         type: string
+      config:
+        additionalProperties: true
+        type: object
       created_at:
         type: string
       display_name:

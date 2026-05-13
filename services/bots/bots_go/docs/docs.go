@@ -394,8 +394,17 @@ const docTemplate = `{
                 "slug"
             ],
             "properties": {
+                "behavior_type": {
+                    "description": "e.g. \"tavern_keeper\", \"quest_giver\"",
+                    "type": "string"
+                },
                 "bio": {
                     "type": "string"
+                },
+                "config": {
+                    "description": "Per-instance behavior tuning knobs",
+                    "type": "object",
+                    "additionalProperties": true
                 },
                 "display_name": {
                     "type": "string"
@@ -411,8 +420,15 @@ const docTemplate = `{
         "main.BotOut": {
             "type": "object",
             "properties": {
+                "behavior_type": {
+                    "type": "string"
+                },
                 "bot_id": {
                     "type": "string"
+                },
+                "config": {
+                    "type": "object",
+                    "additionalProperties": true
                 },
                 "created_at": {
                     "type": "string"

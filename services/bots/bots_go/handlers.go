@@ -124,6 +124,12 @@ func handleRegisterBot(c *gin.Context) {
 		"state":              "active",
 		"created_at":         now,
 	}
+	if body.BehaviorType != "" {
+		botData["behavior_type"] = body.BehaviorType
+	}
+	if body.Config != nil {
+		botData["config"] = body.Config
+	}
 
 	_, err = db.Collection(BOTS_COLLECTION).Doc(botID).Set(ctx, botData)
 	if err != nil {
@@ -133,11 +139,13 @@ func handleRegisterBot(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, BotOut{
-		BotID:       botID,
-		Slug:        body.Slug,
-		DisplayName: body.DisplayName,
-		FirebaseUID: firebaseUID,
-		Email:       email,
+		BotID:        botID,
+		Slug:         body.Slug,
+		DisplayName:  body.DisplayName,
+		FirebaseUID:  firebaseUID,
+		Email:        email,
+		BehaviorType: body.BehaviorType,
+		Config:       body.Config,
 		State:       "active",
 		CreatedAt:   now,
 	})
@@ -397,6 +405,12 @@ func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	}
 	if v, ok := data["profile_id"].(string); ok {
 		b.ProfileID = v
+	}
+	if v, ok := data["behavior_type"].(string); ok {
+		b.BehaviorType = v
+	}
+	if v, ok := data["config"].(map[string]interface{}); ok {
+		b.Config = v
 	}
 	if v, ok := data["created_at"].(time.Time); ok {
 		b.CreatedAt = v
