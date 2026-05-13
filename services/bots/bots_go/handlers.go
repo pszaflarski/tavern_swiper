@@ -449,7 +449,7 @@ func handleCreateBotProfile(c *gin.Context) {
 
 	botData := doc.Data()
 
-	passwordEnc, ok := botData["password_enc"].(string)
+	passwordEnc, ok := botData["encrypted_password"].(string)
 	if !ok || len(passwordEnc) == 0 {
 		httpError(c, http.StatusInternalServerError, "Bot credentials corrupted")
 		return

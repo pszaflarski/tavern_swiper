@@ -276,7 +276,7 @@ func TestCreateBotProfile_Success(t *testing.T) {
 										"slug":         "testbot",
 										"email":        "testbot@test.com",
 										// Base64 of "password123"
-										"password_enc": "cGFzc3dvcmQxMjM=",
+										"encrypted_password": "cGFzc3dvcmQxMjM=",
 									},
 								}, nil
 							},
