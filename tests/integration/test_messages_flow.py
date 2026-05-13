@@ -129,10 +129,32 @@ async def test_full_conversation_lifecycle():
             if conv["id"] == conv_id:
                 assert conv["last_message"]["content"] == msg_content
                 assert conv["other_profile_id"] == hero_a_profile_id
+                assert conv["unread"] == True, "Hero B should see unread after Hero A sent a message"
                 found = True
                 break
         assert found, "Conversation not found in Hero B's inbox"
-        print(f"✅ Inbox correctly updated for {hero_b_profile_id}")
+        print(f"✅ Inbox correctly updated for {hero_b_profile_id} (unread=true)")
+
+        # --- STEP 3b: Hero B reads the messages (implicit mark-as-read) ---
+        print("\nStep 3b: Hero B reads messages (implicit mark-as-read)")
+        resp = await client.get(
+            f"{MESSAGES_URL}/messages/conversations/{conv_id}/messages?profile_id={hero_b_profile_id}",
+            headers={"Authorization": f"Bearer {hero_b['token']}"}
+        )
+        assert resp.status_code == 200
+
+        # Re-check inbox: unread should now be false
+        resp = await client.get(
+            f"{MESSAGES_URL}/messages/conversations/profile/{hero_b_profile_id}",
+            headers={"Authorization": f"Bearer {hero_b['token']}"}
+        )
+        assert resp.status_code == 200
+        inbox = resp.json()
+        for conv in inbox:
+            if conv["id"] == conv_id:
+                assert conv["unread"] == False, "Hero B should see unread=false after reading messages"
+                break
+        print(f"✅ Implicit mark-as-read verified for {hero_b_profile_id}")
 
         # --- STEP 4: Hero B replies ---
         print("\nStep 4: Hero B replies")
@@ -149,10 +171,25 @@ async def test_full_conversation_lifecycle():
         assert resp.status_code == 201
         print(f"✅ Reply sent by {hero_b_profile_id}")
 
-        # --- STEP 5: Verify Full History ---
+        # --- STEP 5: Verify Full History + Unread for Hero A ---
         print("\nStep 5: Verify Full History")
+
+        # First check that Hero A sees unread=true (Hero B just replied)
         resp = await client.get(
-            f"{MESSAGES_URL}/messages/conversations/{conv_id}/messages", 
+            f"{MESSAGES_URL}/messages/conversations/profile/{hero_a_profile_id}",
+            headers={"Authorization": f"Bearer {hero_a['token']}"}
+        )
+        assert resp.status_code == 200
+        inbox = resp.json()
+        for conv in inbox:
+            if conv["id"] == conv_id:
+                assert conv["unread"] == True, "Hero A should see unread after Hero B replied"
+                break
+        print(f"  ✅ Hero A sees unread=true after Hero B's reply")
+
+        # Now Hero A reads messages (with profile_id to trigger mark-as-read)
+        resp = await client.get(
+            f"{MESSAGES_URL}/messages/conversations/{conv_id}/messages?profile_id={hero_a_profile_id}",
             headers={"Authorization": f"Bearer {hero_a['token']}"}
         )
         assert resp.status_code == 200
@@ -160,7 +197,20 @@ async def test_full_conversation_lifecycle():
         assert len(history) >= 2
         assert history[0]["content"] == msg_content
         assert history[1]["content"] == reply_content
-        print(f"✅ Message history integrity verified")
+        print(f"  ✅ Message history integrity verified")
+
+        # Re-check: Hero A should now see unread=false
+        resp = await client.get(
+            f"{MESSAGES_URL}/messages/conversations/profile/{hero_a_profile_id}",
+            headers={"Authorization": f"Bearer {hero_a['token']}"}
+        )
+        assert resp.status_code == 200
+        inbox = resp.json()
+        for conv in inbox:
+            if conv["id"] == conv_id:
+                assert conv["unread"] == False, "Hero A should see unread=false after reading messages"
+                break
+        print(f"  ✅ Hero A mark-as-read verified")
 
         # --- STEP 6: Edge Case - Block Unauthorized Sender ---
         print("\nStep 6: Edge Case - Block Unauthorized Sender")
@@ -343,7 +393,9 @@ async def test_dice_roll_in_conversation():
         print(f"  ✅ Event message verified: \"{dice_msg['content']}\"")
 
         # --- STEP 4: Verify the dice roll updated the conversation's last_message ---
-        print("\nStep 4: Verify conversation denormalization")
+        print("\nStep 4: Verify conversation denormalization + unread flags")
+
+        # Hero A (the roller) should see unread=false
         resp = await client.get(
             f"{MESSAGES_URL}/messages/conversations/profile/{hero_a_pid}",
             headers={"Authorization": f"Bearer {hero_a['token']}"}
@@ -355,7 +407,20 @@ async def test_dice_roll_in_conversation():
         assert hero_a_name in our_conv["last_message"]["content"], (
             f"Last message should contain dice roll event, got: '{our_conv['last_message']['content']}'"
         )
-        print(f"  ✅ Last message denormalization correct")
+        assert our_conv["unread"] == False, "Roller (Hero A) should see unread=false"
+        print(f"  ✅ Last message denormalization correct, roller unread=false")
+
+        # Hero B (the other participant) should see unread=true
+        resp = await client.get(
+            f"{MESSAGES_URL}/messages/conversations/profile/{hero_b_pid}",
+            headers={"Authorization": f"Bearer {hero_b['token']}"}
+        )
+        assert resp.status_code == 200
+        inbox = resp.json()
+        our_conv = next((c for c in inbox if c["id"] == conv_id), None)
+        assert our_conv is not None, "Conversation not found in Hero B's inbox"
+        assert our_conv["unread"] == True, "Non-roller (Hero B) should see unread=true after dice roll"
+        print(f"  ✅ Non-roller unread=true verified")
 
         # --- STEP 5: Non-participant cannot roll in this conversation ---
         print("\nStep 5: Non-participant blocked from rolling")
