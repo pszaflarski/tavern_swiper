@@ -49,6 +49,7 @@ if [[ "$MODE" == "local" ]]; then
     export DISCOVERY_URL="http://localhost:8003"
     export MESSAGES_URL="http://localhost:8005"
     export USERS_URL="http://localhost:8006"
+    export BOTS_URL="http://localhost:8011"
     export DISCOVERY_DB="discovery-dev"
     export PUBSUB_EMULATOR_HOST="localhost:8085"
     ENV_ARG="dev"
@@ -94,6 +95,7 @@ else
         export PROFILES_URL=$(echo "$ROUTES" | jq -r '.services.profiles // empty')
         export DISCOVERY_URL=$(echo "$ROUTES" | jq -r '.services.discovery // empty')
         export MESSAGES_URL=$(echo "$ROUTES" | jq -r '.services.messages // empty')
+        export BOTS_URL=$(echo "$ROUTES" | jq -r '.services.bots // empty')
     else
         echo "  ⚠️  Router empty or unreachable. Falling back to slow gcloud discovery..."
         SERVICES=("auth" "users" "profiles" "discovery" "messages")
@@ -116,6 +118,7 @@ else
                 profiles) export PROFILES_URL=$URL ;;
                 discovery) export DISCOVERY_URL=$URL ;;
                 messages) export MESSAGES_URL=$URL ;;
+                bots) export BOTS_URL=$URL ;;
             esac
             echo "    ✅ ${SERVICE}: ${URL}"
         done
@@ -153,7 +156,7 @@ if [[ "$RESET" == "true" ]]; then
         MAX_RETRIES=12
         RETRY_INTERVAL=5
         RETRIES=0
-        services=("auth:8001:auth/health" "profiles:8002:profiles/health" "discovery:8003:discovery/health" "messages:8005:messages/health" "users:8006:users/health" "pubsub-emulator:8085:" "discovery-subscriber:8007:" "messages-subscriber:8008:")
+        services=("auth:8001:auth/health" "profiles:8002:profiles/health" "discovery:8003:discovery/health" "messages:8005:messages/health" "users:8006:users/health" "bots:8011:bots/health" "pubsub-emulator:8085:" "discovery-subscriber:8007:" "messages-subscriber:8008:")
 
         wait_for_service() {
             local service=$1

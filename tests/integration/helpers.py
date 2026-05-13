@@ -7,6 +7,7 @@ USERS_URL = os.getenv("USERS_URL", "http://localhost:8006")
 PROFILES_URL = os.getenv("PROFILES_URL", "http://localhost:8002")
 DISCOVERY_URL = os.getenv("DISCOVERY_URL", "http://localhost:8003")
 MESSAGES_URL = os.getenv("MESSAGES_URL", "http://localhost:8005")
+BOTS_URL = os.getenv("BOTS_URL", "http://localhost:8011")
 TEST_PASSWORD = os.getenv("ROOT_PASSWORD", "TestPassword123!")
 ROOT_EMAIL = os.getenv("ROOT_EMAIL", "root@example.com")
 

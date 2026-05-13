@@ -160,6 +160,40 @@ services:
       timeout: 5s
       retries: 3
 
+  bots:
+    build:
+      context: ./services/bots/bots_go
+    ports:
+      - "8011:8011"
+    environment:
+      - FIRESTORE_DATABASE_ID=bots-test
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - AUTH_URL=http://auth:8001
+      - PROFILES_URL=http://profiles:8002
+      - USERS_URL=http://users:8006
+      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      auth:
+        condition: service_healthy
+      profiles:
+        condition: service_healthy
+      users:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/bots/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   pubsub-emulator:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
     ports:
