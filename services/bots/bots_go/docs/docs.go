@@ -22,14 +22,14 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all registered bot records.",
+                "description": "Returns all registered bot user records.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "bots"
                 ],
-                "summary": "List all bots",
+                "summary": "List all bot users",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -60,7 +60,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a new bot identity via Firebase Auth, initializes a user record, and optionally creates a profile. Credentials are encrypted and stored.",
+                "description": "Creates a new bot identity via Firebase Auth, initializes a user record, and stores encrypted credentials.",
                 "consumes": [
                     "application/json"
                 ],
@@ -70,7 +70,7 @@ const docTemplate = `{
                 "tags": [
                     "bots"
                 ],
-                "summary": "Register a new bot",
+                "summary": "Register a new bot user",
                 "parameters": [
                     {
                         "description": "Bot creation payload",
@@ -123,7 +123,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Deletes all bot records. Root Admin only.",
+                "description": "Deletes all bot user records and all bot profile records. Root Admin only.",
                 "tags": [
                     "admin"
                 ],
@@ -174,18 +174,18 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the details of a specific bot.",
+                "description": "Returns the details of a specific bot user and all its profiles.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "bots"
                 ],
-                "summary": "Get a bot by ID",
+                "summary": "Get a bot user by ID",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bot ID",
+                        "description": "Bot User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -195,7 +195,8 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.BotOut"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "403": {
@@ -224,15 +225,15 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Deletes a bot record. The Firebase Auth user and profile remain and can be manually purged.",
+                "description": "Deletes a bot user record and all its bot profile records. The Firebase Auth user and profiles service data remain and can be manually purged.",
                 "tags": [
                     "bots"
                 ],
-                "summary": "Delete a bot",
+                "summary": "Delete a bot user",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bot ID",
+                        "description": "Bot User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -281,7 +282,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bot ID",
+                        "description": "Bot User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -322,7 +323,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a profile via the profiles service using the bot's own credentials. Accepts public image URLs which are downloaded and re-uploaded.",
+                "description": "Creates a profile via the profiles service using the bot's own credentials. Accepts public image URLs which are downloaded and re-uploaded. The profile is tracked in the bot_profiles collection.",
                 "consumes": [
                     "application/json"
                 ],
@@ -336,7 +337,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bot ID",
+                        "description": "Bot User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -385,6 +386,61 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/{id}/profiles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all profiles associated with a bot user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bots"
+                ],
+                "summary": "List profiles for a bot user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bot User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.BotProfileOut"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -394,10 +450,6 @@ const docTemplate = `{
                 "slug"
             ],
             "properties": {
-                "behavior_type": {
-                    "description": "e.g. \"tavern_keeper\", \"quest_giver\"",
-                    "type": "string"
-                },
                 "bio": {
                     "type": "string"
                 },
@@ -415,9 +467,6 @@ const docTemplate = `{
         "main.BotOut": {
             "type": "object",
             "properties": {
-                "behavior_type": {
-                    "type": "string"
-                },
                 "bot_id": {
                     "type": "string"
                 },
@@ -431,9 +480,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "firebase_uid": {
-                    "type": "string"
-                },
-                "profile_id": {
                     "type": "string"
                 },
                 "slug": {
@@ -452,6 +498,10 @@ const docTemplate = `{
             "properties": {
                 "age": {
                     "type": "integer"
+                },
+                "behavior_type": {
+                    "description": "e.g. \"tavern_keeper\", \"quest_giver\"",
+                    "type": "string"
                 },
                 "bio": {
                     "type": "string"
@@ -514,6 +564,26 @@ const docTemplate = `{
                     }
                 },
                 "tagline": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.BotProfileOut": {
+            "type": "object",
+            "properties": {
+                "behavior_type": {
+                    "type": "string"
+                },
+                "bot_profile_id": {
+                    "type": "string"
+                },
+                "bot_user_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "profile_id": {
                     "type": "string"
                 }
             }

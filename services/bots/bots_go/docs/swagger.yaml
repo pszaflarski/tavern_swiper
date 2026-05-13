@@ -2,9 +2,6 @@ basePath: /bots
 definitions:
   main.BotCreate:
     properties:
-      behavior_type:
-        description: e.g. "tavern_keeper", "quest_giver"
-        type: string
       bio:
         type: string
       display_name:
@@ -18,8 +15,6 @@ definitions:
     type: object
   main.BotOut:
     properties:
-      behavior_type:
-        type: string
       bot_id:
         type: string
       created_at:
@@ -30,8 +25,6 @@ definitions:
         type: string
       firebase_uid:
         type: string
-      profile_id:
-        type: string
       slug:
         type: string
       state:
@@ -41,6 +34,9 @@ definitions:
     properties:
       age:
         type: integer
+      behavior_type:
+        description: e.g. "tavern_keeper", "quest_giver"
+        type: string
       bio:
         type: string
       display_name:
@@ -86,6 +82,19 @@ definitions:
     required:
     - display_name
     type: object
+  main.BotProfileOut:
+    properties:
+      behavior_type:
+        type: string
+      bot_profile_id:
+        type: string
+      bot_user_id:
+        type: string
+      created_at:
+        type: string
+      profile_id:
+        type: string
+    type: object
   main.CredsResponse:
     properties:
       email:
@@ -127,7 +136,7 @@ info:
 paths:
   /:
     get:
-      description: Returns all registered bot records.
+      description: Returns all registered bot user records.
       produces:
       - application/json
       responses:
@@ -147,14 +156,14 @@ paths:
             $ref: '#/definitions/main.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: List all bots
+      summary: List all bot users
       tags:
       - bots
     post:
       consumes:
       - application/json
       description: Creates a new bot identity via Firebase Auth, initializes a user
-        record, and optionally creates a profile. Credentials are encrypted and stored.
+        record, and stores encrypted credentials.
       parameters:
       - description: Bot creation payload
         in: body
@@ -187,15 +196,15 @@ paths:
             $ref: '#/definitions/main.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Register a new bot
+      summary: Register a new bot user
       tags:
       - bots
   /{id}:
     delete:
-      description: Deletes a bot record. The Firebase Auth user and profile remain
-        and can be manually purged.
+      description: Deletes a bot user record and all its bot profile records. The
+        Firebase Auth user and profiles service data remain and can be manually purged.
       parameters:
-      - description: Bot ID
+      - description: Bot User ID
         in: path
         name: id
         required: true
@@ -217,13 +226,13 @@ paths:
             $ref: '#/definitions/main.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Delete a bot
+      summary: Delete a bot user
       tags:
       - bots
     get:
-      description: Returns the details of a specific bot.
+      description: Returns the details of a specific bot user and all its profiles.
       parameters:
-      - description: Bot ID
+      - description: Bot User ID
         in: path
         name: id
         required: true
@@ -234,7 +243,8 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.BotOut'
+            additionalProperties: true
+            type: object
         "403":
           description: Forbidden
           schema:
@@ -249,7 +259,7 @@ paths:
             $ref: '#/definitions/main.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get a bot by ID
+      summary: Get a bot user by ID
       tags:
       - bots
   /{id}/creds:
@@ -258,7 +268,7 @@ paths:
         work first. If verification fails (e.g. after an environment wipe), the bot
         is automatically re-registered.
       parameters:
-      - description: Bot ID
+      - description: Bot User ID
         in: path
         name: id
         required: true
@@ -293,8 +303,9 @@ paths:
       - application/json
       description: Creates a profile via the profiles service using the bot's own
         credentials. Accepts public image URLs which are downloaded and re-uploaded.
+        The profile is tracked in the bot_profiles collection.
       parameters:
-      - description: Bot ID
+      - description: Bot User ID
         in: path
         name: id
         required: true
@@ -334,9 +345,45 @@ paths:
       summary: Create a profile for a bot
       tags:
       - bots
+  /{id}/profiles:
+    get:
+      description: Returns all profiles associated with a bot user.
+      parameters:
+      - description: Bot User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.BotProfileOut'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List profiles for a bot user
+      tags:
+      - bots
   /all:
     delete:
-      description: Deletes all bot records. Root Admin only.
+      description: Deletes all bot user records and all bot profile records. Root
+        Admin only.
       responses:
         "204":
           description: No Content

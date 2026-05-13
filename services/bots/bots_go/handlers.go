@@ -7,13 +7,15 @@ import (
 	"net/http"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
 )
 
-const BOTS_COLLECTION = "bots"
+const (
+	BOT_USERS_COLLECTION    = "bot_users"
+	BOT_PROFILES_COLLECTION = "bot_profiles"
+)
 
 // handleHealth godoc
 // @Summary      Health check
@@ -27,8 +29,8 @@ func handleHealth(c *gin.Context) {
 }
 
 // handleRegisterBot godoc
-// @Summary      Register a new bot
-// @Description  Creates a new bot identity via Firebase Auth, initializes a user record, and optionally creates a profile. Credentials are encrypted and stored.
+// @Summary      Register a new bot user
+// @Description  Creates a new bot identity via Firebase Auth, initializes a user record, and stores encrypted credentials.
 // @Tags         bots
 // @Accept       json
 // @Produce      json
@@ -61,7 +63,7 @@ func handleRegisterBot(c *gin.Context) {
 	}
 
 	// Check for duplicate slug
-	slugIter := db.Collection(BOTS_COLLECTION).
+	slugIter := db.Collection(BOT_USERS_COLLECTION).
 		Where("slug", "==", body.Slug).
 		Limit(1).
 		Documents(ctx)
@@ -124,11 +126,8 @@ func handleRegisterBot(c *gin.Context) {
 		"state":              "active",
 		"created_at":         now,
 	}
-	if body.BehaviorType != "" {
-		botData["behavior_type"] = body.BehaviorType
-	}
 
-	_, err = db.Collection(BOTS_COLLECTION).Doc(botID).Set(ctx, botData)
+	_, err = db.Collection(BOT_USERS_COLLECTION).Doc(botID).Set(ctx, botData)
 	if err != nil {
 		log.Printf("[ERROR] Failed to save bot record: %v", err)
 		httpError(c, http.StatusInternalServerError, "Failed to save bot record")
@@ -136,12 +135,11 @@ func handleRegisterBot(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, BotOut{
-		BotID:        botID,
-		Slug:         body.Slug,
-		DisplayName:  body.DisplayName,
-		FirebaseUID:  firebaseUID,
-		Email:        email,
-		BehaviorType: body.BehaviorType,
+		BotID:       botID,
+		Slug:        body.Slug,
+		DisplayName: body.DisplayName,
+		FirebaseUID: firebaseUID,
+		Email:       email,
 		State:       "active",
 		CreatedAt:   now,
 	})
@@ -152,7 +150,7 @@ func handleRegisterBot(c *gin.Context) {
 // @Description  Decrypts and returns the bot's login credentials. Verifies they work first. If verification fails (e.g. after an environment wipe), the bot is automatically re-registered.
 // @Tags         bots
 // @Produce      json
-// @Param        id  path      string  true  "Bot ID"
+// @Param        id  path      string  true  "Bot User ID"
 // @Success      200  {object}  CredsResponse
 // @Failure      403  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
@@ -174,7 +172,7 @@ func handleGetCreds(c *gin.Context) {
 		return
 	}
 
-	doc, err := db.Collection(BOTS_COLLECTION).Doc(botID).Get(ctx)
+	doc, err := db.Collection(BOT_USERS_COLLECTION).Doc(botID).Get(ctx)
 	if err != nil || !doc.Exists() {
 		httpError(c, http.StatusNotFound, "Bot not found")
 		return
@@ -227,8 +225,8 @@ func handleGetCreds(c *gin.Context) {
 }
 
 // handleListBots godoc
-// @Summary      List all bots
-// @Description  Returns all registered bot records.
+// @Summary      List all bot users
+// @Description  Returns all registered bot user records.
 // @Tags         bots
 // @Produce      json
 // @Success      200  {array}   BotOut
@@ -250,7 +248,7 @@ func handleListBots(c *gin.Context) {
 		return
 	}
 
-	iter := db.Collection(BOTS_COLLECTION).Documents(ctx)
+	iter := db.Collection(BOT_USERS_COLLECTION).Documents(ctx)
 	bots := make([]BotOut, 0)
 
 	for {
@@ -270,12 +268,12 @@ func handleListBots(c *gin.Context) {
 }
 
 // handleGetBot godoc
-// @Summary      Get a bot by ID
-// @Description  Returns the details of a specific bot.
+// @Summary      Get a bot user by ID
+// @Description  Returns the details of a specific bot user and all its profiles.
 // @Tags         bots
 // @Produce      json
-// @Param        id  path      string  true  "Bot ID"
-// @Success      200  {object}  BotOut
+// @Param        id  path      string  true  "Bot User ID"
+// @Success      200  {object}  map[string]interface{}
 // @Failure      403  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
@@ -296,20 +294,42 @@ func handleGetBot(c *gin.Context) {
 		return
 	}
 
-	doc, err := db.Collection(BOTS_COLLECTION).Doc(botID).Get(ctx)
+	doc, err := db.Collection(BOT_USERS_COLLECTION).Doc(botID).Get(ctx)
 	if err != nil || !doc.Exists() {
 		httpError(c, http.StatusNotFound, "Bot not found")
 		return
 	}
 
-	c.JSON(http.StatusOK, mapToBotOut(doc.ID(), doc.Data()))
+	bot := mapToBotOut(doc.ID(), doc.Data())
+
+	// Fetch all profiles for this bot user
+	profileIter := db.Collection(BOT_PROFILES_COLLECTION).
+		Where("bot_user_id", "==", botID).
+		Documents(ctx)
+
+	profiles := make([]BotProfileOut, 0)
+	for {
+		pDoc, err := profileIter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			break
+		}
+		profiles = append(profiles, mapToBotProfileOut(pDoc.ID(), pDoc.Data()))
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"bot":      bot,
+		"profiles": profiles,
+	})
 }
 
 // handleDeleteBot godoc
-// @Summary      Delete a bot
-// @Description  Deletes a bot record. The Firebase Auth user and profile remain and can be manually purged.
+// @Summary      Delete a bot user
+// @Description  Deletes a bot user record and all its bot profile records. The Firebase Auth user and profiles service data remain and can be manually purged.
 // @Tags         bots
-// @Param        id  path  string  true  "Bot ID"
+// @Param        id  path  string  true  "Bot User ID"
 // @Success      204  "No Content"
 // @Failure      403  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
@@ -331,14 +351,29 @@ func handleDeleteBot(c *gin.Context) {
 		return
 	}
 
-	docRef := db.Collection(BOTS_COLLECTION).Doc(botID)
+	docRef := db.Collection(BOT_USERS_COLLECTION).Doc(botID)
 	_, err = docRef.Get(ctx)
 	if err != nil {
 		httpError(c, http.StatusNotFound, "Bot not found")
 		return
 	}
 
-	// Just delete the bot record. The Firebase user/profile remain (can be manually purged)
+	// Delete all bot profiles for this user
+	profileIter := db.Collection(BOT_PROFILES_COLLECTION).
+		Where("bot_user_id", "==", botID).
+		Documents(ctx)
+	for {
+		pDoc, err := profileIter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			break
+		}
+		pDoc.Ref().Delete(ctx)
+	}
+
+	// Delete the bot user record
 	_, err = docRef.Delete(ctx)
 	if err != nil {
 		httpError(c, http.StatusInternalServerError, "Failed to delete bot record")
@@ -350,7 +385,7 @@ func handleDeleteBot(c *gin.Context) {
 
 // handlePurgeBots godoc
 // @Summary      Purge all bots
-// @Description  Deletes all bot records. Root Admin only.
+// @Description  Deletes all bot user records and all bot profile records. Root Admin only.
 // @Tags         admin
 // @Success      204  "No Content"
 // @Failure      403  {object}  ErrorResponse
@@ -371,16 +406,21 @@ func handlePurgeBots(c *gin.Context) {
 		return
 	}
 
-	if err := db.DeleteCollection(ctx, db.Collection(BOTS_COLLECTION), 100); err != nil {
-		log.Printf("[ERROR] Failed to purge bots collection: %v", err)
+	// Purge both collections
+	if err := db.DeleteCollection(ctx, db.Collection(BOT_USERS_COLLECTION), 100); err != nil {
+		log.Printf("[ERROR] Failed to purge bot_users collection: %v", err)
 		httpError(c, http.StatusInternalServerError, "Failed to purge bots")
 		return
+	}
+	if err := db.DeleteCollection(ctx, db.Collection(BOT_PROFILES_COLLECTION), 100); err != nil {
+		log.Printf("[ERROR] Failed to purge bot_profiles collection: %v", err)
+		// Continue — bot_users already purged
 	}
 
 	c.Status(http.StatusNoContent)
 }
 
-// mapToBotOut safely maps Firestore data to a BotOut struct.
+// mapToBotOut converts a Firestore document to a BotOut response.
 func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	b := BotOut{BotID: id}
 
@@ -399,12 +439,6 @@ func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	if v, ok := data["state"].(string); ok {
 		b.State = v
 	}
-	if v, ok := data["profile_id"].(string); ok {
-		b.ProfileID = v
-	}
-	if v, ok := data["behavior_type"].(string); ok {
-		b.BehaviorType = v
-	}
 	if v, ok := data["created_at"].(time.Time); ok {
 		b.CreatedAt = v
 	}
@@ -412,13 +446,33 @@ func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	return b
 }
 
+// mapToBotProfileOut converts a Firestore document to a BotProfileOut response.
+func mapToBotProfileOut(id string, data map[string]interface{}) BotProfileOut {
+	bp := BotProfileOut{BotProfileID: id}
+
+	if v, ok := data["bot_user_id"].(string); ok {
+		bp.BotUserID = v
+	}
+	if v, ok := data["profile_id"].(string); ok {
+		bp.ProfileID = v
+	}
+	if v, ok := data["behavior_type"].(string); ok {
+		bp.BehaviorType = v
+	}
+	if v, ok := data["created_at"].(time.Time); ok {
+		bp.CreatedAt = v
+	}
+
+	return bp
+}
+
 // handleCreateBotProfile godoc
 // @Summary      Create a profile for a bot
-// @Description  Creates a profile via the profiles service using the bot's own credentials. Accepts public image URLs which are downloaded and re-uploaded.
+// @Description  Creates a profile via the profiles service using the bot's own credentials. Accepts public image URLs which are downloaded and re-uploaded. The profile is tracked in the bot_profiles collection.
 // @Tags         bots
 // @Accept       json
 // @Produce      json
-// @Param        id    path      string           true  "Bot ID"
+// @Param        id    path      string           true  "Bot User ID"
 // @Param        body  body      BotProfileCreate true  "Profile creation payload"
 // @Success      201   {object}  map[string]interface{}
 // @Failure      400   {object}  ErrorResponse
@@ -448,7 +502,7 @@ func handleCreateBotProfile(c *gin.Context) {
 		return
 	}
 
-	doc, err := client.Collection(BOTS_COLLECTION).Doc(botID).Get(c.Request.Context())
+	doc, err := client.Collection(BOT_USERS_COLLECTION).Doc(botID).Get(c.Request.Context())
 	if err != nil || !doc.Exists() {
 		httpError(c, http.StatusNotFound, "Bot not found")
 		return
@@ -506,13 +560,82 @@ func handleCreateBotProfile(c *gin.Context) {
 		profResp = updatedProfResp
 	}
 
-	// Update the bot's Firestore record with the new profileID
-	_, err = client.Collection(BOTS_COLLECTION).Doc(botID).Update(c.Request.Context(), []firestore.Update{
-		{Path: "profile_id", Value: profileID},
-	})
-	if err != nil {
-		log.Printf("[WARN] Failed to update bot %s with profile_id %s: %v", botID, profileID, err)
+	// Create a bot_profiles record linking this bot user to the new profile
+	botProfileID := uuid.New().String()
+	now := _now().UTC()
+
+	botProfileData := map[string]interface{}{
+		"bot_profile_id": botProfileID,
+		"bot_user_id":    botID,
+		"profile_id":     profileID,
+		"created_at":     now,
+	}
+	if body.BehaviorType != "" {
+		botProfileData["behavior_type"] = body.BehaviorType
 	}
 
+	_, err = client.Collection(BOT_PROFILES_COLLECTION).Doc(botProfileID).Set(c.Request.Context(), botProfileData)
+	if err != nil {
+		log.Printf("[WARN] Failed to save bot_profile record for bot %s, profile %s: %v", botID, profileID, err)
+	}
+
+	// Include the bot_profile metadata in the response
+	profResp["bot_profile_id"] = botProfileID
+	profResp["behavior_type"] = body.BehaviorType
+
 	c.JSON(http.StatusCreated, profResp)
+}
+
+// handleListBotProfiles godoc
+// @Summary      List profiles for a bot user
+// @Description  Returns all profiles associated with a bot user.
+// @Tags         bots
+// @Produce      json
+// @Param        id  path      string  true  "Bot User ID"
+// @Success      200  {array}   BotProfileOut
+// @Failure      403  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /{id}/profiles [get]
+func handleListBotProfiles(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		httpError(c, http.StatusForbidden, "Admin authorization required")
+		return
+	}
+
+	botID := c.Param("id")
+	ctx := context.Background()
+	db, err := getDBFunc(ctx)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	// Verify the bot user exists
+	botDoc, err := db.Collection(BOT_USERS_COLLECTION).Doc(botID).Get(ctx)
+	if err != nil || !botDoc.Exists() {
+		httpError(c, http.StatusNotFound, "Bot not found")
+		return
+	}
+
+	profileIter := db.Collection(BOT_PROFILES_COLLECTION).
+		Where("bot_user_id", "==", botID).
+		Documents(ctx)
+
+	profiles := make([]BotProfileOut, 0)
+	for {
+		pDoc, err := profileIter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			httpError(c, http.StatusInternalServerError, "Failed to list bot profiles")
+			return
+		}
+		profiles = append(profiles, mapToBotProfileOut(pDoc.ID(), pDoc.Data()))
+	}
+
+	c.JSON(http.StatusOK, profiles)
 }

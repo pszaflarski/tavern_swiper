@@ -261,29 +261,31 @@ func TestCreateBotProfile_Success(t *testing.T) {
 	originalDBFunc := getDBFunc
 	defer func() { getDBFunc = originalDBFunc }()
 
-	var updatedProfileID string
+	var savedBotProfileData map[string]interface{}
 
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return &mockClient{
 			collectionFunc: func(path string) FirestoreCollection {
 				return mockCollection{
-					docFunc: func(path string) FirestoreDocument {
+					docFunc: func(docPath string) FirestoreDocument {
 						return mockDoc{
 							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
-								return mockSnapshot{
-									exists: true,
-									data: map[string]interface{}{
-										"slug":         "testbot",
-										"email":        "testbot@test.com",
-										// Base64 of "password123"
-										"encrypted_password": "cGFzc3dvcmQxMjM=",
-									},
-								}, nil
+								if path == BOT_USERS_COLLECTION {
+									return mockSnapshot{
+										exists: true,
+										data: map[string]interface{}{
+											"slug":               "testbot",
+											"email":              "testbot@test.com",
+											"encrypted_password": "cGFzc3dvcmQxMjM=",
+										},
+									}, nil
+								}
+								return mockSnapshot{exists: false}, nil
 							},
-							updateFunc: func(ctx context.Context, updates []firestore.Update, preconds ...firestore.Precondition) (*firestore.WriteResult, error) {
-								for _, u := range updates {
-									if u.Path == "profile_id" {
-										updatedProfileID = u.Value.(string)
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								if path == BOT_PROFILES_COLLECTION {
+									if m, ok := data.(map[string]interface{}); ok {
+										savedBotProfileData = m
 									}
 								}
 								return nil, nil
@@ -298,8 +300,9 @@ func TestCreateBotProfile_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	
 	payload := BotProfileCreate{
-		DisplayName: "Test Bot",
-		ImageLinks:  []string{mockServer.URL + "/test-image.jpg"},
+		DisplayName:  "Test Bot",
+		BehaviorType: "tavern_keeper",
+		ImageLinks:   []string{mockServer.URL + "/test-image.jpg"},
 	}
 	body, _ := json.Marshal(payload)
 
@@ -311,7 +314,16 @@ func TestCreateBotProfile_Success(t *testing.T) {
 		t.Errorf("Expected status 201, got %d: %s", w.Code, w.Body.String())
 	}
 
-	if updatedProfileID != "test-profile-id" {
-		t.Errorf("Expected bot's profile_id to be updated to 'test-profile-id', got '%s'", updatedProfileID)
+	// Verify bot_profile record was saved with correct data
+	if savedBotProfileData != nil {
+		if savedBotProfileData["bot_user_id"] != "valid-id" {
+			t.Errorf("Expected bot_user_id 'valid-id', got '%v'", savedBotProfileData["bot_user_id"])
+		}
+		if savedBotProfileData["profile_id"] != "test-profile-id" {
+			t.Errorf("Expected profile_id 'test-profile-id', got '%v'", savedBotProfileData["profile_id"])
+		}
+		if savedBotProfileData["behavior_type"] != "tavern_keeper" {
+			t.Errorf("Expected behavior_type 'tavern_keeper', got '%v'", savedBotProfileData["behavior_type"])
+		}
 	}
 }

@@ -117,11 +117,18 @@ async def test_bot_profile_creation_with_image(root_admin):
         assert len(profile_data["image_urls"]) > 0
         assert "storage.googleapis.com" in profile_data["image_urls"][0]
         
-        # Verify bot record was updated with profile_id
+        # Verify bot_profile was created and linked correctly
+        assert "bot_profile_id" in profile_data, "Response should include bot_profile_id"
+        
+        # Verify via GET /bots/:id that profiles are tracked
         bot_resp = await client.get(
             f"{BOTS_URL}/bots/{bot_id}",
             headers={"Authorization": f"Bearer {root_admin['token']}"}
         )
         assert bot_resp.status_code == 200
-        bot_updated = bot_resp.json()
-        assert bot_updated.get("profile_id") == profile_data["profile_id"]
+        bot_detail = bot_resp.json()
+        assert "bot" in bot_detail
+        assert "profiles" in bot_detail
+        assert len(bot_detail["profiles"]) == 1
+        assert bot_detail["profiles"][0]["profile_id"] == profile_data["profile_id"]
+
