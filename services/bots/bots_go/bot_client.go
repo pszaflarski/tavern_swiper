@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/jpeg"
+	_ "image/png" // Register PNG decoder
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -216,20 +219,32 @@ func downloadImage(imageURL string) ([]byte, string, error) {
 		return nil, "", fmt.Errorf("invalid content type: %s", contentType)
 	}
 
-	// Extract filename from URL
+	// Decode any supported image format (JPEG, PNG, etc.)
+	img, _, err := image.Decode(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Re-encode as JPEG (profiles service requires JPEG magic bytes)
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90}); err != nil {
+		return nil, "", fmt.Errorf("failed to encode as JPEG: %w", err)
+	}
+
+	// Build filename from URL, always with .jpg extension
 	parsedURL, err := url.Parse(imageURL)
 	filename := "image.jpg"
 	if err == nil {
 		base := path.Base(parsedURL.Path)
 		if base != "" && base != "." && base != "/" {
-			filename = base
+			// Strip original extension and use .jpg
+			ext := path.Ext(base)
+			if ext != "" {
+				base = base[:len(base)-len(ext)]
+			}
+			filename = base + ".jpg"
 		}
 	}
 
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	return data, filename, nil
+	return buf.Bytes(), filename, nil
 }

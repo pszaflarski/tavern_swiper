@@ -86,8 +86,8 @@ async def test_bot_profile_creation_with_image(root_admin):
         bot_id = reg_resp.json()["bot_id"]
 
         # 2. Create Profile with Image Link
-        # Use a small reliable public JPEG image (profiles service only accepts JPEG)
-        public_image_url = "https://httpbin.org/image/jpeg"
+        # Use a public PNG to prove the bots service converts any format to JPEG
+        public_image_url = "https://httpbin.org/image/png"
         
         profile_payload = {
             "display_name": "Profile Bot's Real Name",
