@@ -22,7 +22,7 @@ REGION = "us-central1"
 ROOT_EMAIL = os.getenv("ROOT_EMAIL", "root@tavernswiper.com")
 ROOT_PASSWORD = os.getenv("ROOT_PASSWORD", "Password123!")
 
-SERVICES = ["auth", "profiles", "discovery", "messages", "users"]
+SERVICES = ["auth", "profiles", "discovery", "messages", "users", "bots"]
 
 def get_service_url(service_name, env="dev"):
     # Check for local overrides first
