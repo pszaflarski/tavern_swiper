@@ -192,6 +192,7 @@ fi
 # ---------------------------------------------------------------------------
 if [[ "$MODE" == "local" && "$RESET" == "true" ]]; then
     echo "🔧 Initializing Local Pub/Sub Emulator..."
+    # Profile events → discovery_subscriber
     curl -s -X PUT "http://localhost:8085/v1/projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1"
     curl -s -X PUT "http://localhost:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-discovery-subscriber-sub" \
          -H "Content-Type: application/json" \
@@ -201,6 +202,18 @@ if [[ "$MODE" == "local" && "$RESET" == "true" ]]; then
                  "pushEndpoint": "http://discovery-subscriber:8007"
                }
              }'
+    # Match events → messages_subscriber
+    curl -s -X PUT "http://localhost:8085/v1/projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1"
+    curl -s -X PUT "http://localhost:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-messages-subscriber-sub" \
+         -H "Content-Type: application/json" \
+         -d '{
+               "topic": "projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1",
+               "pushConfig": {
+                 "pushEndpoint": "http://messages-subscriber:8008"
+               }
+             }'
+    # Message events (no subscriber yet — topic only for now)
+    curl -s -X PUT "http://localhost:8085/v1/projects/tavern-swiper-dev/topics/dev-messages-message-events-v1"
     echo "✅ Emulator Initialized."
 fi
 
