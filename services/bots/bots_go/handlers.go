@@ -120,6 +120,7 @@ func handleRegisterBot(c *gin.Context) {
 		"bot_id":             botID,
 		"slug":               body.Slug,
 		"display_name":       body.DisplayName,
+		"user_id":            firebaseUID,
 		"firebase_uid":       firebaseUID,
 		"email":              email,
 		"encrypted_password": encryptedPassword,
@@ -138,6 +139,7 @@ func handleRegisterBot(c *gin.Context) {
 		BotID:       botID,
 		Slug:        body.Slug,
 		DisplayName: body.DisplayName,
+		UserID:      firebaseUID,
 		FirebaseUID: firebaseUID,
 		Email:       email,
 		State:       "active",
@@ -430,8 +432,14 @@ func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	if v, ok := data["display_name"].(string); ok {
 		b.DisplayName = v
 	}
+	if v, ok := data["user_id"].(string); ok {
+		b.UserID = v
+	}
 	if v, ok := data["firebase_uid"].(string); ok {
 		b.FirebaseUID = v
+		if b.UserID == "" {
+			b.UserID = v // Backfill user_id from firebase_uid for older records
+		}
 	}
 	if v, ok := data["email"].(string); ok {
 		b.Email = v
@@ -638,4 +646,157 @@ func handleListBotProfiles(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, profiles)
+}
+
+// handleSyncBotProfiles godoc
+// @Summary      Sync bot profiles with profiles service
+// @Description  Reconciles the bot_profiles collection with the profiles service. Creates tracking records for untracked profiles, removes stale records for deleted profiles, and deletes orphaned profiles from the profiles service that aren't tracked.
+// @Tags         bots
+// @Produce      json
+// @Param        id  path      string  true  "Bot User ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /{id}/sync [post]
+func handleSyncBotProfiles(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		httpError(c, http.StatusForbidden, "Admin authorization required")
+		return
+	}
+
+	botID := c.Param("id")
+	ctx := context.Background()
+	db, err := getDBFunc(ctx)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	// 1. Get the bot user
+	botDoc, err := db.Collection(BOT_USERS_COLLECTION).Doc(botID).Get(ctx)
+	if err != nil || !botDoc.Exists() {
+		httpError(c, http.StatusNotFound, "Bot not found")
+		return
+	}
+
+	botData := botDoc.Data()
+	email, _ := botData["email"].(string)
+	encryptedPassword, _ := botData["encrypted_password"].(string)
+
+	// Resolve user_id (firebase_uid)
+	userID, _ := botData["user_id"].(string)
+	if userID == "" {
+		userID, _ = botData["firebase_uid"].(string)
+	}
+	if userID == "" {
+		httpError(c, http.StatusInternalServerError, "Bot has no user_id or firebase_uid")
+		return
+	}
+
+	// 2. Decrypt creds and login as bot
+	password, err := decryptPassword(ctx, encryptedPassword)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Failed to decrypt bot credentials")
+		return
+	}
+
+	jwtToken, _, err := loginAndVerify(email, password)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to login as bot: %v", err))
+		return
+	}
+
+	// 3. Get all profiles from the profiles service for this user
+	remoteProfiles, err := listProfilesForUser(jwtToken, userID)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to list remote profiles: %v", err))
+		return
+	}
+
+	remoteProfileIDs := make(map[string]bool)
+	for _, p := range remoteProfiles {
+		if pid, ok := p["profile_id"].(string); ok {
+			remoteProfileIDs[pid] = true
+		}
+	}
+
+	// 4. Get all bot_profiles from our DB
+	profileIter := db.Collection(BOT_PROFILES_COLLECTION).
+		Where("bot_user_id", "==", botID).
+		Documents(ctx)
+
+	type localRecord struct {
+		DocID     string
+		ProfileID string
+	}
+	var localRecords []localRecord
+	localProfileIDs := make(map[string]string) // profile_id -> bot_profile doc ID
+
+	for {
+		pDoc, err := profileIter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			break
+		}
+		data := pDoc.Data()
+		pid, _ := data["profile_id"].(string)
+		localRecords = append(localRecords, localRecord{DocID: pDoc.ID(), ProfileID: pid})
+		localProfileIDs[pid] = pDoc.ID()
+	}
+
+	// 5. Reconcile
+	var created []string
+	var removedStale []string
+	var deletedOrphans []string
+
+	// 5a. Stale local records: bot_profiles that reference profiles no longer in the profiles service
+	for _, rec := range localRecords {
+		if !remoteProfileIDs[rec.ProfileID] {
+			log.Printf("[INFO] Removing stale bot_profile %s (profile %s no longer exists)", rec.DocID, rec.ProfileID)
+			db.Collection(BOT_PROFILES_COLLECTION).Doc(rec.DocID).Delete(ctx)
+			removedStale = append(removedStale, rec.ProfileID)
+		}
+	}
+
+	// 5b. Orphaned remote profiles: exist in profiles service but NOT tracked in bot_profiles → delete from profiles service
+	for _, p := range remoteProfiles {
+		pid, ok := p["profile_id"].(string)
+		if !ok {
+			continue
+		}
+		if _, tracked := localProfileIDs[pid]; !tracked {
+			log.Printf("[INFO] Deleting orphaned profile %s from profiles service (not tracked in bot_profiles)", pid)
+			if err := deleteProfile(jwtToken, pid); err != nil {
+				log.Printf("[WARN] Failed to delete orphaned profile %s: %v", pid, err)
+			} else {
+				deletedOrphans = append(deletedOrphans, pid)
+			}
+		}
+	}
+
+	// Ensure non-nil arrays in response
+	if created == nil {
+		created = []string{}
+	}
+	if removedStale == nil {
+		removedStale = []string{}
+	}
+	if deletedOrphans == nil {
+		deletedOrphans = []string{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"bot_id":              botID,
+		"user_id":             userID,
+		"remote_profile_count": len(remoteProfiles),
+		"local_record_count":   len(localRecords),
+		"created_records":      created,
+		"removed_stale":        removedStale,
+		"deleted_orphans":      deletedOrphans,
+	})
 }

@@ -198,6 +198,51 @@ func uploadImageToProfile(jwtToken, profileID string, imageData []byte, filename
 	return profResp, nil
 }
 
+// listProfilesForUser fetches all profiles for a given user_id (firebase_uid) from the profiles service.
+func listProfilesForUser(jwtToken, userID string) ([]map[string]interface{}, error) {
+	profilesURL := serviceURLs.Get("profiles")
+
+	req, _ := http.NewRequest("GET", profilesURL+"/profiles/user/"+userID, nil)
+	req.Header.Set("Authorization", "Bearer "+jwtToken)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call /profiles/user/%s: %w", userID, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list profiles failed (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var profiles []map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&profiles)
+
+	return profiles, nil
+}
+
+// deleteProfile deletes a profile via the profiles service.
+func deleteProfile(jwtToken, profileID string) error {
+	profilesURL := serviceURLs.Get("profiles")
+
+	req, _ := http.NewRequest("DELETE", profilesURL+"/profiles/"+profileID, nil)
+	req.Header.Set("Authorization", "Bearer "+jwtToken)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to call DELETE /profiles/%s: %w", profileID, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete profile failed (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
 func downloadImage(imageURL string) ([]byte, string, error) {
 	// 30 second timeout per download
 	client := &http.Client{Timeout: 30 * time.Second}

@@ -54,6 +54,7 @@ func main() {
 		b.GET("/", handleListBots)
 		b.POST("/:id/creds", handleGetCreds)
 		b.POST("/:id/profile", handleCreateBotProfile)
+		b.POST("/:id/sync", handleSyncBotProfiles)
 		b.GET("/:id/profiles", handleListBotProfiles)
 
 		// Concrete paths before wildcard to avoid route conflicts

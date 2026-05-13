@@ -17,6 +17,7 @@ type BotOut struct {
 	BotID       string    `json:"bot_id"`
 	Slug        string    `json:"slug"`
 	DisplayName string    `json:"display_name,omitempty"`
+	UserID      string    `json:"user_id"`
 	FirebaseUID string    `json:"firebase_uid"`
 	Email       string    `json:"email"`
 	State       string    `json:"state"`

@@ -29,6 +29,8 @@ definitions:
         type: string
       state:
         type: string
+      user_id:
+        type: string
     type: object
   main.BotProfileCreate:
     properties:
@@ -378,6 +380,43 @@ paths:
       security:
       - BearerAuth: []
       summary: List profiles for a bot user
+      tags:
+      - bots
+  /{id}/sync:
+    post:
+      description: Reconciles the bot_profiles collection with the profiles service.
+        Creates tracking records for untracked profiles, removes stale records for
+        deleted profiles, and deletes orphaned profiles from the profiles service
+        that aren't tracked.
+      parameters:
+      - description: Bot User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Sync bot profiles with profiles service
       tags:
       - bots
   /all:

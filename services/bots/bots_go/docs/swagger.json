@@ -434,6 +434,59 @@
                     }
                 }
             }
+        },
+        "/{id}/sync": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reconciles the bot_profiles collection with the profiles service. Creates tracking records for untracked profiles, removes stale records for deleted profiles, and deletes orphaned profiles from the profiles service that aren't tracked.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bots"
+                ],
+                "summary": "Sync bot profiles with profiles service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bot User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -479,6 +532,9 @@
                     "type": "string"
                 },
                 "state": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
