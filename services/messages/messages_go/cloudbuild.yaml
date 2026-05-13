@@ -32,7 +32,7 @@ steps:
           --region=us-central1 \
           --allow-unauthenticated \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$PROJECT_ID-media-$_ENV_NAME,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG,PUBSUB_PROJECT_ID=$PROJECT_ID \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$PROJECT_ID-media-$_ENV_NAME,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG,PUBSUB_PROJECT_ID=$PROJECT_ID,PUBSUB_TOPIC_ID=$_ENV_NAME-messages-message-events-v1 \
           --cpu-boost \
           --execution-environment=gen1
 

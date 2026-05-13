@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +18,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// messagePublisher is the package-level Pub/Sub publisher for message events.
+var messagePublisher MessagePublisher
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -28,6 +32,15 @@ func main() {
 
 	// Initialize cross-service clients (URLs come from the router)
 	profilesClient = NewProfilesClient()
+
+	// Initialize Pub/Sub publisher for message events (non-fatal if it fails)
+	ctx := context.Background()
+	pub, err := NewMessagePublisher(ctx)
+	if err != nil {
+		log.Printf("[WARN] Failed to initialize message publisher: %v (events will not be published)", err)
+	} else {
+		messagePublisher = pub
+	}
 
 	r := gin.Default()
 

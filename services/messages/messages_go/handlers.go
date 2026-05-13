@@ -297,6 +297,16 @@ func handleSendMessage(c *gin.Context) {
 		return
 	}
 
+	// 6. Publish message event (fire-and-forget, non-blocking)
+	if messagePublisher != nil {
+		go func() {
+			pubCtx := context.Background()
+			if err := messagePublisher.PublishMessageSent(pubCtx, convID, messageID, body.SenderProfileID, body.Content, msgType); err != nil {
+				log.Printf("[WARN] Failed to publish message event: %v", err)
+			}
+		}()
+	}
+
 	c.JSON(http.StatusCreated, MessageOut{
 		MessageID:       messageID,
 		ConversationID:  convID,
@@ -732,6 +742,16 @@ func handleRollDice(c *gin.Context) {
 		log.Printf("[ERROR] Failed to commit dice roll message batch: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to post dice roll message"})
 		return
+	}
+
+	// 8. Publish message event (fire-and-forget, non-blocking)
+	if messagePublisher != nil {
+		go func() {
+			pubCtx := context.Background()
+			if err := messagePublisher.PublishMessageSent(pubCtx, convID, messageID, profileID, eventContent, MessageTypeEvent); err != nil {
+				log.Printf("[WARN] Failed to publish dice roll event: %v", err)
+			}
+		}()
 	}
 
 	c.JSON(http.StatusOK, DiceRollResponse{
