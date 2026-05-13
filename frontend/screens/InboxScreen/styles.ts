@@ -162,7 +162,7 @@ export const styles = StyleSheet.create({
   profileUnreadDot: {
     position: 'absolute',
     top: 4,
-    right: 4,
+    left: 4,
     width: 10,
     height: 10,
     borderRadius: 5,
