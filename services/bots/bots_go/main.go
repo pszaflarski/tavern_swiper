@@ -23,6 +23,8 @@ import (
 func main() {
 	_ = godotenv.Load()
 
+	initServiceURLs()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8011"

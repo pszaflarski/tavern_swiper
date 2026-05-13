@@ -6,34 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 )
 
 var httpClient = &http.Client{Timeout: 15 * time.Second}
 
-func getServiceURL(serviceName string) string {
-	// Simple env fallback. In a real environment, you might query the router dynamically
-	// like `seed_profiles.py` does.
-	envVar := strings.ToUpper(serviceName) + "_URL"
-	if url := os.Getenv(envVar); url != "" {
-		return url
-	}
-	
-	ports := map[string]string{
-		"auth":     "8001",
-		"profiles": "8002",
-		"users":    "8006",
-	}
-	if port, ok := ports[serviceName]; ok {
-		return "http://localhost:" + port
-	}
-	return ""
-}
-
 func registerFirebaseUser(email, password string) error {
-	authURL := getServiceURL("auth")
+	authURL := serviceURLs.Get("auth")
 	payload := map[string]interface{}{
 		"email":    email,
 		"password": password,
@@ -57,7 +36,7 @@ func registerFirebaseUser(email, password string) error {
 }
 
 func loginAndVerify(email, password string) (string, string, error) {
-	authURL := getServiceURL("auth")
+	authURL := serviceURLs.Get("auth")
 	payload := map[string]interface{}{
 		"email":    email,
 		"password": password,
@@ -117,7 +96,7 @@ func loginAndVerify(email, password string) (string, string, error) {
 }
 
 func initUserRecord(jwtToken string) error {
-	usersURL := getServiceURL("users")
+	usersURL := serviceURLs.Get("users")
 	req, _ := http.NewRequest("GET", usersURL+"/users/me", nil)
 	req.Header.Set("Authorization", "Bearer "+jwtToken)
 
@@ -135,7 +114,7 @@ func initUserRecord(jwtToken string) error {
 }
 
 func createProfile(jwtToken string, botReq BotCreate) (string, error) {
-	profilesURL := getServiceURL("profiles")
+	profilesURL := serviceURLs.Get("profiles")
 	payload := map[string]interface{}{
 		"display_name": botReq.DisplayName,
 		"bio":          botReq.Bio,
