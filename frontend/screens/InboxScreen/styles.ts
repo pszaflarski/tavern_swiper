@@ -148,7 +148,7 @@ export const styles = StyleSheet.create({
   unreadDot: {
     position: 'absolute',
     top: -2,
-    right: -2,
+    left: -2,
     width: 10,
     height: 10,
     borderRadius: 5,
