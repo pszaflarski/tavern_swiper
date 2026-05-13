@@ -42,6 +42,7 @@ type ConversationOut struct {
 	LastMessage     *LastMessageInfo `json:"last_message"`
 	CreatedAt       *string          `json:"created_at,omitempty"`
 	UpdatedAt       *string          `json:"updated_at,omitempty"`
+	Unread          bool             `json:"unread"`
 }
 
 // --- New internal Firestore models ---
@@ -72,6 +73,7 @@ type ProfileConversation struct {
 	ProfileID      string `firestore:"profile_id"`
 	ConversationID string `firestore:"conversation_id"`
 	Role           string `firestore:"role"`
+	Unread         bool   `firestore:"unread,omitempty"`
 }
 
 // --- Dice Roll models ---

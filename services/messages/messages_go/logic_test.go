@@ -466,3 +466,148 @@ func TestHandleSendSystemMessage(t *testing.T) {
 	})
 }
 
+
+func TestHandleSendMessage_UnreadFlag(t *testing.T) {
+	skipIfRealDB(t)
+	gin.SetMode(gin.TestMode)
+	
+	mock := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mock, nil
+	}
+	
+	convID := "conv123"
+	senderID := "p1"
+	otherID := "p2"
+	
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), Conversation{ID: convID, ParticipantIDs: []string{senderID, otherID}})
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(senderID+"_"+convID).Set(context.Background(), ProfileConversation{
+		ProfileID: senderID, ConversationID: convID, Unread: true,
+	})
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(otherID+"_"+convID).Set(context.Background(), ProfileConversation{
+		ProfileID: otherID, ConversationID: convID, Unread: false,
+	})
+	
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("auth", AuthData{Role: "user"})
+	c.Params = []gin.Param{{Key: "id", Value: convID}}
+	
+	body := MessageCreate{SenderProfileID: senderID, Content: "Hello"}
+	b, _ := json.Marshal(body)
+	c.Request, _ = http.NewRequest("POST", "/conversations/"+convID+"/messages", bytes.NewBuffer(b))
+	c.Request.Header.Set("Content-Type", "application/json")
+	
+	handleSendMessage(c)
+	
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected 201, got %d. Body: %s", w.Code, w.Body.String())
+	}
+	
+	s1, _ := mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(senderID+"_"+convID).Get(context.Background())
+	s2, _ := mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(otherID+"_"+convID).Get(context.Background())
+	
+	if s1.Data()["unread"] != false {
+		t.Errorf("Sender unread should be false, got %v", s1.Data()["unread"])
+	}
+	if s2.Data()["unread"] != true {
+		t.Errorf("Other unread should be true, got %v", s2.Data()["unread"])
+	}
+}
+
+func TestHandleGetMessages_ImplicitMarkRead(t *testing.T) {
+	skipIfRealDB(t)
+	gin.SetMode(gin.TestMode)
+	
+	mock := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mock, nil
+	}
+	
+	convID := "conv123"
+	profileID := "p1"
+	
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), map[string]interface{}{
+		"id": convID,
+		"participant_ids": []interface{}{profileID, "p2"},
+	})
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(profileID+"_"+convID).Set(context.Background(), ProfileConversation{
+		ProfileID: profileID, ConversationID: convID, Unread: true,
+	})
+	
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("auth", AuthData{Role: "user"})
+	c.Params = []gin.Param{{Key: "id", Value: convID}}
+	c.Request, _ = http.NewRequest("GET", "/conversations/"+convID+"/messages?profile_id="+profileID, nil)
+	
+	handleGetMessages(c)
+	
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
+	}
+	
+	s1, _ := mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(profileID+"_"+convID).Get(context.Background())
+	if s1.Data()["unread"] != false {
+		t.Errorf("Profile unread should be false after get, got %v", s1.Data()["unread"])
+	}
+}
+
+func TestHandleListConversations_SurfacesUnread(t *testing.T) {
+	skipIfRealDB(t)
+	gin.SetMode(gin.TestMode)
+	
+	mock := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mock, nil
+	}
+	
+	profileID := "p1"
+	c1 := "conv1"
+	c2 := "conv2"
+	
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc(c1).Set(context.Background(), map[string]interface{}{
+		"id": c1, "participant_ids": []interface{}{"p1", "p2"},
+	})
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc(c2).Set(context.Background(), map[string]interface{}{
+		"id": c2, "participant_ids": []interface{}{"p1", "p3"},
+	})
+	
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_"+c1).Set(context.Background(), ProfileConversation{
+		ProfileID: "p1", ConversationID: c1, Unread: true,
+	})
+	// For c2, do not set Unread to test default false
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_"+c2).Set(context.Background(), map[string]interface{}{
+		"profile_id": "p1", "conversation_id": c2, "role": "participant",
+	})
+	
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("auth", AuthData{Role: "user"})
+	c.Params = []gin.Param{{Key: "profile_id", Value: profileID}}
+	
+	handleListConversations(c)
+	
+	var resp []ConversationOut
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	
+	if len(resp) != 2 {
+		t.Fatalf("Expected 2 conversations, got %d", len(resp))
+	}
+	
+	var unreadC1, unreadC2 bool
+	for _, conv := range resp {
+		if conv.ID == c1 {
+			unreadC1 = conv.Unread
+		} else if conv.ID == c2 {
+			unreadC2 = conv.Unread
+		}
+	}
+	
+	if !unreadC1 {
+		t.Errorf("Expected c1 to be unread")
+	}
+	if unreadC2 {
+		t.Errorf("Expected c2 to default to false for unread")
+	}
+}

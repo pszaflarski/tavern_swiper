@@ -128,6 +128,7 @@ func (d *mockDoc) Set(ctx context.Context, data interface{}, opts ...firestore.S
 			"profile_id":      pc.ProfileID,
 			"conversation_id": pc.ConversationID,
 			"role":            pc.Role,
+			"unread":          pc.Unread,
 		}
 	} else if doc, ok := data.(*Conversation); ok {
 		d.data = map[string]interface{}{

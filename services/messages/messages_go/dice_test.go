@@ -325,6 +325,55 @@ func TestHandleRollDice(t *testing.T) {
 			t.Errorf("Expected normalized type 'd20', got '%s'", resp.DiceType)
 		}
 	})
+	t.Run("DiceRoll_SetsUnreadForOtherParticipants", func(t *testing.T) {
+		mock := &mockClient{}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+			return mock, nil
+		}
+		oldClient := profilesClient
+		profilesClient = &mockProfilesClient{}
+		defer func() { profilesClient = oldClient }()
+
+		convID := "conv_unread"
+		profileID := "p1"
+		otherID := "p2"
+
+		mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), map[string]interface{}{
+			"id":              convID,
+			"participant_ids": []interface{}{profileID, otherID},
+		})
+		mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(profileID+"_"+convID).Set(context.Background(), ProfileConversation{
+			ProfileID: profileID, ConversationID: convID, Unread: true,
+		})
+		mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(otherID+"_"+convID).Set(context.Background(), ProfileConversation{
+			ProfileID: otherID, ConversationID: convID, Unread: false,
+		})
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("auth", AuthData{Role: "user"})
+
+		body := map[string]string{"type": "d6", "conversation_id": convID, "profile_id": profileID}
+		b, _ := json.Marshal(body)
+		c.Request, _ = http.NewRequest("POST", "/messages/roll-dice", bytes.NewBuffer(b))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handleRollDice(c)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected 200, got %d", w.Code)
+		}
+
+		s1, _ := mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(profileID+"_"+convID).Get(context.Background())
+		s2, _ := mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(otherID+"_"+convID).Get(context.Background())
+
+		if s1.Data()["unread"] != false {
+			t.Errorf("Roller unread should be false, got %v", s1.Data()["unread"])
+		}
+		if s2.Data()["unread"] != true {
+			t.Errorf("Other participant unread should be true, got %v", s2.Data()["unread"])
+		}
+	})
 }
 
 func TestRollDieDistribution(t *testing.T) {

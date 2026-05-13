@@ -24,7 +24,35 @@ definitions:
         items:
           type: string
         type: array
+      unread:
+        type: boolean
       updated_at:
+        type: string
+    type: object
+  main.DiceRollRequest:
+    properties:
+      conversation_id:
+        description: Optional — if present, posts an event message
+        type: string
+      profile_id:
+        description: Required when conversation_id is set
+        type: string
+      type:
+        description: d4, d6, d8, d12, d20
+        type: string
+    required:
+    - type
+    type: object
+  main.DiceRollResponse:
+    properties:
+      conversation_id:
+        type: string
+      message_id:
+        description: Set when conversation_id was provided
+        type: string
+      result:
+        type: integer
+      type:
         type: string
     type: object
   main.LastMessageInfo:
@@ -35,16 +63,21 @@ definitions:
         type: string
       sent_at:
         type: string
+      type:
+        type: string
     type: object
   main.MessageCreate:
     properties:
       content:
         type: string
       sender_profile_id:
+        description: Required for user messages, omitted for system/event
+        type: string
+      type:
+        description: '"user" (default), "system", "event"'
         type: string
     required:
     - content
-    - sender_profile_id
     type: object
   main.MessageOut:
     properties:
@@ -57,6 +90,8 @@ definitions:
       sender_profile_id:
         type: string
       sent_at:
+        type: string
+      type:
         type: string
     type: object
 info:
@@ -169,7 +204,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Sends a message in a conversation. Sender must be a participant.
+      description: Sends a message in a conversation. For type "user" (default), sender
+        must be a participant. For type "system" or "event", admin authorization is
+        required and sender_profile_id is optional.
       parameters:
       - description: Conversation ID
         in: path
@@ -257,6 +294,50 @@ paths:
       summary: Health check
       tags:
       - health
+  /roll-dice:
+    post:
+      consumes:
+      - application/json
+      description: Rolls a die of the specified type. If conversation_id is provided,
+        posts the result as an event message to that conversation. The caller must
+        be a participant in the conversation.
+      parameters:
+      - description: Dice roll payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.DiceRollRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.DiceRollResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Roll dice
+      tags:
+      - dice
 securityDefinitions:
   BearerAuth:
     in: header

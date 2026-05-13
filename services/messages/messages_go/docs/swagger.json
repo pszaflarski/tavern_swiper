@@ -217,7 +217,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Sends a message in a conversation. Sender must be a participant.",
+                "description": "Sends a message in a conversation. For type \"user\" (default), sender must be a participant. For type \"system\" or \"event\", admin authorization is required and sender_profile_id is optional.",
                 "consumes": [
                     "application/json"
                 ],
@@ -305,6 +305,72 @@
                     }
                 }
             }
+        },
+        "/roll-dice": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Rolls a die of the specified type. If conversation_id is provided, posts the result as an event message to that conversation. The caller must be a participant in the conversation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dice"
+                ],
+                "summary": "Roll dice",
+                "parameters": [
+                    {
+                        "description": "Dice roll payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.DiceRollRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.DiceRollResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -344,7 +410,48 @@
                         "type": "string"
                     }
                 },
+                "unread": {
+                    "type": "boolean"
+                },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.DiceRollRequest": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "conversation_id": {
+                    "description": "Optional — if present, posts an event message",
+                    "type": "string"
+                },
+                "profile_id": {
+                    "description": "Required when conversation_id is set",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "d4, d6, d8, d12, d20",
+                    "type": "string"
+                }
+            }
+        },
+        "main.DiceRollResponse": {
+            "type": "object",
+            "properties": {
+                "conversation_id": {
+                    "type": "string"
+                },
+                "message_id": {
+                    "description": "Set when conversation_id was provided",
+                    "type": "string"
+                },
+                "result": {
+                    "type": "integer"
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -360,20 +467,27 @@
                 },
                 "sent_at": {
                     "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
         "main.MessageCreate": {
             "type": "object",
             "required": [
-                "content",
-                "sender_profile_id"
+                "content"
             ],
             "properties": {
                 "content": {
                     "type": "string"
                 },
                 "sender_profile_id": {
+                    "description": "Required for user messages, omitted for system/event",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"user\" (default), \"system\", \"event\"",
                     "type": "string"
                 }
             }
@@ -394,6 +508,9 @@
                     "type": "string"
                 },
                 "sent_at": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }

@@ -286,6 +286,7 @@ func handleSendMessage(c *gin.Context) {
 			pcID := fmt.Sprintf("%s_%s", pid, convID)
 			batch.Update(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), []firestore.Update{
 				{Path: "updated_at", Value: firestore.ServerTimestamp},
+				{Path: "unread", Value: pid != body.SenderProfileID},
 			})
 		}
 	}
@@ -348,6 +349,14 @@ func handleGetMessages(c *gin.Context) {
 		if !isParticipant && !IsAdmin(auth.Role) {
 			c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to read these messages"})
 			return
+		}
+		
+		if isParticipant {
+			// Implicit mark-as-read
+			pcID := fmt.Sprintf("%s_%s", callerProfile, convID)
+			client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID).Update(ctx, []firestore.Update{
+				{Path: "unread", Value: false},
+			})
 		}
 	}
 
@@ -429,9 +438,13 @@ func handleListConversations(c *gin.Context) {
 	}
 
 	convIDs := make([]string, 0, len(mappings))
+	unreadMap := make(map[string]bool)
 	for _, mDoc := range mappings {
 		if cid, ok := mDoc.Data()["conversation_id"].(string); ok && cid != "" {
 			convIDs = append(convIDs, cid)
+			if unread, ok := mDoc.Data()["unread"].(bool); ok {
+				unreadMap[cid] = unread
+			}
 		}
 	}
 
@@ -503,6 +516,7 @@ func handleListConversations(c *gin.Context) {
 			LastMessage:    lastMsg,
 			CreatedAt:      &createdAt,
 			UpdatedAt:      &updatedAt,
+			Unread:         unreadMap[convID],
 		})
 	}
 
@@ -709,6 +723,7 @@ func handleRollDice(c *gin.Context) {
 			pcID := fmt.Sprintf("%s_%s", pid, convID)
 			batch.Update(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), []firestore.Update{
 				{Path: "updated_at", Value: firestore.ServerTimestamp},
+				{Path: "unread", Value: pid != profileID},
 			})
 		}
 	}
