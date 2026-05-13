@@ -154,7 +154,7 @@ export default function MatchSplash() {
         </Animated.View>
 
         {/* Overlapping Cards — matched profile on top */}
-        <View style={[styles.cardsContainer, { height: CARD_H + Spacing[8] }]}>
+        <View style={[styles.cardsContainer]}>
           {/* Your Profile (behind, tilted left) */}
           <Animated.View style={[
             styles.card, 
@@ -202,7 +202,7 @@ export default function MatchSplash() {
         </View>
 
         {/* Actions */}
-        <Animated.View entering={ZoomIn.delay(1200)} style={styles.actions}>
+        <Animated.View entering={ZoomIn.delay(1200)} style={[styles.actions, { paddingBottom: insets.bottom + Spacing[4] }]}>
           <Pressable 
             style={({ pressed }) => [
               styles.primaryButton,

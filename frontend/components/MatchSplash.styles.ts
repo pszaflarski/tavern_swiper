@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingHorizontal: Spacing[6],
   },
   overlay: {
@@ -49,7 +49,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    marginBottom: Spacing[8],
+    flex: 1,
+    overflow: 'hidden',
   },
   card: {
     backgroundColor: Colors.surfaceContainer,
@@ -89,8 +90,14 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
   actions: {
-    width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing[6],
     gap: Spacing[2],
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingTop: Spacing[4],
   },
   primaryButton: {
     backgroundColor: Colors.primary,
