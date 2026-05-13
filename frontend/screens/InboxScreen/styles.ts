@@ -161,8 +161,8 @@ export const styles = StyleSheet.create({
   },
   profileUnreadDot: {
     position: 'absolute',
-    top: 4,
-    left: 4,
+    top: -2,
+    left: -2,
     width: 14,
     height: 14,
     borderRadius: 7,
