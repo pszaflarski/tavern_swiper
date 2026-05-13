@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
@@ -394,9 +395,117 @@ func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	if v, ok := data["state"].(string); ok {
 		b.State = v
 	}
+	if v, ok := data["profile_id"].(string); ok {
+		b.ProfileID = v
+	}
 	if v, ok := data["created_at"].(time.Time); ok {
 		b.CreatedAt = v
 	}
 
 	return b
+}
+
+// handleCreateBotProfile godoc
+// @Summary      Create a profile for a bot
+// @Description  Creates a profile via the profiles service using the bot's own credentials. Accepts public image URLs which are downloaded and re-uploaded.
+// @Tags         bots
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string           true  "Bot ID"
+// @Param        body  body      BotProfileCreate true  "Profile creation payload"
+// @Success      201   {object}  map[string]interface{}
+// @Failure      400   {object}  ErrorResponse
+// @Failure      403   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /{id}/profile [post]
+func handleCreateBotProfile(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		httpError(c, http.StatusForbidden, "Admin or root_admin required")
+		return
+	}
+
+	botID := c.Param("id")
+
+	var body BotProfileCreate
+	if err := c.ShouldBindJSON(&body); err != nil {
+		httpError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Database connection error")
+		return
+	}
+
+	doc, err := client.Collection(BOTS_COLLECTION).Doc(botID).Get(c.Request.Context())
+	if err != nil || !doc.Exists() {
+		httpError(c, http.StatusNotFound, "Bot not found")
+		return
+	}
+
+	botData := doc.Data()
+
+	passwordEnc, ok := botData["password_enc"].(string)
+	if !ok || len(passwordEnc) == 0 {
+		httpError(c, http.StatusInternalServerError, "Bot credentials corrupted")
+		return
+	}
+
+	email, _ := botData["email"].(string)
+
+	password, err := decryptPassword(c.Request.Context(), passwordEnc)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Failed to decrypt bot credentials")
+		return
+	}
+
+	jwtToken, _, err := loginAndVerify(email, password)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to login as bot: %v", err))
+		return
+	}
+
+	profResp, err := createBotProfile(jwtToken, body)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create profile: %v", err))
+		return
+	}
+
+	profileID, ok := profResp["profile_id"].(string)
+	if !ok || profileID == "" {
+		httpError(c, http.StatusInternalServerError, "Profile service returned invalid profile_id")
+		return
+	}
+
+	// Process images
+	for _, imgURL := range body.ImageLinks {
+		imgData, filename, err := downloadImage(imgURL)
+		if err != nil {
+			log.Printf("[WARN] Failed to download image %s for bot %s: %v", imgURL, botID, err)
+			continue
+		}
+
+		updatedProfResp, err := uploadImageToProfile(jwtToken, profileID, imgData, filename)
+		if err != nil {
+			log.Printf("[WARN] Failed to upload image %s for bot %s: %v", imgURL, botID, err)
+			continue
+		}
+
+		// Take the latest profile response which includes the new image URLs
+		profResp = updatedProfResp
+	}
+
+	// Update the bot's Firestore record with the new profileID
+	_, err = client.Collection(BOTS_COLLECTION).Doc(botID).Update(c.Request.Context(), []firestore.Update{
+		{Path: "profile_id", Value: profileID},
+	})
+	if err != nil {
+		log.Printf("[WARN] Failed to update bot %s with profile_id %s: %v", botID, profileID, err)
+	}
+
+	c.JSON(http.StatusCreated, profResp)
 }

@@ -1,7 +1,7 @@
 import pytest
 import httpx
 import uuid
-from helpers import get_root_admin, BOTS_URL, AUTH_URL
+from .helpers import get_root_admin, BOTS_URL, AUTH_URL
 
 @pytest.fixture
 async def root_admin():
@@ -63,3 +63,65 @@ async def test_bot_registration_and_creds_flow(root_admin):
         login_data = login_resp.json()
         assert "id_token" in login_data
         assert login_data["uid"] == bot_data["firebase_uid"]
+
+@pytest.mark.asyncio
+async def test_bot_profile_creation_with_image(root_admin):
+    """
+    Test the bot profile creation endpoint:
+    1. Register a bot
+    2. Create a profile for the bot using POST /bots/:id/profile with an image link
+    3. Verify the profile is created and image is processed
+    """
+    slug = f"profbot-{uuid.uuid4().hex[:6]}"
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # 1. Register Bot
+        reg_payload = {"slug": slug, "display_name": "Profile Bot"}
+        reg_resp = await client.post(
+            f"{BOTS_URL}/bots/",
+            headers={"Authorization": f"Bearer {root_admin['token']}"},
+            json=reg_payload
+        )
+        assert reg_resp.status_code == 201, f"Bot registration failed: {reg_resp.text}"
+        bot_id = reg_resp.json()["bot_id"]
+
+        # 2. Create Profile with Image Link
+        # Use a small reliable public image URL for the test (a Github raw asset from the repo itself)
+        public_image_url = "https://raw.githubusercontent.com/pszaflarski/tavern_swiper/main/frontend/assets/icon.png"
+        
+        profile_payload = {
+            "display_name": "Profile Bot's Real Name",
+            "bio": "I am a bot with an image.",
+            "tagline": "Beep boop",
+            "image_links": [public_image_url],
+            "gender": [],
+            "race": [],
+            "fandom": [],
+            "interests": [],
+            "events": [],
+            "looking_for": []
+        }
+        
+        prof_resp = await client.post(
+            f"{BOTS_URL}/bots/{bot_id}/profile",
+            headers={"Authorization": f"Bearer {root_admin['token']}"},
+            json=profile_payload
+        )
+        assert prof_resp.status_code == 201, f"Bot profile creation failed: {prof_resp.text}"
+        
+        profile_data = prof_resp.json()
+        assert profile_data["display_name"] == "Profile Bot's Real Name"
+        
+        # Verify the image was downloaded and uploaded (should have a GCS URL now)
+        assert "image_urls" in profile_data
+        assert len(profile_data["image_urls"]) > 0
+        assert "storage.googleapis.com" in profile_data["image_urls"][0]
+        
+        # Verify bot record was updated with profile_id
+        bot_resp = await client.get(
+            f"{BOTS_URL}/bots/{bot_id}",
+            headers={"Authorization": f"Bearer {root_admin['token']}"}
+        )
+        assert bot_resp.status_code == 200
+        bot_updated = bot_resp.json()
+        assert bot_updated.get("profile_id") == profile_data["profile_id"]

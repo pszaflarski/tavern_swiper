@@ -1,12 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/iterator"
 )
@@ -34,6 +38,7 @@ func setupTestRouter() *gin.Engine {
 	{
 		b.GET("/", handleListBots)
 		b.GET("/:id", handleGetBot)
+		b.POST("/:id/profile", handleCreateBotProfile)
 	}
 
 	return r
@@ -167,5 +172,146 @@ func TestGetBot_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Code)
+	}
+}
+
+func TestCreateBotProfile_BotNotFound(t *testing.T) {
+	r := setupTestRouter()
+
+	// Mock DB
+	originalDBFunc := getDBFunc
+	defer func() { getDBFunc = originalDBFunc }()
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{
+			collectionFunc: func(path string) FirestoreCollection {
+				return mockCollection{
+					docFunc: func(path string) FirestoreDocument {
+						return mockDoc{
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{exists: false}, nil
+							},
+						}
+					},
+				}
+			},
+		}, nil
+	}
+
+	w := httptest.NewRecorder()
+	// Must pass valid JSON to bypass ShouldBindJSON
+	req, _ := http.NewRequest("POST", "/bots/missing-id/profile", bytes.NewBuffer([]byte(`{"display_name": "Test"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Code)
+	}
+}
+
+func TestCreateBotProfile_Success(t *testing.T) {
+	// 1. Setup mock external server for auth, profiles, and image downloading
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" && r.URL.Path == "/test-image.jpg" {
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.Write([]byte("fake-image-bytes"))
+			return
+		}
+
+		if r.Method == "POST" && r.URL.Path == "/auth/login" {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"id_token": "fake-id-token", "uid": "fake-uid"}`))
+			return
+		}
+
+		if r.Method == "POST" && r.URL.Path == "/auth/verify" {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"token": "fake-jwt"}`))
+			return
+		}
+
+		if r.Method == "POST" && r.URL.Path == "/profiles/" {
+			w.Header().Set("Content-Type", "application/json")
+			// Return a profile_id
+			w.Write([]byte(`{"profile_id": "test-profile-id", "display_name": "Test Bot"}`))
+			return
+		}
+
+		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/profiles/test-profile-id/image") {
+			w.Header().Set("Content-Type", "application/json")
+			// Return updated profile
+			w.Write([]byte(`{"profile_id": "test-profile-id", "display_name": "Test Bot", "image_urls": ["http://fake.url/image.jpg"]}`))
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	// 2. Set up serviceURLs and KMS fallback
+	os.Setenv("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
+	serviceURLs.mu.Lock()
+	serviceURLs.urls["auth"] = mockServer.URL
+	serviceURLs.urls["profiles"] = mockServer.URL
+	serviceURLs.mu.Unlock()
+
+	r := setupTestRouter()
+
+	// 3. Mock DB
+	originalDBFunc := getDBFunc
+	defer func() { getDBFunc = originalDBFunc }()
+
+	var updatedProfileID string
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{
+			collectionFunc: func(path string) FirestoreCollection {
+				return mockCollection{
+					docFunc: func(path string) FirestoreDocument {
+						return mockDoc{
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									data: map[string]interface{}{
+										"slug":         "testbot",
+										"email":        "testbot@test.com",
+										// Base64 of "password123"
+										"password_enc": "cGFzc3dvcmQxMjM=",
+									},
+								}, nil
+							},
+							updateFunc: func(ctx context.Context, updates []firestore.Update, preconds ...firestore.Precondition) (*firestore.WriteResult, error) {
+								for _, u := range updates {
+									if u.Path == "profile_id" {
+										updatedProfileID = u.Value.(string)
+									}
+								}
+								return nil, nil
+							},
+						}
+					},
+				}
+			},
+		}, nil
+	}
+
+	w := httptest.NewRecorder()
+	
+	payload := BotProfileCreate{
+		DisplayName: "Test Bot",
+		ImageLinks:  []string{mockServer.URL + "/test-image.jpg"},
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", "/bots/valid-id/profile", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if updatedProfileID != "test-profile-id" {
+		t.Errorf("Expected bot's profile_id to be updated to 'test-profile-id', got '%s'", updatedProfileID)
 	}
 }

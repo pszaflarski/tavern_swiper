@@ -25,10 +25,61 @@ definitions:
         type: string
       firebase_uid:
         type: string
+      profile_id:
+        type: string
       slug:
         type: string
       state:
         type: string
+    type: object
+  main.BotProfileCreate:
+    properties:
+      age:
+        type: integer
+      bio:
+        type: string
+      display_name:
+        type: string
+      events:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      fandom:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      gender:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      image_links:
+        items:
+          type: string
+        type: array
+      interests:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      is_oc:
+        type: boolean
+      looking_for:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      other_tags:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/main.ProfileTag'
+          type: array
+        type: object
+      race:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
+      tagline:
+        type: string
+    required:
+    - display_name
     type: object
   main.CredsResponse:
     properties:
@@ -46,6 +97,19 @@ definitions:
   main.HealthResponse:
     properties:
       service:
+        type: string
+      status:
+        type: string
+    type: object
+  main.ProfileTag:
+    properties:
+      category:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      slug:
         type: string
       status:
         type: string
@@ -216,6 +280,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Get bot credentials
+      tags:
+      - bots
+  /{id}/profile:
+    post:
+      consumes:
+      - application/json
+      description: Creates a profile via the profiles service using the bot's own
+        credentials. Accepts public image URLs which are downloaded and re-uploaded.
+      parameters:
+      - description: Bot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Profile creation payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.BotProfileCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a profile for a bot
       tags:
       - bots
   /all:

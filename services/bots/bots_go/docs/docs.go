@@ -314,6 +314,77 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/{id}/profile": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a profile via the profiles service using the bot's own credentials. Accepts public image URLs which are downloaded and re-uploaded.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bots"
+                ],
+                "summary": "Create a profile for a bot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Profile creation payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.BotProfileCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -355,10 +426,87 @@ const docTemplate = `{
                 "firebase_uid": {
                     "type": "string"
                 },
+                "profile_id": {
+                    "type": "string"
+                },
                 "slug": {
                     "type": "string"
                 },
                 "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.BotProfileCreate": {
+            "type": "object",
+            "required": [
+                "display_name"
+            ],
+            "properties": {
+                "age": {
+                    "type": "integer"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "gender": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "image_links": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "interests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "is_oc": {
+                    "type": "boolean"
+                },
+                "looking_for": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "other_tags": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/main.ProfileTag"
+                        }
+                    }
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
+                },
+                "tagline": {
                     "type": "string"
                 }
             }
@@ -387,6 +535,26 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "service": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.ProfileTag": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
                     "type": "string"
                 },
                 "status": {

@@ -21,7 +21,32 @@ type BotOut struct {
 	FirebaseUID string    `json:"firebase_uid"`
 	Email       string    `json:"email"`
 	State       string    `json:"state"`
+	ProfileID   string    `json:"profile_id,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type ProfileTag struct {
+	ID       string `json:"id"`
+	Category string `json:"category"`
+	Name     string `json:"name"`
+	Slug     string `json:"slug"`
+	Status   string `json:"status"`
+}
+
+type BotProfileCreate struct {
+	DisplayName string                  `json:"display_name" binding:"required"`
+	Tagline     *string                 `json:"tagline"`
+	Bio         *string                 `json:"bio"`
+	Age         *int                    `json:"age"`
+	IsOC        *bool                   `json:"is_oc"`
+	ImageLinks  []string                `json:"image_links"`
+	Gender      []ProfileTag            `json:"gender"`
+	Race        []ProfileTag            `json:"race"`
+	Fandom      []ProfileTag            `json:"fandom"`
+	Interests   []ProfileTag            `json:"interests"`
+	Events      []ProfileTag            `json:"events"`
+	LookingFor  []ProfileTag            `json:"looking_for"`
+	OtherTags   map[string][]ProfileTag `json:"other_tags"`
 }
 
 type CredsResponse struct {

@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"net/url"
+	"path"
+	"strings"
 	"time"
 )
 
@@ -113,13 +117,24 @@ func initUserRecord(jwtToken string) error {
 	return nil
 }
 
-func createProfile(jwtToken string, botReq BotCreate) (string, error) {
+func createBotProfile(jwtToken string, botReq BotProfileCreate) (map[string]interface{}, error) {
 	profilesURL := serviceURLs.Get("profiles")
+
 	payload := map[string]interface{}{
 		"display_name": botReq.DisplayName,
-		"bio":          botReq.Bio,
 		"tagline":      botReq.Tagline,
+		"bio":          botReq.Bio,
+		"age":          botReq.Age,
+		"is_oc":        botReq.IsOC,
+		"gender":       botReq.Gender,
+		"race":         botReq.Race,
+		"fandom":       botReq.Fandom,
+		"interests":    botReq.Interests,
+		"events":       botReq.Events,
+		"looking_for":  botReq.LookingFor,
+		"other_tags":   botReq.OtherTags,
 	}
+
 	body, _ := json.Marshal(payload)
 
 	req, _ := http.NewRequest("POST", profilesURL+"/profiles/", bytes.NewBuffer(body))
@@ -128,19 +143,93 @@ func createProfile(jwtToken string, botReq BotCreate) (string, error) {
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to call /profiles/: %w", err)
+		return nil, fmt.Errorf("failed to call /profiles/: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("profile creation failed (HTTP %d): %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("profile creation failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
-	var profResp struct {
-		ProfileID string `json:"profile_id"`
-	}
+	var profResp map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&profResp)
 
-	return profResp.ProfileID, nil
+	return profResp, nil
+}
+
+func uploadImageToProfile(jwtToken, profileID string, imageData []byte, filename string) (map[string]interface{}, error) {
+	profilesURL := serviceURLs.Get("profiles")
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create form file: %w", err)
+	}
+	part.Write(imageData)
+	writer.Close()
+
+	req, _ := http.NewRequest("POST", profilesURL+"/profiles/"+profileID+"/image", body)
+	req.Header.Set("Authorization", "Bearer "+jwtToken)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call /profiles/:id/image: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("image upload failed (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var profResp map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&profResp)
+
+	return profResp, nil
+}
+
+func downloadImage(imageURL string) ([]byte, string, error) {
+	// 30 second timeout per download
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	req, err := http.NewRequest("GET", imageURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("invalid URL: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("download failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, "", fmt.Errorf("download failed (HTTP %d)", resp.StatusCode)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "image/") {
+		return nil, "", fmt.Errorf("invalid content type: %s", contentType)
+	}
+
+	// Extract filename from URL
+	parsedURL, err := url.Parse(imageURL)
+	filename := "image.jpg"
+	if err == nil {
+		base := path.Base(parsedURL.Path)
+		if base != "" && base != "." && base != "/" {
+			filename = base
+		}
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return data, filename, nil
 }
