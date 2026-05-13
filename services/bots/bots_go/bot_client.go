@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/draw"
 	"image/jpeg"
 	_ "image/png" // Register PNG decoder
 	"io"
@@ -14,6 +15,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	xdraw "golang.org/x/image/draw"
 )
 
 var httpClient = &http.Client{Timeout: 15 * time.Second}
@@ -225,6 +228,10 @@ func downloadImage(imageURL string) ([]byte, string, error) {
 		return nil, "", fmt.Errorf("failed to decode image: %w", err)
 	}
 
+	// Resize to 1080x1350 (profiles service required dimensions)
+	const targetW, targetH = 1080, 1350
+	img = resizeAndCrop(img, targetW, targetH)
+
 	// Re-encode as JPEG (profiles service requires JPEG magic bytes)
 	var buf bytes.Buffer
 	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90}); err != nil {
@@ -247,4 +254,50 @@ func downloadImage(imageURL string) ([]byte, string, error) {
 	}
 
 	return buf.Bytes(), filename, nil
+}
+
+// resizeAndCrop center-crops the source image to the target aspect ratio,
+// then scales it to exactly targetW x targetH using high-quality interpolation.
+func resizeAndCrop(src image.Image, targetW, targetH int) image.Image {
+	srcBounds := src.Bounds()
+	srcW := srcBounds.Dx()
+	srcH := srcBounds.Dy()
+
+	// Calculate crop rectangle to match target aspect ratio
+	targetRatio := float64(targetW) / float64(targetH)
+	srcRatio := float64(srcW) / float64(srcH)
+
+	var cropRect image.Rectangle
+	if srcRatio > targetRatio {
+		// Source is wider — crop sides
+		newW := int(float64(srcH) * targetRatio)
+		offset := (srcW - newW) / 2
+		cropRect = image.Rect(srcBounds.Min.X+offset, srcBounds.Min.Y, srcBounds.Min.X+offset+newW, srcBounds.Max.Y)
+	} else {
+		// Source is taller — crop top/bottom
+		newH := int(float64(srcW) / targetRatio)
+		offset := (srcH - newH) / 2
+		cropRect = image.Rect(srcBounds.Min.X, srcBounds.Min.Y+offset, srcBounds.Max.X, srcBounds.Min.Y+offset+newH)
+	}
+
+	// Crop by creating a sub-image
+	type subImager interface {
+		SubImage(r image.Rectangle) image.Image
+	}
+
+	cropped := src
+	if si, ok := src.(subImager); ok {
+		cropped = si.SubImage(cropRect)
+	} else {
+		// Fallback: draw the crop manually
+		tmp := image.NewRGBA(image.Rect(0, 0, cropRect.Dx(), cropRect.Dy()))
+		draw.Draw(tmp, tmp.Bounds(), src, cropRect.Min, draw.Src)
+		cropped = tmp
+	}
+
+	// Scale to target dimensions using Lanczos3
+	dst := image.NewRGBA(image.Rect(0, 0, targetW, targetH))
+	xdraw.CatmullRom.Scale(dst, dst.Bounds(), cropped, cropped.Bounds(), xdraw.Over, nil)
+
+	return dst
 }
