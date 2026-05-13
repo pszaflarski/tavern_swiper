@@ -298,7 +298,7 @@ function ConversationScreenInner() {
             value={messageText}
             onChangeText={setMessageText}
             multiline
-            maxLength={500}
+            maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
             testID="message-input"
           />
           <Pressable

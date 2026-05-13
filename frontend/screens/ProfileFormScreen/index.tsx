@@ -302,6 +302,7 @@ export default function CreateAndEditProfileScreen() {
             onChangeText={setTagline}
             placeholder="e.g. Keeper of the Ancient Light"
             placeholderTextColor={Colors.surfaceVariant}
+            maxLength={PROFILE.MAX_TAGLINE_LENGTH}
           />
         </View>
 
@@ -379,7 +380,7 @@ export default function CreateAndEditProfileScreen() {
             placeholder="e.g. 25"
             placeholderTextColor={Colors.surfaceVariant}
             keyboardType="number-pad"
-            maxLength={3}
+            maxLength={10}
             testID="profile-age-input"
           />
         </View>

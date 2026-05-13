@@ -483,6 +483,10 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error()})
 		return
 	}
+	if err := validateDataForFirestore(body); err != nil {
+		send400(c, err.Error())
+		return
+	}
 
 	auth := GetAuth(c)
 	client, err := getDBFunc(c.Request.Context())
@@ -1010,8 +1014,27 @@ func validateDataForFirestore(v interface{}) error {
 		if body.Bio != nil && len(*body.Bio) > MAX_STRING_LENGTH {
 			return fmt.Errorf("String at path 'bio' is too long (%d chars). Max is %d. (Likely unintended base64 image data).", len(*body.Bio), MAX_STRING_LENGTH)
 		}
+		if body.Tagline != nil && len(*body.Tagline) > 140 {
+			return fmt.Errorf("String at path 'tagline' is too long (%d chars). Max is 140.", len(*body.Tagline))
+		}
+		if body.Age != nil && (*body.Age < 0 || *body.Age > 9999999999) {
+			return fmt.Errorf("Age must be between 0 and 9,999,999,999.")
+		}
 		if len(body.ImageURLs) > MAX_ARRAY_LENGTH {
 			return fmt.Errorf("Array at path 'image_urls' is too large (%d items). Max is %d.", len(body.ImageURLs), MAX_ARRAY_LENGTH)
+		}
+	} else if body, ok := v.(ProfileUpdate); ok {
+		if body.Bio != nil && len(*body.Bio) > MAX_STRING_LENGTH {
+			return fmt.Errorf("String at path 'bio' is too long (%d chars). Max is %d.", len(*body.Bio), MAX_STRING_LENGTH)
+		}
+		if body.Tagline != nil && len(*body.Tagline) > 140 {
+			return fmt.Errorf("String at path 'tagline' is too long (%d chars). Max is 140.", len(*body.Tagline))
+		}
+		if body.Age != nil && (*body.Age < 0 || *body.Age > 9999999999) {
+			return fmt.Errorf("Age must be between 0 and 9,999,999,999.")
+		}
+		if body.ImageURLs != nil && len(*body.ImageURLs) > MAX_ARRAY_LENGTH {
+			return fmt.Errorf("Array at path 'image_urls' is too large (%d items). Max is %d.", len(*body.ImageURLs), MAX_ARRAY_LENGTH)
 		}
 	}
 	return nil
