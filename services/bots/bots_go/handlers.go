@@ -127,9 +127,6 @@ func handleRegisterBot(c *gin.Context) {
 	if body.BehaviorType != "" {
 		botData["behavior_type"] = body.BehaviorType
 	}
-	if body.Config != nil {
-		botData["config"] = body.Config
-	}
 
 	_, err = db.Collection(BOTS_COLLECTION).Doc(botID).Set(ctx, botData)
 	if err != nil {
@@ -145,7 +142,6 @@ func handleRegisterBot(c *gin.Context) {
 		FirebaseUID:  firebaseUID,
 		Email:        email,
 		BehaviorType: body.BehaviorType,
-		Config:       body.Config,
 		State:       "active",
 		CreatedAt:   now,
 	})
@@ -408,9 +404,6 @@ func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	}
 	if v, ok := data["behavior_type"].(string); ok {
 		b.BehaviorType = v
-	}
-	if v, ok := data["config"].(map[string]interface{}); ok {
-		b.Config = v
 	}
 	if v, ok := data["created_at"].(time.Time); ok {
 		b.CreatedAt = v

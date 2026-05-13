@@ -5,27 +5,25 @@ import "time"
 // Request Models
 
 type BotCreate struct {
-	Slug         string                 `json:"slug" binding:"required"`
-	DisplayName  string                 `json:"display_name,omitempty"`
-	Bio          string                 `json:"bio,omitempty"`
-	Tagline      string                 `json:"tagline,omitempty"`
-	BehaviorType string                 `json:"behavior_type,omitempty"` // e.g. "tavern_keeper", "quest_giver"
-	Config       map[string]interface{} `json:"config,omitempty"`         // Per-instance behavior tuning knobs
+	Slug         string `json:"slug" binding:"required"`
+	DisplayName  string `json:"display_name,omitempty"`
+	Bio          string `json:"bio,omitempty"`
+	Tagline      string `json:"tagline,omitempty"`
+	BehaviorType string `json:"behavior_type,omitempty"` // e.g. "tavern_keeper", "quest_giver"
 }
 
 // Response Models
 
 type BotOut struct {
-	BotID        string                 `json:"bot_id"`
-	Slug         string                 `json:"slug"`
-	DisplayName  string                 `json:"display_name,omitempty"`
-	FirebaseUID  string                 `json:"firebase_uid"`
-	Email        string                 `json:"email"`
-	State        string                 `json:"state"`
-	ProfileID    string                 `json:"profile_id,omitempty"`
-	BehaviorType string                 `json:"behavior_type,omitempty"`
-	Config       map[string]interface{} `json:"config,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
+	BotID        string    `json:"bot_id"`
+	Slug         string    `json:"slug"`
+	DisplayName  string    `json:"display_name,omitempty"`
+	FirebaseUID  string    `json:"firebase_uid"`
+	Email        string    `json:"email"`
+	State        string    `json:"state"`
+	ProfileID    string    `json:"profile_id,omitempty"`
+	BehaviorType string    `json:"behavior_type,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type ProfileTag struct {

@@ -401,11 +401,6 @@ const docTemplate = `{
                 "bio": {
                     "type": "string"
                 },
-                "config": {
-                    "description": "Per-instance behavior tuning knobs",
-                    "type": "object",
-                    "additionalProperties": true
-                },
                 "display_name": {
                     "type": "string"
                 },
@@ -425,10 +420,6 @@ const docTemplate = `{
                 },
                 "bot_id": {
                     "type": "string"
-                },
-                "config": {
-                    "type": "object",
-                    "additionalProperties": true
                 },
                 "created_at": {
                     "type": "string"
