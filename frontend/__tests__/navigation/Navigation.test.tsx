@@ -21,6 +21,13 @@ jest.mock('expo-router', () => ({
   useSegments: () => [],
 }));
 
+jest.mock('../../hooks/useUnreadStatus', () => ({
+  useUnreadStatus: jest.fn(() => ({
+    hasAnyUnread: false,
+    unreadByProfile: {},
+  })),
+}));
+
 describe('Tab Navigation Bar', () => {
   it('renders all tab buttons with correct test IDs and target routes', () => {
     const { getByTestId, getByText } = render(<TabLayout />);

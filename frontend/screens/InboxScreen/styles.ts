@@ -145,4 +145,22 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.outline,
   },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.error,
+    marginRight: Spacing[4],
+  },
+  profileUnreadDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.error,
+    borderWidth: 2,
+    borderColor: Colors.surfaceContainerLowest,
+  },
 });

@@ -23,6 +23,7 @@ export interface Conversation {
   last_message?: LastMessageInfo;
   created_at?: string;
   updated_at?: string;
+  unread?: boolean;
 }
 
 export interface Message {
@@ -85,12 +86,13 @@ export function useConversations(profileId: string | undefined) {
  * Hook to fetch messages for a specific conversation.
  * @param pausePolling When true, suppresses the 5s polling interval (e.g. during dice animations).
  */
-export function useConversationMessages(conversationId: string | undefined, pausePolling: boolean = false) {
+export function useConversationMessages(conversationId: string | undefined, profileId: string | undefined, pausePolling: boolean = false) {
   return useQuery<Message[]>({
-    queryKey: ['messages', conversationId],
+    queryKey: ['messages', conversationId, profileId],
     queryFn: async () => {
       if (!conversationId) return [];
-      const res = await messagesApi.get(`/messages/conversations/${conversationId}/messages`);
+      const profileParam = profileId ? `?profile_id=${profileId}` : '';
+      const res = await messagesApi.get(`/messages/conversations/${conversationId}/messages${profileParam}`);
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!conversationId,

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, DiceRollResult } from '../../hooks/useMessages';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
@@ -55,12 +56,22 @@ function ConversationScreenInner() {
   // Get messages
   const { data: messages = [], isLoading: isLoadingMessages } = useConversationMessages(
     conversationId,
+    activeProfileId,
     // Pause polling while the dice animation is playing to prevent the
     // event message from appearing before the roll finishes.
     rollingDie !== null,
   );
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { mutateAsync: rollDice, invalidateAfterRoll } = useRollDice();
+  const queryClient = useQueryClient();
+
+  // Invalidate conversations cache when exiting — the backend just marked
+  // this conversation as read, so the inbox dots need to update.
+  useEffect(() => {
+    return () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    };
+  }, [queryClient]);
 
   const handleSend = useCallback(() => {
     if (!messageText.trim() || !activeProfileId || !conversationId) return;

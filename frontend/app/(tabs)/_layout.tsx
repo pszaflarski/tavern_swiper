@@ -1,9 +1,13 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../../theme';
+import { useUnreadStatus } from '../../hooks/useUnreadStatus';
 
 export default function TabLayout() {
+  const { hasAnyUnread } = useUnreadStatus();
+
   return (
     <Tabs
       {...{ sceneContainerStyle: { backgroundColor: Colors.background } } as any}
@@ -56,11 +60,24 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'chatbubble' : 'chatbubble-outline'} 
-              size={24} 
-              color={color} 
-            />
+            <View>
+              <Ionicons 
+                name={focused ? 'chatbubble' : 'chatbubble-outline'} 
+                size={24} 
+                color={color} 
+              />
+              {hasAnyUnread && (
+                <View style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: Colors.error,
+                }} />
+              )}
+            </View>
           ),
           tabBarButtonTestID: 'tab-bar-messages',
         }}

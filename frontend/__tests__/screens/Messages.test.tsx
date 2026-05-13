@@ -26,6 +26,13 @@ jest.mock('../../hooks/useMessages', () => ({
   })),
 }));
 
+jest.mock('../../hooks/useUnreadStatus', () => ({
+  useUnreadStatus: jest.fn(() => ({
+    hasAnyUnread: false,
+    unreadByProfile: {},
+  })),
+}));
+
 describe('Messages Screen', () => {
   const mockMyProfiles = [
     {

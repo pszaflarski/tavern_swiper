@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import { styles } from './styles';
+import { useUnreadStatus } from '../../hooks/useUnreadStatus';
 
 function MessagesScreenInner() {
   const router = useRouter();
@@ -19,6 +20,7 @@ function MessagesScreenInner() {
   const { data: myProfiles = [], isLoading: isLoadingMyProfiles, refetch: refetchProfiles } = useProfiles(uid);
   const { newMatches, inbox, isLoading: isLoadingContent, refetch: refetchMatches } = useInvolvedMatches(activeProfileId);
   const { mutate: createConversation } = useCreateConversation();
+  const { unreadByProfile } = useUnreadStatus();
 
   useRefreshOnFocus(React.useCallback(() => {
     refetchProfiles();
@@ -83,6 +85,9 @@ function MessagesScreenInner() {
                       {profile.display_name}
                     </Text>
                   </View>
+                  {unreadByProfile[profile.profile_id] && (
+                    <View style={styles.profileUnreadDot} />
+                  )}
                 </Pressable>
               ))}
                {(!myProfiles || myProfiles.length === 0) && (
@@ -156,6 +161,7 @@ function MessagesScreenInner() {
                         {convo.last_message?.content}
                       </Text>
                     </View>
+                    {convo.unread && <View style={styles.unreadDot} />}
                   </View>
                 </Pressable>
               ))}
