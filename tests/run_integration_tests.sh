@@ -98,7 +98,7 @@ else
         export BOTS_URL=$(echo "$ROUTES" | jq -r '.services.bots // empty')
     else
         echo "  ⚠️  Router empty or unreachable. Falling back to slow gcloud discovery..."
-        SERVICES=("auth" "users" "profiles" "discovery" "messages")
+        SERVICES=("auth" "users" "profiles" "discovery" "messages" "bots")
         for SERVICE in "${SERVICES[@]}"; do
             DEPLOY_NAME="${SERVICE}-${ENV_NAME}"
             URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
