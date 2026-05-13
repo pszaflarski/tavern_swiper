@@ -150,18 +150,20 @@ function MessagesScreenInner() {
                   onPress={() => handleConversationPress(convo.id)}
                 >
                   <View style={styles.inboxContent}>
-                    {convo.otherProfile?.image_urls?.[0] ? (
-                      <Image source={{ uri: convo.otherProfile.image_urls[0] }} style={styles.inboxBanner} resizeMode="cover" />
-                    ) : (
-                      <AvatarFallback size={56} style={styles.inboxBanner} />
-                    )}
+                    <View style={styles.inboxAvatarContainer}>
+                      {convo.otherProfile?.image_urls?.[0] ? (
+                        <Image source={{ uri: convo.otherProfile.image_urls[0] }} style={styles.inboxBanner} resizeMode="cover" />
+                      ) : (
+                        <AvatarFallback size={56} style={styles.inboxBanner} />
+                      )}
+                      {convo.unread && <View style={styles.unreadDot} />}
+                    </View>
                     <View style={styles.inboxTextContainer}>
                       <Text style={styles.inboxName}>{convo.otherProfile?.display_name || 'Traveler'}</Text>
                       <Text style={styles.inboxLastMessage} numberOfLines={1}>
                         {convo.last_message?.content}
                       </Text>
                     </View>
-                    {convo.unread && <View style={styles.unreadDot} />}
                   </View>
                 </Pressable>
               ))}

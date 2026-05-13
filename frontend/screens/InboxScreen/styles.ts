@@ -146,11 +146,18 @@ export const styles = StyleSheet.create({
     color: Colors.outline,
   },
   unreadDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: Colors.error,
-    marginRight: Spacing[4],
+    borderWidth: 2,
+    borderColor: Colors.surfaceContainerLow,
+  },
+  inboxAvatarContainer: {
+    position: 'relative',
   },
   profileUnreadDot: {
     position: 'absolute',
