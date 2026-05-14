@@ -27,18 +27,12 @@ steps:
       - |
         echo "🚀 Deploying $_SERVICE_NAME$_ENV_SUFFIX to $_ENV_NAME environment as a Cloud Run service..."
 
-        if [ "$_ENV_NAME" = "prod" ]; then
-          export BOTS_SERVICE_URL="https://bots-prod-df3srduaua-uc.a.run.app"
-        else
-          export BOTS_SERVICE_URL="https://bots$_ENV_SUFFIX-hhqol7siba-uc.a.run.app"
-        fi
-
         gcloud run deploy $_SERVICE_NAME$_ENV_SUFFIX \
           --image=gcr.io/$PROJECT_ID/$_SERVICE_NAME:$SHORT_SHA \
           --region=us-central1 \
           --no-allow-unauthenticated \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,BOTS_SERVICE_URL=$BOTS_SERVICE_URL \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG \
           --cpu-boost \
           --memory=512Mi \
           --execution-environment=gen1 \

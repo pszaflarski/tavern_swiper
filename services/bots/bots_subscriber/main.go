@@ -31,6 +31,10 @@ func getEnv(key, fallback string) string {
 
 func main() {
 	port := getEnv("PORT", "8080")
+
+	// Discover service URLs from the router at boot
+	initServiceURLs()
+
 	r := gin.Default()
 
 	// Health check
@@ -94,27 +98,27 @@ func processEvent(event *pb.ProfileEvent) error {
 	log.Printf("📥 Processing ProfileEvent type: %s", event.Type)
 
 	var trigger string
-	context := make(map[string]interface{})
+	eventCtx := make(map[string]interface{})
 
 	switch event.Type {
 	case pb.ProfileEvent_UPSERTED:
 		p := event.GetUpserted()
 		trigger = "profile_created" // using profile_created for upserts currently
-		context["profile_id"] = p.ProfileId
-		context["user_id"] = p.UserId
-		context["display_name"] = p.DisplayName
+		eventCtx["profile_id"] = p.ProfileId
+		eventCtx["user_id"] = p.UserId
+		eventCtx["display_name"] = p.DisplayName
 		log.Printf("✨ [UPSERTED] ProfileID: %s", p.ProfileId)
 
 	case pb.ProfileEvent_DELETED:
 		p := event.GetDeleted()
 		trigger = "profile_deleted"
-		context["profile_id"] = p.ProfileId
+		eventCtx["profile_id"] = p.ProfileId
 		log.Printf("🗑️ [DELETED] ProfileID: %s", p.ProfileId)
 
 	case pb.ProfileEvent_ALL_DELETED:
 		a := event.GetAllDeleted()
 		trigger = "all_profiles_deleted"
-		context["admin_user_id"] = a.AdminUserId
+		eventCtx["admin_user_id"] = a.AdminUserId
 		log.Printf("🚨 [ALL_DELETED] AdminUserID: %s", a.AdminUserId)
 
 	default:
@@ -124,17 +128,16 @@ func processEvent(event *pb.ProfileEvent) error {
 
 	reqPayload := BehaviorTriggerRequest{
 		Trigger: trigger,
-		Context: context,
+		Context: eventCtx,
 	}
 
 	return callBotsService(reqPayload)
 }
 
 func callBotsService(payload BehaviorTriggerRequest) error {
-	baseURL := os.Getenv("BOTS_SERVICE_URL")
+	baseURL := serviceURLs.Get("bots")
 	if baseURL == "" {
-		// In test environments, this might be empty and we just log
-		log.Printf("⚠️ BOTS_SERVICE_URL not set, skipping relay")
+		log.Printf("⚠️ Bots service URL not resolved from router, skipping relay")
 		return nil
 	}
 

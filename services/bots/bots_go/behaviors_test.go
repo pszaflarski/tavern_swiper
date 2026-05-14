@@ -20,6 +20,9 @@ func TestHandleBehaviorTrigger_Success(t *testing.T) {
 			return mockCollection{
 				docFunc: func(id string) FirestoreDocument {
 					return mockDoc{
+						getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+							return mockSnapshot{exists: false}, nil
+						},
 						setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
 							return &firestore.WriteResult{}, nil
 						},
@@ -34,7 +37,6 @@ func TestHandleBehaviorTrigger_Success(t *testing.T) {
 	router := setupTestRouter()
 
 	reqPayload := BehaviorTriggerRequest{
-		BehaviorType: "tavern_keeper",
 		Trigger:      "profile_created",
 		Context: map[string]interface{}{
 			"profile_id": "test-prof-123",
@@ -51,5 +53,40 @@ func TestHandleBehaviorTrigger_Success(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandleBehaviorTrigger_InvalidJSON(t *testing.T) {
+	router := setupTestRouter()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/bots/behaviors/trigger", bytes.NewBuffer([]byte("{invalid-json}")))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestHandleBehaviorTrigger_DBError(t *testing.T) {
+	originalDBFunc := getDBFunc
+	defer func() { getDBFunc = originalDBFunc }()
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return nil, context.DeadlineExceeded // simulate DB error
+	}
+	router := setupTestRouter()
+
+	reqPayload := BehaviorTriggerRequest{Trigger: "profile_created", Context: map[string]interface{}{}}
+	body, _ := json.Marshal(reqPayload)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/bots/behaviors/trigger", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", w.Code)
 	}
 }

@@ -56,10 +56,20 @@ func handleBehaviorTrigger(c *gin.Context) {
 		CreatedAt:    time.Now().UTC(),
 	}
 
-	_, err = client.Collection("bot_events").Doc(eventID).Set(ctx, event)
+	docRef := client.Collection("bot_events").Doc(eventID)
+	doc, err := docRef.Get(ctx)
+	if err == nil && doc.Exists() {
+		// Event already received/processed, skip to ensure idempotency
+		log.Printf("[INFO] Event %s already exists, skipping", eventID)
+		c.JSON(http.StatusOK, BehaviorTriggerResponse{Triggered: 0, Details: []string{"Already processed"}})
+		return
+	}
+
+	_, err = docRef.Set(ctx, event)
 	if err != nil {
 		log.Printf("[ERROR] handleBehaviorTrigger - Failed to save event log: %v", err)
-		// We'll proceed even if logging fails, but it's good to note.
+		httpError(c, http.StatusInternalServerError, "Failed to save event log")
+		return
 	}
 
 	// 3. Query profiles that match this behavior type (if specified) or all active bot profiles.
@@ -70,12 +80,17 @@ func handleBehaviorTrigger(c *gin.Context) {
 	var details []string
 	triggeredCount := 0
 
-	// Mocking the query for now to demonstrate groundwork
-	log.Printf("[INFO] Triggering %s for behavior: %s", req.Trigger, req.BehaviorType)
+	log.Printf("[INFO] Triggering %s", req.Trigger)
 
-	if req.BehaviorType == "tavern_keeper" && req.Trigger == "profile_created" {
+	// In Phase 3, we will query the bot_profiles collection:
+	// iter := client.Collection("bot_profiles").Where("behavior_type", "!=", "").Documents(ctx)
+	// ... iterate and map behaviors
+	// For now, simulate finding a tavern keeper:
+
+	if req.Trigger == "profile_created" {
 		profileID, ok := req.Context["profile_id"].(string)
 		if ok {
+			// Simulating querying a profile with behavior_type = "tavern_keeper"
 			msg := fmt.Sprintf("Would trigger tavern_keeper greeting for profile: %s", profileID)
 			details = append(details, msg)
 			triggeredCount++
