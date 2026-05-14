@@ -39,6 +39,7 @@ func setupTestRouter() *gin.Engine {
 		b.GET("/", handleListBots)
 		b.GET("/:id", handleGetBot)
 		b.POST("/:id/profile", handleCreateBotProfile)
+		b.PATCH("/:id/profiles/:profile_id", handleUpdateBotProfile)
 	}
 
 	return r
@@ -325,5 +326,86 @@ func TestCreateBotProfile_Success(t *testing.T) {
 		if savedBotProfileData["behavior_type"] != "tavern_keeper" {
 			t.Errorf("Expected behavior_type 'tavern_keeper', got '%v'", savedBotProfileData["behavior_type"])
 		}
+	}
+}
+
+func TestUpdateBotProfile_Success(t *testing.T) {
+	r := setupTestRouter()
+
+	originalDBFunc := getDBFunc
+	defer func() { getDBFunc = originalDBFunc }()
+
+	var updatedFields []firestore.Update
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &mockClient{
+			collectionFunc: func(path string) FirestoreCollection {
+				return mockCollection{
+					docFunc: func(docPath string) FirestoreDocument {
+						return mockDoc{
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								if path == BOT_USERS_COLLECTION {
+									return mockSnapshot{
+										exists: true,
+										data: map[string]interface{}{
+											"slug":  "barkeep",
+											"email": "bot-barkeep@bots.tavernswiper.internal",
+										},
+									}, nil
+								}
+								// bot_profiles collection
+								return mockSnapshot{
+									id:     "bp-123",
+									exists: true,
+									data: map[string]interface{}{
+										"bot_user_id":   "bot-1",
+										"profile_id":    "prof-1",
+										"behavior_type": "tavern_keeper",
+										"agent_name":    "barkeep",
+									},
+								}, nil
+							},
+							updateFunc: func(ctx context.Context, updates []firestore.Update, preconds ...firestore.Precondition) (*firestore.WriteResult, error) {
+								updatedFields = updates
+								return nil, nil
+							},
+						}
+					},
+				}
+			},
+		}, nil
+	}
+
+	w := httptest.NewRecorder()
+	newAgent := "grogmar"
+	payload := BotProfileUpdate{AgentName: &newAgent}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("PATCH", "/bots/bot-1/profiles/bp-123", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if len(updatedFields) != 1 {
+		t.Fatalf("Expected 1 update field, got %d", len(updatedFields))
+	}
+	if updatedFields[0].Path != "agent_name" || updatedFields[0].Value != "grogmar" {
+		t.Errorf("Expected agent_name=grogmar update, got %v", updatedFields[0])
+	}
+}
+
+func TestUpdateBotProfile_NoFields(t *testing.T) {
+	r := setupTestRouter()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/bots/bot-1/profiles/bp-123", bytes.NewBuffer([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d: %s", w.Code, w.Body.String())
 	}
 }

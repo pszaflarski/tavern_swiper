@@ -435,6 +435,83 @@
                 }
             }
         },
+        "/{id}/profiles/{profile_id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates bot-specific metadata (behavior_type, agent_name) on a bot profile record. Only provided fields are updated. Profile content (display_name, bio, etc.) lives in the profiles service.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bots"
+                ],
+                "summary": "Update bot profile metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bot User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bot Profile ID",
+                        "name": "profile_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.BotProfileUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.BotProfileOut"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/{id}/sync": {
             "post": {
                 "security": [
@@ -496,16 +573,11 @@
                 "slug"
             ],
             "properties": {
-                "bio": {
-                    "type": "string"
-                },
-                "display_name": {
+                "description": {
+                    "description": "Internal notes about this bot (not shown in-app)",
                     "type": "string"
                 },
                 "slug": {
-                    "type": "string"
-                },
-                "tagline": {
                     "type": "string"
                 }
             }
@@ -519,7 +591,8 @@
                 "created_at": {
                     "type": "string"
                 },
-                "display_name": {
+                "description": {
+                    "description": "Internal notes about this bot (not shown in-app)",
                     "type": "string"
                 },
                 "email": {
@@ -640,6 +713,19 @@
                     "type": "string"
                 },
                 "profile_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.BotProfileUpdate": {
+            "type": "object",
+            "properties": {
+                "agent_name": {
+                    "description": "e.g. \"grogmar\"",
+                    "type": "string"
+                },
+                "behavior_type": {
+                    "description": "e.g. \"tavern_keeper\", \"quest_giver\"",
                     "type": "string"
                 }
             }

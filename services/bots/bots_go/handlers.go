@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
@@ -119,7 +120,7 @@ func handleRegisterBot(c *gin.Context) {
 	botData := map[string]interface{}{
 		"bot_id":             botID,
 		"slug":               body.Slug,
-		"display_name":       body.DisplayName,
+		"description":        body.Description,
 		"user_id":            firebaseUID,
 		"firebase_uid":       firebaseUID,
 		"email":              email,
@@ -138,7 +139,7 @@ func handleRegisterBot(c *gin.Context) {
 	c.JSON(http.StatusCreated, BotOut{
 		BotID:       botID,
 		Slug:        body.Slug,
-		DisplayName: body.DisplayName,
+		Description: body.Description,
 		UserID:      firebaseUID,
 		FirebaseUID: firebaseUID,
 		Email:       email,
@@ -429,8 +430,8 @@ func mapToBotOut(id string, data map[string]interface{}) BotOut {
 	if v, ok := data["slug"].(string); ok {
 		b.Slug = v
 	}
-	if v, ok := data["display_name"].(string); ok {
-		b.DisplayName = v
+	if v, ok := data["description"].(string); ok {
+		b.Description = v
 	}
 	if v, ok := data["user_id"].(string); ok {
 		b.UserID = v
@@ -807,3 +808,95 @@ func handleSyncBotProfiles(c *gin.Context) {
 		"deleted_orphans":      deletedOrphans,
 	})
 }
+
+// handleUpdateBotProfile godoc
+// @Summary      Update bot profile metadata
+// @Description  Updates bot-specific metadata (behavior_type, agent_name) on a bot profile record. Only provided fields are updated. Profile content (display_name, bio, etc.) lives in the profiles service.
+// @Tags         bots
+// @Accept       json
+// @Produce      json
+// @Param        id         path      string            true  "Bot User ID"
+// @Param        profile_id path      string            true  "Bot Profile ID"
+// @Param        body       body      BotProfileUpdate  true  "Fields to update"
+// @Success      200        {object}  BotProfileOut
+// @Failure      400        {object}  ErrorResponse
+// @Failure      403        {object}  ErrorResponse
+// @Failure      404        {object}  ErrorResponse
+// @Failure      500        {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /{id}/profiles/{profile_id} [patch]
+func handleUpdateBotProfile(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		httpError(c, http.StatusForbidden, "Admin authorization required")
+		return
+	}
+
+	botID := c.Param("id")
+	botProfileID := c.Param("profile_id")
+
+	var body BotProfileUpdate
+	if err := c.ShouldBindJSON(&body); err != nil {
+		httpError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if body.BehaviorType == nil && body.AgentName == nil {
+		httpError(c, http.StatusBadRequest, "No fields to update (provide behavior_type and/or agent_name)")
+		return
+	}
+
+	ctx := context.Background()
+	db, err := getDBFunc(ctx)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	// Verify the bot user exists
+	botDoc, err := db.Collection(BOT_USERS_COLLECTION).Doc(botID).Get(ctx)
+	if err != nil || !botDoc.Exists() {
+		httpError(c, http.StatusNotFound, "Bot not found")
+		return
+	}
+
+	// Verify the bot profile exists and belongs to this bot
+	profileDoc, err := db.Collection(BOT_PROFILES_COLLECTION).Doc(botProfileID).Get(ctx)
+	if err != nil || !profileDoc.Exists() {
+		httpError(c, http.StatusNotFound, "Bot profile not found")
+		return
+	}
+
+	profileData := profileDoc.Data()
+	ownerID, _ := profileData["bot_user_id"].(string)
+	if ownerID != botID {
+		httpError(c, http.StatusNotFound, "Bot profile not found for this bot")
+		return
+	}
+
+	// Build partial update
+	var updates []firestore.Update
+	if body.BehaviorType != nil {
+		updates = append(updates, firestore.Update{Path: "behavior_type", Value: *body.BehaviorType})
+	}
+	if body.AgentName != nil {
+		updates = append(updates, firestore.Update{Path: "agent_name", Value: *body.AgentName})
+	}
+
+	_, err = db.Collection(BOT_PROFILES_COLLECTION).Doc(botProfileID).Update(ctx, updates)
+	if err != nil {
+		log.Printf("[ERROR] Failed to update bot profile %s: %v", botProfileID, err)
+		httpError(c, http.StatusInternalServerError, "Failed to update bot profile")
+		return
+	}
+
+	// Re-read to return the updated record
+	updatedDoc, err := db.Collection(BOT_PROFILES_COLLECTION).Doc(botProfileID).Get(ctx)
+	if err != nil {
+		httpError(c, http.StatusInternalServerError, "Failed to read updated record")
+		return
+	}
+
+	c.JSON(http.StatusOK, mapToBotProfileOut(updatedDoc.ID(), updatedDoc.Data()))
+}
+

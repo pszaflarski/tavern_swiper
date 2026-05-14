@@ -2,13 +2,10 @@ basePath: /bots
 definitions:
   main.BotCreate:
     properties:
-      bio:
-        type: string
-      display_name:
+      description:
+        description: Internal notes about this bot (not shown in-app)
         type: string
       slug:
-        type: string
-      tagline:
         type: string
     required:
     - slug
@@ -19,7 +16,8 @@ definitions:
         type: string
       created_at:
         type: string
-      display_name:
+      description:
+        description: Internal notes about this bot (not shown in-app)
         type: string
       email:
         type: string
@@ -100,6 +98,15 @@ definitions:
       created_at:
         type: string
       profile_id:
+        type: string
+    type: object
+  main.BotProfileUpdate:
+    properties:
+      agent_name:
+        description: e.g. "grogmar"
+        type: string
+      behavior_type:
+        description: e.g. "tavern_keeper", "quest_giver"
         type: string
     type: object
   main.CredsResponse:
@@ -385,6 +392,58 @@ paths:
       security:
       - BearerAuth: []
       summary: List profiles for a bot user
+      tags:
+      - bots
+  /{id}/profiles/{profile_id}:
+    patch:
+      consumes:
+      - application/json
+      description: Updates bot-specific metadata (behavior_type, agent_name) on a
+        bot profile record. Only provided fields are updated. Profile content (display_name,
+        bio, etc.) lives in the profiles service.
+      parameters:
+      - description: Bot User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Bot Profile ID
+        in: path
+        name: profile_id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.BotProfileUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.BotProfileOut'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update bot profile metadata
       tags:
       - bots
   /{id}/sync:

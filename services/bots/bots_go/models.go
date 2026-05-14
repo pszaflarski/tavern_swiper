@@ -6,9 +6,7 @@ import "time"
 
 type BotCreate struct {
 	Slug        string `json:"slug" binding:"required"`
-	DisplayName string `json:"display_name,omitempty"`
-	Bio         string `json:"bio,omitempty"`
-	Tagline     string `json:"tagline,omitempty"`
+	Description string `json:"description,omitempty"` // Internal notes about this bot (not shown in-app)
 }
 
 // Response Models
@@ -16,7 +14,7 @@ type BotCreate struct {
 type BotOut struct {
 	BotID       string    `json:"bot_id"`
 	Slug        string    `json:"slug"`
-	DisplayName string    `json:"display_name,omitempty"`
+	Description string    `json:"description,omitempty"` // Internal notes about this bot (not shown in-app)
 	UserID      string    `json:"user_id"`
 	FirebaseUID string    `json:"firebase_uid"`
 	Email       string    `json:"email"`
@@ -31,6 +29,11 @@ type BotProfileOut struct {
 	BehaviorType string    `json:"behavior_type,omitempty"`
 	AgentName    string    `json:"agent_name,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
+}
+
+type BotProfileUpdate struct {
+	BehaviorType *string `json:"behavior_type"` // e.g. "tavern_keeper", "quest_giver"
+	AgentName    *string `json:"agent_name"`    // e.g. "grogmar"
 }
 
 type ProfileTag struct {

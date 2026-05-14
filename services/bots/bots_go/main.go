@@ -56,6 +56,7 @@ func main() {
 		b.POST("/:id/profile", handleCreateBotProfile)
 		b.POST("/:id/sync", handleSyncBotProfiles)
 		b.GET("/:id/profiles", handleListBotProfiles)
+		b.PATCH("/:id/profiles/:profile_id", handleUpdateBotProfile)
 
 		// Concrete paths before wildcard to avoid route conflicts
 		b.DELETE("/all", handlePurgeBots)
