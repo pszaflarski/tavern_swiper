@@ -26,6 +26,7 @@ export interface SwipeProfile {
   profile_id: string;
   display_name: string;
   bio?: string;
+  tagline?: string;
   image_urls: string[];
 }
 
@@ -128,8 +129,8 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight, cu
 
           <View style={styles.heroInfo}>
             <Text style={styles.heroName} testID="hero-name">{profile.display_name}</Text>
-            {profile.bio && (
-              <Text style={styles.heroTagline} testID="hero-tagline">{profile.bio}</Text>
+            {profile.tagline && (
+              <Text style={styles.heroTagline} testID="hero-tagline">"{profile.tagline}"</Text>
             )}
           </View>
 

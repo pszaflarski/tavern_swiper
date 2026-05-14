@@ -71,7 +71,7 @@ export const styles = StyleSheet.create({
     fontFamily: Fonts.scribe,
     fontSize: 18,
     fontStyle: 'italic',
-    color: '#FFFFFF',
+    color: Colors.tertiary,
     marginTop: Spacing[1],
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },

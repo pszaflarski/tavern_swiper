@@ -146,7 +146,6 @@ function TavernScreenInner() {
                   <Text style={styles.detailsTagline}>"{currentProfile.tagline}"</Text>
                 )}
                 <View style={styles.divider} />
-                <Text style={styles.detailsLabel}>The Legend</Text>
                 <Text style={styles.detailsBio}>
                   {currentProfile?.bio || "This hero's story is yet to be written in the annals of the realm."}
                 </Text>
