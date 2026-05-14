@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package profile;
+
+option go_package = "./proto";
+
+message ProfileTag {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
+message ProfileUpserted {
+  string profile_id = 1;
+  string user_id = 2;
+  string display_name = 3;
+  optional string tagline = 4;
+  optional string bio = 5;
+  repeated string image_urls = 6;
+  bool is_active = 7;
+  optional int32 age = 8;
+  optional bool is_oc = 9;
+  repeated ProfileTag gender = 10;
+  repeated ProfileTag race = 11;
+  repeated ProfileTag fandom = 12;
+  repeated ProfileTag interests = 13;
+  repeated ProfileTag events = 14;
+  repeated ProfileTag looking_for = 15;
+}
+
+message ProfileDeleted {
+  string profile_id = 1;
+}
+
+message AllProfilesDeleted {
+  string admin_user_id = 1;
+  string timestamp = 2;
+}
+
+message ProfileEvent {
+  enum EventType {
+    UNKNOWN = 0;
+    UPSERTED = 1;
+    DELETED = 2;
+    ALL_DELETED = 3;
+  }
+  EventType type = 1;
+  oneof event {
+    ProfileUpserted upserted = 2;
+    ProfileDeleted deleted = 3;
+    AllProfilesDeleted all_deleted = 4;
+  }
+}
