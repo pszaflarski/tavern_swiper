@@ -77,3 +77,25 @@ type HealthResponse struct {
 type ErrorResponse struct {
 	Detail interface{} `json:"detail"`
 }
+
+// Behavior Models
+
+type BehaviorTriggerRequest struct {
+	BehaviorType string                 `json:"behavior_type,omitempty"`    // optional — if empty, bots_go queries all matching behaviors
+	Trigger      string                 `json:"trigger" binding:"required"` // e.g. "profile_created", "profile_deleted"
+	Context      map[string]interface{} `json:"context" binding:"required"` // event-specific data
+}
+
+type BehaviorTriggerResponse struct {
+	Triggered int      `json:"triggered"` // number of bot profiles that acted
+	Details   []string `json:"details"`   // per-profile action summaries
+}
+
+type BotEvent struct {
+	EventID      string                 `json:"event_id" firestore:"event_id"`
+	BehaviorType string                 `json:"behavior_type" firestore:"behavior_type"` // Optional, from request
+	Trigger      string                 `json:"trigger" firestore:"trigger"`
+	Context      map[string]interface{} `json:"context" firestore:"context"`
+	Status       string                 `json:"status" firestore:"status"` // "received", "processed", "ignored"
+	CreatedAt    time.Time              `json:"created_at" firestore:"created_at"`
+}

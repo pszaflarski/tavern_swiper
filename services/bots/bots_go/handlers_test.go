@@ -40,6 +40,7 @@ func setupTestRouter() *gin.Engine {
 		b.GET("/:id", handleGetBot)
 		b.POST("/:id/profile", handleCreateBotProfile)
 		b.PATCH("/:id/profiles/:profile_id", handleUpdateBotProfile)
+		b.POST("/behaviors/trigger", handleBehaviorTrigger)
 	}
 
 	return r

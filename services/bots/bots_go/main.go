@@ -57,6 +57,7 @@ func main() {
 		b.POST("/:id/sync", handleSyncBotProfiles)
 		b.GET("/:id/profiles", handleListBotProfiles)
 		b.PATCH("/:id/profiles/:profile_id", handleUpdateBotProfile)
+		b.POST("/behaviors/trigger", handleBehaviorTrigger)
 
 		// Concrete paths before wildcard to avoid route conflicts
 		b.DELETE("/all", handlePurgeBots)
