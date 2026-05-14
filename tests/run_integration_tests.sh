@@ -126,6 +126,7 @@ else
     
     export DISCOVERY_DB="discovery-${ENV_NAME}"
     export MESSAGES_DB="messages-${ENV_NAME}"
+    export BOTS_DB="bots-${ENV_NAME}"
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
     export PUBSUB_EMULATOR_HOST=""
 fi
