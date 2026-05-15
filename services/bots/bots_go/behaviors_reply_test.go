@@ -132,7 +132,7 @@ func mockBotReplyDB(senderIsBot bool, botProfiles []map[string]interface{}, botU
 
 func TestBehaviorBotReply_SkipsBotSender(t *testing.T) {
 	db := mockBotReplyDB(true, nil, nil)
-	count, details := behaviorBotReply(context.Background(), db, "conv-1", "bot-sender", "hello")
+	count, details := behaviorBotReply(context.Background(), db, "conv-1", "bot-sender", "hello", "user", nil)
 
 	if count != 0 {
 		t.Errorf("Expected 0 triggered, got %d", count)
@@ -144,7 +144,7 @@ func TestBehaviorBotReply_SkipsBotSender(t *testing.T) {
 
 func TestBehaviorBotReply_NoBotProfiles(t *testing.T) {
 	db := mockBotReplyDB(false, nil, nil)
-	count, details := behaviorBotReply(context.Background(), db, "conv-1", "human-sender", "hello")
+	count, details := behaviorBotReply(context.Background(), db, "conv-1", "human-sender", "hello", "user", nil)
 
 	if count != 0 {
 		t.Errorf("Expected 0 triggered, got %d", count)
@@ -160,7 +160,7 @@ func TestBehaviorBotReply_AuthFailure(t *testing.T) {
 	}
 	// No credentials → auth will fail
 	db := mockBotReplyDB(false, profiles, map[string]map[string]interface{}{})
-	count, details := behaviorBotReply(context.Background(), db, "conv-1", "human-sender", "hello")
+	count, details := behaviorBotReply(context.Background(), db, "conv-1", "human-sender", "hello", "user", nil)
 
 	if count != 0 {
 		t.Errorf("Expected 0 triggered, got %d", count)
@@ -267,7 +267,7 @@ func TestIsBotInConversation_HTTPError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCallAgentRouter_Success(t *testing.T) {
-	var receivedPayload map[string]string
+	var receivedPayload map[string]interface{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" || r.URL.Path != "/invoke" {
 			w.WriteHeader(http.StatusNotFound)
@@ -292,7 +292,7 @@ func TestCallAgentRouter_Success(t *testing.T) {
 		serviceURLs.mu.Unlock()
 	}()
 
-	resp, err := callAgentRouter("grogmar", "Hello there", "conv-1")
+	resp, err := callAgentRouter("grogmar", "Hello there", "conv-1", "user", nil)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -300,13 +300,13 @@ func TestCallAgentRouter_Success(t *testing.T) {
 		t.Errorf("Expected 'Hail, adventurer!', got '%s'", resp)
 	}
 	if receivedPayload["agent"] != "grogmar" {
-		t.Errorf("Expected agent 'grogmar', got '%s'", receivedPayload["agent"])
+		t.Errorf("Expected agent 'grogmar', got '%v'", receivedPayload["agent"])
 	}
 	if receivedPayload["prompt"] != "Hello there" {
-		t.Errorf("Expected prompt 'Hello there', got '%s'", receivedPayload["prompt"])
+		t.Errorf("Expected prompt 'Hello there', got '%v'", receivedPayload["prompt"])
 	}
 	if receivedPayload["thread_id"] != "conv-1" {
-		t.Errorf("Expected thread_id 'conv-1', got '%s'", receivedPayload["thread_id"])
+		t.Errorf("Expected thread_id 'conv-1', got '%v'", receivedPayload["thread_id"])
 	}
 }
 
@@ -327,7 +327,7 @@ func TestCallAgentRouter_ServerError(t *testing.T) {
 		serviceURLs.mu.Unlock()
 	}()
 
-	_, err := callAgentRouter("grogmar", "Hello", "conv-1")
+	_, err := callAgentRouter("grogmar", "Hello", "conv-1", "user", nil)
 	if err == nil {
 		t.Fatal("Expected error on 500 response")
 	}
