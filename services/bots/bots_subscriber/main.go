@@ -159,9 +159,11 @@ func processMessageEvent(event *pb.MessageEvent) error {
 			return nil
 		}
 
-		// Only skip messages with no sender (system broadcasts with no profile)
-		if sent.SenderProfileId == "" && sent.MessageType != "user" {
-			log.Printf("ℹ️ Ignoring sender-less %s message in conversation %s", sent.MessageType, sent.ConversationId)
+		// Skip truly anonymous system broadcasts (no sender, no metadata).
+		// Event messages like dice rolls have sender_profile_id empty but
+		// carry metadata with initiated_by, so they must pass through.
+		if sent.SenderProfileId == "" && sent.MessageType != "user" && sent.MetadataJson == "" {
+			log.Printf("ℹ️ Ignoring sender-less %s message in conversation %s (no metadata)", sent.MessageType, sent.ConversationId)
 			return nil
 		}
 
