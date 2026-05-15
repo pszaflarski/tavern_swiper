@@ -22,7 +22,7 @@ REGION = "us-central1"
 ROOT_EMAIL = os.getenv("ROOT_EMAIL", "root@tavernswiper.com")
 ROOT_PASSWORD = os.getenv("ROOT_PASSWORD", "Password123!")
 
-SERVICES = ["auth", "profiles", "discovery", "messages", "users", "bots"]
+SERVICES = ["auth", "profiles", "discovery", "messages", "users", "bots", "agent_router"]
 
 def get_service_url(service_name, env="dev"):
     # Check for local overrides first
@@ -42,7 +42,11 @@ def get_service_url(service_name, env="dev"):
         return f"http://127.0.0.1:{ports.get(service_name)}"
 
     # Fetch from Cloud Run
-    deploy_name = service_name
+    # Some services have a different Cloud Run deploy name than the router key
+    deploy_name_map = {
+        "agent_router": "agent-router",
+    }
+    base_name = deploy_name_map.get(service_name, service_name)
     env_suffix = ""
     if env == "dev":
         env_suffix = "-dev"
@@ -51,7 +55,7 @@ def get_service_url(service_name, env="dev"):
     elif env == "prod":
         env_suffix = "-prod"
     
-    deploy_name = f"{service_name}{env_suffix}"
+    deploy_name = f"{base_name}{env_suffix}"
     
     project_id = get_project_id(env)
     
@@ -66,7 +70,7 @@ def get_service_url(service_name, env="dev"):
         # Try without suffix as fallback
         try:
             url = subprocess.check_output([
-                "gcloud", "run", "services", "describe", service_name,
+                "gcloud", "run", "services", "describe", base_name,
                 "--platform", "managed", "--region", REGION, "--project", project_id,
                 "--format", "value(status.url)"
             ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
