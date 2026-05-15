@@ -275,6 +275,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 		profileID    string
 		agentName    string
 		botProfileID string
+		behaviorType string
 	}
 	var allBotProfiles []botInfo
 
@@ -287,6 +288,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 		botUserID, _ := data["bot_user_id"].(string)
 		profileID, _ := data["profile_id"].(string)
 		agentName, _ := data["agent_name"].(string)
+		behaviorType, _ := data["behavior_type"].(string)
 
 		if botUserID == "" || profileID == "" || agentName == "" {
 			continue
@@ -296,6 +298,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			profileID:    profileID,
 			agentName:    agentName,
 			botProfileID: doc.Ref().ID,
+			behaviorType: behaviorType,
 		})
 	}
 
@@ -357,6 +360,11 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			log.Printf("[INFO] %s", msg)
 			details = append(details, msg)
 			triggered++
+
+			// 6. Quest completion: if this is a tavern_keeper, complete "meet_the_barkeep"
+			if bp.behaviorType == "tavern_keeper" {
+				go tryCompleteBarkeepQuest(token, senderProfileID, bp.profileID)
+			}
 		}
 	}
 
@@ -462,4 +470,94 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	}
 
 	return nil
+}
+
+// tryCompleteBarkeepQuest attempts to mark the "meet_the_barkeep" quest as
+// completed for the user who just messaged a tavern keeper bot.
+// Runs asynchronously — failures are logged but never block the bot reply.
+func tryCompleteBarkeepQuest(botToken, senderProfileID, botProfileID string) {
+	const questID = "meet_the_barkeep"
+
+	// 1. Look up the sender's user_id from their profile
+	userID, err := lookupUserIDByProfile(botToken, senderProfileID)
+	if err != nil {
+		log.Printf("[WARN] Quest completion skipped — failed to look up user for profile %s: %v", senderProfileID, err)
+		return
+	}
+
+	// 2. Call the quests service to complete the quest
+	questsURL := serviceURLs.Get("quests")
+	if questsURL == "" {
+		log.Printf("[WARN] Quest completion skipped — quests service URL not resolved")
+		return
+	}
+
+	payload := map[string]string{
+		"quest_id":   questID,
+		"user_id":    userID,
+		"profile_id": senderProfileID,
+		"status":     "completed",
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", questsURL+"/quests/status/", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+botToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("[WARN] Quest completion failed for user %s: %v", userID, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusConflict {
+		// 409 = already completed, this is expected for repeat messages
+		log.Printf("[INFO] Quest '%s' already completed for user %s", questID, userID)
+		return
+	}
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		log.Printf("[WARN] Quest completion returned HTTP %d for user %s: %s", resp.StatusCode, userID, string(respBody))
+		return
+	}
+
+	log.Printf("[INFO] ✨ Quest '%s' completed for user %s (profile: %s, barkeep: %s)", questID, userID, senderProfileID, botProfileID)
+}
+
+// lookupUserIDByProfile fetches a profile from the profiles service and
+// extracts the user_id. Uses the bot's JWT since bots have read access.
+func lookupUserIDByProfile(token, profileID string) (string, error) {
+	profilesURL := serviceURLs.Get("profiles")
+	if profilesURL == "" {
+		return "", fmt.Errorf("profiles service URL not resolved")
+	}
+
+	req, _ := http.NewRequest("GET", profilesURL+"/profiles/"+profileID, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch profile: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("profiles service returned HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var profile struct {
+		UserID string `json:"user_id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+		return "", fmt.Errorf("failed to decode profile response: %w", err)
+	}
+
+	if profile.UserID == "" {
+		return "", fmt.Errorf("profile %s has no user_id", profileID)
+	}
+
+	return profile.UserID, nil
 }

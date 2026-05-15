@@ -1,0 +1,638 @@
+basePath: /quests
+definitions:
+  main.ErrorResponse:
+    properties:
+      detail:
+        type: string
+    type: object
+  main.InventoryDeductRequest:
+    properties:
+      item_id:
+        type: string
+      profile_id:
+        description: profile_id of the deducting bot (optional for admins)
+        type: string
+      quantity:
+        type: integer
+      user_id:
+        type: string
+    required:
+    - item_id
+    - quantity
+    - user_id
+    type: object
+  main.InventoryEntryOut:
+    properties:
+      acquired_at:
+        type: string
+      category:
+        type: string
+      created_by_profile:
+        type: string
+      created_by_user:
+        type: string
+      description:
+        type: string
+      image_url:
+        type: string
+      item_id:
+        type: string
+      name:
+        description: Joined item definition fields
+        type: string
+      quantity:
+        type: integer
+      rarity:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  main.InventoryGrantRequest:
+    properties:
+      item_id:
+        type: string
+      profile_id:
+        description: profile_id of the granting bot (optional for admins)
+        type: string
+      quantity:
+        type: integer
+      user_id:
+        type: string
+    required:
+    - item_id
+    - quantity
+    - user_id
+    type: object
+  main.ItemDefinition:
+    properties:
+      category:
+        description: currency, weapon, armor, consumable, cosmetic, key_item, badge
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      image_url:
+        type: string
+      item_id:
+        type: string
+      max_stack:
+        description: 0 = unlimited, 1 = unique
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      rarity:
+        description: common, uncommon, rare, epic, legendary
+        type: string
+      tradeable:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  main.ItemDefinitionCreate:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      image_url:
+        type: string
+      max_stack:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      rarity:
+        type: string
+      tradeable:
+        type: boolean
+    required:
+    - category
+    - name
+    - rarity
+    type: object
+  main.ItemDefinitionUpdate:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      image_url:
+        type: string
+      max_stack:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      rarity:
+        type: string
+      tradeable:
+        type: boolean
+    type: object
+  main.QuestStatus:
+    properties:
+      created_at:
+        type: string
+      profile_id:
+        type: string
+      quest_id:
+        type: string
+      status:
+        description: started, completed, failed
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  main.QuestStatusUpdate:
+    properties:
+      profile_id:
+        type: string
+      quest_id:
+        type: string
+      status:
+        description: started, completed, failed
+        type: string
+      user_id:
+        type: string
+    required:
+    - profile_id
+    - quest_id
+    - status
+    - user_id
+    type: object
+  main.QuestTemplate:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      quest_id:
+        type: string
+      quest_type:
+        description: story, daily, weekly, achievement
+        type: string
+      sort_order:
+        type: integer
+      status:
+        description: draft, active, retired
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  main.QuestTemplateCreate:
+    properties:
+      description:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      quest_id:
+        description: deterministic ID for seeding
+        type: string
+      quest_type:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    required:
+    - quest_id
+    - quest_type
+    - title
+    type: object
+info:
+  contact: {}
+  description: Item catalog, user inventory, and quest management for Tavern Swiper.
+  title: Quests Service API
+  version: "1.0"
+paths:
+  /quests/health:
+    get:
+      description: Returns service health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /quests/inventory/{user_id}:
+    get:
+      description: List all items in a user's inventory. Users can only view their
+        own.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.InventoryEntryOut'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user inventory
+      tags:
+      - inventory
+  /quests/inventory/deduct:
+    post:
+      consumes:
+      - application/json
+      description: Remove items from a user's inventory. Admin and bot only.
+      parameters:
+      - description: Deduct request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.InventoryDeductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.InventoryEntryOut'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Deduct items from a user
+      tags:
+      - inventory
+  /quests/inventory/grant:
+    post:
+      consumes:
+      - application/json
+      description: Add items to a user's inventory. Admin and bot only.
+      parameters:
+      - description: Grant request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.InventoryGrantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.InventoryEntryOut'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Grant items to a user
+      tags:
+      - inventory
+  /quests/items/:
+    get:
+      description: List all items in the catalog. Admin and bot only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.ItemDefinition'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all items
+      tags:
+      - items
+    post:
+      consumes:
+      - application/json
+      description: Create a new item in the game catalog. Admin only.
+      parameters:
+      - description: Item definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ItemDefinitionCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.ItemDefinition'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create item definition
+      tags:
+      - items
+  /quests/items/{item_id}:
+    delete:
+      description: Remove an item definition from the catalog. Admin only.
+      parameters:
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete item definition
+      tags:
+      - items
+    get:
+      description: Get a single item definition by ID. Admin and bot only.
+      parameters:
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ItemDefinition'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get item definition
+      tags:
+      - items
+    put:
+      consumes:
+      - application/json
+      description: Update an existing item definition. Admin only.
+      parameters:
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ItemDefinitionUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ItemDefinition'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update item definition
+      tags:
+      - items
+  /quests/status/:
+    post:
+      consumes:
+      - application/json
+      description: Start, complete, or fail a quest for a user. Admin and bot only.
+      parameters:
+      - description: Quest status update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.QuestStatusUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.QuestStatus'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update quest status
+      tags:
+      - quest-status
+  /quests/status/{user_id}:
+    get:
+      description: List all quest statuses for a user. Users can only view their own.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.QuestStatus'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get quest statuses for a user
+      tags:
+      - quest-status
+  /quests/templates/:
+    get:
+      description: List all quest templates. Any authenticated user can view active
+        quests.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.QuestTemplate'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List quest templates
+      tags:
+      - quests
+    post:
+      consumes:
+      - application/json
+      description: Create a new quest template. Admin only. Uses deterministic quest_id
+        for idempotent seeding.
+      parameters:
+      - description: Quest template
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.QuestTemplateCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.QuestTemplate'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create quest template
+      tags:
+      - quests
+  /quests/templates/{quest_id}:
+    get:
+      description: Get a single quest template by ID.
+      parameters:
+      - description: Quest ID
+        in: path
+        name: quest_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.QuestTemplate'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get quest template
+      tags:
+      - quests
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

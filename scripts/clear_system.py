@@ -14,7 +14,7 @@ def get_current_project():
         return "tavern-swiper-dev"
 
 PROJECT_ID = get_current_project()
-SERVICES = ["users", "profiles", "auth", "messages", "discovery", "bots", "agent-router"]
+SERVICES = ["users", "profiles", "auth", "messages", "discovery", "bots", "quests", "agent-router"]
 
 # Databases that use MongoDB compatibility mode (Firestore API disabled).
 # These are cleared separately or skipped since they contain ephemeral data.
