@@ -13,7 +13,7 @@ def get_current_project():
         return "tavern-swiper-dev"
 
 PROJECT_ID = get_current_project()
-SERVICES = ["users", "profiles", "auth", "messages", "discovery", "bots"]
+SERVICES = ["users", "profiles", "auth", "messages", "discovery", "bots", "agent-router"]
 
 def get_gcloud_credentials():
     """Helper to fetch credentials from gcloud if Application Default Credentials are missing/broken."""
