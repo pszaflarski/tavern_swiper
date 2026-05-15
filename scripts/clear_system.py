@@ -26,7 +26,7 @@ PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 
 def clear_mongo_database(service: str, env: str):
-    """Clear a MongoDB-mode Firestore database by dropping all collections via pymongo."""
+    """Clear a MongoDB-mode Firestore database by deleting all documents via pymongo."""
     import re
     from pymongo import MongoClient
 
@@ -65,9 +65,11 @@ def clear_mongo_database(service: str, env: str):
         client.close()
         return
 
+    total_deleted = 0
     for coll_name in collections:
-        db.drop_collection(coll_name)
-    print(f"  ✅ {target_db} cleared ({len(collections)} collections: {', '.join(collections)}).")
+        result = db[coll_name].delete_many({})
+        total_deleted += result.deleted_count
+    print(f"  ✅ {target_db} cleared ({total_deleted} docs across {len(collections)} collections: {', '.join(collections)}).")
     client.close()
 
 def get_gcloud_credentials():
