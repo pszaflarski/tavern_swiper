@@ -88,6 +88,17 @@ func handleBehaviorTrigger(c *gin.Context) {
 		}
 	}
 
+	if req.Trigger == "message_received" {
+		conversationID, _ := req.Context["conversation_id"].(string)
+		senderProfileID, _ := req.Context["sender_profile_id"].(string)
+		messagePreview, _ := req.Context["message_preview"].(string)
+		if conversationID != "" && senderProfileID != "" {
+			count, msgs := behaviorBotReply(ctx, client, conversationID, senderProfileID, messagePreview)
+			triggeredCount += count
+			details = append(details, msgs...)
+		}
+	}
+
 	// 4. Update the event as "processed"
 	event.Status = "processed"
 	_, _ = client.Collection("bot_events").Doc(eventID).Set(ctx, event)
@@ -203,7 +214,7 @@ func authenticateBotUser(ctx context.Context, db FirestoreClient, botUserID stri
 		return "", fmt.Errorf("bot_user %s has no credentials", botUserID)
 	}
 
-	password, err := decryptPassword(ctx, encryptedPassword)
+	password, err := decryptPasswordFunc(ctx, encryptedPassword)
 	if err != nil {
 		return "", fmt.Errorf("failed to decrypt password for %s: %w", botUserID, err)
 	}
@@ -240,6 +251,210 @@ func swipeRight(token, swiperProfileID, swipedProfileID string) error {
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("discovery swipe failed (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+// behaviorBotReply handles the "message_received" trigger. It checks if any
+// bot profiles are participants in the conversation and generates AI replies.
+func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, senderProfileID, messagePreview string) (int, []string) {
+	// 1. Guard: if the sender is ANY bot, bail immediately to prevent loops.
+	if isBotProfile(ctx, db, senderProfileID) {
+		msg := fmt.Sprintf("Sender %s is a bot, skipping reply", senderProfileID)
+		log.Printf("[INFO] %s", msg)
+		return 0, []string{msg}
+	}
+
+	// 2. Query ALL bot profiles to find which ones might be in this conversation.
+	iter := db.Collection(BOT_PROFILES_COLLECTION).Documents(ctx)
+	type botInfo struct {
+		botUserID    string
+		profileID    string
+		agentName    string
+		botProfileID string
+	}
+	var allBotProfiles []botInfo
+
+	for {
+		doc, err := iter.Next()
+		if err != nil {
+			break
+		}
+		data := doc.Data()
+		botUserID, _ := data["bot_user_id"].(string)
+		profileID, _ := data["profile_id"].(string)
+		agentName, _ := data["agent_name"].(string)
+
+		if botUserID == "" || profileID == "" || agentName == "" {
+			continue
+		}
+		allBotProfiles = append(allBotProfiles, botInfo{
+			botUserID:    botUserID,
+			profileID:    profileID,
+			agentName:    agentName,
+			botProfileID: doc.Ref().ID,
+		})
+	}
+
+	if len(allBotProfiles) == 0 {
+		return 0, []string{"No bot profiles with agent_name found"}
+	}
+
+	// 3. For each bot profile, authenticate and check if they're in this conversation.
+	var details []string
+	triggered := 0
+
+	// Group by bot_user_id to authenticate once per bot user
+	grouped := make(map[string][]botInfo)
+	for _, bp := range allBotProfiles {
+		grouped[bp.botUserID] = append(grouped[bp.botUserID], bp)
+	}
+
+	for botUserID, profiles := range grouped {
+		token, err := authenticateBotUser(ctx, db, botUserID)
+		if err != nil {
+			msg := fmt.Sprintf("Auth failed for bot_user %s: %v", botUserID, err)
+			log.Printf("[ERROR] %s", msg)
+			details = append(details, msg)
+			continue
+		}
+
+		for _, bp := range profiles {
+			// Check if this bot profile is a participant in the conversation
+			inConv, err := isBotInConversation(token, bp.profileID, conversationID)
+			if err != nil {
+				log.Printf("[WARN] Failed to check conversation membership for %s: %v", bp.profileID, err)
+				continue
+			}
+			if !inConv {
+				continue
+			}
+
+			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply", bp.agentName, bp.profileID, conversationID)
+
+			// 4. Call agent_router to generate a reply
+			aiResponse, err := callAgentRouter(bp.agentName, messagePreview, conversationID)
+			if err != nil {
+				msg := fmt.Sprintf("Agent router failed for '%s': %v", bp.agentName, err)
+				log.Printf("[ERROR] %s", msg)
+				details = append(details, msg)
+				continue
+			}
+
+			// 5. Post the reply back to the messages service
+			err = postBotMessage(token, conversationID, bp.profileID, aiResponse)
+			if err != nil {
+				msg := fmt.Sprintf("Failed to post reply for '%s': %v", bp.agentName, err)
+				log.Printf("[ERROR] %s", msg)
+				details = append(details, msg)
+				continue
+			}
+
+			msg := fmt.Sprintf("Bot '%s' replied in conversation %s", bp.agentName, conversationID)
+			log.Printf("[INFO] %s", msg)
+			details = append(details, msg)
+			triggered++
+		}
+	}
+
+	return triggered, details
+}
+
+// isBotInConversation checks if a bot profile is a participant in the given
+// conversation by listing the bot's conversations from the messages service.
+func isBotInConversation(token, botProfileID, conversationID string) (bool, error) {
+	messagesURL := serviceURLs.Get("messages")
+
+	req, _ := http.NewRequest("GET", messagesURL+"/messages/conversations/profile/"+botProfileID, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to list conversations: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return false, nil // No conversations or error, treat as not in conversation
+	}
+
+	var conversations []struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&conversations); err != nil {
+		return false, fmt.Errorf("failed to decode conversations: %w", err)
+	}
+
+	for _, conv := range conversations {
+		if conv.ID == conversationID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// callAgentRouter sends a prompt to the agent_router and returns the AI response.
+func callAgentRouter(agentName, prompt, threadID string) (string, error) {
+	agentRouterURL := serviceURLs.Get("agent_router")
+
+	payload := map[string]string{
+		"prompt":    prompt,
+		"agent":     agentName,
+		"thread_id": threadID,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", agentRouterURL+"/invoke", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Agent router calls can take longer (LLM generation)
+	agentClient := &http.Client{Timeout: 30 * time.Second}
+	resp, err := agentClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("HTTP error calling agent_router: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("agent_router error (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Response string `json:"response"`
+		ThreadID string `json:"thread_id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("failed to decode agent_router response: %w", err)
+	}
+
+	return result.Response, nil
+}
+
+// postBotMessage sends a message to a conversation on behalf of a bot profile.
+func postBotMessage(token, conversationID, senderProfileID, content string) error {
+	messagesURL := serviceURLs.Get("messages")
+
+	payload := map[string]string{
+		"sender_profile_id": senderProfileID,
+		"content":           content,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", messagesURL+"/messages/conversations/"+conversationID+"/messages", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to post message: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("messages service error (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	return nil

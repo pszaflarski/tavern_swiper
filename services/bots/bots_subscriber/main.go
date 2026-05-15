@@ -79,13 +79,20 @@ func handlePubSubPush(c *gin.Context) {
 }
 
 func processSerializedEvent(data []byte) error {
-	var event pb.ProfileEvent
-	if err := proto.Unmarshal(data, &event); err != nil {
-		log.Printf("❌ proto.Unmarshal Error: %v", err)
-		return nil // Don't retry on bad data
+	// Try ProfileEvent first (existing behavior)
+	var profileEvent pb.ProfileEvent
+	if err := proto.Unmarshal(data, &profileEvent); err == nil && profileEvent.Type != pb.ProfileEvent_UNKNOWN {
+		return processProfileEvent(&profileEvent)
 	}
 
-	return processEvent(&event)
+	// Try MessageEvent
+	var msgEvent pb.MessageEvent
+	if err := proto.Unmarshal(data, &msgEvent); err == nil && msgEvent.Type != pb.MessageEvent_UNKNOWN {
+		return processMessageEvent(&msgEvent)
+	}
+
+	log.Printf("⚠️ Could not unmarshal data as ProfileEvent or MessageEvent, skipping")
+	return nil // Don't retry on unrecognizable data
 }
 
 type BehaviorTriggerRequest struct {
@@ -94,7 +101,7 @@ type BehaviorTriggerRequest struct {
 	Context      map[string]interface{} `json:"context"`
 }
 
-func processEvent(event *pb.ProfileEvent) error {
+func processProfileEvent(event *pb.ProfileEvent) error {
 	log.Printf("📥 Processing ProfileEvent type: %s", event.Type)
 
 	var trigger string
@@ -122,7 +129,7 @@ func processEvent(event *pb.ProfileEvent) error {
 		log.Printf("🚨 [ALL_DELETED] AdminUserID: %s", a.AdminUserId)
 
 	default:
-		log.Printf("❓ Unknown event type: %s", event.Type)
+		log.Printf("❓ Unknown profile event type: %s", event.Type)
 		return nil
 	}
 
@@ -132,6 +139,43 @@ func processEvent(event *pb.ProfileEvent) error {
 	}
 
 	return callBotsService(reqPayload)
+}
+
+func processMessageEvent(event *pb.MessageEvent) error {
+	log.Printf("📥 Processing MessageEvent type: %s", event.Type)
+
+	switch event.Type {
+	case pb.MessageEvent_SENT:
+		sent := event.GetSent()
+		if sent == nil {
+			log.Printf("⚠️ MessageEvent SENT but no payload, skipping")
+			return nil
+		}
+
+		// Only process user messages — ignore system/event messages
+		if sent.MessageType != "user" {
+			log.Printf("ℹ️ Ignoring non-user message (type=%s) in conversation %s", sent.MessageType, sent.ConversationId)
+			return nil
+		}
+
+		log.Printf("💬 [MESSAGE_SENT] ConversationID: %s, Sender: %s", sent.ConversationId, sent.SenderProfileId)
+
+		eventCtx := map[string]interface{}{
+			"conversation_id":   sent.ConversationId,
+			"sender_profile_id": sent.SenderProfileId,
+			"message_preview":   sent.MessagePreview,
+			"message_id":        sent.MessageId,
+		}
+
+		return callBotsService(BehaviorTriggerRequest{
+			Trigger: "message_received",
+			Context: eventCtx,
+		})
+
+	default:
+		log.Printf("❓ Unknown message event type: %s", event.Type)
+		return nil
+	}
 }
 
 func callBotsService(payload BehaviorTriggerRequest) error {

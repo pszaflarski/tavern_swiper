@@ -46,6 +46,9 @@ func encryptPassword(ctx context.Context, plaintext string) (string, error) {
 	return base64.StdEncoding.EncodeToString(resp.Ciphertext), nil
 }
 
+// decryptPasswordFunc is a replaceable function for test mocking.
+var decryptPasswordFunc = decryptPassword
+
 func decryptPassword(ctx context.Context, encryptedBase64 string) (string, error) {
 	keyName := os.Getenv("KMS_KEY_NAME")
 	if keyName == "" {
