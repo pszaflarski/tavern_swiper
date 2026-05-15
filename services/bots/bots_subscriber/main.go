@@ -159,19 +159,20 @@ func processMessageEvent(event *pb.MessageEvent) error {
 			return nil
 		}
 
-		// Only process user messages — ignore system/event messages
-		if sent.MessageType != "user" {
-			log.Printf("ℹ️ Ignoring non-user message (type=%s) in conversation %s", sent.MessageType, sent.ConversationId)
+		// Only skip messages with no sender (system broadcasts with no profile)
+		if sent.SenderProfileId == "" && sent.MessageType != "user" {
+			log.Printf("ℹ️ Ignoring sender-less %s message in conversation %s", sent.MessageType, sent.ConversationId)
 			return nil
 		}
 
-		log.Printf("💬 [MESSAGE_SENT] ConversationID: %s, Sender: %s", sent.ConversationId, sent.SenderProfileId)
+		log.Printf("💬 [MESSAGE_SENT] ConversationID: %s, Sender: %s, Type: %s", sent.ConversationId, sent.SenderProfileId, sent.MessageType)
 
 		eventCtx := map[string]interface{}{
 			"conversation_id":   sent.ConversationId,
 			"sender_profile_id": sent.SenderProfileId,
 			"message_preview":   sent.MessagePreview,
 			"message_id":        sent.MessageId,
+			"message_type":      sent.MessageType,
 		}
 
 		return callBotsService(BehaviorTriggerRequest{
