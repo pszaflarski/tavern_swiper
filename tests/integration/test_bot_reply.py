@@ -23,7 +23,7 @@ import os
 from google.cloud import firestore
 from .helpers import (
     get_root_admin, register_user,
-    BOTS_URL, PROFILES_URL, DISCOVERY_URL, MESSAGES_URL,
+    BOTS_URL, PROFILES_URL, DISCOVERY_URL, MESSAGES_URL, QUESTS_URL,
 )
 
 # --- Configuration ---
@@ -116,6 +116,31 @@ async def poll_for_bot_reply(
 
     return None
 
+async def poll_for_quest_completion(
+    user_token: str,
+    user_id: str,
+    quest_id: str,
+    timeout: int = 15,
+) -> dict | None:
+    """
+    Poll the quests API for a completed status for the given quest.
+    """
+    start = asyncio.get_event_loop().time()
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        while (asyncio.get_event_loop().time() - start) < timeout:
+            resp = await client.get(
+                f"{QUESTS_URL}/quests/status/{user_id}",
+                headers={"Authorization": f"Bearer {user_token}"},
+            )
+            if resp.status_code == 200:
+                statuses = resp.json()
+                for qs in statuses:
+                    if qs.get("quest_id") == quest_id and qs.get("status") == "completed":
+                        return qs
+            await asyncio.sleep(2)
+
+    return None
 
 @pytest.mark.asyncio
 async def test_bot_replies_to_message(admin_context, bot_with_dummy_agent):
@@ -259,9 +284,16 @@ async def test_bot_replies_to_message(admin_context, bot_with_dummy_agent):
 
         print(f"✅ Bot replied! Content: '{reply['content']}'")
 
-        # The dummy_agent echoes the message back, so verify the content matches
         assert reply["content"] == test_message, (
             f"Expected echo of '{test_message}', got '{reply['content']}'"
         )
         assert reply["sender_profile_id"] == bot_profile_id
         print(f"✅ Echo content verified — bot reply pipeline works end-to-end!")
+
+        # 11. Verify the 'meet_the_barkeep' quest was completed
+        print(f"⏳ Waiting for 'meet_the_barkeep' quest completion for user {user['uid']}...")
+        quest_status = await poll_for_quest_completion(
+            user['token'], user['uid'], "meet_the_barkeep", timeout=15
+        )
+        assert quest_status is not None, "meet_the_barkeep quest was not completed within timeout."
+        print(f"✅ Quest completion verified!")
