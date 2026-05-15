@@ -75,6 +75,7 @@ type MessageSent struct {
 	MessagePreview  string                 `protobuf:"bytes,4,opt,name=message_preview,json=messagePreview,proto3" json:"message_preview,omitempty"`      // Truncated content (max 200 chars)
 	MessageType     string                 `protobuf:"bytes,5,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`               // "user", "system", "event"
 	Timestamp       string                 `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                                      // RFC3339
+	MetadataJson    string                 `protobuf:"bytes,7,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`            // JSON-encoded metadata (e.g. event_type)
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -147,6 +148,13 @@ func (x *MessageSent) GetMessageType() string {
 func (x *MessageSent) GetTimestamp() string {
 	if x != nil {
 		return x.Timestamp
+	}
+	return ""
+}
+
+func (x *MessageSent) GetMetadataJson() string {
+	if x != nil {
+		return x.MetadataJson
 	}
 	return ""
 }
@@ -229,7 +237,7 @@ var File_proto_message_events_proto protoreflect.FileDescriptor
 
 const file_proto_message_events_proto_rawDesc = "" +
 	"\n" +
-	"\x1aproto/message_events.proto\x12\amessage\"\xeb\x01\n" +
+	"\x1aproto/message_events.proto\x12\amessage\"\x90\x02\n" +
 	"\vMessageSent\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId\x12\x1d\n" +
 	"\n" +
@@ -237,7 +245,8 @@ const file_proto_message_events_proto_rawDesc = "" +
 	"\x11sender_profile_id\x18\x03 \x01(\tR\x0fsenderProfileId\x12'\n" +
 	"\x0fmessage_preview\x18\x04 \x01(\tR\x0emessagePreview\x12!\n" +
 	"\fmessage_type\x18\x05 \x01(\tR\vmessageType\x12\x1c\n" +
-	"\ttimestamp\x18\x06 \x01(\tR\ttimestamp\"\x9c\x01\n" +
+	"\ttimestamp\x18\x06 \x01(\tR\ttimestamp\x12#\n" +
+	"\rmetadata_json\x18\a \x01(\tR\fmetadataJson\"\x9c\x01\n" +
 	"\fMessageEvent\x123\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x1f.message.MessageEvent.EventTypeR\x04type\x12*\n" +
 	"\x04sent\x18\x02 \x01(\v2\x14.message.MessageSentH\x00R\x04sent\"\"\n" +

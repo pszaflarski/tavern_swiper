@@ -92,8 +92,10 @@ func handleBehaviorTrigger(c *gin.Context) {
 		conversationID, _ := req.Context["conversation_id"].(string)
 		senderProfileID, _ := req.Context["sender_profile_id"].(string)
 		messagePreview, _ := req.Context["message_preview"].(string)
+		messageType, _ := req.Context["message_type"].(string)
+		metadata, _ := req.Context["metadata"].(map[string]interface{})
 		if conversationID != "" && senderProfileID != "" {
-			count, msgs := behaviorBotReply(ctx, client, conversationID, senderProfileID, messagePreview)
+			count, msgs := behaviorBotReply(ctx, client, conversationID, senderProfileID, messagePreview, messageType, metadata)
 			triggeredCount += count
 			details = append(details, msgs...)
 		}
@@ -258,7 +260,7 @@ func swipeRight(token, swiperProfileID, swipedProfileID string) error {
 
 // behaviorBotReply handles the "message_received" trigger. It checks if any
 // bot profiles are participants in the conversation and generates AI replies.
-func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, senderProfileID, messagePreview string) (int, []string) {
+func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, senderProfileID, messagePreview, messageType string, metadata map[string]interface{}) (int, []string) {
 	// 1. Guard: if the sender is ANY bot, bail immediately to prevent loops.
 	if isBotProfile(ctx, db, senderProfileID) {
 		msg := fmt.Sprintf("Sender %s is a bot, skipping reply", senderProfileID)
@@ -334,7 +336,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply via %s", bp.agentName, bp.profileID, conversationID, serviceURLs.Get("agent_router"))
 
 			// 4. Call agent_router to generate a reply
-			aiResponse, err := callAgentRouter(bp.agentName, messagePreview, conversationID)
+			aiResponse, err := callAgentRouter(bp.agentName, messagePreview, conversationID, messageType, metadata)
 			if err != nil {
 				msg := fmt.Sprintf("Agent router failed for '%s': %v", bp.agentName, err)
 				log.Printf("[ERROR] %s", msg)
@@ -395,13 +397,15 @@ func isBotInConversation(token, botProfileID, conversationID string) (bool, erro
 }
 
 // callAgentRouter sends a prompt to the agent_router and returns the AI response.
-func callAgentRouter(agentName, prompt, threadID string) (string, error) {
+func callAgentRouter(agentName, prompt, threadID, messageType string, metadata map[string]interface{}) (string, error) {
 	agentRouterURL := serviceURLs.Get("agent_router")
 
-	payload := map[string]string{
-		"prompt":    prompt,
-		"agent":     agentName,
-		"thread_id": threadID,
+	payload := map[string]interface{}{
+		"prompt":       prompt,
+		"agent":        agentName,
+		"thread_id":    threadID,
+		"message_type": messageType,
+		"metadata":     metadata,
 	}
 	body, _ := json.Marshal(payload)
 

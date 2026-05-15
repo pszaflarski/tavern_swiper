@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"log"
 	"math/big"
 	"net/http"
@@ -301,19 +302,24 @@ func handleSendMessage(c *gin.Context) {
 		return
 	}
 
+	var outMetadata *EventMetadata
+	if body.Metadata != nil && msgType != MessageTypeUser {
+		outMetadata = body.Metadata
+	}
+
 	// 6. Publish message event (fire-and-forget, non-blocking)
 	if messagePublisher != nil {
 		go func() {
 			pubCtx := context.Background()
-			if err := messagePublisher.PublishMessageSent(pubCtx, convID, messageID, body.SenderProfileID, body.Content, msgType); err != nil {
+			metaJson := ""
+			if outMetadata != nil {
+				b, _ := json.Marshal(outMetadata)
+				metaJson = string(b)
+			}
+			if err := messagePublisher.PublishMessageSent(pubCtx, convID, messageID, body.SenderProfileID, body.Content, msgType, metaJson); err != nil {
 				log.Printf("[WARN] Failed to publish message event: %v", err)
 			}
 		}()
-	}
-
-	var outMetadata *EventMetadata
-	if body.Metadata != nil && msgType != MessageTypeUser {
-		outMetadata = body.Metadata
 	}
 
 	c.JSON(http.StatusCreated, MessageOut{
@@ -415,6 +421,9 @@ func handleGetMessages(c *gin.Context) {
 			metadata.Target = parseStringSlice(rawMeta["target"])
 			if len(metadata.Target) == 0 {
 				metadata.Target = nil
+			}
+			if innerMeta, ok := rawMeta["metadata"].(map[string]interface{}); ok {
+				metadata.Metadata = innerMeta
 			}
 		}
 
@@ -730,6 +739,10 @@ func handleRollDice(c *gin.Context) {
 	eventMetadata := &EventMetadata{
 		EventType:   "dice_roll",
 		InitiatedBy: profileID,
+		Metadata: map[string]interface{}{
+			"value":     result,
+			"item_name": diceType,
+		},
 	}
 	messageID := uuid.New().String()
 	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
@@ -776,7 +789,12 @@ func handleRollDice(c *gin.Context) {
 	if messagePublisher != nil {
 		go func() {
 			pubCtx := context.Background()
-			if err := messagePublisher.PublishMessageSent(pubCtx, convID, messageID, profileID, eventContent, MessageTypeEvent); err != nil {
+			metaJson := ""
+			if eventMetadata != nil {
+				b, _ := json.Marshal(eventMetadata)
+				metaJson = string(b)
+			}
+			if err := messagePublisher.PublishMessageSent(pubCtx, convID, messageID, profileID, eventContent, MessageTypeEvent, metaJson); err != nil {
 				log.Printf("[WARN] Failed to publish dice roll event: %v", err)
 			}
 		}()

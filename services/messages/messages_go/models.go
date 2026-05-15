@@ -11,9 +11,10 @@ const (
 // EventMetadata holds structured metadata for event and system messages.
 // This allows the frontend to render rich event UIs beyond the plain-text content.
 type EventMetadata struct {
-	EventType   string   `json:"event_type"              firestore:"event_type"`              // e.g. "dice_roll", "narration"
-	InitiatedBy string   `json:"initiated_by"            firestore:"initiated_by"`            // profile_id of who triggered the event
-	Target      []string `json:"target,omitempty"         firestore:"target,omitempty"`         // optional target profile_ids
+	EventType   string                 `json:"event_type"              firestore:"event_type"`              // e.g. "dice_roll", "narration"
+	InitiatedBy string                 `json:"initiated_by"            firestore:"initiated_by"`            // profile_id of who triggered the event
+	Target      []string               `json:"target,omitempty"         firestore:"target,omitempty"`         // optional target profile_ids
+	Metadata    map[string]interface{} `json:"metadata,omitempty"       firestore:"metadata,omitempty"`       // raw mechanical data
 }
 
 type MessageCreate struct {

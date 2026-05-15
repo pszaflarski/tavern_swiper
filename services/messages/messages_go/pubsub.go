@@ -14,7 +14,7 @@ import (
 
 // MessagePublisher defines the interface for publishing message events.
 type MessagePublisher interface {
-	PublishMessageSent(ctx context.Context, conversationID, messageID, senderProfileID, content, msgType string) error
+	PublishMessageSent(ctx context.Context, conversationID, messageID, senderProfileID, content, msgType, metadataJson string) error
 }
 
 // RealMessagePublisher publishes events to Pub/Sub.
@@ -54,7 +54,7 @@ func truncatePreview(content string, maxLen int) string {
 }
 
 // PublishMessageSent publishes a MESSAGE_SENT event to Pub/Sub.
-func (r *RealMessagePublisher) PublishMessageSent(ctx context.Context, conversationID, messageID, senderProfileID, content, msgType string) error {
+func (r *RealMessagePublisher) PublishMessageSent(ctx context.Context, conversationID, messageID, senderProfileID, content, msgType, metadataJson string) error {
 	event := &pb.MessageEvent{
 		Type: pb.MessageEvent_SENT,
 		Event: &pb.MessageEvent_Sent{
@@ -65,6 +65,7 @@ func (r *RealMessagePublisher) PublishMessageSent(ctx context.Context, conversat
 				MessagePreview:  truncatePreview(content, 200),
 				MessageType:     msgType,
 				Timestamp:       time.Now().UTC().Format(time.RFC3339),
+				MetadataJson:    metadataJson,
 			},
 		},
 	}

@@ -175,6 +175,15 @@ func processMessageEvent(event *pb.MessageEvent) error {
 			"message_type":      sent.MessageType,
 		}
 
+		if sent.MetadataJson != "" {
+			var meta map[string]interface{}
+			if err := json.Unmarshal([]byte(sent.MetadataJson), &meta); err == nil {
+				eventCtx["metadata"] = meta
+			} else {
+				log.Printf("⚠️ Failed to parse metadata JSON: %v", err)
+			}
+		}
+
 		return callBotsService(BehaviorTriggerRequest{
 			Trigger: "message_received",
 			Context: eventCtx,

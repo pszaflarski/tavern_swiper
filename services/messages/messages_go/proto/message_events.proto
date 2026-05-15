@@ -11,6 +11,7 @@ message MessageSent {
   string message_preview = 4;     // Truncated content (max 200 chars)
   string message_type = 5;        // "user", "system", "event"
   string timestamp = 6;           // RFC3339
+  string metadata_json = 7;       // JSON-encoded metadata (e.g. event_type)
 }
 
 message MessageEvent {
