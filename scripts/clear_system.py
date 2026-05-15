@@ -19,43 +19,32 @@ SERVICES = ["users", "profiles", "auth", "messages", "discovery", "bots", "agent
 # Databases that use MongoDB compatibility mode (Firestore API disabled).
 # These are cleared separately or skipped since they contain ephemeral data.
 MONGO_MODE_SERVICES = {"agent-router"}
-
-# Path to agent_router .env files for MongoDB connection strings
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-
-
 def clear_mongo_database(service: str, env: str):
-    """Clear a MongoDB-mode Firestore database by deleting all documents via pymongo."""
-    import re
+    """Clear a MongoDB-mode Firestore database by deleting all documents via pymongo.
+
+    Fetches the connection string from GCP Secret Manager:
+      - dev/test secrets live in tavern-swiper-dev
+      - prod secrets live in tavern-swiper-prod
+    """
     from pymongo import MongoClient
 
-    # Read connection string from the service's .env file
-    service_dir = service.replace("-", "_")
-    env_file = os.path.join(PROJECT_ROOT, "services", service_dir, ".env")
-    if not os.path.exists(env_file):
-        # Try the .env.{env} variant
-        env_file = os.path.join(PROJECT_ROOT, "services", service_dir, f".env.{env}")
-    if not os.path.exists(env_file):
-        print(f"  ⚠️ No .env file found for {service}, skipping")
-        return
+    target_db = f"{service}-{env}"
+    secret_name = f"{service}-mongodb-{env}"
+    project = "tavern-swiper-prod" if env == "prod" else "tavern-swiper-dev"
 
-    conn_string = None
-    with open(env_file) as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("MONGODB_CONNECTION_STRING"):
-                conn_string = line.split("=", 1)[1].strip().strip('"')
-                break
+    # Fetch connection string from Secret Manager
+    try:
+        conn_string = subprocess.check_output([
+            "gcloud", "secrets", "versions", "access", "latest",
+            "--secret", secret_name, "--project", project
+        ], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+    except Exception as e:
+        print(f"  ⚠️ Could not fetch secret '{secret_name}' from {project}: {e}")
+        return
 
     if not conn_string:
-        print(f"  ⚠️ No MONGODB_CONNECTION_STRING in {env_file}, skipping")
+        print(f"  ⚠️ Empty secret '{secret_name}', skipping")
         return
-
-    # Swap the database name to match the target environment
-    # e.g. agent-router-dev -> agent-router-test
-    target_db = f"{service}-{env}"
-    conn_string = re.sub(r'/[^/?]+\?', f'/{target_db}?', conn_string)
 
     client = MongoClient(conn_string)
     db = client[target_db]
@@ -100,8 +89,14 @@ def delete_collection(coll_ref, batch_size=500):
         return delete_collection(coll_ref, batch_size)
 
 def purge_system(env="dev", purge_auth=False):
+    # HARD BLOCK: Never allow clearing production
+    if env == "prod":
+        print("🚫 REFUSED: Clearing production is permanently disabled in this script.")
+        print("   If you truly need to clear prod, do it manually in the GCP Console.")
+        sys.exit(1)
+
     # Determine the target project based on environment
-    target_project = "tavern-swiper-prod" if env == "prod" else "tavern-swiper-dev"
+    target_project = "tavern-swiper-dev"
     
     print(f"🚀 Starting Direct Firestore Purge for environment: {env} (Project: {target_project})\n")
     # Map 'dev' and 'test' to their respective database/bucket suffixes
@@ -188,7 +183,7 @@ def purge_system(env="dev", purge_auth=False):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Purge system data for a specific environment.")
-    parser.add_argument("env", nargs="?", default="dev", help="Environment to purge (dev/test)")
+    parser.add_argument("env", nargs="?", default="dev", choices=["dev", "test"], help="Environment to purge (dev or test only — prod is blocked)")
     parser.add_argument("--clear-firebase", action="store_true", help="Also purge all Firebase Auth users (destructive to all envs)")
     
     args = parser.parse_args()
