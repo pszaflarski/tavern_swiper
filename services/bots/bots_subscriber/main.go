@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/proto"
@@ -20,6 +21,7 @@ type PubSubPushRequest struct {
 	Message struct {
 		Data []byte `json:"data"`
 	} `json:"message"`
+	Subscription string `json:"subscription"`
 }
 
 func getEnv(key, fallback string) string {
@@ -66,9 +68,9 @@ func handlePubSubPush(c *gin.Context) {
 		return
 	}
 
-	log.Printf("📥 Received Pub/Sub message (%d bytes)", len(pushMsg.Message.Data))
+	log.Printf("📥 Received Pub/Sub message (%d bytes) from subscription: %s", len(pushMsg.Message.Data), pushMsg.Subscription)
 
-	if err := processSerializedEvent(pushMsg.Message.Data); err != nil {
+	if err := processSerializedEvent(pushMsg.Message.Data, pushMsg.Subscription); err != nil {
 		log.Printf("❌ Failed to process event: %v", err)
 		// Return 500 so Pub/Sub retries
 		c.Status(http.StatusInternalServerError)
@@ -78,21 +80,26 @@ func handlePubSubPush(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func processSerializedEvent(data []byte) error {
-	// Try ProfileEvent first (existing behavior)
-	var profileEvent pb.ProfileEvent
-	if err := proto.Unmarshal(data, &profileEvent); err == nil && profileEvent.Type != pb.ProfileEvent_UNKNOWN {
-		return processProfileEvent(&profileEvent)
-	}
-
-	// Try MessageEvent
-	var msgEvent pb.MessageEvent
-	if err := proto.Unmarshal(data, &msgEvent); err == nil && msgEvent.Type != pb.MessageEvent_UNKNOWN {
+func processSerializedEvent(data []byte, subscription string) error {
+	// Use the subscription name to determine the event type.
+	// This avoids protobuf ambiguity since ProfileEvent and MessageEvent
+	// share the same wire layout (field 1 = enum, field 2 = oneof).
+	if strings.Contains(subscription, "message") {
+		var msgEvent pb.MessageEvent
+		if err := proto.Unmarshal(data, &msgEvent); err != nil {
+			log.Printf("❌ Failed to unmarshal MessageEvent: %v", err)
+			return nil // Don't retry on bad data
+		}
 		return processMessageEvent(&msgEvent)
 	}
 
-	log.Printf("⚠️ Could not unmarshal data as ProfileEvent or MessageEvent, skipping")
-	return nil // Don't retry on unrecognizable data
+	// Default: treat as ProfileEvent (existing behavior)
+	var profileEvent pb.ProfileEvent
+	if err := proto.Unmarshal(data, &profileEvent); err != nil {
+		log.Printf("❌ Failed to unmarshal ProfileEvent: %v", err)
+		return nil
+	}
+	return processProfileEvent(&profileEvent)
 }
 
 type BehaviorTriggerRequest struct {
