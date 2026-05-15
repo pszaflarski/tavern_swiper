@@ -2,6 +2,9 @@
 # scripts/apply-indexes.sh
 # Applies Firestore index configurations for Enterprise Edition.
 # In Enterprise, both single-field and multi-field indexes are created via 'composite create'.
+#
+# IDEMPOTENT: If an index already exists, gcloud returns ALREADY_EXISTS — we catch that
+# and print a skip message instead of failing.
 
 set -e
 
@@ -17,16 +20,20 @@ SERVICES=(
   ["discovery_go"]="discovery"
   ["messages_go"]="messages"
   ["users_go"]="users"
+  ["bots_go"]="bots"
   ["quests_go"]="quests"
 )
 
-# Helper function to create an index
+# Track results
+CREATED=0
+SKIPPED=0
+FAILED=0
+
+# Helper function to create an index (idempotent)
 create_index() {
   local db=$1
   local coll=$2
   local fields=$3 # format: "field1:order,field2:order" or "field1:array"
-  
-  echo "  🏗️  Creating index: $coll ($fields)"
   
   local cmd="gcloud firestore indexes composite create --database=$db --collection-group=$coll"
   
@@ -44,23 +51,46 @@ create_index() {
     fi
   done
   
-  # Run in background
-  $cmd --quiet &
+  # Run and handle already-exists gracefully
+  output=$($cmd --quiet 2>&1) && {
+    echo "    ✅ $coll ($fields)"
+    ((CREATED++))
+  } || {
+    if echo "$output" | grep -qi "already exists"; then
+      echo "    ⏭️  $coll ($fields) — already exists"
+      ((SKIPPED++))
+    else
+      echo "    ❌ $coll ($fields) — FAILED: $output"
+      ((FAILED++))
+    fi
+  }
 }
 
 for svc in "${!SERVICES[@]}"; do
   DB_BASE=${SERVICES[$svc]}
   DB_ID="${DB_BASE}-${ENV}"
   
+  echo ""
   echo "📦 Service: $svc -> Database: $DB_ID"
 
   case $svc in
     "profiles_go")
+      # --- profiles collection ---
       create_index "$DB_ID" "profiles" "user_id:ASCENDING"
       create_index "$DB_ID" "profiles" "user_id:DESCENDING"
       create_index "$DB_ID" "profiles" "is_active:ASCENDING"
       create_index "$DB_ID" "profiles" "is_active:DESCENDING"
       create_index "$DB_ID" "profiles" "user_id:ASCENDING,is_active:ASCENDING"
+      # --- tags collection ---
+      create_index "$DB_ID" "tags" "slug:ASCENDING"
+      create_index "$DB_ID" "tags" "category:ASCENDING"
+      create_index "$DB_ID" "tags" "name:ASCENDING"
+      create_index "$DB_ID" "tags" "name_lower:ASCENDING"
+      create_index "$DB_ID" "tags" "multi_select:ASCENDING"
+      create_index "$DB_ID" "tags" "status:ASCENDING"
+      create_index "$DB_ID" "tags" "status:ASCENDING,created_at:DESCENDING"
+      create_index "$DB_ID" "tags" "category:ASCENDING,name_lower:ASCENDING"
+      create_index "$DB_ID" "tags" "category:ASCENDING,name:ASCENDING"
       ;;
     "discovery_go")
       create_index "$DB_ID" "swipes" "swiper_profile_id:ASCENDING"
@@ -81,6 +111,12 @@ for svc in "${!SERVICES[@]}"; do
       create_index "$DB_ID" "users" "is_deleted:ASCENDING"
       create_index "$DB_ID" "users" "user_type:ASCENDING,is_deleted:ASCENDING"
       ;;
+    "bots_go")
+      create_index "$DB_ID" "bot_users" "slug:ASCENDING"
+      create_index "$DB_ID" "bot_profiles" "bot_user_id:ASCENDING"
+      create_index "$DB_ID" "bot_profiles" "profile_id:ASCENDING"
+      create_index "$DB_ID" "bot_profiles" "behavior_type:ASCENDING"
+      ;;
     "quests_go")
       create_index "$DB_ID" "quest_status" "user_id:ASCENDING"
       create_index "$DB_ID" "quest_status" "user_id:ASCENDING,status:ASCENDING"
@@ -90,5 +126,5 @@ for svc in "${!SERVICES[@]}"; do
   esac
 done
 
-wait
-echo "✅ All index creation requests submitted."
+echo ""
+echo "🏁 Index apply complete: ✅ $CREATED created, ⏭️ $SKIPPED already existed, ❌ $FAILED failed."
