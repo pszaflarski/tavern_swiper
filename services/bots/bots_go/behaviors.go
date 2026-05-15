@@ -331,7 +331,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 				continue
 			}
 
-			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply", bp.agentName, bp.profileID, conversationID)
+			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply via %s", bp.agentName, bp.profileID, conversationID, serviceURLs.Get("agent_router"))
 
 			// 4. Call agent_router to generate a reply
 			aiResponse, err := callAgentRouter(bp.agentName, messagePreview, conversationID)
