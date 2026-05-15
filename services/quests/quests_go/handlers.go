@@ -917,9 +917,44 @@ func handleUpdateQuestStatus(c *gin.Context) {
 		existingData := existingSnap.Data()
 		existingStatus, _ := existingData["status"].(string)
 
-		// Don't allow re-starting a completed quest
-		if existingStatus == "completed" && req.Status == "started" {
-			send409(c, fmt.Sprintf("Quest '%s' is already completed by user %s", req.QuestID, req.UserID))
+		// Once completed, the quest is locked — the first profile keeps the credit.
+		// Record a "blocked" entry for this profile so quest status is searchable by profile_id.
+		if existingStatus == "completed" {
+			existingProfileID, _ := existingData["profile_id"].(string)
+
+			// If the SAME profile is re-submitting, just return 409
+			if existingProfileID == req.ProfileID {
+				send409(c, fmt.Sprintf("Quest '%s' is already completed by this profile", req.QuestID))
+				return
+			}
+
+			// Different profile — create a separate "blocked" record keyed by profile
+			blockedDocID := fmt.Sprintf("quest_%s_%s_%s", req.QuestID, req.UserID, req.ProfileID)
+			blockedRef := db.Collection("quest_status").Doc(blockedDocID)
+
+			// Idempotent: don't create duplicate blocked records
+			blockedSnap, _ := blockedRef.Get(ctx)
+			if blockedSnap != nil && blockedSnap.Exists() {
+				send409(c, fmt.Sprintf("Quest '%s' is already completed by user %s (profile %s blocked)", req.QuestID, req.UserID, req.ProfileID))
+				return
+			}
+
+			blockedStatus := QuestStatus{
+				QuestID:   req.QuestID,
+				UserID:    req.UserID,
+				ProfileID: req.ProfileID,
+				Status:    "blocked",
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+			_, err = blockedRef.Set(ctx, blockedStatus)
+			if err != nil {
+				send500(c, fmt.Sprintf("Failed to record blocked quest status: %v", err))
+				return
+			}
+
+			log.Printf("[INFO] Quest '%s' blocked for profile %s — already completed by profile %s", req.QuestID, req.ProfileID, existingProfileID)
+			c.JSON(http.StatusConflict, blockedStatus)
 			return
 		}
 

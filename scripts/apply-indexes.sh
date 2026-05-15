@@ -119,7 +119,10 @@ for svc in "${!SERVICES[@]}"; do
       ;;
     "quests_go")
       create_index "$DB_ID" "quest_status" "user_id:ASCENDING"
+      create_index "$DB_ID" "quest_status" "profile_id:ASCENDING"
+      create_index "$DB_ID" "quest_status" "status:ASCENDING"
       create_index "$DB_ID" "quest_status" "user_id:ASCENDING,status:ASCENDING"
+      create_index "$DB_ID" "quest_status" "profile_id:ASCENDING,status:ASCENDING"
       create_index "$DB_ID" "user_inventory" "user_id:ASCENDING"
       create_index "$DB_ID" "user_inventory" "user_id:ASCENDING,quantity:DESCENDING"
       ;;
