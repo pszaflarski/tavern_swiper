@@ -97,6 +97,25 @@ else
         export MESSAGES_URL=$(echo "$ROUTES" | jq -r '.services.messages // empty')
         export BOTS_URL=$(echo "$ROUTES" | jq -r '.services.bots // empty')
         export QUESTS_URL=$(echo "$ROUTES" | jq -r '.services.quests // empty')
+
+        # Show all resolved URLs so missing services are immediately visible
+        echo "  📋 Resolved service URLs:"
+        for SVC_NAME in auth users profiles discovery messages bots quests; do
+            case $SVC_NAME in
+                auth)      SVC_URL=$AUTH_SERVICE_URL ;;
+                users)     SVC_URL=$USERS_URL ;;
+                profiles)  SVC_URL=$PROFILES_URL ;;
+                discovery) SVC_URL=$DISCOVERY_URL ;;
+                messages)  SVC_URL=$MESSAGES_URL ;;
+                bots)      SVC_URL=$BOTS_URL ;;
+                quests)    SVC_URL=$QUESTS_URL ;;
+            esac
+            if [[ -n "$SVC_URL" ]]; then
+                echo "    ✅ ${SVC_NAME}: ${SVC_URL}"
+            else
+                echo "    ❌ ${SVC_NAME}: NOT FOUND IN ROUTER"
+            fi
+        done
     else
         echo "  ⚠️  Router empty or unreachable. Falling back to slow gcloud discovery..."
         SERVICES=("auth" "users" "profiles" "discovery" "messages" "bots" "quests")

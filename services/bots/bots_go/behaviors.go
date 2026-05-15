@@ -363,7 +363,14 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 
 			// 6. Quest completion: if this is a tavern_keeper, complete "meet_the_barkeep"
 			if bp.behaviorType == "tavern_keeper" {
-				go tryCompleteBarkeepQuest(token, senderProfileID, bp.profileID)
+			go func() {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("[CRITICAL] 🔥 PANIC in tryCompleteBarkeepQuest: %v — this means a required service URL is missing from the router!", r)
+						}
+					}()
+					tryCompleteBarkeepQuest(token, senderProfileID, bp.profileID)
+				}()
 			}
 		}
 	}

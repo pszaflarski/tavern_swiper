@@ -205,6 +205,9 @@ gcloud firestore databases create --database="<db-name>-<env>" \
 ```
 *(Note: Replace `us-central1` with `nam5` for the `prod` environment)*
 
+> **⚠️ CRITICAL INDEXING BEHAVIOR**
+> Firestore Enterprise Native has **NO DEFAULT INDEXES**. Unlike Firestore Standard, which automatically creates single-field indexes, Enterprise requires *every* queried field (even simple `==` lookups) to have an explicit index created via `gcloud firestore indexes composite create`. Always run `./scripts/apply-indexes.sh <env>` after creating a database, or all queries will fail.
+
 ---
 
 ## Frontend (React Native)

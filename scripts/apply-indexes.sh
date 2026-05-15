@@ -17,6 +17,7 @@ SERVICES=(
   ["discovery_go"]="discovery"
   ["messages_go"]="messages"
   ["users_go"]="users"
+  ["quests_go"]="quests"
 )
 
 # Helper function to create an index
@@ -79,6 +80,12 @@ for svc in "${!SERVICES[@]}"; do
       create_index "$DB_ID" "users" "user_type:ASCENDING"
       create_index "$DB_ID" "users" "is_deleted:ASCENDING"
       create_index "$DB_ID" "users" "user_type:ASCENDING,is_deleted:ASCENDING"
+      ;;
+    "quests_go")
+      create_index "$DB_ID" "quest_status" "user_id:ASCENDING"
+      create_index "$DB_ID" "quest_status" "user_id:ASCENDING,status:ASCENDING"
+      create_index "$DB_ID" "user_inventory" "user_id:ASCENDING"
+      create_index "$DB_ID" "user_inventory" "user_id:ASCENDING,quantity:DESCENDING"
       ;;
   esac
 done

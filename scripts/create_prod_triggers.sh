@@ -91,7 +91,17 @@ create_backend_trigger "router-prod-deploy" \
     "services/router/router_go/cloudbuild.yaml" "services/router/router_go" "router_go" "router" \
     "_DB_ID=router-prod,_JWT_SECRET=$JWT_SECRET"
 
-# 9. Frontend (no _DIR_NAME — matches dev trigger structure)
+# 9. Bots
+create_backend_trigger "bots-prod-deploy" \
+    "services/bots/bots_go/cloudbuild.yaml" "services/bots/bots_go" "bots_go" "bots" \
+    "_DB_ID=bots-prod,_JWT_SECRET=$JWT_SECRET"
+
+# 10. Quests
+create_backend_trigger "quests-prod-deploy" \
+    "services/quests/quests_go/cloudbuild.yaml" "services/quests/quests_go" "quests_go" "quests" \
+    "_DB_ID=quests-prod,_JWT_SECRET=$JWT_SECRET"
+
+# 11. Frontend (no _DIR_NAME — matches dev trigger structure)
 create_frontend_trigger "frontend-prod-deploy" \
     "frontend/cloudbuild.yaml" "frontend" "app" \
     "_FIREBASE_API_KEY=$FIREBASE_KEY,_FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_SENDER_ID,_FIREBASE_APP_ID=$FIREBASE_APP_ID"
