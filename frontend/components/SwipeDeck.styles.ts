@@ -60,7 +60,7 @@ export const styles = StyleSheet.create({
   },
   heroName: {
     fontFamily: Fonts.heroic,
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: '800',
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -69,7 +69,7 @@ export const styles = StyleSheet.create({
   },
   heroTagline: {
     fontFamily: Fonts.scribe,
-    fontSize: 18,
+    fontSize: 14,
     fontStyle: 'italic',
     color: Colors.tertiary,
     marginTop: Spacing[1],
