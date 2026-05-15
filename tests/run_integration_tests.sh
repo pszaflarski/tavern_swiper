@@ -96,9 +96,10 @@ else
         export DISCOVERY_URL=$(echo "$ROUTES" | jq -r '.services.discovery // empty')
         export MESSAGES_URL=$(echo "$ROUTES" | jq -r '.services.messages // empty')
         export BOTS_URL=$(echo "$ROUTES" | jq -r '.services.bots // empty')
+        export QUESTS_URL=$(echo "$ROUTES" | jq -r '.services.quests // empty')
     else
         echo "  ⚠️  Router empty or unreachable. Falling back to slow gcloud discovery..."
-        SERVICES=("auth" "users" "profiles" "discovery" "messages" "bots")
+        SERVICES=("auth" "users" "profiles" "discovery" "messages" "bots" "quests")
         for SERVICE in "${SERVICES[@]}"; do
             DEPLOY_NAME="${SERVICE}-${ENV_NAME}"
             URL=$(gcloud run services describe "${DEPLOY_NAME}" --platform managed --region "${REGION}" --project "${PROJECT_ID}" --format 'value(status.url)' 2>/dev/null || echo "NOT_FOUND")
@@ -119,6 +120,7 @@ else
                 discovery) export DISCOVERY_URL=$URL ;;
                 messages) export MESSAGES_URL=$URL ;;
                 bots) export BOTS_URL=$URL ;;
+                quests) export QUESTS_URL=$URL ;;
             esac
             echo "    ✅ ${SERVICE}: ${URL}"
         done
@@ -221,6 +223,9 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Run Integration Tests
 # ---------------------------------------------------------------------------
+echo "🌱 Seeding quests database..."
+$PYTHON scripts/seed_quests.py $ENV_ARG
+
 echo "🧪 Running Integration Tests..."
 $PYTHON -m pip install -r tests/requirements.txt -q
 $PYTHON -m pytest $TESTS_DIR $REAL_AUTH -v -s

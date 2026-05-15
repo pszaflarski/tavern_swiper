@@ -190,6 +190,21 @@ Several convenience scripts are available in the `scripts/` directory to assist 
 | `setup-databases.sh` | `bash scripts/setup-databases.sh [dev/test/prod]` | Creates all Firestore databases and applies indexes. |
 | `switch_env.sh` | `bash scripts/switch_env.sh [local/dev/test]` | Switches frontend to point at a different backend environment. |
 
+### Manual Database Creation
+
+If you ever need to manually create a database for a new microservice, you **must** use the exact flags below. Failure to include `--enable-firestore-data-access` or setting the wrong type/edition will result in the database being created with MongoDB compatibility or as standard tier, which will break the application.
+
+```bash
+gcloud firestore databases create --database="<db-name>-<env>" \
+  --location="us-central1" \
+  --type=firestore-native \
+  --edition=enterprise \
+  --enable-firestore-data-access \
+  --enable-realtime-updates \
+  --project="tavern-swiper-dev"
+```
+*(Note: Replace `us-central1` with `nam5` for the `prod` environment)*
+
 ---
 
 ## Frontend (React Native)

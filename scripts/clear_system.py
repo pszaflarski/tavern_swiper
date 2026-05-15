@@ -126,7 +126,11 @@ def purge_system(env="dev", purge_auth=False):
                 count += 1
             print(f"  ✅ {db_id} cleared ({count} collections).")
         except Exception as e:
-            print(f"  ❌ Error clearing {db_id}: {e}")
+            from google.api_core.exceptions import NotFound
+            if isinstance(e, NotFound):
+                print(f"  ⚠️  Skipping {db_id}: Database does not exist yet.")
+            else:
+                print(f"  ❌ Error clearing {db_id}: {e}")
 
     # 3. Clear Firebase Auth (Optional: Standard for the whole project)
     if purge_auth:

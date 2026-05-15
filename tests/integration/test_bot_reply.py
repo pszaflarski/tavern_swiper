@@ -180,6 +180,9 @@ async def test_bot_replies_to_message(admin_context, bot_with_dummy_agent):
         user_profile_id = create_resp.json()["profile_id"]
         print(f"   Profile created: {user_profile_id}")
 
+        # Wait for profile_created event to propagate to discovery service cache
+        await asyncio.sleep(3)
+
         # 2. Mutual swipe to create a match
         # The tavern keeper behavior should auto-swipe on profile_created,
         # but we also swipe explicitly to guarantee a match exists.
