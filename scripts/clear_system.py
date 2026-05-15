@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess
 import firebase_admin
@@ -14,6 +15,60 @@ def get_current_project():
 
 PROJECT_ID = get_current_project()
 SERVICES = ["users", "profiles", "auth", "messages", "discovery", "bots", "agent-router"]
+
+# Databases that use MongoDB compatibility mode (Firestore API disabled).
+# These are cleared separately or skipped since they contain ephemeral data.
+MONGO_MODE_SERVICES = {"agent-router"}
+
+# Path to agent_router .env files for MongoDB connection strings
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
+
+def clear_mongo_database(service: str, env: str):
+    """Clear a MongoDB-mode Firestore database by dropping all collections via pymongo."""
+    import re
+    from pymongo import MongoClient
+
+    # Read connection string from the service's .env file
+    service_dir = service.replace("-", "_")
+    env_file = os.path.join(PROJECT_ROOT, "services", service_dir, ".env")
+    if not os.path.exists(env_file):
+        # Try the .env.{env} variant
+        env_file = os.path.join(PROJECT_ROOT, "services", service_dir, f".env.{env}")
+    if not os.path.exists(env_file):
+        print(f"  ⚠️ No .env file found for {service}, skipping")
+        return
+
+    conn_string = None
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("MONGODB_CONNECTION_STRING"):
+                conn_string = line.split("=", 1)[1].strip().strip('"')
+                break
+
+    if not conn_string:
+        print(f"  ⚠️ No MONGODB_CONNECTION_STRING in {env_file}, skipping")
+        return
+
+    # Swap the database name to match the target environment
+    # e.g. agent-router-dev -> agent-router-test
+    target_db = f"{service}-{env}"
+    conn_string = re.sub(r'/[^/?]+\?', f'/{target_db}?', conn_string)
+
+    client = MongoClient(conn_string)
+    db = client[target_db]
+    collections = db.list_collection_names()
+    if not collections:
+        print(f"  ✅ {target_db} is already empty.")
+        client.close()
+        return
+
+    for coll_name in collections:
+        db.drop_collection(coll_name)
+    print(f"  ✅ {target_db} cleared ({len(collections)} collections: {', '.join(collections)}).")
+    client.close()
 
 def get_gcloud_credentials():
     """Helper to fetch credentials from gcloud if Application Default Credentials are missing/broken."""
@@ -56,6 +111,13 @@ def purge_system(env="dev", purge_auth=False):
     # 2. Clear Firestore Databases
     for service in SERVICES:
         db_id = f"{service}{suffix}"
+        if service in MONGO_MODE_SERVICES:
+            print(f"🗑️ Clearing MongoDB-mode database: {db_id}...")
+            try:
+                clear_mongo_database(service, env)
+            except Exception as e:
+                print(f"  ❌ Error clearing {db_id} via MongoDB: {e}")
+            continue
         print(f"🗑️ Clearing Firestore Database: {db_id}...")
         try:
             # Use explicit credentials from gcloud to avoid ADC permission issues

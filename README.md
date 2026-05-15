@@ -89,7 +89,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install all dependencies (admin scripts + integration tests)
-pip install -r requirements.txt
+pip install -r scripts/requirements.txt
 ```
 
 ### 3. Truly Keyless Configuration
