@@ -105,6 +105,24 @@ func handleGetFeed(c *gin.Context) {
 			excludeSet[sid] = true
 		}
 	}
+
+	// Also exclude already-matched profiles
+	matchIter := client.Collection(MATCHES_COLLECTION).
+		Where("profiles", "array-contains", profileID).
+		Documents(ctx)
+	matchDocs, err := matchIter.GetAll()
+	if err != nil {
+		log.Printf("[ERROR] Failed to query matches for exclusion: %v", err)
+	} else {
+		for _, doc := range matchDocs {
+			for _, pid := range parseProfiles(doc.Data()["profiles"]) {
+				if pid != profileID {
+					excludeSet[pid] = true
+				}
+			}
+		}
+	}
+
 	excludeIDs := make([]string, 0, len(excludeSet))
 	for id := range excludeSet {
 		excludeIDs = append(excludeIDs, id)
