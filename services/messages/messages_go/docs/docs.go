@@ -466,6 +466,26 @@ const docTemplate = `{
                 }
             }
         },
+        "main.EventMetadata": {
+            "type": "object",
+            "properties": {
+                "event_type": {
+                    "description": "e.g. \"dice_roll\", \"narration\"",
+                    "type": "string"
+                },
+                "initiated_by": {
+                    "description": "profile_id of who triggered the event",
+                    "type": "string"
+                },
+                "target": {
+                    "description": "optional target profile_ids",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "main.LastMessageInfo": {
             "type": "object",
             "properties": {
@@ -492,6 +512,14 @@ const docTemplate = `{
                 "content": {
                     "type": "string"
                 },
+                "metadata": {
+                    "description": "Optional structured metadata for event/system messages",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/main.EventMetadata"
+                        }
+                    ]
+                },
                 "sender_profile_id": {
                     "description": "Required for user messages, omitted for system/event",
                     "type": "string"
@@ -513,6 +541,9 @@ const docTemplate = `{
                 },
                 "message_id": {
                     "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/main.EventMetadata"
                 },
                 "sender_profile_id": {
                     "type": "string"

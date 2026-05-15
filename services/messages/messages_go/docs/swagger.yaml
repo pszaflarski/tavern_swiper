@@ -55,6 +55,20 @@ definitions:
       type:
         type: string
     type: object
+  main.EventMetadata:
+    properties:
+      event_type:
+        description: e.g. "dice_roll", "narration"
+        type: string
+      initiated_by:
+        description: profile_id of who triggered the event
+        type: string
+      target:
+        description: optional target profile_ids
+        items:
+          type: string
+        type: array
+    type: object
   main.LastMessageInfo:
     properties:
       content:
@@ -70,6 +84,10 @@ definitions:
     properties:
       content:
         type: string
+      metadata:
+        allOf:
+        - $ref: '#/definitions/main.EventMetadata'
+        description: Optional structured metadata for event/system messages
       sender_profile_id:
         description: Required for user messages, omitted for system/event
         type: string
@@ -87,6 +105,8 @@ definitions:
         type: string
       message_id:
         type: string
+      metadata:
+        $ref: '#/definitions/main.EventMetadata'
       sender_profile_id:
         type: string
       sent_at:

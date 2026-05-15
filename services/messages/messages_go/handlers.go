@@ -261,6 +261,10 @@ func handleSendMessage(c *gin.Context) {
 	if body.SenderProfileID != "" {
 		msgData["sent_by"] = body.SenderProfileID
 	}
+	// Store metadata for event/system messages
+	if body.Metadata != nil && msgType != MessageTypeUser {
+		msgData["metadata"] = body.Metadata
+	}
 	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(messageID), msgData)
 
 	// Update denormalized parent fields in Conversation
@@ -307,13 +311,19 @@ func handleSendMessage(c *gin.Context) {
 		}()
 	}
 
+	var outMetadata *EventMetadata
+	if body.Metadata != nil && msgType != MessageTypeUser {
+		outMetadata = body.Metadata
+	}
+
 	c.JSON(http.StatusCreated, MessageOut{
 		MessageID:       messageID,
 		ConversationID:  convID,
 		SenderProfileID: body.SenderProfileID,
 		Content:         body.Content,
 		Type:            msgType,
-		SentAt:          _now().Format(time.RFC3339), // Approximate server time for client
+		SentAt:          _now().Format(time.RFC3339),
+		Metadata:        outMetadata,
 	})
 }
 
@@ -396,6 +406,18 @@ func handleGetMessages(c *gin.Context) {
 			msgType = MessageTypeUser // Backward compat: existing messages without type are "user"
 		}
 
+		// Extract metadata if present
+		var metadata *EventMetadata
+		if rawMeta, ok := d["metadata"].(map[string]interface{}); ok {
+			metadata = &EventMetadata{}
+			metadata.EventType, _ = rawMeta["event_type"].(string)
+			metadata.InitiatedBy, _ = rawMeta["initiated_by"].(string)
+			metadata.Target = parseStringSlice(rawMeta["target"])
+			if len(metadata.Target) == 0 {
+				metadata.Target = nil
+			}
+		}
+
 		results = append(results, MessageOut{
 			MessageID:       doc.ID(),
 			ConversationID:  convID,
@@ -403,6 +425,7 @@ func handleGetMessages(c *gin.Context) {
 			Content:         content,
 			Type:            msgType,
 			SentAt:          tVal.Format(time.RFC3339),
+			Metadata:        metadata,
 		})
 	}
 
@@ -704,6 +727,10 @@ func handleRollDice(c *gin.Context) {
 
 	// 7. Post an event message to the conversation
 	eventContent := fmt.Sprintf("%s rolled a %d on a %s", displayName, result, diceType)
+	eventMetadata := &EventMetadata{
+		EventType:   "dice_roll",
+		InitiatedBy: profileID,
+	}
 	messageID := uuid.New().String()
 	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
 	batch := client.Batch()
@@ -712,6 +739,7 @@ func handleRollDice(c *gin.Context) {
 		"content":    eventContent,
 		"type":       MessageTypeEvent,
 		"sent_by":    profileID,
+		"metadata":   eventMetadata,
 		"created_at": firestore.ServerTimestamp,
 		"updated_at": firestore.ServerTimestamp,
 	})

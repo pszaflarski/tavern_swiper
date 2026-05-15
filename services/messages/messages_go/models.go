@@ -2,26 +2,35 @@ package main
 
 import "time"
 
-// Valid message types
 const (
 	MessageTypeUser   = "user"
 	MessageTypeSystem = "system"
 	MessageTypeEvent  = "event"
 )
 
+// EventMetadata holds structured metadata for event and system messages.
+// This allows the frontend to render rich event UIs beyond the plain-text content.
+type EventMetadata struct {
+	EventType   string   `json:"event_type"              firestore:"event_type"`              // e.g. "dice_roll", "narration"
+	InitiatedBy string   `json:"initiated_by"            firestore:"initiated_by"`            // profile_id of who triggered the event
+	Target      []string `json:"target,omitempty"         firestore:"target,omitempty"`         // optional target profile_ids
+}
+
 type MessageCreate struct {
-	SenderProfileID string `json:"sender_profile_id"` // Required for user messages, omitted for system/event
-	Content         string `json:"content" binding:"required"`
-	Type            string `json:"type"` // "user" (default), "system", "event"
+	SenderProfileID string         `json:"sender_profile_id"` // Required for user messages, omitted for system/event
+	Content         string         `json:"content" binding:"required"`
+	Type            string         `json:"type"`     // "user" (default), "system", "event"
+	Metadata        *EventMetadata `json:"metadata,omitempty"` // Optional structured metadata for event/system messages
 }
 
 type MessageOut struct {
-	MessageID       string `json:"message_id"`
-	ConversationID  string `json:"conversation_id"`
-	SenderProfileID string `json:"sender_profile_id,omitempty"`
-	Content         string `json:"content"`
-	Type            string `json:"type"`
-	SentAt          string `json:"sent_at"`
+	MessageID       string         `json:"message_id"`
+	ConversationID  string         `json:"conversation_id"`
+	SenderProfileID string         `json:"sender_profile_id,omitempty"`
+	Content         string         `json:"content"`
+	Type            string         `json:"type"`
+	SentAt          string         `json:"sent_at"`
+	Metadata        *EventMetadata `json:"metadata,omitempty"`
 }
 
 type ConversationCreate struct {
@@ -62,11 +71,12 @@ type Conversation struct {
 }
 
 type Message struct {
-	SentBy    string    `firestore:"sent_by"`
-	Content   string    `firestore:"content"`
-	Type      string    `firestore:"type"`
-	CreatedAt time.Time `firestore:"created_at"`
-	UpdatedAt time.Time `firestore:"updated_at"`
+	SentBy    string         `firestore:"sent_by"`
+	Content   string         `firestore:"content"`
+	Type      string         `firestore:"type"`
+	Metadata  *EventMetadata `firestore:"metadata,omitempty"`
+	CreatedAt time.Time      `firestore:"created_at"`
+	UpdatedAt time.Time      `firestore:"updated_at"`
 }
 
 type ProfileConversation struct {
