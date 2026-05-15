@@ -1,7 +1,7 @@
 import pytest
 import httpx
 import uuid
-from .helpers import get_root_admin, BOTS_URL, AUTH_URL
+from .helpers import get_root_admin, BOTS_URL, AUTH_URL, USERS_URL
 
 @pytest.fixture
 async def root_admin():
@@ -63,6 +63,25 @@ async def test_bot_registration_and_creds_flow(root_admin):
         login_data = login_resp.json()
         assert "id_token" in login_data
         assert login_data["uid"] == bot_data["firebase_uid"]
+
+        # 5. Verify the bot's user record has user_type 'bot'
+        # Exchange the bot's id_token for a Tavern JWT to query /users/me
+        verify_resp = await client.post(
+            f"{AUTH_URL}/auth/verify",
+            json={"id_token": login_data["id_token"]}
+        )
+        assert verify_resp.status_code == 200, f"Bot verify failed: {verify_resp.text}"
+        bot_token = verify_resp.json()["token"]
+
+        me_resp = await client.get(
+            f"{USERS_URL}/users/me",
+            headers={"Authorization": f"Bearer {bot_token}"}
+        )
+        assert me_resp.status_code == 200, f"Failed to get bot user record: {me_resp.text}"
+        user_record = me_resp.json()
+        assert user_record["user_type"] == "bot", (
+            f"Expected user_type 'bot', got '{user_record['user_type']}'"
+        )
 
 @pytest.mark.asyncio
 async def test_bot_profile_creation_with_image(root_admin):

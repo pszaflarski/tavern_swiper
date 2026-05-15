@@ -9,6 +9,7 @@ const (
 	User      UserType = "user"
 	Admin     UserType = "admin"
 	RootAdmin UserType = "root_admin"
+	Bot       UserType = "bot"
 )
 
 // Base User fields

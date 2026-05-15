@@ -91,16 +91,16 @@ func handleRegisterBot(c *gin.Context) {
 		return
 	}
 
-	// 2. Login to get token
-	jwtToken, firebaseUID, err := loginAndVerify(email, password)
+	// 2. Login to get Firebase UID
+	_, firebaseUID, err := loginAndVerify(email, password)
 	if err != nil {
 		log.Printf("[ERROR] Login and verify failed: %v", err)
 		httpError(c, http.StatusInternalServerError, "Failed to obtain bot token")
 		return
 	}
 
-	// 3. Ensure user record exists
-	if err := initUserRecord(jwtToken); err != nil {
+	// 3. Ensure user record exists with type 'bot'
+	if err := initUserRecord(auth.Token, firebaseUID, email); err != nil {
 		log.Printf("[ERROR] User record init failed: %v", err)
 		httpError(c, http.StatusInternalServerError, "Failed to initialize user record")
 		return
@@ -205,14 +205,18 @@ func handleGetCreds(c *gin.Context) {
 			return
 		}
 
-		jwtToken, _, err := loginAndVerify(email, password)
+		_, _, err = loginAndVerify(email, password)
 		if err != nil {
 			log.Printf("[ERROR] Login after re-registration failed: %v", err)
 			httpError(c, http.StatusInternalServerError, "Bot login failed after re-registration")
 			return
 		}
 
-		if err := initUserRecord(jwtToken); err != nil {
+		botUserID, _ := data["user_id"].(string)
+		if botUserID == "" {
+			botUserID, _ = data["firebase_uid"].(string)
+		}
+		if err := initUserRecord(auth.Token, botUserID, email); err != nil {
 			log.Printf("[ERROR] User record init failed after re-registration: %v", err)
 			// Continue anyway, creds work
 		}

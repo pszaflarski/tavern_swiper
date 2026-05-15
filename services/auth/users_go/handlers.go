@@ -361,7 +361,7 @@ func createUserHandler(c *gin.Context) {
 	// Create new
 	isPremium := body.IsPremium
 	isDeleted := body.IsDeleted
-	if body.UserType == User {
+	if body.UserType == User || body.UserType == Bot {
 		isPremium = false
 		isDeleted = false
 	}

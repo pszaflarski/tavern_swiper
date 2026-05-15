@@ -105,14 +105,22 @@ func loginAndVerify(email, password string) (string, string, error) {
 	return *tokenResp.Token, loginResp.UID, nil
 }
 
-func initUserRecord(jwtToken string) error {
+func initUserRecord(adminToken string, botUID string, botEmail string) error {
 	usersURL := serviceURLs.Get("users")
-	req, _ := http.NewRequest("GET", usersURL+"/users/me", nil)
-	req.Header.Set("Authorization", "Bearer "+jwtToken)
+	payload := map[string]interface{}{
+		"email":     botEmail,
+		"user_type": "bot",
+		"uid":       botUID,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", usersURL+"/users/", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to call /users/me: %w", err)
+		return fmt.Errorf("failed to call POST /users/: %w", err)
 	}
 	defer resp.Body.Close()
 

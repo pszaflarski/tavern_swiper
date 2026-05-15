@@ -496,12 +496,14 @@ const docTemplate = `{
             "enum": [
                 "user",
                 "admin",
-                "root_admin"
+                "root_admin",
+                "bot"
             ],
             "x-enum-varnames": [
                 "User",
                 "Admin",
-                "RootAdmin"
+                "RootAdmin",
+                "Bot"
             ]
         },
         "main.UserUpdate": {

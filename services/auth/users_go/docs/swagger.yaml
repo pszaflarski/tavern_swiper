@@ -57,11 +57,13 @@ definitions:
     - user
     - admin
     - root_admin
+    - bot
     type: string
     x-enum-varnames:
     - User
     - Admin
     - RootAdmin
+    - Bot
   main.UserUpdate:
     properties:
       full_name:
