@@ -190,11 +190,14 @@ func TestAuthResilience_DeleteAllUserSuccess(t *testing.T) {
 }
 
 func TestAuthResilience_MintToken(t *testing.T) {
-	token, err := mintTavernJWT("u1", "e1", "admin")
+	token, expiresAt, err := mintTavernJWT("u1", "e1", "admin")
 	if err != nil {
 		t.Fatalf("Failed to mint token: %v", err)
 	}
 	if token == "" {
 		t.Errorf("Token should not be empty")
+	}
+	if expiresAt == 0 {
+		t.Errorf("ExpiresAt should not be zero")
 	}
 }

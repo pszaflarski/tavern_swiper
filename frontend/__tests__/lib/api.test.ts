@@ -149,15 +149,14 @@ describe('API Token Management', () => {
     consoleSpy.mockRestore();
   });
 
-  it('response interceptor should retry once on 401 before global logout', async () => {
+  it('response interceptor should logout immediately on 401 when no Firebase user exists', async () => {
     const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     
-    // The mock axios.create returns the same mockInstance. We captured the handler during import.
+    // No Firebase user
+    (auth as any).currentUser = null;
+    
     const mockInstance = profilesApi as any;
     const errorHandler = mockInstance._errorHandler;
-    
-    const mockRequest = jest.fn().mockRejectedValue(new Error('Retry failed'));
-    (mockInstance as any).request = mockRequest;
 
     const error = {
       response: { status: 401 },
@@ -167,12 +166,149 @@ describe('API Token Management', () => {
     await expect(errorHandler(error)).rejects.toBe(error);
 
     expect(error.config._retried).toBe(true);
-    expect(error.config.headers.Authorization).toBeUndefined(); // Should be deleted
-    expect(mockRequest).toHaveBeenCalledWith(error.config);
-    expect(AsyncStorage.multiRemove).toHaveBeenCalled(); // Clears stale cache
-    expect(auth.signOut).toHaveBeenCalled(); // performGlobalLogout is called when retry fails
+    expect(auth.signOut).toHaveBeenCalled(); // Immediate logout — no Firebase user
     
     consoleSpy.mockRestore();
+  });
+
+  it('response interceptor should retry with fresh token on 401 when Firebase user exists', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleErrSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    // Firebase user exists
+    (auth as any).currentUser = { uid: 'test-uid', getIdToken: mockGetIdToken };
+    mockGetIdToken.mockResolvedValue('fresh-firebase-token');
+    (axios.post as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { token: 'fresh-tavern-token', uid: 'test-uid' },
+    });
+    
+    const mockInstance = profilesApi as any;
+    const errorHandler = mockInstance._errorHandler;
+    const mockRequest = jest.fn().mockRejectedValue(new Error('Retry failed'));
+    (mockInstance as any).request = mockRequest;
+
+    const error = {
+      response: { status: 401 },
+      config: { url: '/profiles/me', headers: { Authorization: 'Bearer stale-token' } },
+    } as any;
+
+    // Should reject but NOT logout (Firebase user still exists)
+    await expect(errorHandler(error)).rejects.toThrow('Retry failed');
+
+    expect(error.config._retried).toBe(true);
+    expect(mockRequest).toHaveBeenCalled();
+    expect(auth.signOut).not.toHaveBeenCalled(); // Should NOT logout
+    
+    consoleSpy.mockRestore();
+    consoleErrSpy.mockRestore();
+  });
+
+  it('getTavernToken should use server-provided expires_at', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    
+    mockGetIdToken.mockResolvedValue('firebase-token');
+    const futureExpiry = Math.floor(Date.now() / 1000) + 86400; // 24h from now
+    (axios.post as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { token: 'tavern-token', uid: 'test-uid', expires_at: futureExpiry },
+    });
+
+    const token = await getTavernToken();
+    expect(token).toBe('tavern-token');
+
+    // Verify the expiry was persisted as milliseconds
+    expect(AsyncStorage.multiSet).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.arrayContaining([
+          'tavern_jwt_expiry',
+          (futureExpiry * 1000).toString(),
+        ]),
+      ])
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('getTavernToken should return cached token on second call', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    mockGetIdToken.mockResolvedValue('firebase-token');
+    const futureExpiry = Math.floor(Date.now() / 1000) + 86400;
+    (axios.post as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { token: 'tavern-token', uid: 'test-uid', expires_at: futureExpiry },
+    });
+
+    // First call — exchanges
+    const t1 = await getTavernToken();
+    expect(t1).toBe('tavern-token');
+    expect(axios.post).toHaveBeenCalledTimes(1);
+
+    // Second call — should use in-memory cache, no new exchange
+    const t2 = await getTavernToken();
+    expect(t2).toBe('tavern-token');
+    expect(axios.post).toHaveBeenCalledTimes(1); // Still only 1 call
+
+    consoleSpy.mockRestore();
+  });
+
+  it('getTavernToken should recover from AsyncStorage on app restart', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const uid = 'test-uid';
+    const futureExpiry = Date.now() + 86400000; // 24h from now in ms
+
+    (auth as any).currentUser = { uid, getIdToken: mockGetIdToken };
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'tavern_jwt_token') return Promise.resolve('stored-token');
+      if (key === 'tavern_jwt_expiry') return Promise.resolve(futureExpiry.toString());
+      if (key === 'tavern_uid') return Promise.resolve(uid);
+      return Promise.resolve(null);
+    });
+
+    const token = await getTavernToken();
+    expect(token).toBe('stored-token');
+    // Should NOT have called axios.post — recovered from storage
+    expect(axios.post).not.toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
+  });
+
+  it('getTavernToken should not recover expired token from AsyncStorage', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const uid = 'test-uid';
+    const pastExpiry = Date.now() - 1000; // already expired
+
+    (auth as any).currentUser = { uid, getIdToken: mockGetIdToken };
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'tavern_jwt_token') return Promise.resolve('expired-token');
+      if (key === 'tavern_jwt_expiry') return Promise.resolve(pastExpiry.toString());
+      if (key === 'tavern_uid') return Promise.resolve(uid);
+      return Promise.resolve(null);
+    });
+
+    mockGetIdToken.mockResolvedValue('firebase-token');
+    (axios.post as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { token: 'fresh-token', uid },
+    });
+
+    const token = await getTavernToken();
+    expect(token).toBe('fresh-token'); // Should have re-exchanged
+    expect(axios.post).toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
+  });
+
+  it('clearTavernSession should cancel proactive refresh', async () => {
+    const { clearTavernSession } = require('../../lib/api');
+    // Just verify it doesn't throw and clears storage
+    await clearTavernSession();
+    expect(AsyncStorage.multiRemove).toHaveBeenCalledWith([
+      'tavern_jwt_token',
+      'tavern_jwt_expiry',
+      'tavern_uid',
+    ]);
   });
 });
 

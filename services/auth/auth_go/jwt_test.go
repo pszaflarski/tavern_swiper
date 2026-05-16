@@ -14,16 +14,16 @@ func TestGetJWTExpiry(t *testing.T) {
 	os.Unsetenv("TAVERN_JWT_EXPIRY")
 
 	expiry := getJWTExpiry()
-	if expiry != 30*time.Minute {
-		t.Errorf("Expected default expiry 30m, got %v", expiry)
+	if expiry != 24*time.Hour {
+		t.Errorf("Expected default expiry 24h, got %v", expiry)
 	}
 
 	// 2. Test ALLOW_LONG_LIVED without dev environment
 	os.Setenv("ALLOW_LONG_LIVED_TOKENS", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "production-project")
 	expiry = getJWTExpiry()
-	if expiry != 30*time.Minute {
-		t.Errorf("Expected default expiry 30m in prod even with flag, got %v", expiry)
+	if expiry != 24*time.Hour {
+		t.Errorf("Expected default expiry 24h in prod even with flag, got %v", expiry)
 	}
 
 	// 3. Test ALLOW_LONG_LIVED with dev project
@@ -52,7 +52,7 @@ func TestGetJWTExpiry(t *testing.T) {
 	// 6. Test manual override ignored in prod mode
 	os.Unsetenv("ALLOW_LONG_LIVED_TOKENS")
 	expiry = getJWTExpiry()
-	if expiry != 30*time.Minute {
+	if expiry != 24*time.Hour {
 		t.Errorf("Expected manual override ignored in prod, got %v", expiry)
 	}
 }

@@ -6,7 +6,7 @@
 # IDEMPOTENT: If an index already exists, gcloud returns ALREADY_EXISTS — we catch that
 # and print a skip message instead of failing.
 
-set -e
+# NOTE: no 'set -e' — we handle errors per-index gracefully
 
 ENV=${1:-"dev"} # [dev|test|prod]
 PROJECT=$(gcloud config get-value project)
@@ -54,14 +54,14 @@ create_index() {
   # Run and handle already-exists gracefully
   output=$($cmd --quiet 2>&1) && {
     echo "    ✅ $coll ($fields)"
-    ((CREATED++))
+    CREATED=$((CREATED+1))
   } || {
     if echo "$output" | grep -qi "already exists"; then
       echo "    ⏭️  $coll ($fields) — already exists"
-      ((SKIPPED++))
+      SKIPPED=$((SKIPPED+1))
     else
       echo "    ❌ $coll ($fields) — FAILED: $output"
-      ((FAILED++))
+      FAILED=$((FAILED+1))
     fi
   }
 }

@@ -14,7 +14,7 @@ var (
 )
 
 func getJWTExpiry() time.Duration {
-	defaultExpiry := 30 * time.Minute
+	defaultExpiry := 24 * time.Hour
 
 	// Security: Only allow long-lived tokens if ALLOW_LONG_LIVED_TOKENS is "true"
 	// AND we are either using the Firebase emulator OR the project ID ends in "-dev"
@@ -37,20 +37,23 @@ func getJWTExpiry() time.Duration {
 	return defaultExpiry
 }
 
-func mintTavernJWT(uid, email, role string) (string, error) {
+// mintTavernJWT creates a signed JWT and returns the token string + expiry unix timestamp.
+func mintTavernJWT(uid, email, role string) (string, int64, error) {
 	now := time.Now()
 	expiry := getJWTExpiry()
+	expiresAt := now.Add(expiry).Unix()
 	
 	claims := jwt.MapClaims{
 		"sub":   uid,
 		"email": email,
 		"role":  role,
 		"iat":   now.Unix(),
-		"exp":   now.Add(expiry).Unix(),
+		"exp":   expiresAt,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	signed, err := token.SignedString(jwtSecret)
+	return signed, expiresAt, err
 }
 
 func getEnv(key, fallback string) string {

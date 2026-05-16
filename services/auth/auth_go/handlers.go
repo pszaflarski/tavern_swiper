@@ -99,16 +99,17 @@ func verifyTokenHandler(c *gin.Context) {
 		}
 	}
 
-	token, err := mintTavernJWT(uid, email, role)
+	token, expiresAt, err := mintTavernJWT(uid, email, role)
 	if err != nil {
 		httpError(c, http.StatusInternalServerError, "Failed to generate internal token")
 		return
 	}
 
 	c.JSON(http.StatusOK, TokenResponse{
-		UID:   uid,
-		Role:  role,
-		Token: &token,
+		UID:       uid,
+		Role:      role,
+		Token:     &token,
+		ExpiresAt: expiresAt,
 	})
 }
 
@@ -373,15 +374,16 @@ func devMintHandler(c *gin.Context) {
 		body.Role = "user"
 	}
 
-	token, err := mintTavernJWT(body.UID, body.Email, body.Role)
+	token, expiresAt, err := mintTavernJWT(body.UID, body.Email, body.Role)
 	if err != nil {
 		httpError(c, http.StatusInternalServerError, "Failed to generate dev token")
 		return
 	}
 
 	c.JSON(http.StatusOK, TokenResponse{
-		UID:   body.UID,
-		Role:  body.Role,
-		Token: &token,
+		UID:       body.UID,
+		Role:      body.Role,
+		Token:     &token,
+		ExpiresAt: expiresAt,
 	})
 }

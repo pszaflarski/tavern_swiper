@@ -22,9 +22,10 @@ type DevMintRequest struct {
 
 // Response Models
 type TokenResponse struct {
-	UID   string  `json:"uid"`
-	Role  string  `json:"role"`
-	Token *string `json:"token"` // Pointer handles null vs empty string parity
+	UID       string  `json:"uid"`
+	Role      string  `json:"role"`
+	Token     *string `json:"token"`      // Pointer handles null vs empty string parity
+	ExpiresAt int64   `json:"expires_at"` // Unix timestamp (seconds) when the token expires
 }
 
 type AuthResponse struct {
