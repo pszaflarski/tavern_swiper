@@ -68,9 +68,9 @@ export default function MatchSplash() {
     })();
   };
 
-  // Card sizing — 16:9 portrait aspect ratio
-  const CARD_W = SCREEN_W * 0.34;
-  const CARD_H = CARD_W * (16 / 9);
+  // Card sizing — 4:5 portrait aspect ratio for taller cards
+  const CARD_W = SCREEN_W * 0.36;
+  const CARD_H = CARD_W * (5 / 3);
 
   // Calculate max offset so rotated cards sit at edges without clipping
   const ROTATION_DEG = 6;
