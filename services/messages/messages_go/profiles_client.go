@@ -10,6 +10,7 @@ import (
 // ProfileInfo is a minimal representation of a profile from the profiles service.
 type ProfileInfo struct {
 	ProfileID   string `json:"profile_id"`
+	UserID      string `json:"user_id"`
 	DisplayName string `json:"display_name"`
 }
 

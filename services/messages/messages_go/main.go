@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	_ "messages_go/docs"
 
@@ -44,8 +45,13 @@ func main() {
 
 	r := gin.Default()
 
+	origins := os.Getenv("ALLOWED_ORIGINS")
 	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
+	if origins != "" {
+		config.AllowOrigins = strings.Split(origins, ",")
+	} else {
+		config.AllowAllOrigins = true
+	}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
 

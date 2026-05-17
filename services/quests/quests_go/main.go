@@ -10,6 +10,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -31,8 +32,13 @@ func main() {
 	r := gin.Default()
 
 	// CORS Setup
+	origins := os.Getenv("ALLOWED_ORIGINS")
 	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
+	if origins != "" {
+		config.AllowOrigins = strings.Split(origins, ",")
+	} else {
+		config.AllowAllOrigins = true
+	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))

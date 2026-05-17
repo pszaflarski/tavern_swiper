@@ -11,6 +11,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 
 	_ "tavern-swiper.app/profiles_go/docs"
 
@@ -27,10 +28,16 @@ func main() {
 	}
 
 	r := gin.Default()
+	r.MaxMultipartMemory = 10 << 20 // 10 MB
 
 	// CORS Setup
+	origins := os.Getenv("ALLOWED_ORIGINS")
 	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
+	if origins != "" {
+		config.AllowOrigins = strings.Split(origins, ",")
+	} else {
+		config.AllowAllOrigins = true
+	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))

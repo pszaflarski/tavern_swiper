@@ -7,6 +7,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	_ "tavern-swiper.app/auth_go/docs"
 
@@ -29,8 +30,13 @@ func main() {
 	r := gin.Default()
 
 	// Middleware
+	origins := os.Getenv("ALLOWED_ORIGINS")
 	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
+	if origins != "" {
+		config.AllowOrigins = strings.Split(origins, ",")
+	} else {
+		config.AllowAllOrigins = true
+	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
@@ -45,11 +51,11 @@ func main() {
 		auth.POST("/verify", verifyTokenHandler)
 		auth.POST("/register", registerHandler)
 		auth.POST("/login", loginHandler)
-		auth.POST("/dev-mint", devMintHandler)
 
 		protected := auth.Group("/")
 		protected.Use(AuthMiddleware())
 		{
+			protected.POST("/dev-mint", devMintHandler)
 			protected.DELETE("/users/:uid", deleteUserHandler)
 			protected.DELETE("/users/", deleteUsersBulkHandler)
 			protected.DELETE("/all", deleteAllHandler)

@@ -355,6 +355,12 @@ func deleteAllHandler(c *gin.Context) {
 // @Security      BearerAuth
 // @Router       /dev-mint [post]
 func devMintHandler(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdmin(auth.Role) {
+		httpError(c, http.StatusForbidden, "Admin required")
+		return
+	}
+
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	isEmulator := os.Getenv("FIREBASE_AUTH_EMULATOR_HOST") != ""
 	isDevProject := strings.HasSuffix(projectID, "-dev")

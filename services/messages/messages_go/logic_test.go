@@ -366,6 +366,15 @@ func TestHandleSendSystemMessage(t *testing.T) {
 			return mock, nil
 		}
 
+		// Inject mock profiles client for ownership verification
+		oldPC := profilesClient
+		profilesClient = &mockProfilesClient{
+			GetProfileFunc: func(profileID string, token string) (*ProfileInfo, error) {
+				return &ProfileInfo{ProfileID: profileID, UserID: "test-uid"}, nil
+			},
+		}
+		defer func() { profilesClient = oldPC }()
+
 		convID := "conv_default"
 		senderID := "p1"
 
@@ -376,7 +385,7 @@ func TestHandleSendSystemMessage(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Set("auth", AuthData{Role: "user"})
+		c.Set("auth", AuthData{UID: "test-uid", Role: "user"})
 		c.Params = []gin.Param{{Key: "id", Value: convID}}
 
 		// No type field — should default to "user"
@@ -475,6 +484,15 @@ func TestHandleSendMessage_UnreadFlag(t *testing.T) {
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return mock, nil
 	}
+
+	// Inject mock profiles client for ownership verification
+	oldPC := profilesClient
+	profilesClient = &mockProfilesClient{
+		GetProfileFunc: func(profileID string, token string) (*ProfileInfo, error) {
+			return &ProfileInfo{ProfileID: profileID, UserID: "test-uid"}, nil
+		},
+	}
+	defer func() { profilesClient = oldPC }()
 	
 	convID := "conv123"
 	senderID := "p1"
@@ -490,7 +508,7 @@ func TestHandleSendMessage_UnreadFlag(t *testing.T) {
 	
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Set("auth", AuthData{Role: "user"})
+	c.Set("auth", AuthData{UID: "test-uid", Role: "user"})
 	c.Params = []gin.Param{{Key: "id", Value: convID}}
 	
 	body := MessageCreate{SenderProfileID: senderID, Content: "Hello"}
@@ -561,6 +579,15 @@ func TestHandleListConversations_SurfacesUnread(t *testing.T) {
 	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
 		return mock, nil
 	}
+
+	// Inject mock profiles client for ownership verification
+	oldPC := profilesClient
+	profilesClient = &mockProfilesClient{
+		GetProfileFunc: func(profileID string, token string) (*ProfileInfo, error) {
+			return &ProfileInfo{ProfileID: profileID, UserID: "test-uid"}, nil
+		},
+	}
+	defer func() { profilesClient = oldPC }()
 	
 	profileID := "p1"
 	c1 := "conv1"
@@ -583,7 +610,7 @@ func TestHandleListConversations_SurfacesUnread(t *testing.T) {
 	
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Set("auth", AuthData{Role: "user"})
+	c.Set("auth", AuthData{UID: "test-uid", Role: "user"})
 	c.Params = []gin.Param{{Key: "profile_id", Value: profileID}}
 	
 	handleListConversations(c)
