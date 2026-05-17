@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -84,14 +84,14 @@ function ConversationScreenInner() {
     setMessageText('');
   }, [messageText, activeProfileId, conversationId, sendMessage]);
 
-  // Track whether we've done the initial scroll (instant) vs new messages (animated)
-  const hasScrolledRef = useRef(false);
-
-  const handleContentSizeChange = useCallback(() => {
-    if (messages.length === 0) return;
-    flatListRef.current?.scrollToEnd({ animated: hasScrolledRef.current });
-    hasScrolledRef.current = true;
-  }, [messages.length]);
+  // We use an inverted FlatList — the standard pattern for chat UIs.
+  // By inverting, the most recent message sits at the scroll origin (top of the
+  // virtual list = bottom of the screen), so no scrollToEnd hacks are needed.
+  // The data array is reversed so visual order stays chronological.
+  const invertedMessages = useMemo(
+    () => (hiddenMessageId ? messages.filter(m => m.message_id !== hiddenMessageId) : messages).slice().reverse(),
+    [messages, hiddenMessageId],
+  );
 
   const navigation = useNavigation();
 
@@ -192,12 +192,12 @@ function ConversationScreenInner() {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={hiddenMessageId ? messages.filter(m => m.message_id !== hiddenMessageId) : messages}
+          data={invertedMessages}
+          inverted
           keyExtractor={(item) => item.message_id}
-          contentContainerStyle={styles.messageList}
+          contentContainerStyle={[styles.messageList, { flexGrow: 1 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          onContentSizeChange={handleContentSizeChange}
           renderItem={({ item }) => {
             // Event messages — centered gold pill (dice rolls, etc.)
             if (item.type === 'event') {
@@ -258,9 +258,9 @@ function ConversationScreenInner() {
               </View>
             );
           }}
-          ListFooterComponent={<Animated.View style={listBottomSpacerStyle} />}
+          ListHeaderComponent={<Animated.View style={listBottomSpacerStyle} />}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
+            <View style={[styles.emptyContainer, { transform: [{ scaleY: -1 }] }]}>
               <Text style={styles.emptyText}>The air is thick with unspoken words.</Text>
               <Text style={styles.emptySubText}>Break the silence with a greeting.</Text>
             </View>

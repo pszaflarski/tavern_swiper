@@ -204,4 +204,60 @@ describe('Conversation Screen', () => {
     
     expect(router.replace).toHaveBeenCalledWith('/(tabs)/messages');
   });
+
+  it('uses an inverted FlatList so newest messages appear at the bottom without scrollToEnd', () => {
+    const { UNSAFE_getByType } = render(<ConversationScreen />);
+    const { FlatList } = require('react-native');
+    const flatList = UNSAFE_getByType(FlatList);
+
+    // The FlatList must be inverted — this is the core of the scroll fix.
+    // Inverted lists render from the bottom up, so the newest message
+    // (index 0 in the reversed data) sits at the scroll origin.
+    expect(flatList.props.inverted).toBe(true);
+  });
+
+  it('feeds messages in reversed order so newest message is at index 0', () => {
+    const { UNSAFE_getByType } = render(<ConversationScreen />);
+    const { FlatList } = require('react-native');
+    const flatList = UNSAFE_getByType(FlatList);
+
+    const data = flatList.props.data;
+    expect(data.length).toBe(2);
+    // In an inverted list, the first item in the data array renders at the
+    // bottom of the screen. So the newest message (m2) must be at index 0.
+    expect(data[0].message_id).toBe('m2');
+    expect(data[1].message_id).toBe('m1');
+  });
+
+  it('keeps newest message at scroll origin when new messages arrive', () => {
+    const { UNSAFE_getByType, rerender } = render(<ConversationScreen />);
+    const { FlatList } = require('react-native');
+
+    // Simulate a new message arriving via polling
+    const updatedMessages = [
+      ...mockMessages,
+      {
+        message_id: 'm3',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2',
+        content: 'A new quest awaits!',
+        type: 'user',
+        sent_at: new Date().toISOString(),
+      },
+    ];
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: updatedMessages,
+      isLoading: false,
+      isError: false,
+    });
+
+    rerender(<ConversationScreen />);
+    const flatList = UNSAFE_getByType(FlatList);
+
+    const data = flatList.props.data;
+    expect(data.length).toBe(3);
+    // Newest message should be at index 0 (scroll origin of inverted list)
+    expect(data[0].message_id).toBe('m3');
+    expect(data[0].content).toBe('A new quest awaits!');
+  });
 });
