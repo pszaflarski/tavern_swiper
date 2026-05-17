@@ -732,6 +732,10 @@ func handleGetProfilesBatch(c *gin.Context) {
 		c.JSON(http.StatusOK, []ProfileOut{})
 		return
 	}
+	if len(body.ProfileIDs) > 20 {
+		send400(c, "Maximum 20 profiles per batch request")
+		return
+	}
 
 	client, err := getDBFunc(c.Request.Context())
 	if err != nil {
@@ -918,6 +922,10 @@ func handleUploadProfileImage(c *gin.Context, publisher Publisher) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		send400(c, "No file uploaded")
+		return
+	}
+	if file.Size > 10*1024*1024 {
+		send400(c, "Image file exceeds 10MB limit")
 		return
 	}
 

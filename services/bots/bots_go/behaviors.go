@@ -251,7 +251,7 @@ func swipeRight(token, swiperProfileID, swipedProfileID string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return fmt.Errorf("discovery swipe failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -436,7 +436,7 @@ func callAgentRouter(agentName, prompt, threadID, messageType string, metadata m
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return "", fmt.Errorf("agent_router error (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -472,7 +472,7 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return fmt.Errorf("messages service error (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -525,7 +525,7 @@ func tryCompleteBarkeepQuest(botToken, senderProfileID, botProfileID string) {
 	}
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		log.Printf("[WARN] Quest completion returned HTTP %d for user %s: %s", resp.StatusCode, userID, string(respBody))
 		return
 	}
@@ -551,7 +551,7 @@ func lookupUserIDByProfile(token, profileID string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return "", fmt.Errorf("profiles service returned HTTP %d: %s", resp.StatusCode, string(respBody))
 	}
 

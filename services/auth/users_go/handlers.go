@@ -483,8 +483,19 @@ func deleteUserHandler(c *gin.Context) {
 	if hard {
 		authSvc := serviceURLs.Get("auth")
 		req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/auth/users/%s", authSvc, targetUID), nil)
-		http.DefaultClient.Do(req)
-		docRef.Delete(c.Request.Context())
+		req.Header.Set("Authorization", "Bearer "+auth.Token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Printf("[ERROR] Failed to call auth service for hard delete of %s: %v", targetUID, err)
+		} else {
+			resp.Body.Close()
+			if resp.StatusCode >= 400 {
+				log.Printf("[WARN] Auth service returned %d for hard delete of %s", resp.StatusCode, targetUID)
+			}
+		}
+		if _, err := docRef.Delete(c.Request.Context()); err != nil {
+			log.Printf("[ERROR] Failed to delete user doc %s: %v", targetUID, err)
+		}
 	} else {
 		docRef.Update(c.Request.Context(), []firestore.Update{{Path: "is_deleted", Value: true}})
 	}

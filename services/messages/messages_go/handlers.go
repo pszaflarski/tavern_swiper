@@ -31,6 +31,21 @@ const (
 )
 
 
+// verifyProfileOwnership checks that auth.UID owns the given profile.
+// Admins bypass this check.
+func verifyProfileOwnership(auth AuthData, profileID string, pc ProfilesClient) bool {
+	if IsAdmin(auth.Role) {
+		return true
+	}
+	if pc == nil {
+		return false
+	}
+	info, err := pc.GetProfile(profileID, auth.Token)
+	if err != nil {
+		return false
+	}
+	return info.UserID == auth.UID
+}
 
 func parseStringSlice(val interface{}) []string {
 	if val == nil {
@@ -75,7 +90,7 @@ func handleHealth(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /conversations [post]
 func handleCreateConversation(c *gin.Context) {
-	_ = GetAuth(c) // Auth verified by middleware; match cache gates authorization
+	auth := GetAuth(c)
 	var body ConversationCreate
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error()})
@@ -108,8 +123,20 @@ func handleCreateConversation(c *gin.Context) {
 	sort.Strings(pids)
 	participantsKey := strings.Join(pids, "_")
 
-	// Authorization: match cache verification below (step 3) ensures
-	// only matched profiles can create conversations.
+	// Authorization: verify caller owns at least one participant profile
+	if !IsAdmin(auth.Role) {
+		ownsOne := false
+		for _, pid := range pids {
+			if verifyProfileOwnership(auth, pid, profilesClient) {
+				ownsOne = true
+				break
+			}
+		}
+		if !ownsOne {
+			c.JSON(http.StatusForbidden, gin.H{"detail": "You must own one of the participant profiles"})
+			return
+		}
+	}
 
 	// 3. Check for existing conversation with this key
 	iter := client.Collection(COLLECTION_CONVERSATIONS).Where("participants_key", "==", participantsKey).Limit(1).Documents(ctx)
@@ -244,6 +271,11 @@ func handleSendMessage(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"detail": "Not a participant in this conversation"})
 			return
 		}
+		// Verify caller owns the sender profile
+		if !verifyProfileOwnership(auth, body.SenderProfileID, profilesClient) {
+			c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to send as this profile"})
+			return
+		}
 	}
 	// Non-user types (system, event) skip participant validation — admin already verified above
 
@@ -364,7 +396,12 @@ func handleGetMessages(c *gin.Context) {
 	// is a participant. The conversation doc confirms participant membership.
 	pids := parseStringSlice(convDoc.Data()["participant_ids"])
 	callerProfile := c.Query("profile_id")
-	if callerProfile != "" {
+	if callerProfile == "" {
+		if !IsAdmin(auth.Role) {
+			c.JSON(http.StatusBadRequest, gin.H{"detail": "profile_id query parameter is required"})
+			return
+		}
+	} else {
 		isParticipant := false
 		for _, pid := range pids {
 			if pid == callerProfile {
@@ -376,7 +413,6 @@ func handleGetMessages(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to read these messages"})
 			return
 		}
-		
 		if isParticipant {
 			// Implicit mark-as-read
 			pcID := fmt.Sprintf("%s_%s", callerProfile, convID)
@@ -457,8 +493,14 @@ func handleGetMessages(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /conversations/profile/{profile_id} [get]
 func handleListConversations(c *gin.Context) {
-	_ = GetAuth(c) // Auth verified by middleware; query scoped to profile_id
+	auth := GetAuth(c)
 	profileID := c.Param("profile_id")
+
+	// Verify caller owns this profile
+	if !verifyProfileOwnership(auth, profileID, profilesClient) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to view conversations for this profile"})
+		return
+	}
 	ctx := context.Background()
 
 	client, err := getDBFunc(ctx)

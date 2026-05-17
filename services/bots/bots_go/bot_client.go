@@ -39,7 +39,7 @@ func registerFirebaseUser(email, password string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return fmt.Errorf("Firebase registration failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 	return nil
@@ -64,7 +64,7 @@ func loginAndVerify(email, password string) (string, string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return "", "", fmt.Errorf("login failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -125,7 +125,7 @@ func initUserRecord(adminToken string, botUID string, botEmail string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return fmt.Errorf("user init failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 	return nil
@@ -162,7 +162,7 @@ func createBotProfile(jwtToken string, botReq BotProfileCreate) (map[string]inte
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return nil, fmt.Errorf("profile creation failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -196,7 +196,7 @@ func uploadImageToProfile(jwtToken, profileID string, imageData []byte, filename
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return nil, fmt.Errorf("image upload failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -220,7 +220,7 @@ func listProfilesForUser(jwtToken, userID string) ([]map[string]interface{}, err
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return nil, fmt.Errorf("list profiles failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -244,7 +244,7 @@ func deleteProfile(jwtToken, profileID string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return fmt.Errorf("delete profile failed (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
