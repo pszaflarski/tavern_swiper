@@ -213,4 +213,16 @@ export const styles = StyleSheet.create({
   diceToggleActive: {
     backgroundColor: Colors.tertiaryContainer,
   },
+  loadingMore: {
+    paddingVertical: Spacing[4],
+    alignItems: 'center' as const,
+    transform: [{ scaleY: -1 }],
+  },
+  loadingMoreText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    color: Colors.outline,
+    marginTop: Spacing[1],
+    fontStyle: 'italic' as const,
+  },
 });

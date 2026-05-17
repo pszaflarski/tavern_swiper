@@ -1,7 +1,8 @@
-import { useMemo, useCallback, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useCallback, useRef, useEffect } from 'react';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profilesApi, discoveryApi, messagesApi } from '../lib/api';
 import { Profile } from './useProfiles';
+import { MESSAGES } from '../constants';
 
 export interface Match {
   id: string;
@@ -33,6 +34,13 @@ export interface Message {
   content: string;
   type: string;
   sent_at: string;
+}
+
+export interface PaginatedMessagesResponse {
+  messages: Message[];
+  has_more: boolean;
+  oldest_timestamp?: string;
+  newest_timestamp?: string;
 }
 
 export interface DiceRollResult {
@@ -83,21 +91,112 @@ export function useConversations(profileId: string | undefined) {
 }
 
 /**
- * Hook to fetch messages for a specific conversation.
- * @param pausePolling When true, suppresses the 5s polling interval (e.g. during dice animations).
+ * Hook to fetch messages for a specific conversation with cursor-based pagination.
+ * Loads the newest PAGE_SIZE messages initially, then lazy-loads older pages on demand.
+ * Polls for new messages every POLL_INTERVAL_MS using the ?after= cursor.
+ *
+ * @param pausePolling When true, suppresses polling (e.g. during dice animations).
  */
-export function useConversationMessages(conversationId: string | undefined, profileId: string | undefined, pausePolling: boolean = false) {
-  return useQuery<Message[]>({
+export function useConversationMessages(
+  conversationId: string | undefined,
+  profileId: string | undefined,
+  pausePolling: boolean = false,
+) {
+  const queryClient = useQueryClient();
+
+  // Infinite query for paginated message loading
+  const infiniteQuery = useInfiniteQuery<PaginatedMessagesResponse>({
     queryKey: ['messages', conversationId, profileId],
-    queryFn: async () => {
-      if (!conversationId) return [];
-      const profileParam = profileId ? `?profile_id=${profileId}` : '';
-      const res = await messagesApi.get(`/messages/conversations/${conversationId}/messages${profileParam}`);
-      return Array.isArray(res.data) ? res.data : [];
+    queryFn: async ({ pageParam }) => {
+      if (!conversationId) return { messages: [], has_more: false };
+      const params = new URLSearchParams();
+      if (profileId) params.set('profile_id', profileId);
+      params.set('limit', String(MESSAGES.PAGE_SIZE));
+      if (pageParam) params.set('before', pageParam as string);
+
+      const res = await messagesApi.get(
+        `/messages/conversations/${conversationId}/messages?${params}`
+      );
+      return res.data as PaginatedMessagesResponse;
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.has_more ? lastPage.oldest_timestamp : undefined,
     enabled: !!conversationId,
-    refetchInterval: pausePolling ? false : 5000, // Poll every 5 seconds for "real-time" feel
   });
+
+  // Flatten all pages into a single chronologically-sorted array.
+  // Pages arrive newest-first but each page is internally ASC-sorted by the backend.
+  // We merge them so oldest messages come first.
+  const messages = useMemo(() => {
+    if (!infiniteQuery.data?.pages) return [] as Message[];
+    // Deduplicate by message_id (safety net for polling overlap)
+    const seen = new Set<string>();
+    const all: Message[] = [];
+    for (const page of infiniteQuery.data.pages) {
+      for (const msg of page.messages) {
+        if (!seen.has(msg.message_id)) {
+          seen.add(msg.message_id);
+          all.push(msg);
+        }
+      }
+    }
+    return all.sort((a, b) => a.sent_at.localeCompare(b.sent_at));
+  }, [infiniteQuery.data?.pages]);
+
+  // Poll for NEW messages only (after the newest known timestamp).
+  // This is much cheaper than refetching the entire first page.
+  useEffect(() => {
+    if (pausePolling || !conversationId || messages.length === 0) return;
+    const newestTimestamp = messages[messages.length - 1]?.sent_at;
+    if (!newestTimestamp) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const params = new URLSearchParams();
+        if (profileId) params.set('profile_id', profileId);
+        params.set('limit', String(MESSAGES.PAGE_SIZE));
+        params.set('after', newestTimestamp);
+
+        const res = await messagesApi.get(
+          `/messages/conversations/${conversationId}/messages?${params}`
+        );
+        const pollData = res.data as PaginatedMessagesResponse;
+        if (pollData.messages?.length > 0) {
+          // Prepend new messages to the first page (newest page)
+          queryClient.setQueryData(
+            ['messages', conversationId, profileId],
+            (old: any) => {
+              if (!old?.pages?.[0]) return old;
+              return {
+                ...old,
+                pages: [
+                  {
+                    ...old.pages[0],
+                    messages: [...old.pages[0].messages, ...pollData.messages],
+                    newest_timestamp: pollData.newest_timestamp ?? old.pages[0].newest_timestamp,
+                  },
+                  ...old.pages.slice(1),
+                ],
+              };
+            }
+          );
+        }
+      } catch (err) {
+        // Silently swallow polling errors — the next interval will retry
+      }
+    }, MESSAGES.POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [pausePolling, conversationId, profileId, messages, queryClient]);
+
+  return {
+    data: messages,
+    isLoading: infiniteQuery.isLoading,
+    fetchNextPage: infiniteQuery.fetchNextPage,
+    hasNextPage: !!infiniteQuery.hasNextPage,
+    isFetchingNextPage: infiniteQuery.isFetchingNextPage,
+  };
 }
 
 /**

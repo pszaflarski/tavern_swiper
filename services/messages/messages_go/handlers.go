@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -367,11 +368,14 @@ func handleSendMessage(c *gin.Context) {
 
 // handleGetMessages godoc
 // @Summary      Get messages in a conversation
-// @Description  Returns all messages in a conversation, sorted by creation time.
+// @Description  Returns messages in a conversation, sorted by creation time (ascending). Supports optional cursor-based pagination via limit/before/after query params. Without ?limit, returns all messages as a bare array for backwards compatibility.
 // @Tags         messages
 // @Produce      json
-// @Param        id  path      string  true  "Conversation ID"
-// @Success      200  {array}   MessageOut
+// @Param        id       path   string  true   "Conversation ID"
+// @Param        limit    query  int     false  "Max messages to return (1-100, default: all)"
+// @Param        before   query  string  false  "Cursor: return messages older than this RFC3339 timestamp"
+// @Param        after    query  string  false  "Cursor: return messages newer than this RFC3339 timestamp"
+// @Success      200  {object}  PaginatedMessagesResponse  "When ?limit is provided"
 // @Failure      500  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /conversations/{id}/messages [get]
@@ -422,10 +426,63 @@ func handleGetMessages(c *gin.Context) {
 		}
 	}
 
-	// Query from sub-collection: conversations/{id}/messages
-	iter := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES).
-		OrderBy("created_at", firestore.Asc).
-		Documents(ctx)
+	// --- Pagination parameters ---
+	limitStr := c.Query("limit")
+	beforeStr := c.Query("before")
+	afterStr := c.Query("after")
+	paginated := limitStr != "" // Use paginated envelope only when limit is explicit
+
+	limit := 0
+	if paginated {
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil || limit < 1 {
+			limit = 50
+		}
+		if limit > 100 {
+			limit = 100
+		}
+	}
+
+	// Build the Firestore query
+	msgCol := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES)
+	var q Query
+	needReverse := false // true when we query DESC but want ASC output
+
+	if beforeStr != "" {
+		// Load older messages: ORDER BY created_at DESC, StartAfter(beforeTime)
+		beforeTime, parseErr := time.Parse(time.RFC3339, beforeStr)
+		if parseErr == nil {
+			q = msgCol.OrderBy("created_at", firestore.Desc).StartAfter(beforeTime)
+			needReverse = true
+		}
+	} else if afterStr != "" {
+		// Load newer messages only (polling optimization)
+		afterTime, parseErr := time.Parse(time.RFC3339, afterStr)
+		if parseErr == nil {
+			q = msgCol.OrderBy("created_at", firestore.Asc).StartAfter(afterTime)
+		}
+	}
+
+	// Default: no cursor
+	if q == nil {
+		if paginated {
+			// Initial paginated load: get the most recent N messages
+			q = msgCol.OrderBy("created_at", firestore.Desc)
+			needReverse = true
+		} else {
+			// Backwards compat: return everything ASC
+			q = msgCol.OrderBy("created_at", firestore.Asc)
+		}
+	}
+
+	// Apply limit (fetch limit+1 to detect has_more)
+	fetchLimit := 0
+	if paginated {
+		fetchLimit = limit + 1
+		q = q.Limit(fetchLimit)
+	}
+
+	iter := q.Documents(ctx)
 	docs, err := iter.GetAll()
 	if err != nil {
 		log.Printf("[ERROR] Failed to fetch messages for %s: %v", convID, err)
@@ -433,9 +490,21 @@ func handleGetMessages(c *gin.Context) {
 		return
 	}
 
-	// No stable sort needed — results arrive pre-sorted from Firestore
+	// Determine has_more from the extra document
+	hasMore := false
+	if paginated && len(docs) > limit {
+		hasMore = true
+		docs = docs[:limit] // Trim the extra
+	}
 
-	results := make([]MessageOut, 0)
+	// Reverse if we queried DESC but want ASC output
+	if needReverse {
+		for i, j := 0, len(docs)-1; i < j; i, j = i+1, j-1 {
+			docs[i], docs[j] = docs[j], docs[i]
+		}
+	}
+
+	results := make([]MessageOut, 0, len(docs))
 	for _, doc := range docs {
 		d := doc.Data()
 		tVal, _ := d["created_at"].(time.Time)
@@ -474,12 +543,27 @@ func handleGetMessages(c *gin.Context) {
 		})
 	}
 
-	if len(results) == 0 {
-		c.JSON(http.StatusOK, []MessageOut{})
+	// --- Response ---
+	if !paginated {
+		// Backwards compat: bare array
+		if len(results) == 0 {
+			c.JSON(http.StatusOK, []MessageOut{})
+			return
+		}
+		c.JSON(http.StatusOK, results)
 		return
 	}
 
-	c.JSON(http.StatusOK, results)
+	// Paginated envelope
+	resp := PaginatedMessagesResponse{
+		Messages: results,
+		HasMore:  hasMore,
+	}
+	if len(results) > 0 {
+		resp.OldestTimestamp = results[0].SentAt
+		resp.NewestTimestamp = results[len(results)-1].SentAt
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // handleListConversations godoc

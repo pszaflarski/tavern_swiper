@@ -120,6 +120,9 @@ describe('Conversation Screen', () => {
       data: mockMessages,
       isLoading: false,
       isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
     });
     (useSendMessage as jest.Mock).mockReturnValue({
       mutate: jest.fn(),
@@ -170,6 +173,9 @@ describe('Conversation Screen', () => {
       data: [],
       isLoading: false,
       isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
     });
 
     render(<ConversationScreen />);
@@ -181,6 +187,9 @@ describe('Conversation Screen', () => {
       data: [],
       isLoading: true,
       isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
     });
 
     render(<ConversationScreen />);
@@ -249,6 +258,9 @@ describe('Conversation Screen', () => {
       data: updatedMessages,
       isLoading: false,
       isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
     });
 
     rerender(<ConversationScreen />);

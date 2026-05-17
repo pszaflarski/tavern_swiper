@@ -34,6 +34,16 @@ type MessageOut struct {
 	Metadata        *EventMetadata `json:"metadata,omitempty"`
 }
 
+// PaginatedMessagesResponse is the envelope returned when the caller
+// explicitly requests pagination via the ?limit query parameter.
+// Without ?limit, the endpoint returns a bare []MessageOut for backwards compat.
+type PaginatedMessagesResponse struct {
+	Messages        []MessageOut `json:"messages"`
+	HasMore         bool         `json:"has_more"`
+	OldestTimestamp string       `json:"oldest_timestamp,omitempty"`
+	NewestTimestamp string       `json:"newest_timestamp,omitempty"`
+}
+
 type ConversationCreate struct {
 	ParticipantProfileIDs []string `json:"participant_profile_ids" binding:"required,min=2"`
 }

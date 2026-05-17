@@ -48,6 +48,7 @@ type Query interface {
 	Limit(n int) Query
 	Where(path, op string, value interface{}) Query
 	OrderBy(path string, dir firestore.Direction) Query
+	StartAfter(docSnapshotOrFieldValues ...interface{}) Query
 	Documents(ctx context.Context) DocumentIterator
 }
 
@@ -173,6 +174,10 @@ func (c *realCollection) OrderBy(path string, dir firestore.Direction) Query {
 	return &realQuery{c.CollectionRef.OrderBy(path, dir)}
 }
 
+func (c *realCollection) StartAfter(docSnapshotOrFieldValues ...interface{}) Query {
+	return &realQuery{c.CollectionRef.StartAfter(docSnapshotOrFieldValues...)}
+}
+
 func (c *realCollection) Documents(ctx context.Context) DocumentIterator {
 	return &realIter{c.CollectionRef.Documents(ctx)}
 }
@@ -271,6 +276,10 @@ func (q *realQuery) Where(path, op string, value interface{}) Query {
 
 func (q *realQuery) OrderBy(path string, dir firestore.Direction) Query {
 	return &realQuery{q.Query.OrderBy(path, dir)}
+}
+
+func (q *realQuery) StartAfter(docSnapshotOrFieldValues ...interface{}) Query {
+	return &realQuery{q.Query.StartAfter(docSnapshotOrFieldValues...)}
 }
 
 func (q *realQuery) Documents(ctx context.Context) DocumentIterator {

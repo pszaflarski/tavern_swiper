@@ -54,7 +54,13 @@ function ConversationScreenInner() {
   const otherProfile = conversation?.otherProfile;
 
   // Get messages
-  const { data: messages = [], isLoading: isLoadingMessages } = useConversationMessages(
+  const {
+    data: messages = [],
+    isLoading: isLoadingMessages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useConversationMessages(
     conversationId,
     activeProfileId,
     // Pause polling while the dice animation is playing to prevent the
@@ -258,7 +264,21 @@ function ConversationScreenInner() {
               </View>
             );
           }}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
           ListHeaderComponent={<Animated.View style={listBottomSpacerStyle} />}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.loadingMoreText}>Unrolling older scrolls...</Text>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={[styles.emptyContainer, { transform: [{ scaleY: -1 }] }]}>
               <Text style={styles.emptyText}>The air is thick with unspoken words.</Text>
