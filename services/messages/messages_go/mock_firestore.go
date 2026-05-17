@@ -72,6 +72,10 @@ func (c *mockCollection) OrderBy(path string, dir firestore.Direction) Query {
 	return &mockQuery{col: c, orderByField: path, orderByDir: dir}
 }
 
+func (c *mockCollection) StartAfter(docSnapshotOrFieldValues ...interface{}) Query {
+	return &mockQuery{col: c, startAfterVals: docSnapshotOrFieldValues}
+}
+
 func (c *mockCollection) Documents(ctx context.Context) DocumentIterator {
 	q := &mockQuery{col: c}
 	return q.Documents(ctx)
@@ -212,11 +216,12 @@ func (i *mockIter) Stop() {}
 
 type mockQuery struct {
 	Query
-	col          *mockCollection
-	filters      []filter
-	limit        int
-	orderByField string
-	orderByDir   firestore.Direction
+	col            *mockCollection
+	filters        []filter
+	limit          int
+	orderByField   string
+	orderByDir     firestore.Direction
+	startAfterVals []interface{}
 }
 
 func (q *mockQuery) Limit(n int) Query { q.limit = n; return q }
@@ -228,6 +233,11 @@ func (q *mockQuery) Where(path, op string, value interface{}) Query {
 func (q *mockQuery) OrderBy(path string, dir firestore.Direction) Query {
 	q.orderByField = path
 	q.orderByDir = dir
+	return q
+}
+
+func (q *mockQuery) StartAfter(docSnapshotOrFieldValues ...interface{}) Query {
+	q.startAfterVals = docSnapshotOrFieldValues
 	return q
 }
 
@@ -274,9 +284,6 @@ func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 			snaps = append(snaps, &mockSnap{id: d.id, data: d.data, exists: true, ref: d})
 		}
 	}
-	if q.limit > 0 && len(snaps) > q.limit {
-		snaps = snaps[:q.limit]
-	}
 	// Sort by orderBy field if set (mirrors real Firestore behavior)
 	if q.orderByField != "" {
 		sort.SliceStable(snaps, func(i, j int) bool {
@@ -298,6 +305,31 @@ func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 			}
 			return si < sj
 		})
+	}
+	// Apply StartAfter cursor: skip all documents whose orderBy field
+	// value is not strictly after the cursor (respecting sort direction).
+	if len(q.startAfterVals) > 0 && q.orderByField != "" {
+		if cursorTime, ok := q.startAfterVals[0].(time.Time); ok {
+			filtered := make([]*mockSnap, 0, len(snaps))
+			for _, s := range snaps {
+				val := s.data[q.orderByField]
+				if t, ok := val.(time.Time); ok {
+					if q.orderByDir == firestore.Desc {
+						if t.Before(cursorTime) {
+							filtered = append(filtered, s)
+						}
+					} else {
+						if t.After(cursorTime) {
+							filtered = append(filtered, s)
+						}
+					}
+				}
+			}
+			snaps = filtered
+		}
+	}
+	if q.limit > 0 && len(snaps) > q.limit {
+		snaps = snaps[:q.limit]
 	}
 	return &mockIter{snaps: snaps}
 }
