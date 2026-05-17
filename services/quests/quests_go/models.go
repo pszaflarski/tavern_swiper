@@ -27,7 +27,7 @@ type ItemDefinitionCreate struct {
 	Description string         `json:"description"`
 	ImageURL    string         `json:"image_url"`
 	Category    string         `json:"category"    binding:"required"`
-	Rarity      string         `json:"rarity"      binding:"required"`
+	Rarity      string         `json:"rarity"`
 	MaxStack    int            `json:"max_stack"`
 	Tradeable   bool           `json:"tradeable"`
 	Metadata    map[string]any `json:"metadata"`

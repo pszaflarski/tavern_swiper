@@ -57,7 +57,7 @@ func handleCreateItem(c *gin.Context) {
 		send400(c, fmt.Sprintf("Invalid category '%s'. Valid: currency, weapon, armor, consumable, cosmetic, key_item, badge", req.Category))
 		return
 	}
-	if !validRarities[req.Rarity] {
+	if req.Rarity != "" && !validRarities[req.Rarity] {
 		send400(c, fmt.Sprintf("Invalid rarity '%s'. Valid: common, uncommon, rare, epic, legendary", req.Rarity))
 		return
 	}
