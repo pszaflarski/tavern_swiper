@@ -366,7 +366,7 @@ async def test_dice_roll_in_conversation():
         # --- STEP 3: Verify the event message in conversation history ---
         print("\nStep 3: Verify event message in conversation history")
         resp = await client.get(
-            f"{MESSAGES_URL}/messages/conversations/{conv_id}/messages",
+            f"{MESSAGES_URL}/messages/conversations/{conv_id}/messages?profile_id={hero_a_pid}",
             headers={"Authorization": f"Bearer {hero_a['token']}"}
         )
         assert resp.status_code == 200
