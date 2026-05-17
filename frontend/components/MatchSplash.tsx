@@ -68,16 +68,12 @@ export default function MatchSplash() {
     })();
   };
 
-  // Card sizing — 4:5 portrait aspect ratio for taller cards
-  const CARD_W = SCREEN_W * 0.36;
-  const CARD_H = CARD_W * (5 / 3);
+  // Card sizing — height-driven for taller cards on mobile
+  const CARD_H = SCREEN_H * 0.50;
+  const CARD_W = CARD_H * (3 / 5);
 
-  // Calculate max offset so rotated cards sit at edges without clipping
-  const ROTATION_DEG = 6;
-  const ROTATION_RAD = (ROTATION_DEG * Math.PI) / 180;
-  const ROTATED_HALF_W = (CARD_W * Math.cos(ROTATION_RAD) + CARD_H * Math.sin(ROTATION_RAD)) / 2;
-  const AVAILABLE_HALF_W = (SCREEN_W - 2 * Spacing[6]) / 2;
-  const CARD_OFFSET = Math.max(0, AVAILABLE_HALF_W - ROTATED_HALF_W - Spacing[1]);
+  // Offset: push each card out by ~25% of card width so they overlap in center
+  const CARD_OFFSET = CARD_W * 0.25;
 
   // Animation values
   const leftCardX = useSharedValue(-SCREEN_W);
@@ -154,7 +150,7 @@ export default function MatchSplash() {
         </Animated.View>
 
         {/* Overlapping Cards — matched profile on top */}
-        <View style={[styles.cardsContainer]}>
+        <View style={[styles.cardsContainer, { height: CARD_H + Spacing[4] }]}>
           {/* Your Profile (behind, tilted left) */}
           <Animated.View style={[
             styles.card, 

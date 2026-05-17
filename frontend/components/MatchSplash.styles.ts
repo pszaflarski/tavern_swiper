@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
   textContainer: {
     alignItems: 'center',
     width: '100%',
-    marginBottom: Spacing[8],
+    marginBottom: Spacing[4],
   },
   matchTitle: {
     fontFamily: Fonts.heroic,
@@ -49,8 +49,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    flex: 1,
-    overflow: 'hidden',
   },
   card: {
     backgroundColor: Colors.surfaceContainer,
@@ -90,14 +88,11 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
   actions: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    width: '100%',
     paddingHorizontal: Spacing[6],
     gap: Spacing[2],
-    backgroundColor: 'rgba(0,0,0,0.6)',
     paddingTop: Spacing[4],
+    marginTop: 'auto',
   },
   primaryButton: {
     backgroundColor: Colors.primary,
