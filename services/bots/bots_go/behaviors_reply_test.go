@@ -292,7 +292,7 @@ func TestCallAgentRouter_Success(t *testing.T) {
 		serviceURLs.mu.Unlock()
 	}()
 
-	resp, err := callAgentRouter("grogmar", "Hello there", "conv-1", "user", nil)
+	resp, err := callAgentRouter("fake-token", "grogmar", "Hello there", "conv-1", "user", nil)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestCallAgentRouter_ServerError(t *testing.T) {
 		serviceURLs.mu.Unlock()
 	}()
 
-	_, err := callAgentRouter("grogmar", "Hello", "conv-1", "user", nil)
+	_, err := callAgentRouter("fake-token", "grogmar", "Hello", "conv-1", "user", nil)
 	if err == nil {
 		t.Fatal("Expected error on 500 response")
 	}

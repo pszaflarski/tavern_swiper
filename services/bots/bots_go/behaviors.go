@@ -339,7 +339,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply via %s", bp.agentName, bp.profileID, conversationID, serviceURLs.Get("agent_router"))
 
 			// 4. Call agent_router to generate a reply
-			aiResponse, err := callAgentRouter(bp.agentName, messagePreview, conversationID, messageType, metadata)
+			aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, metadata)
 			if err != nil {
 				msg := fmt.Sprintf("Agent router failed for '%s': %v", bp.agentName, err)
 				log.Printf("[ERROR] %s", msg)
@@ -412,7 +412,7 @@ func isBotInConversation(token, botProfileID, conversationID string) (bool, erro
 }
 
 // callAgentRouter sends a prompt to the agent_router and returns the AI response.
-func callAgentRouter(agentName, prompt, threadID, messageType string, metadata map[string]interface{}) (string, error) {
+func callAgentRouter(token, agentName, prompt, threadID, messageType string, metadata map[string]interface{}) (string, error) {
 	agentRouterURL := serviceURLs.Get("agent_router")
 
 	payload := map[string]interface{}{
@@ -425,6 +425,7 @@ func callAgentRouter(agentName, prompt, threadID, messageType string, metadata m
 	body, _ := json.Marshal(payload)
 
 	req, _ := http.NewRequest("POST", agentRouterURL+"/invoke", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Agent router calls can take longer (LLM generation)
