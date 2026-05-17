@@ -762,9 +762,9 @@ func handleSyncBotProfiles(c *gin.Context) {
 	}
 
 	// 5. Reconcile
-	var created []string
-	var removedStale []string
-	var deletedOrphans []string
+	created := []string{}
+	removedStale := []string{}
+	deletedOrphans := []string{}
 
 	// 5a. Stale local records: bot_profiles that reference profiles no longer in the profiles service
 	for _, rec := range localRecords {
@@ -789,17 +789,6 @@ func handleSyncBotProfiles(c *gin.Context) {
 				deletedOrphans = append(deletedOrphans, pid)
 			}
 		}
-	}
-
-	// Ensure non-nil arrays in response
-	if created == nil {
-		created = []string{}
-	}
-	if removedStale == nil {
-		removedStale = []string{}
-	}
-	if deletedOrphans == nil {
-		deletedOrphans = []string{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
