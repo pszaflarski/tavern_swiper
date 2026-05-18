@@ -13,7 +13,12 @@ export default function ProfilePreviewScreen() {
   const { width } = useWindowDimensions();
 
   // If previewData is provided (from the form), parse it. Otherwise, fetch by ID.
-  const parsedPreviewData: SwipeProfile | null = previewData ? JSON.parse(previewData) : null;
+  let parsedPreviewData: SwipeProfile | null = null;
+  try {
+    parsedPreviewData = previewData ? JSON.parse(previewData) : null;
+  } catch (e) {
+    console.warn('[ProfilePreviewScreen] Failed to parse previewData param:', e);
+  }
   const { data: fetchedProfile, isLoading } = useProfile(parsedPreviewData ? undefined : id);
 
   const profile: SwipeProfile | null = parsedPreviewData || (fetchedProfile as SwipeProfile | null);

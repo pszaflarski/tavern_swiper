@@ -104,7 +104,7 @@ function ProfilesScreenInner() {
                 pressed && { opacity: 0.7 }
               ]}
               onPress={() => router.push({ pathname: '/profiles/preview', params: { id: item.profile_id } } as any)}
-              testID="preview-profile-button"
+              testID={`preview-profile-button-${item.profile_id}`}
               accessibilityLabel={`Preview ${item.display_name} profile`}
               accessibilityRole="button"
             >
