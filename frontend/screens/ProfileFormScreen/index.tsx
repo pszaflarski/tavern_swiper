@@ -18,13 +18,12 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { PROFILE } from '../../constants';
-import { useCreateProfile, useUpdateProfile, useProfile, useUploadProfileImage, ProfileTag } from '../../hooks/useProfiles';
+import { useCreateProfile, useUpdateProfile, useProfile, useUploadProfileImage } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageCropperModal } from '../../components/ImageCropperModal';
 import { useImageSlots } from './useImageSlots';
 import { prepareImageUpload } from '../../lib/imageProcessing';
-import { TagPicker, ProfileTagData } from '../../components/TagPicker';
 import * as FileSystem from 'expo-file-system';
 import { styles } from './styles';
 
@@ -48,13 +47,7 @@ export default function CreateAndEditProfileScreen() {
   const [displayName, setDisplayName] = useState('');
   const [tagline, setTagline] = useState('');
   const [bio, setBio] = useState('');
-  const [age, setAge] = useState<string>('');
-  const [isOC, setIsOC] = useState(false);
-  const [genderTags, setGenderTags] = useState<ProfileTagData[]>([]);
-  const [fandomTags, setFandomTags] = useState<ProfileTagData[]>([]);
-  const [interestsTags, setInterestsTags] = useState<ProfileTagData[]>([]);
-  const [raceTags, setRaceTags] = useState<ProfileTagData[]>([]);
-  const [eventsTags, setEventsTags] = useState<ProfileTagData[]>([]);
+  const [isOC, setIsOC] = useState(true);
   const {
     imageUrls,
     setImageUrls,
@@ -75,13 +68,7 @@ export default function CreateAndEditProfileScreen() {
       setDisplayName(existingProfile.display_name || '');
       setTagline(existingProfile.tagline || '');
       setBio(existingProfile.bio || '');
-      setAge(existingProfile.age != null ? String(existingProfile.age) : '');
-      setIsOC(existingProfile.is_oc ?? false);
-      setGenderTags((existingProfile.gender || []).map(t => ({ id: t.id, category: t.category, name: t.name, slug: t.slug, status: t.status })));
-      setFandomTags((existingProfile.fandom || []).map(t => ({ id: t.id, category: t.category, name: t.name, slug: t.slug, status: t.status })));
-      setInterestsTags((existingProfile.interests || []).map(t => ({ id: t.id, category: t.category, name: t.name, slug: t.slug, status: t.status })));
-      setRaceTags((existingProfile.race || []).map(t => ({ id: t.id, category: t.category, name: t.name, slug: t.slug, status: t.status })));
-      setEventsTags((existingProfile.events || []).map(t => ({ id: t.id, category: t.category, name: t.name, slug: t.slug, status: t.status })));
+      setIsOC(existingProfile.is_oc ?? true);
       setImageUrls(existingProfile.image_urls || []);
     }
   }, [existingProfile]);
@@ -115,15 +102,9 @@ export default function CreateAndEditProfileScreen() {
       display_name: displayName,
       tagline,
       bio,
-      gender: genderTags,
-      fandom: fandomTags,
-      interests: interestsTags,
-      race: raceTags,
-      events: eventsTags,
       is_oc: isOC,
       image_urls: permanentImageUrls,
     };
-    if (age.trim()) payload.age = parseInt(age, 10);
 
     try {
       let profileId = id;
@@ -229,7 +210,7 @@ export default function CreateAndEditProfileScreen() {
       <View style={styles.gridSection}>
         <Text style={styles.sectionTitle}>Visions of the Self</Text>
         <View style={styles.imageGrid}>
-          {[...Array(6)].map((_, index) => {
+          {[...Array(Math.min(imageUrls.length + 1, 6))].map((_, index) => {
             const uri = imageUrls[index];
             return (
               <View key={index} style={{ width: ITEM_WIDTH, height: ITEM_HEIGHT }} testID={`profile-image-slot-${index}`}>
@@ -321,70 +302,8 @@ export default function CreateAndEditProfileScreen() {
         </View>
       </View>
 
-      {/* Attributes Section */}
+      {/* OC Toggle — moved here from removed Attributes section */}
       <View style={styles.formSection}>
-        <Text style={styles.sectionTitle}>Attributes</Text>
-
-        <TagPicker
-          category="gender"
-          label="Gender / Essence"
-          multiSelect={false}
-          selectedTags={genderTags}
-          onTagsChange={setGenderTags}
-          testIDPrefix="profile-gender"
-        />
-
-        <TagPicker
-          category="fandom"
-          label="Fandoms"
-          multiSelect={true}
-          selectedTags={fandomTags}
-          onTagsChange={setFandomTags}
-          testIDPrefix="profile-fandom"
-        />
-
-        <TagPicker
-          category="interests"
-          label="Interests"
-          multiSelect={true}
-          selectedTags={interestsTags}
-          onTagsChange={setInterestsTags}
-          testIDPrefix="profile-interests"
-        />
-
-        <TagPicker
-          category="race"
-          label="Race / Species"
-          multiSelect={true}
-          selectedTags={raceTags}
-          onTagsChange={setRaceTags}
-          testIDPrefix="profile-race"
-        />
-
-        <TagPicker
-          category="events"
-          label="Events"
-          multiSelect={true}
-          selectedTags={eventsTags}
-          onTagsChange={setEventsTags}
-          testIDPrefix="profile-events"
-        />
-
-        {/* Age & OC */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Age</Text>
-          <TextInput
-            style={[styles.input, { width: 100 }]}
-            value={age}
-            onChangeText={(text) => setAge(text.replace(/[^0-9]/g, ''))}
-            placeholder="e.g. 25"
-            placeholderTextColor={Colors.surfaceVariant}
-            keyboardType="number-pad"
-            maxLength={10}
-            testID="profile-age-input"
-          />
-        </View>
-
         <View style={styles.inputGroup}>
           <Pressable
             style={({ pressed }) => [

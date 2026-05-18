@@ -107,7 +107,7 @@ describe('Profile Creation & Editing', () => {
     expect(nameInput.props.value).toBe('Gimli');
   });
 
-  it('calls createProfile on save', async () => {
+  it('calls createProfile on save with OC defaulting to true', async () => {
     const { getByTestId } = render(<CreateAndEditProfileScreen />);
     
     fireEvent.changeText(getByTestId('profile-name-input'), 'Aragorn');
@@ -118,6 +118,7 @@ describe('Profile Creation & Editing', () => {
       expect(mockCreateMutate).toHaveBeenCalledWith(expect.objectContaining({
         display_name: 'Aragorn',
         tagline: 'Strider',
+        is_oc: true,
       }));
       expect(mockRouter.back).toHaveBeenCalled();
     });
@@ -131,11 +132,6 @@ describe('Profile Creation & Editing', () => {
         display_name: 'Gandalf',
         tagline: 'The Grey',
         bio: 'A wizard is never late',
-        gender: [],
-        fandom: [],
-        interests: [],
-        race: [],
-        events: [],
         image_urls: ['http://magic.com/gandalf.jpg'],
       },
       isLoading: false,
@@ -147,26 +143,19 @@ describe('Profile Creation & Editing', () => {
     expect(getByTestId('profile-tagline-input').props.value).toBe('The Grey');
   });
 
-  it('renders tag picker for gender category', () => {
-    const { getByTestId } = render(<CreateAndEditProfileScreen />);
-    const genderPicker = getByTestId('profile-gender-picker');
-    expect(genderPicker).toBeTruthy();
-  });
-
-  it('renders age input field', () => {
-    const { getByTestId } = render(<CreateAndEditProfileScreen />);
-    const ageInput = getByTestId('profile-age-input');
-    expect(ageInput).toBeTruthy();
-    fireEvent.changeText(ageInput, '25');
-    expect(ageInput.props.value).toBe('25');
-  });
-
-  it('toggles OC checkbox', () => {
+  it('toggles OC checkbox (defaults to checked)', () => {
     const { getByTestId } = render(<CreateAndEditProfileScreen />);
     const ocToggle = getByTestId('profile-oc-toggle');
+    // OC defaults to true — pressing should uncheck it
     fireEvent.press(ocToggle);
-    // Verify it doesn't crash and stays functional
     expect(ocToggle).toBeTruthy();
+  });
+
+  it('shows only one empty slot initially (progressive grid)', () => {
+    const { queryByTestId } = render(<CreateAndEditProfileScreen />);
+    // Should show exactly 1 slot (the empty upload slot)
+    expect(queryByTestId('profile-image-slot-0')).toBeTruthy();
+    expect(queryByTestId('profile-image-slot-1')).toBeNull();
   });
 
   it('uploads local images and verifies persistence logic after save', async () => {
