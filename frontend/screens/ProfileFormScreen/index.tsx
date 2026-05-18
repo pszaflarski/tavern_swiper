@@ -76,6 +76,21 @@ export default function CreateAndEditProfileScreen() {
   const uploadImage = useUploadProfileImage();
   const [isUploading, setIsUploading] = useState(false);
 
+  const handlePreview = () => {
+    const previewData = {
+      profile_id: 'preview',
+      display_name: displayName || 'Unnamed Hero',
+      tagline: tagline,
+      bio: bio,
+      image_urls: imageUrls.filter(Boolean),
+    };
+
+    router.push({
+      pathname: '/profiles/preview',
+      params: { previewData: JSON.stringify(previewData) }
+    } as any);
+  };
+
   const handleSave = async () => {
     if (!displayName.trim()) {
       const msg = 'Your hero must have a name to be remembered.';
@@ -320,6 +335,18 @@ export default function CreateAndEditProfileScreen() {
           </Pressable>
         </View>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.previewButton, 
+          pressed && { opacity: 0.8 }
+        ]}
+        onPress={handlePreview}
+        testID="profile-preview-button"
+      >
+        <Ionicons name="eye" size={20} color={Colors.onSurface} style={{ marginRight: 8 }} />
+        <Text style={styles.previewButtonText}>Preview Profile</Text>
+      </Pressable>
 
       <Pressable
         style={({ pressed }) => [

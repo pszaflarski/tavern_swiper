@@ -103,6 +103,19 @@ function ProfilesScreenInner() {
                 styles.actionButton,
                 pressed && { opacity: 0.7 }
               ]}
+              onPress={() => router.push({ pathname: '/profiles/preview', params: { id: item.profile_id } } as any)}
+              testID="preview-profile-button"
+              accessibilityLabel={`Preview ${item.display_name} profile`}
+              accessibilityRole="button"
+            >
+              <Ionicons name="eye" size={24} color={Colors.outline} />
+            </Pressable>
+
+            <Pressable 
+              style={({ pressed }) => [
+                styles.actionButton,
+                pressed && { opacity: 0.7 }
+              ]}
               onPress={() => handleEdit(item.profile_id)}
               testID="edit-profile-button"
               accessibilityLabel={`Edit ${item.display_name} profile`}

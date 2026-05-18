@@ -168,6 +168,22 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.onPrimary,
   },
+  previewButton: {
+    backgroundColor: Colors.surfaceContainerLow,
+    flexDirection: 'row',
+    padding: Spacing[4],
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing[4],
+  },
+  previewButtonText: {
+    fontFamily: Fonts.heroic,
+    fontSize: 18,
+    color: Colors.onSurface,
+  },
   footerPlaceholder: {
     height: 40,
   },
