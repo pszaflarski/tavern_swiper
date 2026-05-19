@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -356,16 +357,30 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 				continue
 			}
 
-			// 6. Post the reply back to the messages service
-			err = postBotMessage(token, conversationID, bp.profileID, aiResponse)
-			if err != nil {
-				msg := fmt.Sprintf("Failed to post reply for '%s': %v", bp.agentName, err)
-				log.Printf("[ERROR] %s", msg)
-				details = append(details, msg)
+			// 6. Parse structured response and post each item
+			items := parseAgentResponse(aiResponse)
+			postFailed := false
+			for _, item := range items {
+				var postErr error
+				switch item.Type {
+				case "narration":
+					postErr = postBotNarration(token, conversationID, bp.profileID, item.Content)
+				default: // "message" or fallback
+					postErr = postBotMessage(token, conversationID, bp.profileID, item.Content)
+				}
+				if postErr != nil {
+					msg := fmt.Sprintf("Failed to post %s for '%s': %v", item.Type, bp.agentName, postErr)
+					log.Printf("[ERROR] %s", msg)
+					details = append(details, msg)
+					postFailed = true
+					break
+				}
+			}
+			if postFailed {
 				continue
 			}
 
-			msg := fmt.Sprintf("Bot '%s' replied in conversation %s", bp.agentName, conversationID)
+			msg := fmt.Sprintf("Bot '%s' replied in conversation %s (%d items)", bp.agentName, conversationID, len(items))
 			log.Printf("[INFO] %s", msg)
 			details = append(details, msg)
 			triggered++
@@ -478,6 +493,90 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to post message: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		return fmt.Errorf("messages service error (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+// AgentResponseItem represents a single item in a structured agent response.
+type AgentResponseItem struct {
+	Type    string `json:"type"`    // "message" or "narration"
+	Content string `json:"content"`
+}
+
+// parseAgentResponse parses a JSON array of items from the agent response.
+// If the response isn't valid JSON, it falls back to a single "message" item.
+func parseAgentResponse(raw string) []AgentResponseItem {
+	trimmed := strings.TrimSpace(raw)
+
+	// Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+	if strings.HasPrefix(trimmed, "```") {
+		lines := strings.Split(trimmed, "\n")
+		if len(lines) >= 3 {
+			// Remove first line (```json or ```) and last line (```)
+			inner := lines[1:]
+			for len(inner) > 0 && strings.TrimSpace(inner[len(inner)-1]) == "```" {
+				inner = inner[:len(inner)-1]
+			}
+			trimmed = strings.TrimSpace(strings.Join(inner, "\n"))
+		}
+	}
+
+	var items []AgentResponseItem
+	if err := json.Unmarshal([]byte(trimmed), &items); err != nil {
+		log.Printf("[WARN] Agent response is not valid JSON array, using as plain message: %v", err)
+		return []AgentResponseItem{{Type: "message", Content: raw}}
+	}
+
+	// Filter out empty or invalid items
+	var valid []AgentResponseItem
+	for _, item := range items {
+		content := strings.TrimSpace(item.Content)
+		if content == "" {
+			continue
+		}
+		itemType := strings.TrimSpace(item.Type)
+		if itemType != "message" && itemType != "narration" {
+			itemType = "message" // default unknown types to message
+		}
+		valid = append(valid, AgentResponseItem{Type: itemType, Content: content})
+	}
+
+	if len(valid) == 0 {
+		// If all items were filtered, fallback to raw text
+		return []AgentResponseItem{{Type: "message", Content: raw}}
+	}
+
+	return valid
+}
+
+// postBotNarration posts a narration event to a conversation on behalf of a bot.
+func postBotNarration(token, conversationID, botProfileID, content string) error {
+	messagesURL := serviceURLs.Get("messages")
+
+	payload := map[string]interface{}{
+		"sender_profile_id": botProfileID,
+		"content":           content,
+		"type":              "event",
+		"metadata": map[string]interface{}{
+			"event_type":   "narration",
+			"initiated_by": botProfileID,
+		},
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", messagesURL+"/messages/conversations/"+conversationID+"/messages", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to post narration: %w", err)
 	}
 	defer resp.Body.Close()
 
