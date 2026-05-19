@@ -61,6 +61,12 @@ func handleCreateItem(c *gin.Context) {
 		send400(c, fmt.Sprintf("Invalid rarity '%s'. Valid: common, uncommon, rare, epic, legendary", req.Rarity))
 		return
 	}
+	for _, a := range req.Actions {
+		if !validActions[a] {
+			send400(c, fmt.Sprintf("Invalid action '%s'. Valid: use, trade, gift, equip", a))
+			return
+		}
+	}
 
 	ctx := c.Request.Context()
 	db, err := getDBFunc(ctx)
@@ -79,6 +85,7 @@ func handleCreateItem(c *gin.Context) {
 		Rarity:      req.Rarity,
 		MaxStack:    req.MaxStack,
 		Tradeable:   req.Tradeable,
+		Actions:     req.Actions,
 		Metadata:    req.Metadata,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -212,6 +219,14 @@ func handleUpdateItem(c *gin.Context) {
 		send400(c, fmt.Sprintf("Invalid rarity '%s'", *req.Rarity))
 		return
 	}
+	if req.Actions != nil {
+		for _, a := range *req.Actions {
+			if !validActions[a] {
+				send400(c, fmt.Sprintf("Invalid action '%s'. Valid: use, trade, gift, equip", a))
+				return
+			}
+		}
+	}
 
 	ctx := c.Request.Context()
 	db, err := getDBFunc(ctx)
@@ -259,6 +274,9 @@ func handleUpdateItem(c *gin.Context) {
 	}
 	if req.Metadata != nil {
 		updates["metadata"] = *req.Metadata
+	}
+	if req.Actions != nil {
+		updates["actions"] = *req.Actions
 	}
 
 	_, err = docRef.Set(ctx, updates, mergeAllOption())
@@ -380,6 +398,7 @@ func handleGetInventory(c *gin.Context) {
 			entry.ImageURL, _ = itemData["image_url"].(string)
 			entry.Category, _ = itemData["category"].(string)
 			entry.Rarity, _ = itemData["rarity"].(string)
+			entry.Actions = stringsFromMap(itemData, "actions")
 		}
 
 		entries = append(entries, entry)
@@ -502,6 +521,7 @@ func handleGrantItem(c *gin.Context) {
 		ImageURL:         stringFromMap(itemData, "image_url"),
 		Category:         stringFromMap(itemData, "category"),
 		Rarity:           stringFromMap(itemData, "rarity"),
+		Actions:          stringsFromMap(itemData, "actions"),
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -623,6 +643,7 @@ func handleDeductItem(c *gin.Context) {
 		ImageURL:         stringFromMap(itemData, "image_url"),
 		Category:         stringFromMap(itemData, "category"),
 		Rarity:           stringFromMap(itemData, "rarity"),
+		Actions:          stringsFromMap(itemData, "actions"),
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -656,6 +677,7 @@ func mapToItemDefinition(data map[string]interface{}, id string) ItemDefinition 
 	if v, ok := data["tradeable"].(bool); ok {
 		item.Tradeable = v
 	}
+	item.Actions = stringsFromMap(data, "actions")
 	if v, ok := data["metadata"].(map[string]interface{}); ok {
 		item.Metadata = v
 	}
@@ -699,6 +721,27 @@ func stringFromMap(m map[string]interface{}, key string) string {
 		return v
 	}
 	return ""
+}
+
+// stringsFromMap extracts a []string from a Firestore data map.
+func stringsFromMap(m map[string]interface{}, key string) []string {
+	if m == nil {
+		return nil
+	}
+	raw, ok := m[key]
+	if !ok || raw == nil {
+		return nil
+	}
+	if arr, ok := raw.([]interface{}); ok {
+		result := make([]string, 0, len(arr))
+		for _, v := range arr {
+			if s, ok := v.(string); ok {
+				result = append(result, s)
+			}
+		}
+		return result
+	}
+	return nil
 }
 
 // mergeAllOption returns a Firestore MergeAll option for partial updates.

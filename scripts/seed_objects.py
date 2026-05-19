@@ -22,65 +22,84 @@ ITEMS = [
         "item_id": "gold",
         "name": "Gold",
         "description": (
-            "The universal currency of the tavern. "
-            "Earned through quests, wagers, and acts of valor."
+            "The universal currency of the realm. "
+            "Earned through quests, wagers, and the goodwill of fellow adventurers."
         ),
         "image_url": "",
         "category": "currency",
         "max_stack": 0,  # unlimited
         "tradeable": True,
+        "actions": ["trade", "gift"],
         "metadata": {},
     },
     {
-        "item_id": "dice_d6",
-        "name": "D6 Die",
+        "item_id": "dice_d4",
+        "name": "Standard D4 Dice",
         "description": (
-            "A trusty six-sided die. "
-            "The workhorse of any tavern game night."
+            "A four-sided die carved from enchanted stone. "
+            "Favoured by rogues for quick, decisive rolls."
         ),
         "image_url": "",
         "category": "key_item",
         "max_stack": 0,
         "tradeable": False,
+        "actions": ["use"],
+        "metadata": {"sides": 4, "dice_type": "d4"},
+    },
+    {
+        "item_id": "dice_d6",
+        "name": "Standard D6 Dice",
+        "description": (
+            "The classic six-sided die. "
+            "Reliable, sturdy, and the backbone of any adventurer's pouch."
+        ),
+        "image_url": "",
+        "category": "key_item",
+        "max_stack": 0,
+        "tradeable": True,
+        "actions": ["use", "trade", "gift"],
         "metadata": {"sides": 6, "dice_type": "d6"},
     },
     {
         "item_id": "dice_d8",
-        "name": "D8 Die",
+        "name": "Standard D8 Dice",
         "description": (
-            "An eight-sided die favored by fortune-tellers "
-            "and gamblers with something to prove."
+            "An eight-sided die humming with faint arcane energy. "
+            "A step above the ordinary."
         ),
         "image_url": "",
         "category": "key_item",
         "max_stack": 0,
         "tradeable": False,
+        "actions": ["use"],
         "metadata": {"sides": 8, "dice_type": "d8"},
     },
     {
         "item_id": "dice_d12",
-        "name": "D12 Die",
+        "name": "Standard D12 Dice",
         "description": (
-            "A twelve-sided die carved from ancient stone. "
-            "Its weight carries a certain gravitas."
+            "A twelve-sided die, rarely seen outside the vaults "
+            "of seasoned dungeon-delvers."
         ),
         "image_url": "",
         "category": "key_item",
         "max_stack": 0,
         "tradeable": False,
+        "actions": ["use"],
         "metadata": {"sides": 12, "dice_type": "d12"},
     },
     {
         "item_id": "dice_d20",
-        "name": "D20 Die",
+        "name": "Standard D20 Dice",
         "description": (
             "The legendary twenty-sided die. "
-            "When fate itself hangs in the balance, only the D20 will do."
+            "Every critical moment deserves one of these."
         ),
         "image_url": "",
         "category": "key_item",
         "max_stack": 0,
         "tradeable": False,
+        "actions": ["use"],
         "metadata": {"sides": 20, "dice_type": "d20"},
     },
 ]

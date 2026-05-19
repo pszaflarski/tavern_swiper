@@ -1,0 +1,142 @@
+import { StyleSheet, Platform } from 'react-native';
+import { Colors, Fonts, Spacing, Radius, Shadow } from '../../theme';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+  },
+  content: {
+    flex: 1,
+    padding: Spacing[4],
+  },
+  headerButton: {
+    padding: Spacing[2],
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+
+  // ── Grid View ──────────────────────────────────────────────────────────────
+  itemGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  itemCard: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: Radius.lg,
+    padding: Spacing[3],
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+  },
+  itemIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing[2],
+    overflow: 'hidden',
+  },
+  itemIcon: {
+    width: 48,
+    height: 48,
+  },
+  itemName: {
+    fontFamily: Fonts.heroic,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.onSurface,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  itemQuantity: {
+    fontFamily: Fonts.scribe,
+    fontSize: 13,
+    color: Colors.onSurfaceVariant,
+  },
+
+  // ── Detail View ────────────────────────────────────────────────────────────
+  detailContent: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Spacing[6],
+  },
+  detailName: {
+    fontFamily: Fonts.heroic,
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.onSurface,
+    textAlign: 'center',
+    marginBottom: Spacing[4],
+  },
+  detailIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surfaceContainerLow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing[3],
+    ...Shadow.waxSeal,
+  },
+  detailIcon: {
+    width: 96,
+    height: 96,
+  },
+  detailQuantity: {
+    fontFamily: Fonts.scribe,
+    fontSize: 16,
+    color: Colors.onSurfaceVariant,
+    marginBottom: Spacing[4],
+  },
+  detailDescription: {
+    fontFamily: Fonts.scribe,
+    fontSize: 15,
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing[8],
+    paddingHorizontal: Spacing[4],
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing[3],
+    width: '100%',
+    paddingHorizontal: Spacing[4],
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerHigh,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[5],
+    borderRadius: Radius.full,
+    minWidth: 120,
+    ...Shadow.waxSeal,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  actionButtonDisabled: {
+    opacity: 0.4,
+    ...(Platform.OS === 'web' ? { cursor: 'default' } : {}),
+  },
+  actionButtonText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.onSurface,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginLeft: Spacing[2],
+  },
+  disabledHint: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    color: Colors.outline,
+    textAlign: 'center',
+    marginTop: Spacing[4],
+    fontStyle: 'italic',
+  },
+});

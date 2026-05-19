@@ -185,18 +185,17 @@ export default function CreateAndEditProfileScreen() {
     >
       <Stack.Screen
         options={{
-          title: isEditing ? 'Alter Your Path' : 'Forge Your Hero',
+          title: '',
           headerShown: true,
           headerStyle: { backgroundColor: Colors.surfaceContainerLowest },
-          headerTitleStyle: { fontFamily: Fonts.heroic, color: Colors.onSurface },
-          headerTintColor: Colors.primary,
+          headerTintColor: Colors.onSurface,
           headerLeft: () => (
             <Pressable 
               onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/profiles' as any)} 
               style={({ pressed }) => [styles.headerButton, pressed && { opacity: 0.7 }]}
               testID="profile-header-close-button"
             >
-              <Ionicons name="close" size={24} color={Colors.outline} />
+              <Ionicons name="close" size={24} color={Colors.onSurface} />
             </Pressable>
           ),
           headerRight: () => (

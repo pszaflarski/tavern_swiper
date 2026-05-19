@@ -141,9 +141,10 @@ export const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: Colors.surfaceContainerLowest, // Solid background restored
+    backgroundColor: Colors.surfaceContainerLowest,
     borderTopWidth: 1,
     borderTopColor: Colors.outlineVariant,
+    overflow: 'visible',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -224,5 +225,31 @@ export const styles = StyleSheet.create({
     color: Colors.outline,
     marginTop: Spacing[1],
     fontStyle: 'italic' as const,
+  },
+  equippedDieFloat: {
+    position: 'absolute',
+    bottom: 80,
+    left: Spacing[4],
+    zIndex: 10,
+  },
+  equippedDieCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderWidth: 2,
+    borderColor: Colors.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.waxSeal,
+  },
+  equippedDieImage: {
+    width: 32,
+    height: 32,
+  },
+  equippedDieDismiss: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
   },
 });

@@ -16,6 +16,7 @@ type ItemDefinition struct {
 	Rarity      string         `json:"rarity"       firestore:"rarity"`      // common, uncommon, rare, epic, legendary
 	MaxStack    int            `json:"max_stack"    firestore:"max_stack"`   // 0 = unlimited, 1 = unique
 	Tradeable   bool           `json:"tradeable"    firestore:"tradeable"`
+	Actions     []string       `json:"actions"      firestore:"actions"`     // use, trade, gift, equip
 	Metadata    map[string]any `json:"metadata"     firestore:"metadata"`
 	CreatedAt   time.Time      `json:"created_at"   firestore:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"   firestore:"updated_at"`
@@ -30,6 +31,7 @@ type ItemDefinitionCreate struct {
 	Rarity      string         `json:"rarity"`
 	MaxStack    int            `json:"max_stack"`
 	Tradeable   bool           `json:"tradeable"`
+	Actions     []string       `json:"actions"`
 	Metadata    map[string]any `json:"metadata"`
 }
 
@@ -42,6 +44,7 @@ type ItemDefinitionUpdate struct {
 	Rarity      *string         `json:"rarity"`
 	MaxStack    *int            `json:"max_stack"`
 	Tradeable   *bool           `json:"tradeable"`
+	Actions     *[]string       `json:"actions"`
 	Metadata    *map[string]any `json:"metadata"`
 }
 
@@ -63,6 +66,14 @@ var validRarities = map[string]bool{
 	"rare":      true,
 	"epic":      true,
 	"legendary": true,
+}
+
+// Valid actions for items
+var validActions = map[string]bool{
+	"use":   true,
+	"trade": true,
+	"gift":  true,
+	"equip": true,
 }
 
 // -----------------------------------------------------------------------------
@@ -105,11 +116,12 @@ type InventoryEntryOut struct {
 	CreatedByUser    string    `json:"created_by_user"`
 	CreatedByProfile string    `json:"created_by_profile"`
 	// Joined item definition fields
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	ImageURL    string `json:"image_url"`
-	Category    string `json:"category"`
-	Rarity      string `json:"rarity"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	ImageURL    string   `json:"image_url"`
+	Category    string   `json:"category"`
+	Rarity      string   `json:"rarity"`
+	Actions     []string `json:"actions"`
 }
 
 // ErrorResponse matches the generic error response format.

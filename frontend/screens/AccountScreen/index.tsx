@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import ScreenHeader from '../../components/ScreenHeader';
 import { useRouter } from 'expo-router';
 
@@ -28,6 +29,18 @@ function AccountScreenInner() {
       <ScreenHeader title="Account" />
 
       <View style={styles.content}>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.inventoryButton,
+            pressed && { opacity: 0.7 }
+          ]}
+          onPress={() => router.push('/inventory')}
+          testID="inventory-button"
+        >
+          <Ionicons name="cube-outline" size={20} color="#3e2e00" style={{ marginRight: 8 }} />
+          <Text style={styles.inventoryButtonText}>Inventory</Text>
+        </Pressable>
+
         <Pressable 
           style={({ pressed }) => [
             styles.logoutButton,

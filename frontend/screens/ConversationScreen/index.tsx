@@ -8,6 +8,8 @@ import {
   Platform, 
   Image,
   ActivityIndicator,
+  PanResponder,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,18 +22,97 @@ import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller
 import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import DiceOverlay from '../../components/DiceOverlay';
-import DiceTypeBar from '../../components/DiceOverlay/DiceTypeBar';
 import { MESSAGES } from '../../constants';
 import { styles } from './styles';
 
 const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
-const DICE_BAR_HEIGHT = 48; // DiceTypeBar approx height (padding + chip + border)
+
+// Die type → image asset mapping for the equipped die circle
+const DICE_IMAGES: Record<string, any> = {
+  d4:  require('../../assets/dice/triangle/4.png'),
+  d6:  require('../../assets/dice/square/6.png'),
+  d8:  require('../../assets/dice/triangle/8.png'),
+  d12: require('../../assets/dice/pentagon/12.png'),
+  d20: require('../../assets/dice/triangle/20.png'),
+};
+
+// ---------------------------------------------------------------------------
+// Equipped die circle — freely draggable, tap to roll, drag off bottom to dismiss
+// ---------------------------------------------------------------------------
+const TAP_THRESHOLD = 10; // Max movement (px) to count as a tap
+
+function EquippedDieCircle({ dieType, onRoll, onDismiss, screenHeight }: {
+  dieType: string;
+  onRoll: () => void;
+  onDismiss: () => void;
+  screenHeight: number;
+}) {
+  // Persistent position so drag sticks between renders
+  const posRef = useRef({ x: 0, y: 0 });
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gs) => {
+        setPos({
+          x: posRef.current.x + gs.dx,
+          y: posRef.current.y + gs.dy,
+        });
+      },
+      onPanResponderRelease: (_, gs) => {
+        const totalMove = Math.abs(gs.dx) + Math.abs(gs.dy);
+
+        if (totalMove < TAP_THRESHOLD) {
+          // It was a tap — roll the die
+          onRoll();
+          return;
+        }
+
+        // Persist the new position
+        const newX = posRef.current.x + gs.dx;
+        const newY = posRef.current.y + gs.dy;
+        posRef.current = { x: newX, y: newY };
+
+        // If released in the input bar zone (bottom ~80px of screen), unequip
+        if (gs.moveY > screenHeight - 80) {
+          onDismiss();
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <View
+      style={[
+        styles.equippedDieFloat,
+        { transform: [{ translateX: pos.x }, { translateY: pos.y }] },
+      ]}
+      {...panResponder.panHandlers}
+    >
+      <View style={styles.equippedDieCircle} testID="equipped-die-roll-button">
+        <Image
+          source={DICE_IMAGES[dieType] || DICE_IMAGES['d6']}
+          style={styles.equippedDieImage}
+          resizeMode="contain"
+        />
+      </View>
+      <Pressable
+        onPress={onDismiss}
+        style={({ pressed }) => [styles.equippedDieDismiss, pressed && { opacity: 0.5 }]}
+        testID="equipped-die-dismiss"
+      >
+        <Ionicons name="close-circle" size={16} color={Colors.outline} />
+      </Pressable>
+    </View>
+  );
+}
 
 function ConversationScreenInner() {
-  const { id: conversationId } = useLocalSearchParams<{ id: string }>();
+  const { id: conversationId, equippedDie: equippedDieParam } = useLocalSearchParams<{ id: string; equippedDie?: string }>();
   const { activeProfileId } = useProfileContext();
   const [messageText, setMessageText] = useState('');
-  const [diceBarOpen, setDiceBarOpen] = useState(false);
+  const [equippedDie, setEquippedDie] = useState<string | null>(null);
   const [rollingDie, setRollingDie] = useState<string | null>(null);
   const [diceResult, setDiceResult] = useState<DiceRollResult | null>(null);
   const [hiddenMessageId, setHiddenMessageId] = useState<string | null>(null);
@@ -47,6 +128,7 @@ function ConversationScreenInner() {
   
   // Native keyboard animation hook — gives us a smooth, frame-synced height value
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const { height: screenHeight } = useWindowDimensions();
 
   // Get conversation info (other profile details etc.)
   const { inbox, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
@@ -69,6 +151,33 @@ function ConversationScreenInner() {
   );
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { mutateAsync: rollDice, invalidateAfterRoll } = useRollDice();
+
+  // Handle equipped die coming back from the inventory screen
+  useEffect(() => {
+    if (equippedDieParam) {
+      setEquippedDie(equippedDieParam);
+    }
+  }, [equippedDieParam]);
+
+  // Roll the equipped die
+  const handleRollEquipped = async () => {
+    if (!equippedDie || !activeProfileId || !conversationId) return;
+    try {
+      const result = await rollDice({
+        dieType: equippedDie,
+        conversationId,
+        profileId: activeProfileId,
+      });
+      if (result.message_id) {
+        setHiddenMessageId(result.message_id);
+      }
+      setDiceResult(result);
+      setRollingDie(equippedDie);
+      setRollKey(k => k + 1);
+    } catch (err) {
+      console.error('🎲 Dice roll failed:', err);
+    }
+  };
   const queryClient = useQueryClient();
 
   // Invalidate conversations cache when exiting — the backend just marked
@@ -140,13 +249,12 @@ function ConversationScreenInner() {
     };
   });
 
-  // Extra height for the dice bar when open
-  const diceBarExtra = diceBarOpen ? DICE_BAR_HEIGHT : 0;
+
 
   // Animated style for the FlatList spacer.
   // Precisely mirrors the footer's height for smooth scrolling.
   const listBottomSpacerStyle = useAnimatedStyle(() => ({
-    height: INPUT_BAR_HEIGHT + diceBarExtra + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
+    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
   }));
 
   if (isLoadingInbox && !conversation) {
@@ -289,37 +397,6 @@ function ConversationScreenInner() {
       )}
 
       <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle]}>
-        {/* Dice type bar — slides up above the input when toggled */}
-        {diceBarOpen && (
-          <DiceTypeBar
-            onSelectDie={async (dieType: string) => {
-              if (!activeProfileId || !conversationId) return;
-              try {
-                // If a prior roll is still showing, clean it up first
-                if (rollingDie) {
-                  setHiddenMessageId(null);
-                  invalidateAfterRoll();
-                }
-                // 1. Call the backend for an authoritative roll
-                const result = await rollDice({
-                  dieType,
-                  conversationId,
-                  profileId: activeProfileId,
-                });
-                // 2. Hide the event message the backend just wrote
-                if (result.message_id) {
-                  setHiddenMessageId(result.message_id);
-                }
-                // 3. Show the overlay with the predetermined result
-                setDiceResult(result);
-                setRollingDie(dieType);
-                setRollKey(k => k + 1);
-              } catch (err) {
-                console.error('🎲 Dice roll failed:', err);
-              }
-            }}
-          />
-        )}
 
         <View style={styles.inputContainer}>
           <TextInput
@@ -335,24 +412,23 @@ function ConversationScreenInner() {
           <Pressable
             style={({ pressed }) => [
               styles.diceToggle,
-              diceBarOpen && styles.diceToggleActive,
               pressed && { opacity: 0.7 },
             ]}
             onPress={() => {
-              if (diceBarOpen) {
-                // Close everything
-                setDiceBarOpen(false);
-                setRollingDie(null);
-              } else {
-                setDiceBarOpen(true);
-              }
+              router.push({
+                pathname: '/inventory',
+                params: {
+                  conversationId,
+                  profileId: activeProfileId,
+                },
+              } as any);
             }}
-            testID="dice-toggle-button"
+            testID="inventory-toggle-button"
           >
             <Ionicons
-              name="dice-outline"
+              name="bag-handle-outline"
               size={22}
-              color={diceBarOpen ? Colors.tertiary : Colors.outline}
+              color={Colors.outline}
             />
           </Pressable>
           <Pressable 
@@ -373,6 +449,16 @@ function ConversationScreenInner() {
           </Pressable>
         </View>
       </Animated.View>
+
+      {/* Equipped die circle — floats over everything, freely draggable */}
+      {equippedDie && (
+        <EquippedDieCircle
+          dieType={equippedDie}
+          onRoll={handleRollEquipped}
+          onDismiss={() => setEquippedDie(null)}
+          screenHeight={screenHeight}
+        />
+      )}
 
       {/* Dice overlay — renders on top of everything */}
       <DiceOverlay
