@@ -1,6 +1,6 @@
 import React from 'react';
-import { renderHook } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider, notifyManager } from '@tanstack/react-query';
 import { useUnreadStatus } from '../../hooks/useUnreadStatus';
 import { useProfileContext } from '../../context/ProfileContext';
 import { messagesApi } from '../../lib/api';
@@ -17,13 +17,16 @@ jest.mock('../../lib/api', () => ({
   },
 }));
 
-// Helper to wrap renderHook with a real QueryClientProvider
+// Route React Query notifications through act() to prevent warnings.
+// Set once at module scope so it covers all lifecycle phases including cleanup.
+notifyManager.setNotifyFunction((fn) => {
+  act(() => { fn(); });
+});
+
+// Shared QueryClient instance, recreated per test
+let queryClient: QueryClient;
+
 function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: Infinity },
-    },
-  });
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
@@ -32,6 +35,15 @@ function createWrapper() {
 describe('useUnreadStatus', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: Infinity },
+      },
+    });
+  });
+
+  afterEach(() => {
+    queryClient.clear();
   });
 
   it('should return false/empty when user has no profiles', () => {
@@ -70,15 +82,15 @@ describe('useUnreadStatus', () => {
       return Promise.resolve({ data: [] });
     });
 
-    const { result, rerender } = renderHook(() => useUnreadStatus(), {
+    const { result } = renderHook(() => useUnreadStatus(), {
       wrapper: createWrapper(),
     });
 
-    // Wait for queries to settle
-    await new Promise(resolve => setTimeout(resolve, 100));
-    rerender({});
+    // Wait for queries to settle inside act()
+    await waitFor(() => {
+      expect(result.current.hasAnyUnread).toBe(true);
+    });
 
-    expect(result.current.hasAnyUnread).toBe(true);
     expect(result.current.unreadByProfile['p1']).toBe(true);
     expect(result.current.unreadByProfile['p2']).toBe(false);
   });
@@ -92,15 +104,15 @@ describe('useUnreadStatus', () => {
       data: [{ id: 'c1', unread: false }],
     });
 
-    const { result, rerender } = renderHook(() => useUnreadStatus(), {
+    const { result } = renderHook(() => useUnreadStatus(), {
       wrapper: createWrapper(),
     });
 
-    await new Promise(resolve => setTimeout(resolve, 100));
-    rerender({});
+    await waitFor(() => {
+      expect(result.current.unreadByProfile['p1']).toBe(false);
+    });
 
     expect(result.current.hasAnyUnread).toBe(false);
-    expect(result.current.unreadByProfile['p1']).toBe(false);
     expect(result.current.unreadByProfile['p2']).toBe(false);
   });
 
@@ -114,12 +126,13 @@ describe('useUnreadStatus', () => {
       data: [{ id: 'c1' }],
     });
 
-    const { result, rerender } = renderHook(() => useUnreadStatus(), {
+    const { result } = renderHook(() => useUnreadStatus(), {
       wrapper: createWrapper(),
     });
 
-    await new Promise(resolve => setTimeout(resolve, 100));
-    rerender({});
+    await waitFor(() => {
+      expect(result.current.unreadByProfile['p1']).toBeDefined();
+    });
 
     // Missing unread should default to false (not unread)
     expect(result.current.hasAnyUnread).toBe(false);
