@@ -82,39 +82,33 @@ var validActions = map[string]bool{
 
 // UserInventoryEntry represents a single item stack in a user's inventory.
 type UserInventoryEntry struct {
-	UserID           string    `json:"user_id"            firestore:"user_id"`
-	ItemID           string    `json:"item_id"            firestore:"item_id"`
-	Quantity         int       `json:"quantity"           firestore:"quantity"`
-	AcquiredAt       time.Time `json:"acquired_at"        firestore:"acquired_at"`
-	UpdatedAt        time.Time `json:"updated_at"         firestore:"updated_at"`
-	CreatedByUser    string    `json:"created_by_user"    firestore:"created_by_user"`
-	CreatedByProfile string    `json:"created_by_profile" firestore:"created_by_profile"`
+	UserID     string    `json:"user_id"      firestore:"user_id"`
+	ItemID     string    `json:"item_id"      firestore:"item_id"`
+	Quantity   int       `json:"quantity"     firestore:"quantity"`
+	AcquiredAt time.Time `json:"acquired_at"  firestore:"acquired_at"`
+	UpdatedAt  time.Time `json:"updated_at"   firestore:"updated_at"`
 }
 
 // InventoryGrantRequest is the request body for granting items to a user.
 type InventoryGrantRequest struct {
-	UserID    string `json:"user_id"    binding:"required"`
-	ItemID    string `json:"item_id"    binding:"required"`
-	Quantity  int    `json:"quantity"   binding:"required"`
-	ProfileID string `json:"profile_id"` // profile_id of the granting bot (optional for admins)
+	UserID   string `json:"user_id"   binding:"required"`
+	ItemID   string `json:"item_id"   binding:"required"`
+	Quantity int    `json:"quantity"  binding:"required"`
 }
 
 // InventoryDeductRequest is the request body for deducting items from a user.
 type InventoryDeductRequest struct {
-	UserID    string `json:"user_id"    binding:"required"`
-	ItemID    string `json:"item_id"    binding:"required"`
-	Quantity  int    `json:"quantity"   binding:"required"`
-	ProfileID string `json:"profile_id"` // profile_id of the deducting bot (optional for admins)
+	UserID   string `json:"user_id"   binding:"required"`
+	ItemID   string `json:"item_id"   binding:"required"`
+	Quantity int    `json:"quantity"  binding:"required"`
 }
 
 // InventoryEntryOut is the response format for an inventory entry.
 type InventoryEntryOut struct {
-	ItemID           string    `json:"item_id"`
-	Quantity         int       `json:"quantity"`
-	AcquiredAt       time.Time `json:"acquired_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
-	CreatedByUser    string    `json:"created_by_user"`
-	CreatedByProfile string    `json:"created_by_profile"`
+	ItemID     string    `json:"item_id"`
+	Quantity   int       `json:"quantity"`
+	AcquiredAt time.Time `json:"acquired_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 	// Joined item definition fields
 	Name        string   `json:"name"`
 	Description string   `json:"description"`

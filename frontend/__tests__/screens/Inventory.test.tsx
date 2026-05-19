@@ -1,9 +1,14 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react-native';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import InventoryScreen from '../../screens/InventoryScreen';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { InventoryEntry } from '../../hooks/useInventory';
 
-// Mock expo-router
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+// Mock expo-router (override the global default)
 jest.mock('expo-router', () => {
   const actual = jest.requireActual('expo-router');
   return {
@@ -16,6 +21,63 @@ jest.mock('expo-router', () => {
   };
 });
 
+// Mock useUser
+jest.mock('../../hooks/useUser', () => ({
+  useUser: jest.fn(),
+}));
+import { useUser } from '../../hooks/useUser';
+
+// Mock useInventory
+jest.mock('../../hooks/useInventory', () => ({
+  useInventory: jest.fn(),
+}));
+import { useInventory } from '../../hooks/useInventory';
+
+// ---------------------------------------------------------------------------
+// Test fixtures
+// ---------------------------------------------------------------------------
+const MOCK_INVENTORY: InventoryEntry[] = [
+  {
+    item_id: 'gold',
+    quantity: 350,
+    acquired_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    name: 'Gold',
+    description: 'The universal currency of the realm.',
+    image_url: '',
+    category: 'currency',
+    rarity: 'common',
+    actions: ['trade', 'gift'],
+  },
+  {
+    item_id: 'dice_d6',
+    quantity: 12,
+    acquired_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    name: 'Standard D6 Dice',
+    description: 'The classic six-sided die. Reliable and sturdy.',
+    image_url: '',
+    category: 'key_item',
+    rarity: 'common',
+    actions: ['use'],
+  },
+  {
+    item_id: 'dice_d20',
+    quantity: 1,
+    acquired_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    name: 'Standard D20 Dice',
+    description: 'The legendary twenty-sided die.',
+    image_url: '',
+    category: 'key_item',
+    rarity: 'common',
+    actions: ['use'],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 describe('Inventory Screen', () => {
   const mockRouter = {
     push: jest.fn(),
@@ -24,9 +86,96 @@ describe('Inventory Screen', () => {
     canGoBack: jest.fn(() => true),
   };
 
+  const mockRefetch = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
+    (useUser as jest.Mock).mockReturnValue({ uid: 'user1' });
+  });
+
+  /** Helper to set up the inventory hook mock with loaded data */
+  function mockInventoryLoaded(data: InventoryEntry[] = MOCK_INVENTORY) {
+    (useInventory as jest.Mock).mockReturnValue({
+      data,
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    });
+  }
+
+  /** Helper to set up the inventory hook mock in loading state */
+  function mockInventoryLoading() {
+    (useInventory as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      refetch: mockRefetch,
+    });
+  }
+
+  /** Helper to set up the inventory hook mock in error state */
+  function mockInventoryError() {
+    (useInventory as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: mockRefetch,
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Loading State
+  // -----------------------------------------------------------------------
+  describe('Loading State', () => {
+    it('renders a loading indicator while fetching inventory', () => {
+      (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoading();
+
+      render(<InventoryScreen />);
+
+      expect(screen.getByText(/opening your pouch/i)).toBeTruthy();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Error State
+  // -----------------------------------------------------------------------
+  describe('Error State', () => {
+    it('renders an error message when the fetch fails', () => {
+      (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryError();
+
+      render(<InventoryScreen />);
+
+      expect(screen.getByText(/failed to load inventory/i)).toBeTruthy();
+    });
+
+    it('calls refetch when Try Again is pressed', () => {
+      (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryError();
+
+      render(<InventoryScreen />);
+
+      fireEvent.press(screen.getByText(/try again/i));
+
+      expect(mockRefetch).toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Empty State
+  // -----------------------------------------------------------------------
+  describe('Empty State', () => {
+    it('renders the empty pouch message when inventory is empty', () => {
+      (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded([]);
+
+      render(<InventoryScreen />);
+
+      expect(screen.getByText(/your pouch is empty/i)).toBeTruthy();
+      expect(screen.getByText(/complete quests/i)).toBeTruthy();
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -35,19 +184,18 @@ describe('Inventory Screen', () => {
   describe('Grid View', () => {
     it('renders all inventory items in the grid', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
 
       render(<InventoryScreen />);
 
       expect(screen.getByTestId('inventory-item-gold')).toBeTruthy();
-      expect(screen.getByTestId('inventory-item-dice_d4')).toBeTruthy();
       expect(screen.getByTestId('inventory-item-dice_d6')).toBeTruthy();
-      expect(screen.getByTestId('inventory-item-dice_d8')).toBeTruthy();
-      expect(screen.getByTestId('inventory-item-dice_d12')).toBeTruthy();
       expect(screen.getByTestId('inventory-item-dice_d20')).toBeTruthy();
     });
 
     it('shows item names and quantities', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
 
       render(<InventoryScreen />);
 
@@ -64,18 +212,19 @@ describe('Inventory Screen', () => {
   describe('Detail View', () => {
     it('opens detail view when an item is tapped', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
 
       render(<InventoryScreen />);
 
       fireEvent.press(screen.getByTestId('inventory-item-dice_d6'));
 
-      // Detail view should show the item's description
       expect(screen.getByText(/classic six-sided die/i)).toBeTruthy();
       expect(screen.getByText('×12 in pouch')).toBeTruthy();
     });
 
     it('returns to grid view when back button is pressed from detail', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
 
       render(<InventoryScreen />);
 
@@ -92,7 +241,6 @@ describe('Inventory Screen', () => {
       // Press back — should return to grid (not navigate away)
       fireEvent.press(getByTestId('inventory-back-button'));
 
-      // Grid should be visible again (rerender picked up the state change)
       // Since we rendered HeaderLeft separately, we verify router.back was NOT called
       // (the goBack function clears selectedItem first)
       expect(mockRouter.back).not.toHaveBeenCalled();
@@ -100,6 +248,7 @@ describe('Inventory Screen', () => {
 
     it('shows correct action buttons for gold (trade, gift)', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
 
       render(<InventoryScreen />);
 
@@ -113,6 +262,7 @@ describe('Inventory Screen', () => {
 
     it('shows correct action buttons for dice (use only)', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
 
       render(<InventoryScreen />);
 
@@ -129,6 +279,7 @@ describe('Inventory Screen', () => {
   describe('opened from Account (no conversationId)', () => {
     beforeEach(() => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
     });
 
     it('disables all action buttons', () => {
@@ -163,6 +314,7 @@ describe('Inventory Screen', () => {
         conversationId: 'conv-123',
         profileId: 'profile-456',
       });
+      mockInventoryLoaded();
     });
 
     it('enables action buttons', () => {
@@ -208,6 +360,7 @@ describe('Inventory Screen', () => {
   describe('Navigation', () => {
     it('calls router.back() when X is pressed and there is history', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
       mockRouter.canGoBack.mockReturnValue(true);
 
       render(<InventoryScreen />);
@@ -225,6 +378,7 @@ describe('Inventory Screen', () => {
 
     it('falls back to account screen when no history', () => {
       (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      mockInventoryLoaded();
       mockRouter.canGoBack.mockReturnValue(false);
 
       render(<InventoryScreen />);
@@ -238,6 +392,33 @@ describe('Inventory Screen', () => {
       fireEvent.press(getByTestId('inventory-back-button'));
 
       expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/account');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Hook Integration
+  // -----------------------------------------------------------------------
+  describe('Hook Integration', () => {
+    it('passes the user UID to useInventory', () => {
+      (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      (useUser as jest.Mock).mockReturnValue({ uid: 'my-user-id' });
+      mockInventoryLoaded([]);
+
+      render(<InventoryScreen />);
+
+      expect(useInventory).toHaveBeenCalledWith('my-user-id');
+    });
+
+    it('handles undefined uid gracefully', () => {
+      (useLocalSearchParams as jest.Mock).mockReturnValue({});
+      (useUser as jest.Mock).mockReturnValue({ uid: undefined });
+      mockInventoryLoading();
+
+      render(<InventoryScreen />);
+
+      expect(useInventory).toHaveBeenCalledWith(undefined);
+      // Should show loading state when uid is not yet available
+      expect(screen.getByText(/opening your pouch/i)).toBeTruthy();
     });
   });
 });

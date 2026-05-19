@@ -490,12 +490,10 @@ func handleGrantItem(c *gin.Context) {
 	}
 
 	entry := UserInventoryEntry{
-		UserID:           req.UserID,
-		ItemID:           req.ItemID,
-		Quantity:         newQty,
-		UpdatedAt:        now,
-		CreatedByUser:    auth.UID,
-		CreatedByProfile: req.ProfileID,
+		UserID:     req.UserID,
+		ItemID:     req.ItemID,
+		Quantity:   newQty,
+		UpdatedAt:  now,
 	}
 	if isNew {
 		entry.AcquiredAt = now
@@ -507,15 +505,13 @@ func handleGrantItem(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[INFO] Granted %dx %s to user %s (by %s, profile: %s)", req.Quantity, req.ItemID, req.UserID, auth.UID, req.ProfileID)
+	log.Printf("[INFO] Granted %dx %s to user %s (by %s)", req.Quantity, req.ItemID, req.UserID, auth.UID)
 
 	out := InventoryEntryOut{
-		ItemID:           req.ItemID,
-		Quantity:         newQty,
-		AcquiredAt:       entry.AcquiredAt,
-		UpdatedAt:        now,
-		CreatedByUser:    auth.UID,
-		CreatedByProfile: req.ProfileID,
+		ItemID:      req.ItemID,
+		Quantity:    newQty,
+		AcquiredAt:  entry.AcquiredAt,
+		UpdatedAt:   now,
 		Name:             stringFromMap(itemData, "name"),
 		Description:      stringFromMap(itemData, "description"),
 		ImageURL:         stringFromMap(itemData, "image_url"),
@@ -602,20 +598,16 @@ func handleDeductItem(c *gin.Context) {
 		}
 		log.Printf("[INFO] Deducted %dx %s from user %s (removed, qty=0)", req.Quantity, req.ItemID, req.UserID)
 		c.JSON(http.StatusOK, InventoryEntryOut{
-			ItemID:           req.ItemID,
-			Quantity:         0,
-			CreatedByUser:    auth.UID,
-			CreatedByProfile: req.ProfileID,
+			ItemID:   req.ItemID,
+			Quantity: 0,
 		})
 		return
 	}
 
 	// Update quantity
 	updates := map[string]interface{}{
-		"quantity":           newQty,
-		"updated_at":        now,
-		"created_by_user":   auth.UID,
-		"created_by_profile": req.ProfileID,
+		"quantity":   newQty,
+		"updated_at": now,
 	}
 	_, err = invDoc.Set(ctx, updates, mergeAllOption())
 	if err != nil {
@@ -633,11 +625,9 @@ func handleDeductItem(c *gin.Context) {
 	}
 
 	out := InventoryEntryOut{
-		ItemID:           req.ItemID,
-		Quantity:         newQty,
-		UpdatedAt:        now,
-		CreatedByUser:    auth.UID,
-		CreatedByProfile: req.ProfileID,
+		ItemID:      req.ItemID,
+		Quantity:    newQty,
+		UpdatedAt:   now,
 		Name:             stringFromMap(itemData, "name"),
 		Description:      stringFromMap(itemData, "description"),
 		ImageURL:         stringFromMap(itemData, "image_url"),
@@ -703,12 +693,6 @@ func mapToInventoryEntry(data map[string]interface{}) InventoryEntryOut {
 	}
 	if v, ok := data["updated_at"].(time.Time); ok {
 		entry.UpdatedAt = v
-	}
-	if v, ok := data["created_by_user"].(string); ok {
-		entry.CreatedByUser = v
-	}
-	if v, ok := data["created_by_profile"].(string); ok {
-		entry.CreatedByProfile = v
 	}
 	return entry
 }

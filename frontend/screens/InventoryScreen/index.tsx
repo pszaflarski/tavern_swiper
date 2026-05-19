@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import { Colors, Spacing } from '../../theme';
 import { styles } from './styles';
+import { useUser } from '../../hooks/useUser';
+import { useInventory, InventoryEntry } from '../../hooks/useInventory';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 type ItemAction = 'use' | 'trade' | 'gift' | 'equip';
 
-interface InventoryItem {
+interface DisplayItem {
   item_id: string;
   name: string;
   description: string;
@@ -32,63 +34,44 @@ const ACTION_CONFIG: Record<ItemAction, { icon: keyof typeof Ionicons.glyphMap; 
 };
 
 // ---------------------------------------------------------------------------
-// Mock data — will be replaced with a real API call to quests service later
+// Local image mapping — dice assets are bundled, so we map item_id → require
 // ---------------------------------------------------------------------------
-const MOCK_INVENTORY: InventoryItem[] = [
-  {
-    item_id: 'gold',
-    name: 'Gold',
-    description: 'The universal currency of the realm. Earned through quests, wagers, and the goodwill of fellow adventurers.',
-    quantity: 350,
-    image: require('../../assets/images/inventory_icon_gold.png'),
-    actions: ['trade', 'gift'],
-  },
-  {
-    item_id: 'dice_d4',
-    name: 'Standard D4 Dice',
-    description: 'A four-sided die carved from enchanted stone. Favoured by rogues for quick, decisive rolls.',
-    quantity: 8,
-    image: require('../../assets/dice/triangle/4.png'),
-    actions: ['use'],
-    dieType: 'd4',
-  },
-  {
-    item_id: 'dice_d6',
-    name: 'Standard D6 Dice',
-    description: 'The classic six-sided die. Reliable, sturdy, and the backbone of any adventurer\'s pouch.',
-    quantity: 12,
-    image: require('../../assets/dice/square/6.png'),
-    actions: ['use'],
-    dieType: 'd6',
-  },
-  {
-    item_id: 'dice_d8',
-    name: 'Standard D8 Dice',
-    description: 'An eight-sided die humming with faint arcane energy. A step above the ordinary.',
-    quantity: 5,
-    image: require('../../assets/dice/triangle/8.png'),
-    actions: ['use'],
-    dieType: 'd8',
-  },
-  {
-    item_id: 'dice_d12',
-    name: 'Standard D12 Dice',
-    description: 'A twelve-sided die, rarely seen outside the vaults of seasoned dungeon-delvers.',
-    quantity: 3,
-    image: require('../../assets/dice/pentagon/12.png'),
-    actions: ['use'],
-    dieType: 'd12',
-  },
-  {
-    item_id: 'dice_d20',
-    name: 'Standard D20 Dice',
-    description: 'The legendary twenty-sided die. Every critical moment deserves one of these.',
-    quantity: 1,
-    image: require('../../assets/dice/triangle/20.png'),
-    actions: ['use'],
-    dieType: 'd20',
-  },
-];
+const DICE_IMAGE_MAP: Record<string, any> = {
+  dice_d4:  require('../../assets/dice/triangle/4.png'),
+  dice_d6:  require('../../assets/dice/square/6.png'),
+  dice_d8:  require('../../assets/dice/triangle/8.png'),
+  dice_d12: require('../../assets/dice/pentagon/12.png'),
+  dice_d20: require('../../assets/dice/triangle/20.png'),
+};
+
+const ITEM_IMAGE_MAP: Record<string, any> = {
+  gold: require('../../assets/images/inventory_icon_gold.png'),
+  ...DICE_IMAGE_MAP,
+};
+
+// Dice type lookup from item_id
+const DICE_TYPE_MAP: Record<string, string> = {
+  dice_d4:  'd4',
+  dice_d6:  'd6',
+  dice_d8:  'd8',
+  dice_d12: 'd12',
+  dice_d20: 'd20',
+};
+
+/**
+ * Convert an API InventoryEntry into a DisplayItem for the UI.
+ */
+function toDisplayItem(entry: InventoryEntry): DisplayItem {
+  return {
+    item_id: entry.item_id,
+    name: entry.name || entry.item_id,
+    description: entry.description || '',
+    quantity: entry.quantity,
+    image: ITEM_IMAGE_MAP[entry.item_id] ?? null,
+    actions: (entry.actions ?? []) as ItemAction[],
+    dieType: DICE_TYPE_MAP[entry.item_id],
+  };
+}
 
 const ITEM_MIN_WIDTH = 100;
 const GRID_GAP = Spacing[3];
@@ -101,10 +84,17 @@ function InventoryScreenInner() {
     profileId?: string;
   }>();
   const { width } = useWindowDimensions();
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<DisplayItem | null>(null);
+
+  // Fetch live data
+  const { uid } = useUser();
+  const { data: inventory, isLoading, isError, refetch } = useInventory(uid);
 
   // Whether we came from a conversation (enables actions)
   const inConversation = !!conversationId && !!profileId;
+
+  // Transform API data into display items
+  const items: DisplayItem[] = (inventory ?? []).map(toDisplayItem);
 
   // Calculate how many columns fit based on screen width
   const availableWidth = width - GRID_PADDING * 2;
@@ -121,7 +111,7 @@ function InventoryScreenInner() {
     }
   };
 
-  const handleAction = (action: ItemAction, item: InventoryItem) => {
+  const handleAction = (action: ItemAction, item: DisplayItem) => {
     if (!inConversation) return;
 
     if (action === 'use' && item.dieType) {
@@ -136,6 +126,70 @@ function InventoryScreenInner() {
     }
     // Other actions (trade, gift, equip) — TODO: wire up later
   };
+
+  // ── Loading state ──────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <View style={styles.container} testID="inventory-screen">
+        <Stack.Screen
+          options={{
+            title: '',
+            headerShown: true,
+            headerStyle: { backgroundColor: Colors.surfaceContainerLowest },
+            headerTintColor: Colors.onSurface,
+            headerLeft: () => (
+              <Pressable
+                onPress={goBack}
+                style={({ pressed }) => [styles.headerButton, pressed && { opacity: 0.7 }]}
+                testID="inventory-back-button"
+              >
+                <Ionicons name="close" size={24} color={Colors.onSurface} />
+              </Pressable>
+            ),
+          }}
+        />
+        <View style={styles.centeredContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.centeredText}>Opening your pouch…</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Error state ────────────────────────────────────────────────────────────
+  if (isError) {
+    return (
+      <View style={styles.container} testID="inventory-screen">
+        <Stack.Screen
+          options={{
+            title: '',
+            headerShown: true,
+            headerStyle: { backgroundColor: Colors.surfaceContainerLowest },
+            headerTintColor: Colors.onSurface,
+            headerLeft: () => (
+              <Pressable
+                onPress={goBack}
+                style={({ pressed }) => [styles.headerButton, pressed && { opacity: 0.7 }]}
+                testID="inventory-back-button"
+              >
+                <Ionicons name="close" size={24} color={Colors.onSurface} />
+              </Pressable>
+            ),
+          }}
+        />
+        <View style={styles.centeredContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
+          <Text style={styles.centeredText}>Failed to load inventory</Text>
+          <Pressable
+            onPress={() => refetch()}
+            style={({ pressed }) => [styles.retryButton, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} testID="inventory-screen">
@@ -162,7 +216,11 @@ function InventoryScreenInner() {
           <Text style={styles.detailName}>{selectedItem.name}</Text>
 
           <View style={styles.detailIconContainer}>
-            <Image source={selectedItem.image} style={styles.detailIcon} resizeMode="contain" />
+            {selectedItem.image ? (
+              <Image source={selectedItem.image} style={styles.detailIcon} resizeMode="contain" />
+            ) : (
+              <Ionicons name="cube-outline" size={64} color={Colors.onSurfaceVariant} />
+            )}
           </View>
 
           <Text style={styles.detailQuantity}>×{selectedItem.quantity.toLocaleString()} in pouch</Text>
@@ -208,10 +266,19 @@ function InventoryScreenInner() {
             </Text>
           )}
         </ScrollView>
+      ) : items.length === 0 ? (
+        /* ── Empty state ──────────────────────────────────────────────── */
+        <View style={styles.centeredContainer}>
+          <Ionicons name="cube-outline" size={64} color={Colors.outlineVariant} />
+          <Text style={styles.emptyTitle}>Your pouch is empty</Text>
+          <Text style={styles.emptySubtitle}>
+            Complete quests and chat with adventurers to earn items
+          </Text>
+        </View>
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={[styles.itemGrid, { gap: GRID_GAP }]}>
-            {MOCK_INVENTORY.map((item) => (
+            {items.map((item) => (
               <Pressable
                 key={item.item_id}
                 style={({ pressed }) => [
@@ -223,7 +290,11 @@ function InventoryScreenInner() {
                 testID={`inventory-item-${item.item_id}`}
               >
                 <View style={styles.itemIconContainer}>
-                  <Image source={item.image} style={styles.itemIcon} resizeMode="contain" />
+                  {item.image ? (
+                    <Image source={item.image} style={styles.itemIcon} resizeMode="contain" />
+                  ) : (
+                    <Ionicons name="cube-outline" size={32} color={Colors.onSurfaceVariant} />
+                  )}
                 </View>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemQuantity}>×{item.quantity.toLocaleString()}</Text>

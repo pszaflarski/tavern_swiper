@@ -139,4 +139,52 @@ export const styles = StyleSheet.create({
     marginTop: Spacing[4],
     fontStyle: 'italic',
   },
+
+  // ── Loading / Error / Empty states ────────────────────────────────────────
+  centeredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing[8],
+  },
+  centeredText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 15,
+    color: Colors.onSurfaceVariant,
+    marginTop: Spacing[3],
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: Spacing[4],
+    backgroundColor: Colors.surfaceContainerHigh,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[6],
+    borderRadius: Radius.full,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  retryButtonText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.onSurface,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.heroic,
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.onSurface,
+    marginTop: Spacing[4],
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    color: Colors.onSurfaceVariant,
+    marginTop: Spacing[2],
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: Spacing[4],
+  },
 });
