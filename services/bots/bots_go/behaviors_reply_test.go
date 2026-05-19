@@ -637,3 +637,88 @@ func TestHandleBehaviorTrigger_MessageReceived_FullPipeline(t *testing.T) {
 		t.Errorf("Expected posted content 'Well met, traveler!', got '%s'", postedContent)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// parseAgentResponse unit tests
+// ---------------------------------------------------------------------------
+
+func TestParseAgentResponse_ValidJSONArray(t *testing.T) {
+	input := `[{"type":"message","content":"Hello!"},{"type":"narration","content":"The door creaks open."}]`
+	items := parseAgentResponse(input)
+
+	if len(items) != 2 {
+		t.Fatalf("Expected 2 items, got %d", len(items))
+	}
+	if items[0].Type != "message" || items[0].Content != "Hello!" {
+		t.Errorf("Item 0: got type=%s content=%s", items[0].Type, items[0].Content)
+	}
+	if items[1].Type != "narration" || items[1].Content != "The door creaks open." {
+		t.Errorf("Item 1: got type=%s content=%s", items[1].Type, items[1].Content)
+	}
+}
+
+func TestParseAgentResponse_MarkdownWrapped(t *testing.T) {
+	input := "```json\n[{\"type\":\"message\",\"content\":\"OI!\"}]\n```"
+	items := parseAgentResponse(input)
+
+	if len(items) != 1 {
+		t.Fatalf("Expected 1 item, got %d", len(items))
+	}
+	if items[0].Type != "message" || items[0].Content != "OI!" {
+		t.Errorf("Item 0: got type=%s content=%s", items[0].Type, items[0].Content)
+	}
+}
+
+func TestParseAgentResponse_PlainTextFallback(t *testing.T) {
+	input := "Well met, traveler!"
+	items := parseAgentResponse(input)
+
+	if len(items) != 1 {
+		t.Fatalf("Expected 1 fallback item, got %d", len(items))
+	}
+	if items[0].Type != "message" {
+		t.Errorf("Expected type 'message', got '%s'", items[0].Type)
+	}
+	if items[0].Content != input {
+		t.Errorf("Expected raw content preserved, got '%s'", items[0].Content)
+	}
+}
+
+func TestParseAgentResponse_EmptyItemsFiltered(t *testing.T) {
+	input := `[{"type":"message","content":"Hello!"},{"type":"narration","content":""},{"type":"message","content":"  "}]`
+	items := parseAgentResponse(input)
+
+	if len(items) != 1 {
+		t.Fatalf("Expected 1 item after filtering, got %d", len(items))
+	}
+	if items[0].Content != "Hello!" {
+		t.Errorf("Expected 'Hello!', got '%s'", items[0].Content)
+	}
+}
+
+func TestParseAgentResponse_UnknownTypeDefaultsToMessage(t *testing.T) {
+	input := `[{"type":"action","content":"Something happens."}]`
+	items := parseAgentResponse(input)
+
+	if len(items) != 1 {
+		t.Fatalf("Expected 1 item, got %d", len(items))
+	}
+	if items[0].Type != "message" {
+		t.Errorf("Expected unknown type to default to 'message', got '%s'", items[0].Type)
+	}
+}
+
+func TestParseAgentResponse_AllEmptyFallsBackToRaw(t *testing.T) {
+	input := `[{"type":"message","content":""},{"type":"narration","content":""}]`
+	items := parseAgentResponse(input)
+
+	if len(items) != 1 {
+		t.Fatalf("Expected 1 fallback item, got %d", len(items))
+	}
+	if items[0].Type != "message" {
+		t.Errorf("Expected fallback type 'message', got '%s'", items[0].Type)
+	}
+	if items[0].Content != input {
+		t.Errorf("Expected raw input as fallback content")
+	}
+}
