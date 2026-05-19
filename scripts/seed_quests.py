@@ -1,5 +1,5 @@
 """
-Seed the "Meet the Tavern Keepers" quest into the quests service.
+Seed quest templates into the quests service.
 
 This script:
 1. Connects directly to Firestore (quests-{env}) using ADC
@@ -33,6 +33,24 @@ QUESTS = [
         ],
         "metadata": {
             "trigger": "message_to_tavern_keeper",
+        },
+    },
+    {
+        "quest_id": "oi_ya_git",
+        "title": "OI YA GIT!",
+        "description": (
+            "Walk up to Grogmar's bar and say somefin'. "
+            "Da big green lump might even toss ya a bone cube if 'e likes yer face."
+        ),
+        "quest_type": "story",
+        "status": "active",
+        "sort_order": 2,
+        "rewards": [
+            {"item_id": "dice_d6", "quantity": 1},
+        ],
+        "metadata": {
+            "assigned_to": "grogmar",
+            "trigger": "first_message",
         },
     },
 ]
