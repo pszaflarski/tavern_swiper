@@ -338,8 +338,23 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 
 			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply via %s", bp.agentName, bp.profileID, conversationID, serviceURLs.Get("agent_router"))
 
-			// 4. Call agent_router to generate a reply
-			aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, metadata)
+			// 4. Build enriched metadata for the agent_router call.
+			// For Grogmar: attempt oi_ya_git quest completion synchronously NOW
+			// so we know the result before the LLM generates its reply. A 200
+			// means newly granted → inject signal so Grogmar narrates the die
+			// toss. A 409 means already done → no signal, no narration.
+			enrichedMetadata := make(map[string]interface{})
+			for k, v := range metadata {
+				enrichedMetadata[k] = v
+			}
+			if bp.behaviorType == "tavern_keeper" && bp.agentName == "grogmar" {
+				if completeQuestSync(token, "oi_ya_git", senderProfileID, bp.profileID) {
+					enrichedMetadata["quest_completed"] = "oi_ya_git"
+				}
+			}
+
+			// 5. Call agent_router to generate a reply
+			aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata)
 			if err != nil {
 				msg := fmt.Sprintf("Agent router failed for '%s': %v", bp.agentName, err)
 				log.Printf("[ERROR] %s", msg)
@@ -347,7 +362,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 				continue
 			}
 
-			// 5. Post the reply back to the messages service
+			// 6. Post the reply back to the messages service
 			err = postBotMessage(token, conversationID, bp.profileID, aiResponse)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to post reply for '%s': %v", bp.agentName, err)
@@ -361,23 +376,16 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			details = append(details, msg)
 			triggered++
 
-			// 6. Quest completion: deterministically fire quests based on bot type/agent.
-			// Both calls are idempotent (409 = already done). Runs async so it never
-			// blocks the reply path.
+			// 7. meet_the_tavern_keepers milestone — async, no narration needed.
 			if bp.behaviorType == "tavern_keeper" {
-				go func(agentName, botProfileID string) {
+				go func(botProfileID string) {
 					defer func() {
 						if r := recover(); r != nil {
-							log.Printf("[CRITICAL] 🔥 PANIC in quest completion goroutine: %v", r)
+							log.Printf("[CRITICAL] 🔥 PANIC in quest goroutine: %v", r)
 						}
 					}()
-					// All tavern keepers grant the meet_the_tavern_keepers milestone.
 					tryCompleteQuest(token, "meet_the_tavern_keepers", senderProfileID, botProfileID)
-					// Grogmar specifically grants the oi_ya_git story quest reward.
-					if agentName == "grogmar" {
-						tryCompleteQuest(token, "oi_ya_git", senderProfileID, botProfileID)
-					}
-				}(bp.agentName, bp.profileID)
+				}(bp.profileID)
 			}
 		}
 	}
@@ -485,6 +493,56 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	}
 
 	return nil
+}
+
+// completeQuestSync attempts quest completion synchronously and returns true if
+// the quest was NEWLY completed (HTTP 200). Returns false on 409 (already done)
+// or any error. Used when the caller needs to know the result before proceeding
+// (e.g. to inject a narrative signal into the agent_router metadata).
+func completeQuestSync(botToken, questID, senderProfileID, botProfileID string) bool {
+	userID, err := lookupUserIDByProfile(botToken, senderProfileID)
+	if err != nil {
+		log.Printf("[WARN] Quest '%s' sync check skipped — failed to look up user for profile %s: %v", questID, senderProfileID, err)
+		return false
+	}
+
+	questsURL := serviceURLs.Get("quests")
+	if questsURL == "" {
+		log.Printf("[WARN] Quest '%s' sync check skipped — quests service URL not resolved", questID)
+		return false
+	}
+
+	payload := map[string]string{
+		"quest_id":   questID,
+		"user_id":    userID,
+		"profile_id": senderProfileID,
+		"status":     "completed",
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", questsURL+"/quests/status/", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+botToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("[WARN] Quest '%s' sync completion failed for user %s: %v", questID, userID, err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusConflict {
+		log.Printf("[INFO] Quest '%s' already completed for user %s (409)", questID, userID)
+		return false // already done — don't narrate again
+	}
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		log.Printf("[WARN] Quest '%s' sync returned HTTP %d for user %s: %s", questID, resp.StatusCode, userID, string(respBody))
+		return false
+	}
+
+	log.Printf("[INFO] ✨ Quest '%s' newly completed for user %s — injecting narrative signal", questID, userID)
+	return true
 }
 
 // tryCompleteQuest attempts to mark the given quest as completed for the user
