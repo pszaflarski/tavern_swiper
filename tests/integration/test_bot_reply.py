@@ -293,10 +293,10 @@ async def test_bot_replies_to_message(admin_context, bot_with_dummy_agent):
         assert reply["sender_profile_id"] == bot_profile_id
         print(f"✅ Echo content verified — bot reply pipeline works end-to-end!")
 
-        # 11. Verify the 'meet_the_barkeep' quest was completed
-        print(f"⏳ Waiting for 'meet_the_barkeep' quest completion for user {user['uid']}...")
+        # 11. Verify the 'meet_the_tavern_keepers' quest was completed
+        print(f"⏳ Waiting for 'meet_the_tavern_keepers' quest completion for user {user['uid']}...")
         quest_status = await poll_for_quest_completion(
-            user['token'], user['uid'], "meet_the_barkeep", timeout=15
+            user['token'], user['uid'], "meet_the_tavern_keepers", timeout=15
         )
-        assert quest_status is not None, "meet_the_barkeep quest was not completed within timeout."
+        assert quest_status is not None, "meet_the_tavern_keepers quest was not completed within timeout."
         print(f"✅ Quest completion verified!")

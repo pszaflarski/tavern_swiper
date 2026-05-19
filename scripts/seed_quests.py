@@ -1,5 +1,5 @@
 """
-Seed the "Meet the Barkeep" quest into the quests service.
+Seed the "Meet the Tavern Keepers" quest into the quests service.
 
 This script:
 1. Connects directly to Firestore (quests-{env}) using ADC
@@ -19,19 +19,20 @@ from google.cloud import firestore
 
 QUESTS = [
     {
-        "quest_id": "meet_the_barkeep",
-        "title": "Meet the Barkeep",
+        "quest_id": "meet_the_tavern_keepers",
+        "title": "Meet the Tavern Keepers",
         "description": (
             "Every adventurer's journey begins at the tavern. "
-            "Swipe right on one of the barkeeps and strike up a conversation. "
-            "They might just have something interesting to say…"
+            "Introduce yourself to the keepers and earn your first purse of gold."
         ),
         "quest_type": "story",
         "status": "active",
         "sort_order": 1,
+        "rewards": [
+            {"item_id": "gold", "quantity": 500},
+        ],
         "metadata": {
-            "trigger": "match_with_tavern_keeper",
-            "reward_description": "A warm welcome and a free ale.",
+            "trigger": "message_to_tavern_keeper",
         },
     },
 ]
