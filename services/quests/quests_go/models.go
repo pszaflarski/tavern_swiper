@@ -127,6 +127,12 @@ type ErrorResponse struct {
 // Quest Templates
 // -----------------------------------------------------------------------------
 
+// QuestReward represents a single reward granted upon quest completion.
+type QuestReward struct {
+	ItemID   string `json:"item_id"   firestore:"item_id"`
+	Quantity int    `json:"quantity"  firestore:"quantity"`
+}
+
 // QuestTemplate defines a quest in the game.
 type QuestTemplate struct {
 	QuestID     string         `json:"quest_id"     firestore:"quest_id"`
@@ -135,6 +141,7 @@ type QuestTemplate struct {
 	QuestType   string         `json:"quest_type"   firestore:"quest_type"`   // story, daily, weekly, achievement
 	Status      string         `json:"status"       firestore:"status"`       // draft, active, retired
 	SortOrder   int            `json:"sort_order"   firestore:"sort_order"`
+	Rewards     []QuestReward  `json:"rewards"      firestore:"rewards"`
 	Metadata    map[string]any `json:"metadata"     firestore:"metadata"`
 	CreatedAt   time.Time      `json:"created_at"   firestore:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"   firestore:"updated_at"`
@@ -148,6 +155,7 @@ type QuestTemplateCreate struct {
 	QuestType   string         `json:"quest_type"   binding:"required"`
 	Status      string         `json:"status"`
 	SortOrder   int            `json:"sort_order"`
+	Rewards     []QuestReward  `json:"rewards"`
 	Metadata    map[string]any `json:"metadata"`
 }
 

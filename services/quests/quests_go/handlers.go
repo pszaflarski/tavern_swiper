@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -733,6 +734,55 @@ func mergeAllOption() firestore.SetOption {
 	return firestore.MergeAll
 }
 
+// grantQuestRewards grants all rewards from a quest to a user's inventory.
+// This is a best-effort operation — individual grant failures are logged but
+// do not block the quest completion response.
+func grantQuestRewards(ctx context.Context, db FirestoreClient, rewards []QuestReward, userID string) {
+	if len(rewards) == 0 {
+		return
+	}
+
+	now := time.Now()
+	for _, reward := range rewards {
+		if reward.ItemID == "" || reward.Quantity <= 0 {
+			log.Printf("[WARN] Skipping invalid reward: item_id=%q, quantity=%d", reward.ItemID, reward.Quantity)
+			continue
+		}
+
+		docID := fmt.Sprintf("inv_%s_%s", userID, reward.ItemID)
+		invDoc := db.Collection("user_inventory").Doc(docID)
+
+		// Read current quantity
+		currentQty := 0
+		isNew := true
+		existingSnap, err := invDoc.Get(ctx)
+		if err == nil && existingSnap.Exists() {
+			isNew = false
+			if q, ok := existingSnap.Data()["quantity"].(int64); ok {
+				currentQty = int(q)
+			}
+		}
+
+		entry := UserInventoryEntry{
+			UserID:     userID,
+			ItemID:     reward.ItemID,
+			Quantity:   currentQty + reward.Quantity,
+			UpdatedAt:  now,
+		}
+		if isNew {
+			entry.AcquiredAt = now
+		}
+
+		_, err = invDoc.Set(ctx, entry)
+		if err != nil {
+			log.Printf("[ERROR] Failed to grant quest reward %dx %s to user %s: %v", reward.Quantity, reward.ItemID, userID, err)
+			continue
+		}
+
+		log.Printf("[INFO] Quest reward granted: %dx %s to user %s", reward.Quantity, reward.ItemID, userID)
+	}
+}
+
 // =============================================================================
 // Quest Template Handlers (Admin Only)
 // =============================================================================
@@ -791,6 +841,7 @@ func handleCreateQuestTemplate(c *gin.Context) {
 		QuestType:   req.QuestType,
 		Status:      questStatus,
 		SortOrder:   req.SortOrder,
+		Rewards:     req.Rewards,
 		Metadata:    req.Metadata,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -922,8 +973,8 @@ func handleUpdateQuestStatus(c *gin.Context) {
 		return
 	}
 
-	// Verify quest template exists
-	_, err = db.Collection("quest_templates").Doc(req.QuestID).Get(ctx)
+	// Verify quest template exists and load rewards
+	questSnap, err := db.Collection("quest_templates").Doc(req.QuestID).Get(ctx)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			send404(c, fmt.Sprintf("Quest '%s' not found", req.QuestID))
@@ -932,6 +983,7 @@ func handleUpdateQuestStatus(c *gin.Context) {
 		send500(c, fmt.Sprintf("Failed to look up quest: %v", err))
 		return
 	}
+	questTemplate := mapToQuestTemplate(questSnap.Data(), questSnap.ID())
 
 	// Doc ID keyed by user_id to prevent duplicate completions across profiles
 	docID := fmt.Sprintf("quest_%s_%s", req.QuestID, req.UserID)
@@ -998,6 +1050,12 @@ func handleUpdateQuestStatus(c *gin.Context) {
 		}
 
 		log.Printf("[INFO] Quest status updated: %s for user %s → %s (by %s)", req.QuestID, req.UserID, req.Status, auth.UID)
+
+		// Grant rewards on completion
+		if req.Status == "completed" {
+			grantQuestRewards(ctx, db, questTemplate.Rewards, req.UserID)
+		}
+
 		c.JSON(http.StatusOK, QuestStatus{
 			QuestID:   req.QuestID,
 			UserID:    req.UserID,
@@ -1026,6 +1084,12 @@ func handleUpdateQuestStatus(c *gin.Context) {
 	}
 
 	log.Printf("[INFO] Quest status created: %s for user %s → %s (profile: %s, by %s)", req.QuestID, req.UserID, req.Status, req.ProfileID, auth.UID)
+
+	// Grant rewards on completion
+	if req.Status == "completed" {
+		grantQuestRewards(ctx, db, questTemplate.Rewards, req.UserID)
+	}
+
 	c.JSON(http.StatusOK, qs)
 }
 
@@ -1096,6 +1160,21 @@ func mapToQuestTemplate(data map[string]interface{}, id string) QuestTemplate {
 	}
 	if v, ok := data["metadata"].(map[string]interface{}); ok {
 		q.Metadata = v
+	}
+	// Parse rewards array
+	if rawRewards, ok := data["rewards"].([]interface{}); ok {
+		for _, r := range rawRewards {
+			if rm, ok := r.(map[string]interface{}); ok {
+				reward := QuestReward{}
+				if id, ok := rm["item_id"].(string); ok {
+					reward.ItemID = id
+				}
+				if qty, ok := rm["quantity"].(int64); ok {
+					reward.Quantity = int(qty)
+				}
+				q.Rewards = append(q.Rewards, reward)
+			}
+		}
 	}
 	if v, ok := data["created_at"].(time.Time); ok {
 		q.CreatedAt = v

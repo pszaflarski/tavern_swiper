@@ -104,6 +104,44 @@ ITEMS = [
     },
 ]
 
+# ─── Quest Templates ──────────────────────────────────────────────────────────
+
+QUESTS = [
+    {
+        "quest_id": "meet_the_tavern_keepers",
+        "title": "Meet the Tavern Keepers",
+        "description": (
+            "Every adventurer's journey begins at the tavern. "
+            "Introduce yourself to the keepers and earn your first purse of gold."
+        ),
+        "quest_type": "story",
+        "status": "active",
+        "sort_order": 1,
+        "rewards": [
+            {"item_id": "gold", "quantity": 500},
+        ],
+        "metadata": {},
+    },
+    {
+        "quest_id": "oi_ya_git",
+        "title": "OI YA GIT!",
+        "description": (
+            "Walk up to Grogmar's bar and say somefin'. "
+            "Da big green lump might even toss ya a bone cube if 'e likes yer face."
+        ),
+        "quest_type": "story",
+        "status": "active",
+        "sort_order": 2,
+        "rewards": [
+            {"item_id": "dice_d6", "quantity": 1},
+        ],
+        "metadata": {
+            "assigned_to": "grogmar",
+            "trigger": "first_message",
+        },
+    },
+]
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def seed_objects(env: str):
@@ -135,7 +173,7 @@ def seed_objects(env: str):
                 "updated_at": now,
             })
 
-    # Verify
+    # Verify items
     print("\n🔍 Verifying seeded items:")
     for item in ITEMS:
         doc = db.collection("item_definitions").document(item["item_id"]).get()
@@ -151,6 +189,51 @@ def seed_objects(env: str):
 
     print(f"\n🏁 Done! {len(ITEMS)} item(s) seeded into {db_id}")
 
+    # ── Quest Templates ───────────────────────────────────────────────────────
+    print(f"\n📜 Seeding quest templates into {db_id}")
+
+    for quest in QUESTS:
+        quest_id = quest["quest_id"]
+        doc_ref = db.collection("quest_templates").document(quest_id)
+        existing = doc_ref.get()
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        if existing.exists:
+            print(f"  ✏️  Updating existing quest: {quest['title']} ({quest_id})")
+            doc_ref.set({
+                **quest,
+                "updated_at": now,
+            }, merge=True)
+        else:
+            print(f"  ✨ Creating new quest: {quest['title']} ({quest_id})")
+            doc_ref.set({
+                **quest,
+                "created_at": now,
+                "updated_at": now,
+            })
+
+    # Verify quests
+    print("\n🔍 Verifying seeded quests:")
+    for quest in QUESTS:
+        doc = db.collection("quest_templates").document(quest["quest_id"]).get()
+        if doc.exists:
+            data = doc.to_dict()
+            rewards = data.get("rewards", [])
+            reward_str = ", ".join(
+                f"{r.get('quantity')}x {r.get('item_id')}" for r in rewards
+            ) or "none"
+            print(
+                f"  ✅ {data.get('title')} — "
+                f"type: {data.get('quest_type')}, "
+                f"status: {data.get('status')}, "
+                f"rewards: [{reward_str}]"
+            )
+        else:
+            print(f"  ❌ {quest['quest_id']} — NOT FOUND")
+
+    print(f"\n🏁 Done! {len(QUESTS)} quest(s) seeded into {db_id}")
+
 
 if __name__ == "__main__":
     env = sys.argv[1] if len(sys.argv) > 1 else "dev"
@@ -158,3 +241,4 @@ if __name__ == "__main__":
         print(f"❌ Invalid environment: {env}. Use dev, test, or prod.")
         sys.exit(1)
     seed_objects(env)
+
