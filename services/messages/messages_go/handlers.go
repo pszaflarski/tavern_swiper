@@ -232,8 +232,11 @@ func handleSendMessage(c *gin.Context) {
 		return
 	}
 
-	// 2. Authorization: non-user message types require admin
-	if msgType != MessageTypeUser {
+	// 2. Authorization: non-user message types require admin (with narration exemption)
+	isNarration := msgType == MessageTypeEvent &&
+		body.Metadata != nil &&
+		body.Metadata.EventType == "narration"
+	if msgType != MessageTypeUser && !isNarration {
 		if !IsAdmin(auth.Role) {
 			c.JSON(http.StatusForbidden, gin.H{"detail": "Admin or Root Admin authorization required for non-user messages"})
 			return
@@ -259,9 +262,9 @@ func handleSendMessage(c *gin.Context) {
 		return
 	}
 
-	// 4. Authorization: participant check (user messages only)
-	if msgType == MessageTypeUser {
-		// User messages require a sender who is a participant
+	// 4. Authorization: participant check (user messages and narration events)
+	if msgType == MessageTypeUser || isNarration {
+		// User messages and narrations require a sender who is a participant
 		if strings.TrimSpace(body.SenderProfileID) == "" {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": "sender_profile_id is required for user messages"})
 			return

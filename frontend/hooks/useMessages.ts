@@ -27,6 +27,13 @@ export interface Conversation {
   unread?: boolean;
 }
 
+export interface EventMetadata {
+  event_type?: string;
+  initiated_by?: string;
+  target?: string[];
+  metadata?: Record<string, any>;
+}
+
 export interface Message {
   message_id: string;
   conversation_id: string;
@@ -34,6 +41,7 @@ export interface Message {
   content: string;
   type: string;
   sent_at: string;
+  metadata?: EventMetadata;
 }
 
 export interface PaginatedMessagesResponse {
