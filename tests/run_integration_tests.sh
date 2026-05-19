@@ -52,6 +52,7 @@ if [[ "$MODE" == "local" ]]; then
     export BOTS_URL="http://localhost:8011"
     export DISCOVERY_DB="discovery-dev"
     export PUBSUB_EMULATOR_HOST="localhost:8085"
+    export JWT_SECRET="super-secret-tavern-key-123"
     ENV_ARG="dev"
     echo "📍 Mode: LOCAL (pointing to localhost)"
 
@@ -150,6 +151,15 @@ else
     export BOTS_DB="bots-${ENV_NAME}"
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
     export PUBSUB_EMULATOR_HOST=""
+
+    # Fetch JWT_SECRET from the deployed quests service so bot-minted JWT tests work
+    JWT_SECRET_VAL=$(gcloud run services describe "quests-${ENV_NAME}" --project "${PROJECT_ID}" --region "${REGION}" --format=json 2>/dev/null | jq -r '.spec.template.spec.containers[0].env[] | select(.name=="JWT_SECRET") | .value' 2>/dev/null || echo "")
+    if [[ -n "$JWT_SECRET_VAL" ]]; then
+        export JWT_SECRET="$JWT_SECRET_VAL"
+        echo "  🔑 JWT_SECRET loaded from quests-${ENV_NAME}"
+    else
+        echo "  ⚠️  Could not fetch JWT_SECRET from quests-${ENV_NAME}. Bot JWT tests may fail."
+    fi
 fi
 
 # Use the project's virtual environment if available
