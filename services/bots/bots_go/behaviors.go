@@ -361,7 +361,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			details = append(details, msg)
 			triggered++
 
-			// 6. Quest completion: if this is a tavern_keeper, complete "meet_the_barkeep"
+			// 6. Quest completion: if this is a tavern_keeper, complete "meet_the_tavern_keepers"
 			if bp.behaviorType == "tavern_keeper" {
 			go func() {
 					defer func() {
@@ -480,11 +480,11 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	return nil
 }
 
-// tryCompleteBarkeepQuest attempts to mark the "meet_the_barkeep" quest as
+// tryCompleteBarkeepQuest attempts to mark the "meet_the_tavern_keepers" quest as
 // completed for the user who just messaged a tavern keeper bot.
 // Runs asynchronously — failures are logged but never block the bot reply.
 func tryCompleteBarkeepQuest(botToken, senderProfileID, botProfileID string) {
-	const questID = "meet_the_barkeep"
+	const questID = "meet_the_tavern_keepers"
 
 	// 1. Look up the sender's user_id from their profile
 	userID, err := lookupUserIDByProfile(botToken, senderProfileID)
