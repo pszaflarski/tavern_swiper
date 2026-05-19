@@ -80,14 +80,50 @@ describe('Profiles Screen', () => {
     expect(getByTestId('profile-name-Thorin Oakenshield')).toBeTruthy();
   });
 
-  it('switches active profile on press', () => {
-    const { setActiveProfileId } = useProfileContext();
+  it('shows hamburger menu buttons for each profile', () => {
     const { getByTestId } = render(<ProfilesScreen />);
     
-    const secondProfile = getByTestId('profile-item-2');
-    fireEvent.press(secondProfile);
+    expect(getByTestId('profile-menu-1')).toBeTruthy();
+    expect(getByTestId('profile-menu-2')).toBeTruthy();
+  });
+
+  it('expands card into action buttons when hamburger is pressed', () => {
+    const { getByTestId, queryByTestId } = render(<ProfilesScreen />);
     
-    expect(setActiveProfileId).toHaveBeenCalledWith('2');
+    // Action buttons should not exist before expanding
+    expect(queryByTestId('preview-profile-button-1')).toBeNull();
+    
+    // Tap hamburger
+    fireEvent.press(getByTestId('profile-menu-1'));
+    
+    // Action buttons should now be visible
+    expect(getByTestId('preview-profile-button-1')).toBeTruthy();
+    expect(getByTestId('edit-profile-button-1')).toBeTruthy();
+    expect(getByTestId('delete-profile-button-1')).toBeTruthy();
+    expect(getByTestId('cancel-menu-button-1')).toBeTruthy();
+  });
+
+  it('collapses back to normal card when cancel is pressed', () => {
+    const { getByTestId, queryByTestId } = render(<ProfilesScreen />);
+    
+    // Expand
+    fireEvent.press(getByTestId('profile-menu-1'));
+    expect(getByTestId('cancel-menu-button-1')).toBeTruthy();
+    
+    // Cancel
+    fireEvent.press(getByTestId('cancel-menu-button-1'));
+    
+    // Should be back to normal — hamburger visible, actions gone
+    expect(getByTestId('profile-menu-1')).toBeTruthy();
+    expect(queryByTestId('preview-profile-button-1')).toBeNull();
+  });
+
+  it('shows "Set Active" button only for non-active profiles', () => {
+    const { getByTestId, queryByTestId } = render(<ProfilesScreen />);
+    
+    // Profile 1 is active — expand it
+    fireEvent.press(getByTestId('profile-menu-1'));
+    expect(queryByTestId('select-profile-button-1')).toBeNull();
   });
 
   it('shows loading state', () => {

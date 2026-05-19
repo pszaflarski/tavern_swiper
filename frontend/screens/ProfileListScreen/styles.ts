@@ -45,23 +45,36 @@ export const styles = StyleSheet.create({
   cardContainer: {
     marginBottom: Spacing[2],
   },
+
+  // ── Card base ──────────────────────────────────────────
   profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    minHeight: 96,
     padding: Spacing[4],
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: Radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: Colors.outlineVariant,
+    overflow: 'hidden',
     ...Shadow.waxSeal,
   },
   activeProfileCard: {
-    borderColor: Colors.primary,
+    borderColor: Colors.tertiary,
     backgroundColor: Colors.surfaceContainerHigh,
   },
+  inactiveProfileCard: {
+    borderColor: Colors.primary,
+  },
+
+  // ── Normal card content (avatar + name + hamburger) ────
+  cardNormalContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+
   profileImageContainer: {
     position: 'relative',
-    marginRight: Spacing[4],
+    marginRight: Spacing[3],
   },
   profileImage: {
     height: 80,
@@ -82,14 +95,16 @@ export const styles = StyleSheet.create({
   },
   activeBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: -6,
+    right: -6,
     backgroundColor: Colors.surface,
-    borderRadius: 10,
+    borderRadius: 12,
     zIndex: 1,
   },
+
   profileInfo: {
     flex: 1,
+    marginRight: Spacing[2],
   },
   profileName: {
     fontFamily: Fonts.heroic,
@@ -97,24 +112,8 @@ export const styles = StyleSheet.create({
     color: Colors.onSurface,
     marginBottom: 2,
   },
-  cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
-  },
-  actionButton: {
-    padding: Spacing[4],
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
-  },
-  selectionIndicator: {
-    marginLeft: Spacing[1],
-  },
-  profileClass: {
-    fontFamily: Fonts.scribe,
-    fontSize: 12,
-    color: Colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  activeProfileName: {
+    color: Colors.tertiary,
   },
   profileTagline: {
     fontFamily: Fonts.scribe,
@@ -122,6 +121,76 @@ export const styles = StyleSheet.create({
     color: Colors.outline,
     marginTop: 4,
     fontStyle: 'italic',
+  },
+
+  // ── Hamburger button ───────────────────────────────────
+  hamburgerButton: {
+    padding: Spacing[3],
+    borderRadius: Radius.sm,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+
+  // ── Expanded actions overlay ───────────────────────────
+  expandedActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing[2],
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing[1],
+  },
+  expandedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing[2],
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.surfaceContainerHighest,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    minWidth: '45%' as any,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  expandedButtonSelect: {
+    borderColor: Colors.tertiaryContainer,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  expandedButtonDanger: {
+    borderColor: 'rgba(255, 180, 171, 0.25)',
+  },
+  expandedButtonCancel: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderColor: Colors.outlineVariant,
+  },
+  expandedButtonPressed: {
+    opacity: 0.6,
+  },
+  expandedButtonText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.primaryFixed,
+    letterSpacing: 0.5,
+  },
+  expandedButtonTextSelect: {
+    color: Colors.tertiary,
+  },
+  expandedButtonTextDanger: {
+    color: Colors.error,
+  },
+  expandedButtonTextCancel: {
+    color: Colors.outline,
+  },
+
+  // ── Legacy styles kept for non-card elements ───────────
+  profileClass: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   emptyIcon: {
     fontSize: 64,

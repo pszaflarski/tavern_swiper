@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, FlatList, Pressable, Image, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, FlatList, Pressable, Image, ActivityIndicator, Platform, Animated } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
@@ -12,6 +12,173 @@ import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import { styles } from './styles';
+
+/** Individual profile card with hamburger-expand pattern */
+function ProfileCard({
+  item,
+  isActive,
+  onSetActive,
+  onPreview,
+  onEdit,
+  onDelete,
+}: {
+  item: Profile;
+  isActive: boolean;
+  onSetActive: () => void;
+  onPreview: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: expanded ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [expanded]);
+
+  const handleAction = useCallback((action: () => void) => {
+    setExpanded(false);
+    action();
+  }, []);
+
+  return (
+    <View style={styles.cardContainer}>
+      <View
+        style={[
+          styles.profileCard,
+          isActive ? styles.activeProfileCard : styles.inactiveProfileCard,
+        ]}
+        testID={`profile-item-${item.profile_id}`}
+      >
+        {/* Normal card content */}
+        {!expanded && (
+          <View style={styles.cardNormalContent}>
+            <View style={styles.profileImageContainer}>
+              {item.image_urls?.[0] ? (
+                <Image source={{ uri: item.image_urls[0] }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Text style={styles.placeholderEmoji}>🎭</Text>
+                </View>
+              )}
+              {isActive && (
+                <View style={styles.activeBadge}>
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.tertiary} />
+                </View>
+              )}
+            </View>
+
+            <View style={styles.profileInfo}>
+              <Text style={[styles.profileName, isActive && styles.activeProfileName]} testID={`profile-name-${item.display_name}`}>
+                {item.display_name}
+              </Text>
+              {item.bio && (
+                <Text style={styles.profileTagline} numberOfLines={2}>{item.bio}</Text>
+              )}
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.hamburgerButton,
+                pressed && { opacity: 0.6 },
+              ]}
+              onPress={() => setExpanded(true)}
+              testID={`profile-menu-${item.profile_id}`}
+              accessibilityLabel={`Open actions for ${item.display_name}`}
+              accessibilityRole="button"
+            >
+              <Ionicons name="ellipsis-vertical" size={22} color={Colors.outline} />
+            </Pressable>
+          </View>
+        )}
+
+        {/* Expanded action overlay */}
+        {expanded && (
+          <Animated.View style={[styles.expandedActions, { opacity: fadeAnim }]}>
+            {!isActive && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.expandedButton,
+                  styles.expandedButtonSelect,
+                  pressed && styles.expandedButtonPressed,
+                ]}
+                onPress={() => handleAction(onSetActive)}
+                testID={`select-profile-button-${item.profile_id}`}
+                accessibilityLabel={`Set ${item.display_name} as active`}
+                accessibilityRole="button"
+              >
+                <Ionicons name="shield-checkmark" size={20} color={Colors.tertiary} />
+                <Text style={[styles.expandedButtonText, styles.expandedButtonTextSelect]}>Set Active</Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.expandedButton,
+                pressed && styles.expandedButtonPressed,
+              ]}
+              onPress={() => handleAction(onPreview)}
+              testID={`preview-profile-button-${item.profile_id}`}
+              accessibilityLabel={`Preview ${item.display_name} profile`}
+              accessibilityRole="button"
+            >
+              <Ionicons name="eye" size={20} color={Colors.primaryFixed} />
+              <Text style={styles.expandedButtonText}>Preview</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.expandedButton,
+                pressed && styles.expandedButtonPressed,
+              ]}
+              onPress={() => handleAction(onEdit)}
+              testID={`edit-profile-button-${item.profile_id}`}
+              accessibilityLabel={`Edit ${item.display_name} profile`}
+              accessibilityRole="button"
+            >
+              <Ionicons name="pencil" size={20} color={Colors.primaryFixed} />
+              <Text style={styles.expandedButtonText}>Edit</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.expandedButton,
+                styles.expandedButtonDanger,
+                pressed && styles.expandedButtonPressed,
+              ]}
+              onPress={() => handleAction(onDelete)}
+              testID={`delete-profile-button-${item.profile_id}`}
+              accessibilityLabel={`Delete ${item.display_name} profile`}
+              accessibilityRole="button"
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.error} />
+              <Text style={[styles.expandedButtonText, styles.expandedButtonTextDanger]}>Delete</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.expandedButton,
+                styles.expandedButtonCancel,
+                pressed && styles.expandedButtonPressed,
+              ]}
+              onPress={() => setExpanded(false)}
+              testID={`cancel-menu-button-${item.profile_id}`}
+              accessibilityLabel="Cancel"
+              accessibilityRole="button"
+            >
+              <Ionicons name="close" size={20} color={Colors.outline} />
+              <Text style={[styles.expandedButtonText, styles.expandedButtonTextCancel]}>Cancel</Text>
+            </Pressable>
+          </Animated.View>
+        )}
+      </View>
+    </View>
+  );
+}
 
 function ProfilesScreenInner() {
   const { uid, isLoading: isLoadingUser } = useUser();
@@ -65,88 +232,14 @@ function ProfilesScreenInner() {
     const isActive = item.profile_id === activeProfileId;
 
     return (
-      <View style={styles.cardContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.profileCard,
-            isActive && styles.activeProfileCard,
-            pressed && { opacity: 0.9 }
-          ]}
-          onPress={() => setActiveProfileId(item.profile_id)}
-          testID={`profile-item-${item.profile_id}`}
-        >
-          <View style={styles.profileImageContainer}>
-            {item.image_urls?.[0] ? (
-              <Image source={{ uri: item.image_urls[0] }} style={styles.profileImage} />
-            ) : (
-              <View style={styles.profileImagePlaceholder}>
-                <Text style={styles.placeholderEmoji}>🎭</Text>
-              </View>
-            )}
-            {isActive && (
-              <View style={styles.activeBadge}>
-                <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName} testID={`profile-name-${item.display_name}`}>{item.display_name}</Text>
-            {item.bio && (
-              <Text style={styles.profileTagline} numberOfLines={2}>{item.bio}</Text>
-            )}
-          </View>
-
-          <View style={styles.cardActions}>
-            <Pressable 
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && { opacity: 0.7 }
-              ]}
-              onPress={() => router.push({ pathname: '/profiles/preview', params: { id: item.profile_id } } as any)}
-              testID={`preview-profile-button-${item.profile_id}`}
-              accessibilityLabel={`Preview ${item.display_name} profile`}
-              accessibilityRole="button"
-            >
-              <Ionicons name="eye" size={24} color={Colors.outline} />
-            </Pressable>
-
-            <Pressable 
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && { opacity: 0.7 }
-              ]}
-              onPress={() => handleEdit(item.profile_id)}
-              testID="edit-profile-button"
-              accessibilityLabel={`Edit ${item.display_name} profile`}
-              accessibilityRole="button"
-            >
-              <Ionicons name="pencil" size={24} color={Colors.outline} />
-            </Pressable>
-            
-            <Pressable 
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && { opacity: 0.7 }
-              ]}
-              onPress={() => handleDelete(item.profile_id, item.display_name)}
-              testID="delete-profile-button"
-              accessibilityLabel={`Delete ${item.display_name} profile`}
-              accessibilityRole="button"
-            >
-              <Ionicons name="trash-outline" size={24} color={Colors.error} />
-            </Pressable>
-
-            <View style={styles.selectionIndicator}>
-              <Ionicons 
-                name={isActive ? 'radio-button-on' : 'radio-button-off'} 
-                size={22} 
-                color={isActive ? Colors.primary : Colors.outlineVariant} 
-              />
-            </View>
-          </View>
-        </Pressable>
-      </View>
+      <ProfileCard
+        item={item}
+        isActive={isActive}
+        onSetActive={() => setActiveProfileId(item.profile_id)}
+        onPreview={() => router.push({ pathname: '/profiles/preview', params: { id: item.profile_id } } as any)}
+        onEdit={() => handleEdit(item.profile_id)}
+        onDelete={() => handleDelete(item.profile_id, item.display_name)}
+      />
     );
   };
 
@@ -239,4 +332,3 @@ export default function ProfilesScreen() {
     </ScreenErrorBoundary>
   );
 }
-
