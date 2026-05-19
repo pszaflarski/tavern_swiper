@@ -51,6 +51,17 @@ function EquippedDieCircle({ dieType, onRoll, onDismiss, screenHeight }: {
   const posRef = useRef({ x: 0, y: 0 });
   const [pos, setPos] = useState({ x: 0, y: 0 });
 
+  // Keep callback refs in sync so the PanResponder (created once) always
+  // invokes the latest versions instead of stale first-render closures.
+  const onRollRef = useRef(onRoll);
+  const onDismissRef = useRef(onDismiss);
+  const screenHeightRef = useRef(screenHeight);
+  useEffect(() => {
+    onRollRef.current = onRoll;
+    onDismissRef.current = onDismiss;
+    screenHeightRef.current = screenHeight;
+  });
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -65,7 +76,7 @@ function EquippedDieCircle({ dieType, onRoll, onDismiss, screenHeight }: {
 
         if (totalMove < TAP_THRESHOLD) {
           // It was a tap — roll the die
-          onRoll();
+          onRollRef.current();
           return;
         }
 
@@ -75,8 +86,8 @@ function EquippedDieCircle({ dieType, onRoll, onDismiss, screenHeight }: {
         posRef.current = { x: newX, y: newY };
 
         // If released in the input bar zone (bottom ~80px of screen), unequip
-        if (gs.moveY > screenHeight - 80) {
-          onDismiss();
+        if (gs.moveY > screenHeightRef.current - 80) {
+          onDismissRef.current();
         }
       },
     })
@@ -455,7 +466,16 @@ function ConversationScreenInner() {
         <EquippedDieCircle
           dieType={equippedDie}
           onRoll={handleRollEquipped}
-          onDismiss={() => setEquippedDie(null)}
+          onDismiss={() => {
+            setEquippedDie(null);
+            // Also dismiss the dice overlay if it's showing
+            if (rollingDie) {
+              setHiddenMessageId(null);
+              setRollingDie(null);
+              setDiceResult(null);
+              invalidateAfterRoll();
+            }
+          }}
           screenHeight={screenHeight}
         />
       )}
