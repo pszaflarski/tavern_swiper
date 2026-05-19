@@ -437,8 +437,8 @@ func callAgentRouter(token, agentName, prompt, threadID, messageType string, met
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
-	// Agent router calls can take longer (LLM generation)
-	agentClient := &http.Client{Timeout: 30 * time.Second}
+	// Agent router calls can take longer (cold start + tool calls + LLM generation)
+	agentClient := &http.Client{Timeout: 60 * time.Second}
 	resp, err := agentClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("HTTP error calling agent_router: %w", err)
