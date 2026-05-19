@@ -24,6 +24,9 @@ import (
 func main() {
 	_ = godotenv.Load()
 
+	// Initialize service URLs from router (for profiles service resolution)
+	initServiceURLs()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8013"
@@ -74,6 +77,10 @@ func main() {
 		// Quest Status (Bot/Admin for write, user own for read)
 		q.POST("/status/", handleUpdateQuestStatus)
 		q.GET("/status/:user_id", handleGetUserQuestStatuses)
+
+		// Quest Status by Profile (resolves profile_id → user_id internally)
+		q.POST("/status/by-profile/", handleUpdateQuestStatusByProfile)
+		q.GET("/status/by-profile/:profile_id", handleGetUserQuestStatusesByProfile)
 	}
 
 	log.Printf("[INFO] Quests Go Service starting on port %s", port)

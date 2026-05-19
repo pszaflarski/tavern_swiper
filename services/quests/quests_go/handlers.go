@@ -1215,3 +1215,230 @@ func timeFromMap(m map[string]interface{}, key string) time.Time {
 	return time.Time{}
 }
 
+// =============================================================================
+// Quest Status By-Profile Handlers
+// =============================================================================
+
+// handleUpdateQuestStatusByProfile godoc
+// @Summary      Update quest status by profile ID
+// @Description  Start, complete, or fail a quest using only a profile_id. The service resolves
+//
+//	the profile_id to a user_id internally by calling the profiles service.
+//	Admin and bot only.
+//
+// @Tags         quest-status
+// @Accept       json
+// @Produce      json
+// @Param        body  body      QuestStatusUpdateByProfile  true  "Quest status update (by profile)"
+// @Success      200   {object}  QuestStatus
+// @Failure      400   {object}  ErrorResponse
+// @Failure      403   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Failure      409   {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /quests/status/by-profile/ [post]
+func handleUpdateQuestStatusByProfile(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdminOrBot(auth.Role) {
+		send403(c, "Only admins and bots can update quest status")
+		return
+	}
+
+	var req QuestStatusUpdateByProfile
+	if err := c.ShouldBindJSON(&req); err != nil {
+		send400(c, fmt.Sprintf("Invalid request body: %v", err))
+		return
+	}
+
+	if !validProgressStatuses[req.Status] {
+		send400(c, fmt.Sprintf("Invalid status '%s'. Valid: started, completed, failed", req.Status))
+		return
+	}
+
+	// Resolve profile_id → user_id via the profiles service
+	userID, err := resolveProfileFunc(auth.Token, req.ProfileID)
+	if err != nil {
+		log.Printf("[WARN] Failed to resolve user_id for profile %s: %v", req.ProfileID, err)
+		send400(c, fmt.Sprintf("Could not resolve profile_id '%s' to a user: %v", req.ProfileID, err))
+		return
+	}
+
+	// Delegate to the existing quest completion logic by constructing the
+	// full QuestStatusUpdate and reusing the internal handler path.
+	ctx := c.Request.Context()
+	db, err := getDBFunc(ctx)
+	if err != nil {
+		send503(c, "Database unavailable")
+		return
+	}
+
+	// Verify quest template exists and load rewards
+	questSnap, err := db.Collection("quest_templates").Doc(req.QuestID).Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			send404(c, fmt.Sprintf("Quest '%s' not found", req.QuestID))
+			return
+		}
+		send500(c, fmt.Sprintf("Failed to look up quest: %v", err))
+		return
+	}
+	questTemplate := mapToQuestTemplate(questSnap.Data(), questSnap.ID())
+
+	// Doc ID keyed by user_id to prevent duplicate completions across profiles
+	docID := fmt.Sprintf("quest_%s_%s", req.QuestID, userID)
+	docRef := db.Collection("quest_status").Doc(docID)
+	now := time.Now()
+
+	// Check if status already exists
+	existingSnap, err := docRef.Get(ctx)
+	if err == nil && existingSnap.Exists() {
+		existingData := existingSnap.Data()
+		existingStatus, _ := existingData["status"].(string)
+
+		if existingStatus == "completed" {
+			existingProfileID, _ := existingData["profile_id"].(string)
+
+			if existingProfileID == req.ProfileID {
+				send409(c, fmt.Sprintf("Quest '%s' is already completed by this profile", req.QuestID))
+				return
+			}
+
+			// Different profile — create blocked record
+			blockedDocID := fmt.Sprintf("quest_%s_%s_%s", req.QuestID, userID, req.ProfileID)
+			blockedRef := db.Collection("quest_status").Doc(blockedDocID)
+
+			blockedSnap, _ := blockedRef.Get(ctx)
+			if blockedSnap != nil && blockedSnap.Exists() {
+				send409(c, fmt.Sprintf("Quest '%s' is already completed by user %s (profile %s blocked)", req.QuestID, userID, req.ProfileID))
+				return
+			}
+
+			blockedStatus := QuestStatus{
+				QuestID:   req.QuestID,
+				UserID:    userID,
+				ProfileID: req.ProfileID,
+				Status:    "blocked",
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+			_, err = blockedRef.Set(ctx, blockedStatus)
+			if err != nil {
+				send500(c, fmt.Sprintf("Failed to record blocked quest status: %v", err))
+				return
+			}
+
+			log.Printf("[INFO] Quest '%s' blocked for profile %s — already completed by profile %s", req.QuestID, req.ProfileID, existingProfileID)
+			c.JSON(http.StatusConflict, blockedStatus)
+			return
+		}
+
+		// Update existing status
+		updates := map[string]interface{}{
+			"status":     req.Status,
+			"profile_id": req.ProfileID,
+			"updated_at": now,
+		}
+		_, err = docRef.Set(ctx, updates, mergeAllOption())
+		if err != nil {
+			send500(c, fmt.Sprintf("Failed to update quest status: %v", err))
+			return
+		}
+
+		log.Printf("[INFO] Quest status updated (by-profile): %s for user %s → %s (by %s)", req.QuestID, userID, req.Status, auth.UID)
+
+		if req.Status == "completed" {
+			grantQuestRewards(ctx, db, questTemplate.Rewards, userID)
+		}
+
+		c.JSON(http.StatusOK, QuestStatus{
+			QuestID:   req.QuestID,
+			UserID:    userID,
+			ProfileID: req.ProfileID,
+			Status:    req.Status,
+			CreatedAt: timeFromMap(existingData, "created_at"),
+			UpdatedAt: now,
+		})
+		return
+	}
+
+	// Create new quest status
+	qs := QuestStatus{
+		QuestID:   req.QuestID,
+		UserID:    userID,
+		ProfileID: req.ProfileID,
+		Status:    req.Status,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	_, err = docRef.Set(ctx, qs)
+	if err != nil {
+		send500(c, fmt.Sprintf("Failed to create quest status: %v", err))
+		return
+	}
+
+	log.Printf("[INFO] Quest status created (by-profile): %s for user %s → %s (profile: %s, by %s)", req.QuestID, userID, req.Status, req.ProfileID, auth.UID)
+
+	if req.Status == "completed" {
+		grantQuestRewards(ctx, db, questTemplate.Rewards, userID)
+	}
+
+	c.JSON(http.StatusOK, qs)
+}
+
+// handleGetUserQuestStatusesByProfile godoc
+// @Summary      Get quest statuses by profile ID
+// @Description  List all quest statuses for the user who owns the given profile.
+//
+//	Resolves profile_id → user_id internally via the profiles service.
+//	Admin, bot, or the profile's own user can view.
+//
+// @Tags         quest-status
+// @Produce      json
+// @Param        profile_id  path      string  true  "Profile ID"
+// @Success      200         {array}   QuestStatus
+// @Failure      400         {object}  ErrorResponse
+// @Failure      403         {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /quests/status/by-profile/{profile_id} [get]
+func handleGetUserQuestStatusesByProfile(c *gin.Context) {
+	auth := GetAuth(c)
+	profileID := c.Param("profile_id")
+
+	// Resolve profile_id → user_id
+	userID, err := resolveProfileFunc(auth.Token, profileID)
+	if err != nil {
+		log.Printf("[WARN] Failed to resolve user_id for profile %s: %v", profileID, err)
+		send400(c, fmt.Sprintf("Could not resolve profile_id '%s' to a user: %v", profileID, err))
+		return
+	}
+
+	// Users can only view their own quest statuses; admins and bots can view anyone's
+	if !IsAdminOrBot(auth.Role) && auth.UID != userID {
+		send403(c, "You can only view your own quest status")
+		return
+	}
+
+	ctx := c.Request.Context()
+	db, err := getDBFunc(ctx)
+	if err != nil {
+		send503(c, "Database unavailable")
+		return
+	}
+
+	iter := db.Collection("quest_status").Where("user_id", "==", userID).Documents(ctx)
+	docs, err := iter.GetAll()
+	if err != nil {
+		send500(c, fmt.Sprintf("Failed to get quest statuses: %v", err))
+		return
+	}
+
+	statuses := make([]QuestStatus, 0, len(docs))
+	for _, doc := range docs {
+		data := doc.Data()
+		qs := mapToQuestStatus(data)
+		statuses = append(statuses, qs)
+	}
+
+	c.JSON(http.StatusOK, statuses)
+}

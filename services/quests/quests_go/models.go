@@ -198,6 +198,15 @@ type QuestStatusUpdate struct {
 	Status    string `json:"status"     binding:"required"` // started, completed, failed
 }
 
+// QuestStatusUpdateByProfile is the request body for updating quest status
+// using only a profile_id. The quests service resolves profile_id → user_id
+// by calling the profiles service internally.
+type QuestStatusUpdateByProfile struct {
+	QuestID   string `json:"quest_id"   binding:"required"`
+	ProfileID string `json:"profile_id" binding:"required"`
+	Status    string `json:"status"     binding:"required"` // started, completed, failed
+}
+
 // Valid quest progress statuses
 var validProgressStatuses = map[string]bool{
 	"started":   true,

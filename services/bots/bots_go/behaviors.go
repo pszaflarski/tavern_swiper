@@ -339,19 +339,13 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply via %s", bp.agentName, bp.profileID, conversationID, serviceURLs.Get("agent_router"))
 
 			// 4. Build enriched metadata for the agent_router call.
-			// For Grogmar: attempt oi_ya_git quest completion synchronously NOW
-			// so we know the result before the LLM generates its reply. A 200
-			// means newly granted → inject signal so Grogmar narrates the die
-			// toss. A 409 means already done → no signal, no narration.
+			// Include sender_profile_id so agent_router tools can look up
+			// quest status and complete quests on behalf of the user.
 			enrichedMetadata := make(map[string]interface{})
 			for k, v := range metadata {
 				enrichedMetadata[k] = v
 			}
-			if bp.behaviorType == "tavern_keeper" && bp.agentName == "grogmar" {
-				if completeQuestSync(token, "oi_ya_git", senderProfileID, bp.profileID) {
-					enrichedMetadata["quest_completed"] = "oi_ya_git"
-				}
-			}
+			enrichedMetadata["sender_profile_id"] = senderProfileID
 
 			// 5. Call agent_router to generate a reply
 			aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata)
