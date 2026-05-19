@@ -6,12 +6,15 @@ Tests:
 2. Completing 'oi_ya_git' quest (Grogmar's greeting) grants 1x D6 die
 3. Duplicate completion is rejected (409)
 4. Rewards are visible in the user's inventory
+5. Bot-minted JWT (Grogmar's tool code path) completes quests successfully
 """
 
 import pytest
 import httpx
+import jwt
 import uuid
 import os
+import time
 import asyncio
 from google.cloud import firestore
 from .helpers import get_root_admin, register_user, QUESTS_URL
@@ -269,3 +272,102 @@ async def test_duplicate_quest_completion_rejected(admin_context, test_user):
             f"Expected exactly 1 dice_d6 (no double grant), got {d6_entry['quantity']}"
         )
         print(f"   🎲 D6 quantity confirmed: {d6_entry['quantity']} (no double grant)")
+
+
+# =============================================================================
+# Test: Bot-minted JWT (Grogmar's tool code path)
+# =============================================================================
+
+
+def _mint_bot_token(bot_uid: str = "grogmar-bot") -> str:
+    """Mint a bot JWT exactly the way Grogmar's tool does.
+
+    This is a copy of tools/quests.py::_mint_bot_token() so we test
+    the same code path without importing from the agent_router package.
+    """
+    secret = os.getenv("JWT_SECRET", "")
+    assert secret, "JWT_SECRET must be set in test environment"
+    now = int(time.time())
+    payload = {
+        "sub": bot_uid,
+        "role": "bot",
+        "iat": now,
+        "exp": now + 300,
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
+
+
+@pytest.mark.asyncio
+async def test_bot_minted_jwt_completes_quest_and_grants_d6(test_user):
+    """
+    Integration Test: Grogmar's exact tool code path.
+
+    This test exercises the REAL flow that happens when Grogmar's LLM
+    invokes the complete_oi_ya_git_quest tool:
+
+    1. Mint a bot JWT using the shared JWT_SECRET (same as _mint_bot_token)
+    2. Call POST /quests/status/ with that bot token
+    3. Verify the quest completes (not rejected for auth)
+    4. Verify the D6 die appears in the user's inventory
+
+    If this test fails, Grogmar's tool will also fail in production.
+    """
+    quest_id = "oi_ya_git"
+    reward_item = "dice_d6"
+    reward_qty = 1
+
+    # Setup
+    ensure_quest_template(quest_id, "OI YA GIT!", [
+        {"item_id": reward_item, "quantity": reward_qty}
+    ])
+    clear_user_quest_and_inventory(test_user["uid"], quest_id, reward_item)
+
+    # Mint a bot token — this is EXACTLY what Grogmar's tool does
+    bot_token = _mint_bot_token("grogmar-bot")
+    bot_headers = {
+        "Authorization": f"Bearer {bot_token}",
+        "Content-Type": "application/json",
+    }
+
+    grogmar_profile_id = f"grogmar-profile-{uuid.uuid4().hex[:6]}"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # 1. Complete quest with bot-minted JWT
+        print(f"\n🤖 Grogmar's tool completing quest '{quest_id}' for user {test_user['uid']}")
+        resp = await client.post(
+            f"{QUESTS_URL}/quests/status/",
+            headers=bot_headers,
+            json={
+                "quest_id": quest_id,
+                "user_id": test_user["uid"],
+                "profile_id": grogmar_profile_id,
+                "status": "completed",
+            },
+        )
+        assert resp.status_code == 200, (
+            f"Bot-minted JWT quest completion failed with {resp.status_code}: {resp.text}. "
+            f"This means Grogmar's tool would also fail in production!"
+        )
+        quest_status = resp.json()
+        assert quest_status["status"] == "completed"
+        print(f"   ✅ Quest completed via bot token: {quest_status['status']}")
+
+        # 2. Verify D6 in inventory (fetch with user's own token)
+        inv_resp = await client.get(
+            f"{QUESTS_URL}/quests/inventory/{test_user['uid']}",
+            headers={"Authorization": f"Bearer {test_user['token']}"},
+        )
+        assert inv_resp.status_code == 200, f"Inventory fetch failed: {inv_resp.text}"
+
+        inventory = inv_resp.json()
+        d6_entry = next((e for e in inventory if e["item_id"] == reward_item), None)
+        assert d6_entry is not None, (
+            f"dice_d6 NOT found in inventory after bot-token quest completion. "
+            f"The grantQuestRewards() function may have failed silently. "
+            f"Inventory: {[e['item_id'] for e in inventory]}"
+        )
+        assert d6_entry["quantity"] >= reward_qty, (
+            f"Expected at least {reward_qty} dice_d6, got {d6_entry['quantity']}"
+        )
+        print(f"   🎲 D6 granted via bot token: {d6_entry['quantity']}")
+        print(f"   ✅ Grogmar's tool code path works end-to-end!")
