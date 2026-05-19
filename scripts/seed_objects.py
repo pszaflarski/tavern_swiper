@@ -56,8 +56,8 @@ ITEMS = [
         "image_url": "",
         "category": "key_item",
         "max_stack": 0,
-        "tradeable": True,
-        "actions": ["use", "trade", "gift"],
+        "tradeable": False,
+        "actions": ["use"],
         "metadata": {"sides": 6, "dice_type": "d6"},
     },
     {
