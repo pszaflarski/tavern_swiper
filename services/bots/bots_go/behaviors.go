@@ -361,16 +361,23 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			details = append(details, msg)
 			triggered++
 
-			// 6. Quest completion: if this is a tavern_keeper, complete "meet_the_tavern_keepers"
+			// 6. Quest completion: deterministically fire quests based on bot type/agent.
+			// Both calls are idempotent (409 = already done). Runs async so it never
+			// blocks the reply path.
 			if bp.behaviorType == "tavern_keeper" {
-			go func() {
+				go func(agentName, botProfileID string) {
 					defer func() {
 						if r := recover(); r != nil {
-							log.Printf("[CRITICAL] 🔥 PANIC in tryCompleteBarkeepQuest: %v — this means a required service URL is missing from the router!", r)
+							log.Printf("[CRITICAL] 🔥 PANIC in quest completion goroutine: %v", r)
 						}
 					}()
-					tryCompleteBarkeepQuest(token, senderProfileID, bp.profileID)
-				}()
+					// All tavern keepers grant the meet_the_tavern_keepers milestone.
+					tryCompleteQuest(token, "meet_the_tavern_keepers", senderProfileID, botProfileID)
+					// Grogmar specifically grants the oi_ya_git story quest reward.
+					if agentName == "grogmar" {
+						tryCompleteQuest(token, "oi_ya_git", senderProfileID, botProfileID)
+					}
+				}(bp.agentName, bp.profileID)
 			}
 		}
 	}
@@ -480,23 +487,21 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	return nil
 }
 
-// tryCompleteBarkeepQuest attempts to mark the "meet_the_tavern_keepers" quest as
-// completed for the user who just messaged a tavern keeper bot.
-// Runs asynchronously — failures are logged but never block the bot reply.
-func tryCompleteBarkeepQuest(botToken, senderProfileID, botProfileID string) {
-	const questID = "meet_the_tavern_keepers"
-
-	// 1. Look up the sender's user_id from their profile
+// tryCompleteQuest attempts to mark the given quest as completed for the user
+// who just interacted with a bot. Idempotent — 409 means already done.
+// Always called in a goroutine; never blocks the reply path.
+func tryCompleteQuest(botToken, questID, senderProfileID, botProfileID string) {
+	// 1. Resolve the sender's user_id from their profile
 	userID, err := lookupUserIDByProfile(botToken, senderProfileID)
 	if err != nil {
-		log.Printf("[WARN] Quest completion skipped — failed to look up user for profile %s: %v", senderProfileID, err)
+		log.Printf("[WARN] Quest '%s' skipped — failed to look up user for profile %s: %v", questID, senderProfileID, err)
 		return
 	}
 
-	// 2. Call the quests service to complete the quest
+	// 2. Call the quests service
 	questsURL := serviceURLs.Get("quests")
 	if questsURL == "" {
-		log.Printf("[WARN] Quest completion skipped — quests service URL not resolved")
+		log.Printf("[WARN] Quest '%s' skipped — quests service URL not resolved", questID)
 		return
 	}
 
@@ -514,24 +519,23 @@ func tryCompleteBarkeepQuest(botToken, senderProfileID, botProfileID string) {
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.Printf("[WARN] Quest completion failed for user %s: %v", userID, err)
+		log.Printf("[WARN] Quest '%s' completion failed for user %s: %v", questID, userID, err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusConflict {
-		// 409 = already completed, this is expected for repeat messages
-		log.Printf("[INFO] Quest '%s' already completed for user %s", questID, userID)
+		log.Printf("[INFO] Quest '%s' already completed for user %s (409)", questID, userID)
 		return
 	}
 
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		log.Printf("[WARN] Quest completion returned HTTP %d for user %s: %s", resp.StatusCode, userID, string(respBody))
+		log.Printf("[WARN] Quest '%s' returned HTTP %d for user %s: %s", questID, resp.StatusCode, userID, string(respBody))
 		return
 	}
 
-	log.Printf("[INFO] ✨ Quest '%s' completed for user %s (profile: %s, barkeep: %s)", questID, userID, senderProfileID, botProfileID)
+	log.Printf("[INFO] ✨ Quest '%s' completed for user %s (profile: %s, bot: %s)", questID, userID, senderProfileID, botProfileID)
 }
 
 // lookupUserIDByProfile fetches a profile from the profiles service and
