@@ -264,3 +264,19 @@ type CheckpointStatus struct {
 	CreatedAt    time.Time `json:"created_at"     firestore:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"     firestore:"updated_at"`
 }
+
+// BotCheckpointView is the response format for the by-bot endpoint.
+// Merges checkpoint template data with completion status and quest-level info
+// so the bot tool gets everything it needs in one API call.
+type BotCheckpointView struct {
+	QuestID             string        `json:"quest_id"`
+	QuestTitle          string        `json:"quest_title"`
+	QuestStatus         string        `json:"quest_status"`          // not_started, started, completed
+	QuestRewards        []QuestReward `json:"quest_rewards"`
+	CheckpointID        string        `json:"checkpoint_id"`
+	Description         string        `json:"description"`
+	DetailedDescription string        `json:"detailed_description"`
+	SuccessCriteria     string        `json:"success_criteria"`
+	SortOrder           int           `json:"sort_order"`
+	Status              string        `json:"status"`                // completed, not_completed
+}

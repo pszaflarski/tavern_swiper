@@ -1912,3 +1912,165 @@ func handleGetCheckpointStatusesByProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, statuses)
 }
+
+// =============================================================================
+// Bot Checkpoint Discovery
+// =============================================================================
+
+// handleGetCheckpointsByBot godoc
+// @Summary      Get checkpoints for a bot
+// @Description  List all checkpoints assigned to a bot, merged with the user's
+//
+//	completion status and quest-level info. Resolves profile_id → user_id
+//	internally. Bot and admin only.
+//
+// @Tags         checkpoints
+// @Produce      json
+// @Param        bot_id      path      string  true   "Bot ID"
+// @Param        profile_id  query     string  true   "Profile ID to check status for"
+// @Success      200         {array}   BotCheckpointView
+// @Failure      400         {object}  ErrorResponse
+// @Failure      403         {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /quests/checkpoints/by-bot/{bot_id} [get]
+func handleGetCheckpointsByBot(c *gin.Context) {
+	auth := GetAuth(c)
+	if !IsAdminOrBot(auth.Role) {
+		send403(c, "Only admins and bots can query checkpoints by bot")
+		return
+	}
+
+	botID := c.Param("bot_id")
+	profileID := c.Query("profile_id")
+	if profileID == "" {
+		send400(c, "profile_id query parameter is required")
+		return
+	}
+
+	// Resolve profile_id → user_id
+	userID, err := resolveProfileFunc(auth.Token, profileID)
+	if err != nil {
+		log.Printf("[WARN] Failed to resolve user_id for profile %s: %v", profileID, err)
+		send400(c, fmt.Sprintf("Could not resolve profile_id '%s' to a user: %v", profileID, err))
+		return
+	}
+
+	ctx := c.Request.Context()
+	db, err := getDBFunc(ctx)
+	if err != nil {
+		send503(c, "Database unavailable")
+		return
+	}
+
+	// 1. Load checkpoint templates for this bot
+	iter := db.Collection("checkpoint_templates").
+		Where("bot_id", "==", botID).
+		Documents(ctx)
+	cpDocs, err := iter.GetAll()
+	if err != nil {
+		send500(c, fmt.Sprintf("Failed to query checkpoint templates: %v", err))
+		return
+	}
+
+	if len(cpDocs) == 0 {
+		c.JSON(http.StatusOK, []BotCheckpointView{})
+		return
+	}
+
+	// Parse checkpoint templates and collect unique quest IDs
+	type cpWithQuest struct {
+		template CheckpointTemplate
+	}
+	checkpoints := make([]cpWithQuest, 0, len(cpDocs))
+	questIDs := make(map[string]bool)
+
+	for _, doc := range cpDocs {
+		data := doc.Data()
+		questID, _ := data["quest_id"].(string)
+		cp := mapToCheckpointTemplate(data, doc.ID(), questID)
+		checkpoints = append(checkpoints, cpWithQuest{template: cp})
+		questIDs[questID] = true
+	}
+
+	// 2. Load quest templates for all referenced quests
+	questMap := make(map[string]QuestTemplate)
+	for qID := range questIDs {
+		qSnap, err := db.Collection("quest_templates").Doc(qID).Get(ctx)
+		if err != nil {
+			log.Printf("[WARN] Failed to load quest template %s: %v", qID, err)
+			continue
+		}
+		questMap[qID] = mapToQuestTemplate(qSnap.Data(), qSnap.ID())
+	}
+
+	// 3. Load quest statuses for this user (to determine quest-level status)
+	questStatusMap := make(map[string]string)
+	qsIter := db.Collection("quest_status").
+		Where("user_id", "==", userID).
+		Documents(ctx)
+	qsDocs, err := qsIter.GetAll()
+	if err != nil {
+		log.Printf("[WARN] Failed to query quest statuses: %v", err)
+		// Non-fatal — we'll default to "not_started"
+	} else {
+		for _, doc := range qsDocs {
+			data := doc.Data()
+			qID, _ := data["quest_id"].(string)
+			st, _ := data["status"].(string)
+			if qID != "" && st != "" {
+				questStatusMap[qID] = st
+			}
+		}
+	}
+
+	// 4. Load checkpoint statuses for this user across all relevant quests
+	cpStatusMap := make(map[string]bool) // checkpoint_id → completed
+	for qID := range questIDs {
+		completed, err := getCompletedCheckpointIDs(ctx, db, qID, userID)
+		if err != nil {
+			log.Printf("[WARN] Failed to query checkpoint statuses for quest %s: %v", qID, err)
+			continue
+		}
+		for cpID := range completed {
+			cpStatusMap[cpID] = true
+		}
+	}
+
+	// 5. Build response, sorted by quest_id then sort_order
+	views := make([]BotCheckpointView, 0, len(checkpoints))
+	for _, cp := range checkpoints {
+		quest := questMap[cp.template.QuestID]
+		questStatus := questStatusMap[cp.template.QuestID]
+		if questStatus == "" {
+			questStatus = "not_started"
+		}
+
+		cpStatus := "not_completed"
+		if cpStatusMap[cp.template.CheckpointID] {
+			cpStatus = "completed"
+		}
+
+		views = append(views, BotCheckpointView{
+			QuestID:             cp.template.QuestID,
+			QuestTitle:          quest.Title,
+			QuestStatus:         questStatus,
+			QuestRewards:        quest.Rewards,
+			CheckpointID:        cp.template.CheckpointID,
+			Description:         cp.template.Description,
+			DetailedDescription: cp.template.DetailedDescription,
+			SuccessCriteria:     cp.template.SuccessCriteria,
+			SortOrder:           cp.template.SortOrder,
+			Status:              cpStatus,
+		})
+	}
+
+	// Sort by quest_id, then sort_order
+	sort.Slice(views, func(i, j int) bool {
+		if views[i].QuestID != views[j].QuestID {
+			return views[i].QuestID < views[j].QuestID
+		}
+		return views[i].SortOrder < views[j].SortOrder
+	})
+
+	c.JSON(http.StatusOK, views)
+}

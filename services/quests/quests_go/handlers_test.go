@@ -285,6 +285,7 @@ func setupCheckpointRouter() *gin.Engine {
 		q.GET("/templates/:quest_id/checkpoints", handleListCheckpointTemplates)
 		q.POST("/checkpoints/", handleCreateCheckpointTemplate)
 		q.GET("/checkpoints/status/:user_id/:quest_id", handleGetCheckpointStatuses)
+		q.GET("/checkpoints/by-bot/:bot_id", handleGetCheckpointsByBot)
 	}
 	return r
 }
@@ -804,4 +805,179 @@ func TestQuestCompletion_MultiCheckpoint_AdvancesOneAtATime(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.Equal(t, "started", resp.Status, "Multi-checkpoint quest should return 'started' after completing only 1 of 2 checkpoints")
 	assert.NotNil(t, capturedQuestStatus)
+}
+
+// =============================================================================
+// Bot Checkpoint Discovery
+// =============================================================================
+
+func TestGetCheckpointsByBot_BotOnly(t *testing.T) {
+	// Mock profile resolution
+	origResolve := resolveProfileFunc
+	resolveProfileFunc = func(token, profileID string) (string, error) {
+		return "user1", nil
+	}
+	defer func() { resolveProfileFunc = origResolve }()
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &routingMockClient{
+			collections: map[string]FirestoreCollection{
+				"checkpoint_templates": mockCollection{
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{
+											mockSnapshot{
+												exists: true,
+												id:     "send_message_to_grogmar",
+												data: map[string]interface{}{
+													"quest_id":             "oi_ya_git",
+													"bot_id":               "grogmar",
+													"description":          "Talk to Grogmar",
+													"detailed_description": "Grogmar is a cantankerous orc barkeep",
+													"success_criteria":     "User sent a message and Grogmar replied",
+													"sort_order":           int64(1),
+												},
+											},
+										}, nil
+									},
+								}
+							},
+						}
+					},
+				},
+				"quest_templates": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									id:     "oi_ya_git",
+									data: map[string]interface{}{
+										"title":      "OI YA GIT!",
+										"quest_type": "story",
+										"status":     "active",
+										"rewards": []interface{}{
+											map[string]interface{}{"item_id": "dice_d6", "quantity": int64(1)},
+										},
+									},
+								}, nil
+							},
+						}
+					},
+				},
+				"quest_status": mockCollection{
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{}, nil // no quest status yet
+									},
+								}
+							},
+						}
+					},
+				},
+				"checkpoint_status": mockCollection{
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+								return &mockQuery{
+									documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+										return &mockIterator{
+											getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+												return []FirestoreDocumentSnapshot{}, nil
+											},
+										}
+									},
+								}
+							},
+						}
+					},
+				},
+			},
+		}, nil
+	}
+
+	r := setupCheckpointRouter()
+
+	// Regular user should be rejected
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/quests/checkpoints/by-bot/grogmar?profile_id=profile1", nil)
+	req.Header.Set("Authorization", "Bearer "+signToken("user1", "user"))
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	// Bot should succeed and get merged checkpoint data
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/quests/checkpoints/by-bot/grogmar?profile_id=profile1", nil)
+	req.Header.Set("Authorization", "Bearer "+signToken("bot1", "bot"))
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var views []BotCheckpointView
+	json.Unmarshal(w.Body.Bytes(), &views)
+	assert.Equal(t, 1, len(views))
+	assert.Equal(t, "oi_ya_git", views[0].QuestID)
+	assert.Equal(t, "OI YA GIT!", views[0].QuestTitle)
+	assert.Equal(t, "send_message_to_grogmar", views[0].CheckpointID)
+	assert.Equal(t, "Talk to Grogmar", views[0].Description)
+	assert.Equal(t, "Grogmar is a cantankerous orc barkeep", views[0].DetailedDescription)
+	assert.Equal(t, "User sent a message and Grogmar replied", views[0].SuccessCriteria)
+	assert.Equal(t, "not_completed", views[0].Status)
+	assert.Equal(t, "not_started", views[0].QuestStatus)
+	assert.Equal(t, 1, len(views[0].QuestRewards))
+	assert.Equal(t, "dice_d6", views[0].QuestRewards[0].ItemID)
+}
+
+func TestGetCheckpointsByBot_MissingProfileID(t *testing.T) {
+	r := setupCheckpointRouter()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/quests/checkpoints/by-bot/grogmar", nil)
+	req.Header.Set("Authorization", "Bearer "+signToken("bot1", "bot"))
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetCheckpointsByBot_NoBotCheckpoints(t *testing.T) {
+	origResolve := resolveProfileFunc
+	resolveProfileFunc = func(token, profileID string) (string, error) {
+		return "user1", nil
+	}
+	defer func() { resolveProfileFunc = origResolve }()
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &routingMockClient{
+			collections: map[string]FirestoreCollection{
+				"checkpoint_templates": mockCollection{
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{}, nil // no checkpoints
+									},
+								}
+							},
+						}
+					},
+				},
+			},
+		}, nil
+	}
+
+	r := setupCheckpointRouter()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/quests/checkpoints/by-bot/unknown_bot?profile_id=profile1", nil)
+	req.Header.Set("Authorization", "Bearer "+signToken("bot1", "bot"))
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var views []BotCheckpointView
+	json.Unmarshal(w.Body.Bytes(), &views)
+	assert.Equal(t, 0, len(views))
 }
