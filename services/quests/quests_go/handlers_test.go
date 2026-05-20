@@ -268,3 +268,540 @@ func TestDeductItem_UserRejected(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusForbidden, w.Code)
 }
+
+// =============================================================================
+// Checkpoint Tests
+// =============================================================================
+
+// setupCheckpointRouter creates a router with quest status + checkpoint routes
+func setupCheckpointRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.Default()
+	r.Use(AuthMiddleware())
+
+	q := r.Group("/quests")
+	{
+		q.POST("/status/", handleUpdateQuestStatus)
+		q.GET("/templates/:quest_id/checkpoints", handleListCheckpointTemplates)
+		q.POST("/checkpoints/", handleCreateCheckpointTemplate)
+		q.GET("/checkpoints/status/:user_id/:quest_id", handleGetCheckpointStatuses)
+	}
+	return r
+}
+
+// routingMockClient dispatches Collection() calls based on the collection path,
+// allowing different mock behaviors per collection.
+type routingMockClient struct {
+	FirestoreClient
+	collections map[string]FirestoreCollection
+}
+
+func (r *routingMockClient) Collection(path string) FirestoreCollection {
+	if c, ok := r.collections[path]; ok {
+		return c
+	}
+	// Default: return empty collection
+	return mockCollection{
+		docFunc: func(id string) FirestoreDocument {
+			return mockDoc{
+				id: id,
+				getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+					return nil, status.Error(codes.NotFound, "not found")
+				},
+				setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+					return nil, nil
+				},
+			}
+		},
+		documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+			return &mockIterator{getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+				return []FirestoreDocumentSnapshot{}, nil
+			}}
+		},
+		whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+			return &mockQuery{
+				documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+					return &mockIterator{getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+						return []FirestoreDocumentSnapshot{}, nil
+					}}
+				},
+			}
+		},
+	}
+}
+func (r *routingMockClient) Batch() FirestoreWriteBatch { return mockBatch{} }
+func (r *routingMockClient) Close() error               { return nil }
+
+func TestQuestCompletion_SingleCheckpoint(t *testing.T) {
+	// Test: completing a quest that has 1 checkpoint should complete the checkpoint
+	// AND the quest in a single call (backward compatible behavior)
+
+	var capturedQuestStatus interface{}
+	var capturedCheckpointStatus interface{}
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &routingMockClient{
+			collections: map[string]FirestoreCollection{
+				// quest_templates: return a valid quest template
+				"quest_templates": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									id:     "oi_ya_git",
+									data: map[string]interface{}{
+										"quest_id":   "oi_ya_git",
+										"title":      "OI YA GIT!",
+										"quest_type": "story",
+										"status":     "active",
+										"rewards": []interface{}{
+											map[string]interface{}{"item_id": "dice_d6", "quantity": int64(1)},
+										},
+									},
+								}, nil
+							},
+						}
+					},
+				},
+				// checkpoint_templates: return 1 checkpoint
+				"checkpoint_templates": mockCollection{
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{
+											mockSnapshot{
+												exists: true,
+												id:     "send_message_to_grogmar",
+												data: map[string]interface{}{
+													"quest_id":    "oi_ya_git",
+													"bot_id":      "grogmar",
+													"description": "Send a message to Grogmar",
+													"sort_order":  int64(1),
+												},
+											},
+										}, nil
+									},
+								}
+							},
+						}
+					},
+				},
+				// checkpoint_status: no completions yet
+				"checkpoint_status": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								capturedCheckpointStatus = data
+								return nil, nil
+							},
+						}
+					},
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+								return &mockQuery{
+									documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+										return &mockIterator{
+											getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+												return []FirestoreDocumentSnapshot{}, nil // no completions yet
+											},
+										}
+									},
+								}
+							},
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{}, nil
+									},
+								}
+							},
+						}
+					},
+				},
+				// quest_status: no existing status
+				"quest_status": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return nil, status.Error(codes.NotFound, "not found")
+							},
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								capturedQuestStatus = data
+								return nil, nil
+							},
+						}
+					},
+				},
+				// user_inventory: for reward granting
+				"user_inventory": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return nil, status.Error(codes.NotFound, "not found")
+							},
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								return nil, nil
+							},
+						}
+					},
+				},
+				// item_definitions: for reward granting
+				"item_definitions": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									id:     "dice_d6",
+									data: map[string]interface{}{
+										"name":      "D6 Die",
+										"max_stack": int64(0),
+									},
+								}, nil
+							},
+						}
+					},
+				},
+			},
+		}, nil
+	}
+
+	r := setupCheckpointRouter()
+	w := httptest.NewRecorder()
+	body := `{"quest_id":"oi_ya_git","user_id":"user1","profile_id":"profile1","status":"completed"}`
+	req, _ := http.NewRequest("POST", "/quests/status/", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+signToken("bot1", "bot"))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Parse response — should show "completed" status
+	var resp QuestStatus
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, "completed", resp.Status)
+	assert.Equal(t, "oi_ya_git", resp.QuestID)
+	assert.Equal(t, "user1", resp.UserID)
+
+	// Verify checkpoint was written
+	assert.NotNil(t, capturedCheckpointStatus)
+	// Verify quest status was written
+	assert.NotNil(t, capturedQuestStatus)
+}
+
+func TestQuestCompletion_NoCheckpoints_BackwardCompat(t *testing.T) {
+	// Test: quest with NO checkpoints should complete directly (old behavior)
+
+	var capturedQuestStatus interface{}
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &routingMockClient{
+			collections: map[string]FirestoreCollection{
+				"quest_templates": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									id:     "legacy_quest",
+									data: map[string]interface{}{
+										"quest_id":   "legacy_quest",
+										"title":      "Legacy Quest",
+										"quest_type": "story",
+										"status":     "active",
+										"rewards":    []interface{}{},
+									},
+								}, nil
+							},
+						}
+					},
+				},
+				// checkpoint_templates: empty — no checkpoints
+				"checkpoint_templates": mockCollection{
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{}, nil
+									},
+								}
+							},
+						}
+					},
+				},
+				"quest_status": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return nil, status.Error(codes.NotFound, "not found")
+							},
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								capturedQuestStatus = data
+								return nil, nil
+							},
+						}
+					},
+				},
+			},
+		}, nil
+	}
+
+	r := setupCheckpointRouter()
+	w := httptest.NewRecorder()
+	body := `{"quest_id":"legacy_quest","user_id":"user1","profile_id":"profile1","status":"completed"}`
+	req, _ := http.NewRequest("POST", "/quests/status/", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+signToken("bot1", "bot"))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp QuestStatus
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, "completed", resp.Status, "Quest with no checkpoints should complete directly")
+	assert.NotNil(t, capturedQuestStatus)
+}
+
+func TestQuestCompletion_AlreadyCompleted_409(t *testing.T) {
+	// Test: calling complete on an already-completed quest returns 409
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &routingMockClient{
+			collections: map[string]FirestoreCollection{
+				"quest_templates": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									id:     "oi_ya_git",
+									data: map[string]interface{}{
+										"quest_id":   "oi_ya_git",
+										"quest_type": "story",
+										"status":     "active",
+										"rewards":    []interface{}{},
+									},
+								}, nil
+							},
+						}
+					},
+				},
+				"quest_status": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									id:     id,
+									data: map[string]interface{}{
+										"quest_id":   "oi_ya_git",
+										"user_id":    "user1",
+										"profile_id": "profile1",
+										"status":     "completed",
+									},
+								}, nil
+							},
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								return nil, nil
+							},
+						}
+					},
+				},
+			},
+		}, nil
+	}
+
+	r := setupCheckpointRouter()
+	w := httptest.NewRecorder()
+	body := `{"quest_id":"oi_ya_git","user_id":"user1","profile_id":"profile1","status":"completed"}`
+	req, _ := http.NewRequest("POST", "/quests/status/", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+signToken("bot1", "bot"))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code, "Already-completed quest should return 409")
+}
+
+func TestCreateCheckpointTemplate_AdminOnly(t *testing.T) {
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &routingMockClient{
+			collections: map[string]FirestoreCollection{
+				"quest_templates": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{exists: true, id: id, data: map[string]interface{}{}}, nil
+							},
+						}
+					},
+				},
+				"checkpoint_templates": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								return nil, nil
+							},
+						}
+					},
+				},
+			},
+		}, nil
+	}
+
+	r := setupCheckpointRouter()
+
+	// Non-admin should be rejected
+	w := httptest.NewRecorder()
+	body := `{"checkpoint_id":"cp1","quest_id":"q1","description":"Test checkpoint"}`
+	req, _ := http.NewRequest("POST", "/quests/checkpoints/", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+signToken("user1", "user"))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	// Admin should succeed
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/quests/checkpoints/", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+signToken("admin1", "root_admin"))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var resp CheckpointTemplate
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, "cp1", resp.CheckpointID)
+	assert.Equal(t, "q1", resp.QuestID)
+	assert.Equal(t, "Test checkpoint", resp.Description)
+}
+
+func TestQuestCompletion_MultiCheckpoint_AdvancesOneAtATime(t *testing.T) {
+	// Test: quest with 2 checkpoints — first call completes checkpoint 1
+	// and returns "started" (not "completed")
+
+	var capturedQuestStatus interface{}
+
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return &routingMockClient{
+			collections: map[string]FirestoreCollection{
+				"quest_templates": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return mockSnapshot{
+									exists: true,
+									id:     "multi_quest",
+									data: map[string]interface{}{
+										"quest_id":   "multi_quest",
+										"quest_type": "story",
+										"status":     "active",
+										"rewards":    []interface{}{},
+									},
+								}, nil
+							},
+						}
+					},
+				},
+				// 2 checkpoints
+				"checkpoint_templates": mockCollection{
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{
+											mockSnapshot{exists: true, id: "cp1", data: map[string]interface{}{
+												"quest_id": "multi_quest", "sort_order": int64(1), "description": "Step 1",
+											}},
+											mockSnapshot{exists: true, id: "cp2", data: map[string]interface{}{
+												"quest_id": "multi_quest", "sort_order": int64(2), "description": "Step 2",
+											}},
+										}, nil
+									},
+								}
+							},
+						}
+					},
+				},
+				// No completions yet
+				"checkpoint_status": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								return nil, nil
+							},
+						}
+					},
+					whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+						return &mockQuery{
+							whereFunc: func(p, op string, value interface{}) FirestoreQuery {
+								return &mockQuery{
+									documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+										return &mockIterator{
+											getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+												return []FirestoreDocumentSnapshot{}, nil
+											},
+										}
+									},
+								}
+							},
+							documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
+								return &mockIterator{
+									getAllFunc: func() ([]FirestoreDocumentSnapshot, error) {
+										return []FirestoreDocumentSnapshot{}, nil
+									},
+								}
+							},
+						}
+					},
+				},
+				"quest_status": mockCollection{
+					docFunc: func(id string) FirestoreDocument {
+						return mockDoc{
+							id: id,
+							getFunc: func(ctx context.Context) (FirestoreDocumentSnapshot, error) {
+								return nil, status.Error(codes.NotFound, "not found")
+							},
+							setFunc: func(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error) {
+								capturedQuestStatus = data
+								return nil, nil
+							},
+						}
+					},
+				},
+			},
+		}, nil
+	}
+
+	r := setupCheckpointRouter()
+	w := httptest.NewRecorder()
+	body := `{"quest_id":"multi_quest","user_id":"user1","profile_id":"profile1","status":"completed"}`
+	req, _ := http.NewRequest("POST", "/quests/status/", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+signToken("bot1", "bot"))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp QuestStatus
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, "started", resp.Status, "Multi-checkpoint quest should return 'started' after completing only 1 of 2 checkpoints")
+	assert.NotNil(t, capturedQuestStatus)
+}
