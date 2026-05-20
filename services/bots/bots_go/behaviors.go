@@ -347,6 +347,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 				enrichedMetadata[k] = v
 			}
 			enrichedMetadata["sender_profile_id"] = senderProfileID
+			enrichedMetadata["bot_profile_id"] = bp.profileID
 
 			// 5. Call agent_router to generate a reply
 			aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata)

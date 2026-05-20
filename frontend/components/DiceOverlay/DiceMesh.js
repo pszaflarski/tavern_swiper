@@ -109,5 +109,5 @@ export default function DiceMesh({ meshRef, dieType, faceMapping }) {
 
   if (!materials) return null;
 
-  return <mesh ref={meshRef} geometry={geometry} material={materials} castShadow receiveShadow />;
+  return <mesh ref={meshRef} geometry={geometry} material={materials} castShadow receiveShadow position={[0, -100, 0]} />;
 }

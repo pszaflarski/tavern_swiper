@@ -25,9 +25,24 @@
 |--------|-------|---------------|
 | `status` ASC, `sort_order` ASC | Composite | List active quests in order |
 
+### `checkpoint_templates` collection
+
+| Fields | Order | Query Pattern |
+|--------|-------|---------------|
+| `quest_id` ASC, `sort_order` ASC | Composite | List checkpoints for a quest in order |
+
+### `checkpoint_status` collection
+
+| Fields | Order | Query Pattern |
+|--------|-------|---------------|
+| `quest_id` ASC, `user_id` ASC | Composite | Get completed checkpoints for a user's quest |
+| `quest_id` ASC, `user_id` ASC, `status` ASC | Composite | Filter by completion status |
+
 ## Notes
 
-- Single-field indexes on `user_id`, `quest_id`, `item_id`, `status` are auto-created.
+- Single-field indexes on `user_id`, `quest_id`, `item_id`, `status`, `checkpoint_id` are auto-created.
 - Monitor Cloud Console for "index required" errors in dev/test and add as needed.
 - Batch all index creation before the prod deploy to minimize churn.
 - Use `gcloud firestore indexes composite create` or the Firebase Console.
+- **CRITICAL**: Firestore Enterprise Native has NO default indexes. All indexes must be
+  explicitly created via `scripts/apply-indexes.sh`.

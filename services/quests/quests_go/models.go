@@ -135,16 +135,17 @@ type QuestReward struct {
 
 // QuestTemplate defines a quest in the game.
 type QuestTemplate struct {
-	QuestID     string         `json:"quest_id"     firestore:"quest_id"`
-	Title       string         `json:"title"        firestore:"title"`
-	Description string         `json:"description"  firestore:"description"`
-	QuestType   string         `json:"quest_type"   firestore:"quest_type"`   // story, daily, weekly, achievement
-	Status      string         `json:"status"       firestore:"status"`       // draft, active, retired
-	SortOrder   int            `json:"sort_order"   firestore:"sort_order"`
-	Rewards     []QuestReward  `json:"rewards"      firestore:"rewards"`
-	Metadata    map[string]any `json:"metadata"     firestore:"metadata"`
-	CreatedAt   time.Time      `json:"created_at"   firestore:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"   firestore:"updated_at"`
+	QuestID     string               `json:"quest_id"     firestore:"quest_id"`
+	Title       string               `json:"title"        firestore:"title"`
+	Description string               `json:"description"  firestore:"description"`
+	QuestType   string               `json:"quest_type"   firestore:"quest_type"`   // story, daily, weekly, achievement
+	Status      string               `json:"status"       firestore:"status"`       // draft, active, retired
+	SortOrder   int                  `json:"sort_order"   firestore:"sort_order"`
+	Rewards     []QuestReward        `json:"rewards"      firestore:"rewards"`
+	Metadata    map[string]any       `json:"metadata"     firestore:"metadata"`
+	Checkpoints []CheckpointTemplate `json:"checkpoints,omitempty" firestore:"-"` // populated from subcollection
+	CreatedAt   time.Time            `json:"created_at"   firestore:"created_at"`
+	UpdatedAt   time.Time            `json:"updated_at"   firestore:"updated_at"`
 }
 
 // QuestTemplateCreate is the request body for creating a quest template.
@@ -212,4 +213,70 @@ var validProgressStatuses = map[string]bool{
 	"started":   true,
 	"completed": true,
 	"failed":    true,
+}
+
+// -----------------------------------------------------------------------------
+// Checkpoint Templates (ordered steps within a quest)
+// -----------------------------------------------------------------------------
+
+// CheckpointTemplate defines a single ordered step within a quest.
+// The description is designed to be read by a bot/LLM to decide if the
+// checkpoint condition has been met.
+// Stored in top-level collection: checkpoint_templates/{checkpoint_id}
+type CheckpointTemplate struct {
+	CheckpointID        string         `json:"checkpoint_id"        firestore:"checkpoint_id"`
+	QuestID             string         `json:"quest_id"             firestore:"quest_id"`
+	BotID               string         `json:"bot_id"               firestore:"bot_id"`
+	Description         string         `json:"description"          firestore:"description"`
+	DetailedDescription string         `json:"detailed_description" firestore:"detailed_description"`
+	SuccessCriteria     string         `json:"success_criteria"     firestore:"success_criteria"`
+	SortOrder           int            `json:"sort_order"           firestore:"sort_order"`
+	Metadata            map[string]any `json:"metadata"             firestore:"metadata"`
+	CreatedAt           time.Time      `json:"created_at"           firestore:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"           firestore:"updated_at"`
+}
+
+// CheckpointTemplateCreate is the request body for creating a checkpoint template.
+type CheckpointTemplateCreate struct {
+	CheckpointID        string         `json:"checkpoint_id"        binding:"required"`
+	QuestID             string         `json:"quest_id"             binding:"required"`
+	BotID               string         `json:"bot_id"`
+	Description         string         `json:"description"          binding:"required"`
+	DetailedDescription string         `json:"detailed_description"`
+	SuccessCriteria     string         `json:"success_criteria"`
+	SortOrder           int            `json:"sort_order"`
+	Metadata            map[string]any `json:"metadata"`
+}
+
+// -----------------------------------------------------------------------------
+// Checkpoint Status (per-profile completion tracking)
+// -----------------------------------------------------------------------------
+
+// CheckpointStatus tracks a profile's completion of a specific checkpoint.
+// Keyed per-profile so different profiles can independently hit checkpoints.
+// Quest completion rolls up to the user level.
+type CheckpointStatus struct {
+	QuestID      string    `json:"quest_id"       firestore:"quest_id"`
+	CheckpointID string    `json:"checkpoint_id"  firestore:"checkpoint_id"`
+	ProfileID    string    `json:"profile_id"     firestore:"profile_id"`
+	UserID       string    `json:"user_id"        firestore:"user_id"`
+	Status       string    `json:"status"         firestore:"status"` // completed
+	CreatedAt    time.Time `json:"created_at"     firestore:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"     firestore:"updated_at"`
+}
+
+// BotCheckpointView is the response format for the by-bot endpoint.
+// Merges checkpoint template data with completion status and quest-level info
+// so the bot tool gets everything it needs in one API call.
+type BotCheckpointView struct {
+	QuestID             string        `json:"quest_id"`
+	QuestTitle          string        `json:"quest_title"`
+	QuestStatus         string        `json:"quest_status"`          // not_started, started, completed
+	QuestRewards        []QuestReward `json:"quest_rewards"`
+	CheckpointID        string        `json:"checkpoint_id"`
+	Description         string        `json:"description"`
+	DetailedDescription string        `json:"detailed_description"`
+	SuccessCriteria     string        `json:"success_criteria"`
+	SortOrder           int           `json:"sort_order"`
+	Status              string        `json:"status"`                // completed, not_completed
 }
