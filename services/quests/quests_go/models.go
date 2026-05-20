@@ -224,24 +224,28 @@ var validProgressStatuses = map[string]bool{
 // checkpoint condition has been met.
 // Stored in top-level collection: checkpoint_templates/{checkpoint_id}
 type CheckpointTemplate struct {
-	CheckpointID string         `json:"checkpoint_id" firestore:"checkpoint_id"`
-	QuestID      string         `json:"quest_id"      firestore:"quest_id"`
-	BotID        string         `json:"bot_id"        firestore:"bot_id"`
-	Description  string         `json:"description"   firestore:"description"`
-	SortOrder    int            `json:"sort_order"    firestore:"sort_order"`
-	Metadata     map[string]any `json:"metadata"      firestore:"metadata"`
-	CreatedAt    time.Time      `json:"created_at"    firestore:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"    firestore:"updated_at"`
+	CheckpointID        string         `json:"checkpoint_id"        firestore:"checkpoint_id"`
+	QuestID             string         `json:"quest_id"             firestore:"quest_id"`
+	BotID               string         `json:"bot_id"               firestore:"bot_id"`
+	Description         string         `json:"description"          firestore:"description"`
+	DetailedDescription string         `json:"detailed_description" firestore:"detailed_description"`
+	SuccessCriteria     string         `json:"success_criteria"     firestore:"success_criteria"`
+	SortOrder           int            `json:"sort_order"           firestore:"sort_order"`
+	Metadata            map[string]any `json:"metadata"             firestore:"metadata"`
+	CreatedAt           time.Time      `json:"created_at"           firestore:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"           firestore:"updated_at"`
 }
 
 // CheckpointTemplateCreate is the request body for creating a checkpoint template.
 type CheckpointTemplateCreate struct {
-	CheckpointID string         `json:"checkpoint_id" binding:"required"`
-	QuestID      string         `json:"quest_id"      binding:"required"`
-	BotID        string         `json:"bot_id"`
-	Description  string         `json:"description"   binding:"required"`
-	SortOrder    int            `json:"sort_order"`
-	Metadata     map[string]any `json:"metadata"`
+	CheckpointID        string         `json:"checkpoint_id"        binding:"required"`
+	QuestID             string         `json:"quest_id"             binding:"required"`
+	BotID               string         `json:"bot_id"`
+	Description         string         `json:"description"          binding:"required"`
+	DetailedDescription string         `json:"detailed_description"`
+	SuccessCriteria     string         `json:"success_criteria"`
+	SortOrder           int            `json:"sort_order"`
+	Metadata            map[string]any `json:"metadata"`
 }
 
 // -----------------------------------------------------------------------------

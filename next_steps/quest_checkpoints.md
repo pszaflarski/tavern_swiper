@@ -8,7 +8,7 @@
 
 ## What's Done (This PR)
 
-- ✅ `checkpoint_templates` top-level collection with `bot_id`, `description`, `sort_order`
+- ✅ `checkpoint_templates` top-level collection with `bot_id`, `description`, `detailed_description`, `success_criteria`, `sort_order`
 - ✅ `checkpoint_status` collection tracking per-profile checkpoint completion
 - ✅ `POST /quests/status/` auto-advances checkpoints behind the scenes
 - ✅ Quest only completes when ALL ordered checkpoints are done
@@ -17,6 +17,7 @@
 - ✅ Checkpoint status query endpoints (by user_id and by profile_id)
 - ✅ Seed data for both existing quests (1 checkpoint each)
 - ✅ Fully backward compatible — zero changes to bots_go or agent_router
+- ✅ Three-field checkpoint design: `description` (short label), `detailed_description` (narrative), `success_criteria` (testable condition)
 
 ---
 
@@ -56,12 +57,14 @@ Each bot (via agent_router) gets a tool that:
 
 1. **Queries** `checkpoint_templates WHERE bot_id == {my_bot_id}`
    to find all checkpoints assigned to this bot
-2. **Reads the description** to understand what needs to happen
-   (e.g., "Send a message to Grogmar the bartender and receive a reply")
-3. **Decides** based on the conversation context whether the condition is met
-4. **If met** → calls `POST /quests/checkpoints/complete` (new endpoint, or
+2. **Reads `success_criteria`** to understand the testable condition
+   (e.g., "The user has sent at least one message AND the bot has replied")
+3. **Reads `detailed_description`** for narrative flavor when narrating
+   (e.g., "Grogmar grudgingly acknowledges newcomers...")
+4. **Decides** based on the conversation context whether `success_criteria` is met
+5. **If met** → calls `POST /quests/checkpoints/complete` (new endpoint, or
    continues using `POST /quests/status/` which handles it behind the scenes)
-5. **If not met** → returns info about what's still needed (for narration)
+6. **If not met** → returns info about what's still needed (for narration)
 
 ### Example Flow: Grogmar and "OI YA GIT!"
 
@@ -70,12 +73,15 @@ User sends first message to Grogmar
   → agent_router invokes Grogmar agent
   → Grogmar's LLM calls check_and_complete_checkpoints tool
   → Tool queries: checkpoint_templates WHERE bot_id == "grogmar"
-  → Finds: "send_message_to_grogmar" (desc: "...receive a reply...")
+  → Finds: "send_message_to_grogmar"
+       description: "Talk to Grogmar the bartender"
+       success_criteria: "The user has sent at least one message..."
+       detailed_description: "Grogmar is a cantankerous orc barkeep..."
   → Tool checks: has this user's checkpoint been completed? No.
-  → Tool checks: has the condition been met? Yes — the user just sent a message.
+  → Tool evaluates success_criteria against conversation context: Yes — message sent.
   → Tool completes the checkpoint → quest auto-completes → D6 granted
   → Tool returns: "Quest 'OI YA GIT!' completed! Reward: 1x D6 die"
-  → LLM narrates tossing the cube at the adventurer
+  → LLM uses detailed_description to narrate tossing the cube at the adventurer
 ```
 
 ### Example Flow: Future Multi-Checkpoint Quest
@@ -88,25 +94,28 @@ Quest: "Grogmar's Wager" (3 checkpoints)
 
 User messages Grogmar:
   → Tool finds checkpoint 1 is the next uncompleted one
-  → Condition met (message sent) → completes checkpoint 1
+  → Evaluates success_criteria: "Start a conversation" — condition met
+  → Completes checkpoint 1
   → Quest status: "started" (2 checkpoints remaining)
 
 User plays dice with Grogmar:
   → Tool finds checkpoint 2 is next
-  → Condition met (dice game happened) → completes checkpoint 2
+  → Evaluates success_criteria: "Play a game of dice" — condition met
+  → Completes checkpoint 2
   → Quest status: "started" (1 checkpoint remaining)
 
 User wins the dice game:
   → Tool finds checkpoint 3 is next
-  → LLM evaluates description: "Win a game of dice"
+  → Evaluates success_criteria: "Win a game of dice"
   → Did the user win? YES → completes checkpoint 3
   → All checkpoints done → quest auto-completes → rewards granted
   
 User loses the dice game:
   → Tool finds checkpoint 3 is next
+  → Evaluates success_criteria: "Win a game of dice"
   → Did the user win? NO → checkpoint NOT completed
   → Tool returns: "Checkpoint not met — the adventurer needs to win"
-  → LLM narrates Grogmar's gloating: "HAH! Better luck next time, runt!"
+  → LLM uses detailed_description to narrate Grogmar's gloating
 ```
 
 ### What Needs to Be Built
@@ -114,7 +123,8 @@ User loses the dice game:
 1. **New LangGraph tool** in `agent_router/tools/`:
    - `check_and_complete_checkpoints(user_id, profile_id)` — zero visible args
    - Queries checkpoints by `bot_id` (injected from config)
-   - Reads descriptions, evaluates conditions against conversation context
+   - Reads `success_criteria` to evaluate conditions against conversation context
+   - Reads `detailed_description` for narrative flavor in return strings
    - Completes checkpoints and returns plain English action strings
 
 2. **New quests_go endpoint** (optional):
@@ -153,8 +163,6 @@ User loses the dice game:
 
 - [ ] Should the tool query checkpoints on every message, or only on
       specific triggers? (Performance vs. flexibility)
-- [ ] Should checkpoint descriptions be pure natural language, or include
-      structured conditions the tool can evaluate programmatically?
 - [ ] For complex conditions like "win a dice game" — does the LLM evaluate
       the conversation history, or does the tool check game state from metadata?
 - [ ] Should there be checkpoint-level rewards in addition to quest-level rewards?

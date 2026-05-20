@@ -150,9 +150,17 @@ CHECKPOINTS = {
         {
             "checkpoint_id": "send_message_to_keeper",
             "bot_id": "",  # any tavern keeper qualifies
-            "description": (
-                "Send a message to any tavern keeper and receive a reply. "
-                "The checkpoint is complete once a tavern keeper bot has responded."
+            "description": "Speak to a tavern keeper",
+            "detailed_description": (
+                "Every adventurer's journey begins with a conversation. "
+                "Approach any of the tavern keepers — the bartender, the bard, "
+                "the bouncer — and introduce yourself. They'll size you up and "
+                "decide whether you're worth their time."
+            ),
+            "success_criteria": (
+                "The user has sent at least one message in a conversation with "
+                "a tavern keeper bot AND the bot has generated a reply. "
+                "Viewing the bot's profile alone does NOT count."
             ),
             "sort_order": 1,
             "metadata": {"trigger": "tavern_keeper_reply"},
@@ -162,9 +170,17 @@ CHECKPOINTS = {
         {
             "checkpoint_id": "send_message_to_grogmar",
             "bot_id": "grogmar",
-            "description": (
-                "Send a message to Grogmar the bartender and receive a reply. "
-                "The checkpoint is complete once Grogmar has responded to the adventurer."
+            "description": "Talk to Grogmar the bartender",
+            "detailed_description": (
+                "Grogmar is a cantankerous orc barkeep who grudgingly acknowledges "
+                "newcomers. Walk up to his bar and say something — anything. "
+                "If he likes your face (he won't), he might toss you a bone cube."
+            ),
+            "success_criteria": (
+                "The user has sent at least one message to Grogmar in this "
+                "conversation AND Grogmar has generated a reply. The checkpoint "
+                "is NOT met if the user has only viewed Grogmar's profile "
+                "without messaging."
             ),
             "sort_order": 1,
             "metadata": {"target_bot": "grogmar", "trigger": "first_message"},

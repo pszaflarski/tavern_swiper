@@ -1646,6 +1646,12 @@ func mapToCheckpointTemplate(data map[string]interface{}, id, questID string) Ch
 	if v, ok := data["description"].(string); ok {
 		cp.Description = v
 	}
+	if v, ok := data["detailed_description"].(string); ok {
+		cp.DetailedDescription = v
+	}
+	if v, ok := data["success_criteria"].(string); ok {
+		cp.SuccessCriteria = v
+	}
 	if v, ok := data["sort_order"].(int64); ok {
 		cp.SortOrder = int(v)
 	}
@@ -1738,14 +1744,16 @@ func handleCreateCheckpointTemplate(c *gin.Context) {
 
 	now := time.Now()
 	cp := CheckpointTemplate{
-		CheckpointID: req.CheckpointID,
-		QuestID:      req.QuestID,
-		BotID:        req.BotID,
-		Description:  req.Description,
-		SortOrder:    req.SortOrder,
-		Metadata:     req.Metadata,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		CheckpointID:        req.CheckpointID,
+		QuestID:             req.QuestID,
+		BotID:               req.BotID,
+		Description:         req.Description,
+		DetailedDescription: req.DetailedDescription,
+		SuccessCriteria:     req.SuccessCriteria,
+		SortOrder:           req.SortOrder,
+		Metadata:            req.Metadata,
+		CreatedAt:           now,
+		UpdatedAt:           now,
 	}
 
 	// Store in top-level checkpoint_templates collection
