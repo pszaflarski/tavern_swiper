@@ -112,7 +112,10 @@ export function useConversationMessages(
 ) {
   const queryClient = useQueryClient();
 
-  // Infinite query for paginated message loading
+  // Infinite query for paginated message loading.
+  // We disable automatic background refetching because our custom polling
+  // effect handles new-message detection more efficiently (single ?after=
+  // request vs refetching ALL loaded pages).
   const infiniteQuery = useInfiniteQuery<PaginatedMessagesResponse>({
     queryKey: ['messages', conversationId, profileId],
     queryFn: async ({ pageParam }) => {
@@ -131,6 +134,8 @@ export function useConversationMessages(
     getNextPageParam: (lastPage) =>
       lastPage.has_more ? lastPage.oldest_timestamp : undefined,
     enabled: !!conversationId,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // Flatten all pages into a single chronologically-sorted array.
@@ -152,19 +157,31 @@ export function useConversationMessages(
     return all.sort((a, b) => a.sent_at.localeCompare(b.sent_at));
   }, [infiniteQuery.data?.pages]);
 
+  // Keep a ref of the newest message timestamp so the polling interval
+  // always reads the latest cursor without re-creating itself.
+  const newestTimestampRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (messages.length > 0) {
+      newestTimestampRef.current = messages[messages.length - 1].sent_at;
+    }
+  }, [messages]);
+
   // Poll for NEW messages only (after the newest known timestamp).
   // This is much cheaper than refetching the entire first page.
+  // The interval is stable — it only recreates when the conversation or
+  // pause state changes, NOT on every message update.
   useEffect(() => {
-    if (pausePolling || !conversationId || messages.length === 0) return;
-    const newestTimestamp = messages[messages.length - 1]?.sent_at;
-    if (!newestTimestamp) return;
+    if (pausePolling || !conversationId) return;
 
     const interval = setInterval(async () => {
+      const after = newestTimestampRef.current;
+      if (!after) return; // No messages loaded yet — skip this tick
+
       try {
         const params = new URLSearchParams();
         if (profileId) params.set('profile_id', profileId);
         params.set('limit', String(MESSAGES.PAGE_SIZE));
-        params.set('after', newestTimestamp);
+        params.set('after', after);
 
         const res = await messagesApi.get(
           `/messages/conversations/${conversationId}/messages?${params}`
@@ -196,7 +213,7 @@ export function useConversationMessages(
     }, MESSAGES.POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [pausePolling, conversationId, profileId, messages, queryClient]);
+  }, [pausePolling, conversationId, profileId, queryClient]);
 
   return {
     data: messages,
