@@ -15,7 +15,7 @@ import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
-import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, DiceRollResult } from '../../hooks/useMessages';
+import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice } from '../../hooks/useMessages';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -26,6 +26,11 @@ import { MESSAGES } from '../../constants';
 import { styles } from './styles';
 
 const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
+
+/** Max sides per die type for local random rolls */
+const DICE_SIDES: Record<string, number> = {
+  d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20,
+};
 
 // Die type → image asset mapping for the equipped die circle
 const DICE_IMAGES: Record<string, any> = {
@@ -125,9 +130,27 @@ function ConversationScreenInner() {
   const [messageText, setMessageText] = useState('');
   const [equippedDie, setEquippedDie] = useState<string | null>(null);
   const [rollingDie, setRollingDie] = useState<string | null>(null);
-  const [diceResult, setDiceResult] = useState<DiceRollResult | null>(null);
-  const [hiddenMessageId, setHiddenMessageId] = useState<string | null>(null);
+  const [diceResultValue, setDiceResultValue] = useState<number | null>(null);
   const [rollKey, setRollKey] = useState(0);
+  // true while the 3D animation is actively playing; false once it settles.
+  // The die stays visible (rollingDie !== null) even after the animation ends.
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // --- Dice animation queue ---
+  // Tracks dice_roll event message_ids we've already enqueued so we never
+  // double-add when the messages array reference changes.
+  const processedDiceIdsRef = useRef<Set<string>>(new Set());
+  // Watermark: the sent_at of the newest message when the conversation first
+  // loaded. Only dice_roll events AFTER this timestamp get animated.
+  // Resets on component remount (i.e. opening a different conversation).
+  const diceWatermarkRef = useRef<string | null>(null);
+  const [diceQueue, setDiceQueue] = useState<Array<{
+    messageId: string;
+    sentAt: string;
+    dieType: string;
+    value: number;
+  }>>([]); 
+
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
 
@@ -156,12 +179,9 @@ function ConversationScreenInner() {
   } = useConversationMessages(
     conversationId,
     activeProfileId,
-    // Pause polling while the dice animation is playing to prevent the
-    // event message from appearing before the roll finishes.
-    rollingDie !== null,
   );
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
-  const { mutateAsync: rollDice, invalidateAfterRoll } = useRollDice();
+  const { mutateAsync: rollDice } = useRollDice();
 
   // Handle equipped die coming back from the inventory screen
   useEffect(() => {
@@ -170,7 +190,9 @@ function ConversationScreenInner() {
     }
   }, [equippedDieParam]);
 
-  // Roll the equipped die
+  const queryClient = useQueryClient();
+
+  // Roll the equipped die — API only, no animation
   const handleRollEquipped = async () => {
     if (!equippedDie || !activeProfileId || !conversationId) return;
     try {
@@ -179,17 +201,80 @@ function ConversationScreenInner() {
         conversationId,
         profileId: activeProfileId,
       });
-      if (result.message_id) {
-        setHiddenMessageId(result.message_id);
-      }
-      setDiceResult(result);
-      setRollingDie(equippedDie);
-      setRollKey(k => k + 1);
+      console.log(`🎲 Dice roll posted: ${equippedDie} → ${result.result}`);
+      // Invalidate messages so the event message appears in chat
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     } catch (err) {
       console.error('🎲 Dice roll failed:', err);
     }
   };
-  const queryClient = useQueryClient();
+
+  // -----------------------------------------------------------------------
+  // ENQUEUE: Scan messages for dice_roll events we haven't seen yet.
+  // On first load, sets a watermark to the newest message's sent_at so
+  // we only animate rolls that arrive AFTER the conversation was opened.
+  // -----------------------------------------------------------------------
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    // First load: capture the watermark and mark all existing dice_roll
+    // message_ids as processed (so they never get enqueued).
+    if (diceWatermarkRef.current === null) {
+      const newest = messages[messages.length - 1];
+      diceWatermarkRef.current = newest.sent_at;
+      console.log(`🎲 Dice watermark set: ${diceWatermarkRef.current}`);
+      // Pre-mark all existing dice_roll ids so they're never enqueued
+      for (const msg of messages) {
+        if (msg.type === 'event' && msg.metadata?.event_type === 'dice_roll') {
+          processedDiceIdsRef.current.add(msg.message_id);
+        }
+      }
+      return;
+    }
+
+    const newItems: Array<{ messageId: string; sentAt: string; dieType: string; value: number }> = [];
+
+    for (const msg of messages) {
+      if (
+        msg.type === 'event' &&
+        msg.metadata?.event_type === 'dice_roll' &&
+        msg.sent_at > diceWatermarkRef.current! &&
+        !processedDiceIdsRef.current.has(msg.message_id)
+      ) {
+        processedDiceIdsRef.current.add(msg.message_id);
+        const meta = msg.metadata?.metadata;
+        newItems.push({
+          messageId: msg.message_id,
+          sentAt: msg.sent_at,
+          dieType: (meta?.item_name as string) || 'd6',
+          value: (meta?.value as number) || Math.ceil(Math.random() * 6),
+        });
+      }
+    }
+
+    if (newItems.length > 0) {
+      console.log(`🎲 Enqueuing ${newItems.length} dice roll(s):`, newItems.map(i => `${i.dieType}→${i.value}`).join(', '));
+      setDiceQueue((q) => [...q, ...newItems]);
+    }
+  }, [messages]);
+
+  // -----------------------------------------------------------------------
+  // PROCESS: When the queue has items and no animation is actively playing,
+  // pop the next item and trigger the 3D dice animation.
+  // The die from a previous roll may still be visible — that's fine,
+  // the new roll replaces it via rollKey remount.
+  // -----------------------------------------------------------------------
+  useEffect(() => {
+    if (diceQueue.length === 0 || isAnimating) return;
+
+    const next = diceQueue[0];
+    console.log(`🎲 Processing queue: ${next.dieType} → ${next.value} (${diceQueue.length} remaining)`);
+    setDiceResultValue(next.value);
+    setRollingDie(next.dieType);
+    setRollKey((k) => k + 1);
+    setIsAnimating(true);
+  }, [diceQueue, isAnimating]);
 
   // Invalidate conversations cache when exiting — the backend just marked
   // this conversation as read, so the inbox dots need to update.
@@ -210,14 +295,22 @@ function ConversationScreenInner() {
     setMessageText('');
   }, [messageText, activeProfileId, conversationId, sendMessage]);
 
+  // Hide messages at or after the currently-animating dice_roll's sent_at.
+  // This hides the roll event AND any follow-up messages (e.g. Lira's
+  // commentary) so they don't spoil the result before the animation finishes.
+  // Derived directly from the queue — no extra state needed.
+  const hideMessagesCutoff = diceQueue.length > 0 ? diceQueue[0].sentAt : null;
+
   // We use an inverted FlatList — the standard pattern for chat UIs.
   // By inverting, the most recent message sits at the scroll origin (top of the
   // virtual list = bottom of the screen), so no scrollToEnd hacks are needed.
   // The data array is reversed so visual order stays chronological.
-  const invertedMessages = useMemo(
-    () => (hiddenMessageId ? messages.filter(m => m.message_id !== hiddenMessageId) : messages).slice().reverse(),
-    [messages, hiddenMessageId],
-  );
+  const invertedMessages = useMemo(() => {
+    const visible = hideMessagesCutoff
+      ? messages.filter(m => m.sent_at < hideMessagesCutoff)
+      : messages;
+    return visible.slice().reverse();
+  }, [messages, hideMessagesCutoff]);
 
   const navigation = useNavigation();
 
@@ -470,35 +563,34 @@ function ConversationScreenInner() {
             setEquippedDie(null);
             // Also dismiss the dice overlay if it's showing
             if (rollingDie) {
-              setHiddenMessageId(null);
               setRollingDie(null);
-              setDiceResult(null);
-              invalidateAfterRoll();
+              setDiceResultValue(null);
+              setIsAnimating(false);
+              setDiceQueue([]);
             }
           }}
           screenHeight={screenHeight}
         />
       )}
 
-      {/* Dice overlay — renders on top of everything */}
+      {/* Dice overlay — purely visual, no backend interaction */}
       <DiceOverlay
         visible={rollingDie !== null}
-        dieType={rollingDie ?? 'd6'}
+        dieType={(rollingDie ?? 'd6') as 'd4' | 'd6' | 'd8' | 'd12' | 'd20'}
         rollKey={rollKey}
-        desiredValue={diceResult?.result}
+        desiredValue={diceResultValue ?? undefined}
         onResult={(value: number) => {
-          console.log(`\ud83c\udfb2 Rolled ${rollingDie}: ${value}`);
-          // Reveal the event message now that the animation is done.
-          // The overlay stays visible until the user dismisses or re-rolls.
-          setHiddenMessageId(null);
-          invalidateAfterRoll();
+          console.log(`🎲 Animation complete — ${rollingDie}: ${value}`);
+          // Dequeue the completed item. The die stays visible (rollingDie
+          // remains set) until dismissed or replaced by the next roll.
+          setDiceQueue((q) => q.slice(1));
+          setIsAnimating(false);
         }}
         onDismiss={() => {
-          // Clean up — also reveal any hidden message if dismissed early
-          setHiddenMessageId(null);
           setRollingDie(null);
-          setDiceResult(null);
-          invalidateAfterRoll();
+          setDiceResultValue(null);
+          setIsAnimating(false);
+          setDiceQueue([]);
         }}
       />
     </View>

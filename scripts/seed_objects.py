@@ -142,6 +142,52 @@ QUESTS = [
     },
 ]
 
+# ─── Checkpoint Templates ─────────────────────────────────────────────────────
+# Maps quest_id → list of ordered checkpoints
+
+CHECKPOINTS = {
+    "meet_the_tavern_keepers": [
+        {
+            "checkpoint_id": "send_message_to_keeper",
+            "bot_id": "",  # any tavern keeper qualifies
+            "description": "Speak to a tavern keeper",
+            "detailed_description": (
+                "Every adventurer's journey begins with a conversation. "
+                "Approach any of the tavern keepers — the bartender, the bard, "
+                "the bouncer — and introduce yourself. They'll size you up and "
+                "decide whether you're worth their time."
+            ),
+            "success_criteria": (
+                "The user has sent at least one message in a conversation with "
+                "a tavern keeper bot AND the bot has generated a reply. "
+                "Viewing the bot's profile alone does NOT count."
+            ),
+            "sort_order": 1,
+            "metadata": {"trigger": "tavern_keeper_reply"},
+        },
+    ],
+    "oi_ya_git": [
+        {
+            "checkpoint_id": "send_message_to_grogmar",
+            "bot_id": "grogmar",
+            "description": "Talk to Grogmar the bartender",
+            "detailed_description": (
+                "Grogmar is a cantankerous orc barkeep who grudgingly acknowledges "
+                "newcomers. Walk up to his bar and say something — anything. "
+                "If he likes your face (he won't), he might toss you a bone cube."
+            ),
+            "success_criteria": (
+                "The user has sent at least one message to Grogmar in this "
+                "conversation AND Grogmar has generated a reply. The checkpoint "
+                "is NOT met if the user has only viewed Grogmar's profile "
+                "without messaging."
+            ),
+            "sort_order": 1,
+            "metadata": {"target_bot": "grogmar", "trigger": "first_message"},
+        },
+    ],
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def seed_objects(env: str):
@@ -233,6 +279,55 @@ def seed_objects(env: str):
             print(f"  ❌ {quest['quest_id']} — NOT FOUND")
 
     print(f"\n🏁 Done! {len(QUESTS)} quest(s) seeded into {db_id}")
+
+    # ── Checkpoint Templates ──────────────────────────────────────────────────
+    total_checkpoints = 0
+    print(f"\n🔖 Seeding checkpoint templates into {db_id}")
+
+    for quest_id, checkpoints in CHECKPOINTS.items():
+        for cp in checkpoints:
+            cp_id = cp["checkpoint_id"]
+            doc_ref = db.collection("checkpoint_templates").document(cp_id)
+            existing = doc_ref.get()
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+
+            cp_data = {
+                **cp,
+                "quest_id": quest_id,
+            }
+
+            if existing.exists:
+                print(f"  ✏️  Updating checkpoint: {quest_id}/{cp_id}")
+                doc_ref.set({
+                    **cp_data,
+                    "updated_at": now,
+                }, merge=True)
+            else:
+                print(f"  ✨ Creating checkpoint: {quest_id}/{cp_id}")
+                doc_ref.set({
+                    **cp_data,
+                    "created_at": now,
+                    "updated_at": now,
+                })
+            total_checkpoints += 1
+
+    # Verify checkpoints
+    print("\n🔍 Verifying seeded checkpoints:")
+    for quest_id, checkpoints in CHECKPOINTS.items():
+        for cp in checkpoints:
+            doc = db.collection("checkpoint_templates").document(cp["checkpoint_id"]).get()
+            if doc.exists:
+                data = doc.to_dict()
+                print(
+                    f"  ✅ {quest_id}/{cp['checkpoint_id']} — "
+                    f"order: {data.get('sort_order')}, "
+                    f"desc: {data.get('description', '')[:60]}"
+                )
+            else:
+                print(f"  ❌ {quest_id}/{cp['checkpoint_id']} — NOT FOUND")
+
+    print(f"\n🏁 Done! {total_checkpoints} checkpoint(s) seeded into {db_id}")
 
 
 if __name__ == "__main__":

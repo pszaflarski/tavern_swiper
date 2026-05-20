@@ -73,6 +73,15 @@ func main() {
 		q.POST("/templates/", handleCreateQuestTemplate)
 		q.GET("/templates/", handleListQuestTemplates)
 		q.GET("/templates/:quest_id", handleGetQuestTemplate)
+		q.GET("/templates/:quest_id/checkpoints", handleListCheckpointTemplates)
+
+		// Checkpoint Templates (Admin only)
+		q.POST("/checkpoints/", handleCreateCheckpointTemplate)
+
+		// Checkpoint Status (query endpoints)
+		q.GET("/checkpoints/status/:user_id/:quest_id", handleGetCheckpointStatuses)
+		q.GET("/checkpoints/status/by-profile/:profile_id/:quest_id", handleGetCheckpointStatusesByProfile)
+		q.GET("/checkpoints/by-bot/:bot_id", handleGetCheckpointsByBot)
 
 		// Quest Status (Bot/Admin for write, user own for read)
 		q.POST("/status/", handleUpdateQuestStatus)
