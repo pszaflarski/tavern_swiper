@@ -22,6 +22,7 @@ SERVICES=(
   ["users_go"]="users"
   ["bots_go"]="bots"
   ["quests_go"]="quests"
+  ["characters_go"]="characters"
 )
 
 # Track results
@@ -125,6 +126,22 @@ for svc in "${!SERVICES[@]}"; do
       create_index "$DB_ID" "quest_status" "profile_id:ASCENDING,status:ASCENDING"
       create_index "$DB_ID" "user_inventory" "user_id:ASCENDING"
       create_index "$DB_ID" "user_inventory" "user_id:ASCENDING,quantity:DESCENDING"
+      ;;
+    "characters_go")
+      # --- characters collection ---
+      create_index "$DB_ID" "characters" "fandom:CONTAINS"
+      create_index "$DB_ID" "characters" "race:CONTAINS"
+      create_index "$DB_ID" "characters" "gender:CONTAINS"
+      # --- images collection ---
+      create_index "$DB_ID" "images" "character_id:ASCENDING"
+      create_index "$DB_ID" "images" "artist_handle:ASCENDING"
+      # --- character_tags collection ---
+      create_index "$DB_ID" "character_tags" "slug:ASCENDING"
+      create_index "$DB_ID" "character_tags" "category:ASCENDING"
+      create_index "$DB_ID" "character_tags" "name:ASCENDING"
+      create_index "$DB_ID" "character_tags" "name_lower:ASCENDING"
+      create_index "$DB_ID" "character_tags" "category:ASCENDING,name_lower:ASCENDING"
+      create_index "$DB_ID" "character_tags" "category:ASCENDING,name:ASCENDING"
       ;;
   esac
 done

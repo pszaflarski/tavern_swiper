@@ -1,0 +1,58 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: characters
+boundary: characters
+port: 8012
+database: characters-{env}
+base_path: /characters
+
+collections:
+  owned:
+    - characters
+    - images
+    - character_tags
+
+pubsub:
+  publishes: []
+  consumes: []
+
+endpoints:
+  public:
+    - GET /characters/health
+    - GET /characters/swagger/*
+  authenticated:
+    - GET /characters/                        # list/search all characters
+    - GET /characters/{id}                    # get character by ID
+    - GET /characters/random                  # get random character
+    - POST /characters/                       # create character (admin)
+    - PUT /characters/{id}                    # update character (admin)
+    - DELETE /characters/{id}                 # delete character (admin)
+    - GET /characters/images/by-artist/{handle}  # list images by artist
+    - POST /characters/images                 # upload image (admin)
+    - PUT /characters/images/{id}             # update image metadata (admin)
+    - DELETE /characters/images/{id}          # delete image (admin)
+    - POST /characters/tags/search            # search tags by prefix
+    - GET /characters/tags/by-slug/{slug}     # get tag by slug
+    - GET /characters/tags/by-category/{cat}  # list tags in category
+    - GET /characters/tags/{id}               # get tag by ID
+    - POST /characters/tags/                  # create tag (admin)
+    - PUT /characters/tags/{id}               # update tag (admin)
+    - DELETE /characters/tags/{id}            # delete tag (admin)
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - GCS_BUCKET_NAME
+    - JWT_SECRET
+  services: []
+  external:
+    - Google Cloud Storage (character images)
+
+testing:
+  unit: "go test -v ./..."
+
+notes:
+  - Read-only for regular users, admin-only mutations
+  - Characters are predefined templates for the character creation flow
+  - Tags owned by this service: fandom, race, gender
+  - Images support artist attribution (handle, name, link) and AI-generated source types
+  - Firestore only allows one array-contains per query so tag filters are mutually exclusive
