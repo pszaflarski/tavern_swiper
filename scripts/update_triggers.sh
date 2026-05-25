@@ -21,6 +21,8 @@ TRIGGERS["discovery-dev-deploy"]="$ROUTER_DEV_URL"
 TRIGGERS["discovery-subscriber-dev-deploy"]="$ROUTER_DEV_URL"
 TRIGGERS["messages-dev-deploy"]="$ROUTER_DEV_URL"
 TRIGGERS["messages-subscriber-dev-deploy"]="$ROUTER_DEV_URL"
+TRIGGERS["quests-dev-deploy"]="$ROUTER_DEV_URL"
+TRIGGERS["characters-dev-deploy"]="$ROUTER_DEV_URL"
 # Test triggers
 TRIGGERS["router-test-deploy"]="$ROUTER_TEST_URL"
 TRIGGERS["auth-test-deploy"]="$ROUTER_TEST_URL"
@@ -30,6 +32,8 @@ TRIGGERS["discovery-test-deploy"]="$ROUTER_TEST_URL"
 TRIGGERS["discovery-subscriber-test-deploy"]="$ROUTER_TEST_URL"
 TRIGGERS["messages-test-deploy"]="$ROUTER_TEST_URL"
 TRIGGERS["messages-subscriber-test-deploy"]="$ROUTER_TEST_URL"
+TRIGGERS["quests-test-deploy"]="$ROUTER_TEST_URL"
+TRIGGERS["characters-test-deploy"]="$ROUTER_TEST_URL"
 
 for TRIGGER_NAME in "${!TRIGGERS[@]}"; do
   ROUTER_URL="${TRIGGERS[$TRIGGER_NAME]}"
