@@ -1,0 +1,370 @@
+/* Tavern Swiper Design System Foundations */
+:root {
+  /* HSL Tailored Color Palette */
+  --bg-deep: 260 50% 4%;
+  --bg-card: 260 30% 8%;
+  --border-glass: 260 30% 20% / 0.4;
+  --border-glow: 38 90% 55% / 0.3;
+  
+  --primary-hue: 270;
+  --primary: var(--primary-hue) 75% 60%;
+  --primary-glow: var(--primary-hue) 75% 60% / 0.4;
+  --primary-dark: var(--primary-hue) 80% 40%;
+  
+  --amber-hue: 38;
+  --accent-gold: var(--amber-hue) 90% 55%;
+  --accent-gold-glow: var(--amber-hue) 90% 55% / 0.4;
+  --accent-gold-dark: var(--amber-hue) 80% 35%;
+
+  --emerald-hue: 142;
+  --accent-green: var(--emerald-hue) 70% 45%;
+  --accent-green-glow: var(--emerald-hue) 70% 45% / 0.3;
+
+  --rose-hue: 345;
+  --accent-rose: var(--rose-hue) 80% 60%;
+  --accent-rose-glow: var(--rose-hue) 80% 60% / 0.3;
+
+  --text-primary: 0 0% 96%;
+  --text-secondary: 260 15% 75%;
+  --text-muted: 260 10% 55%;
+
+  --font-family-rpg: 'Cinzel', serif;
+  --font-family-ui: 'Outfit', sans-serif;
+}
+
+/* Base resets & typography */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: hsl(var(--bg-deep));
+  color: hsl(var(--text-primary));
+  font-family: var(--font-family-ui);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, .rpg-font {
+  font-family: var(--font-family-rpg);
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--bg-deep));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--bg-card));
+  border: 2px solid hsl(var(--bg-deep));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px hsl(var(--primary-glow));
+    border-color: hsla(var(--primary), 0.5);
+  }
+  50% {
+    box-shadow: 0 0 25px hsl(var(--primary-glow));
+    border-color: hsla(var(--primary), 0.8);
+  }
+}
+
+@keyframes goldGlow {
+  0%, 100% {
+    box-shadow: 0 0 12px hsl(var(--accent-gold-glow));
+    border-color: hsla(var(--accent-gold), 0.4);
+  }
+  50% {
+    box-shadow: 0 0 22px hsl(var(--accent-gold-glow));
+    border-color: hsla(var(--accent-gold), 0.7);
+  }
+}
+
+@keyframes floatBackground {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes floatParticle {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px) rotate(10deg);
+  }
+}
+
+/* Glassmorphism & Cards */
+.glass-panel {
+  background: rgba(15, 10, 25, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--border-glass));
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+.glass-card {
+  background: rgba(25, 20, 40, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(var(--border-glass));
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(25, 20, 40, 0.6);
+  border-color: rgba(var(--primary), 0.3);
+  transform: translateY(-2px);
+}
+
+/* RPG Inputs */
+.rpg-input {
+  width: 100%;
+  background: rgba(10, 5, 20, 0.5);
+  border: 1px solid rgba(var(--border-glass));
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: hsl(var(--text-primary));
+  font-family: var(--font-family-ui);
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.rpg-input:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 10px hsl(var(--primary-glow));
+  background: rgba(15, 10, 30, 0.7);
+}
+
+.rpg-label {
+  font-family: var(--font-family-rpg);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: hsl(var(--accent-gold));
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Interactive Chips */
+.trait-chip {
+  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(var(--border-glass));
+  background: rgba(15, 10, 25, 0.4);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trait-chip:hover {
+  background: rgba(var(--primary), 0.15);
+  border-color: rgba(var(--primary), 0.5);
+  transform: scale(1.03);
+}
+
+.trait-chip.selected {
+  background: hsl(var(--primary-glow));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--text-primary));
+  box-shadow: 0 0 12px hsl(var(--primary-glow));
+}
+
+.trait-chip.fandom.selected {
+  background: hsla(var(--primary), 0.25);
+  border-color: hsl(var(--primary));
+}
+
+.trait-chip.race.selected {
+  background: hsla(var(--accent-gold), 0.2);
+  border-color: hsl(var(--accent-gold));
+  color: hsl(var(--text-primary));
+  box-shadow: 0 0 12px hsl(var(--accent-gold-glow));
+}
+
+.trait-chip.gender.selected {
+  background: hsla(var(--accent-green), 0.2);
+  border-color: hsl(var(--accent-green));
+  box-shadow: 0 0 12px hsl(var(--accent-green-glow));
+}
+
+/* Premium Buttons */
+.rpg-btn {
+  font-family: var(--font-family-rpg);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  padding: 12px 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  outline: none;
+}
+
+.rpg-btn-primary {
+  background: linear-gradient(135deg, hsl(var(--primary-dark)) 0%, hsl(var(--primary)) 100%);
+  color: white;
+  border-color: hsla(var(--primary), 0.5);
+  box-shadow: 0 4px 14px hsl(var(--primary-glow));
+}
+
+.rpg-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px hsl(var(--primary-glow));
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hue) 85% 65%) 100%);
+}
+
+.rpg-btn-secondary {
+  background: transparent;
+  color: hsl(var(--text-secondary));
+  border-color: rgba(var(--border-glass));
+}
+
+.rpg-btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: hsl(var(--text-primary));
+  border-color: rgba(var(--text-secondary), 0.3);
+}
+
+.rpg-btn-gold {
+  background: linear-gradient(135deg, hsl(var(--accent-gold-dark)) 0%, hsl(var(--accent-gold)) 100%);
+  color: #120902;
+  border-color: hsla(var(--accent-gold), 0.5);
+  box-shadow: 0 4px 14px hsl(var(--accent-gold-glow));
+}
+
+.rpg-btn-gold:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px hsl(var(--accent-gold-glow));
+  background: linear-gradient(135deg, hsl(var(--accent-gold)) 0%, hsl(var(--amber-hue) 100% 65%) 100%);
+}
+
+.rpg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Tavern Character Card Frame */
+.tavern-card-container {
+  width: 340px;
+  height: 520px;
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+  border: 1px solid hsla(var(--accent-gold), 0.3);
+  animation: goldGlow 6s infinite ease-in-out;
+  background: hsl(var(--bg-deep));
+}
+
+.tavern-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.tavern-card-container:hover .tavern-card-image {
+  transform: scale(1.04);
+}
+
+.tavern-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(10, 5, 20, 0.95) 0%, rgba(10, 5, 20, 0.6) 40%, rgba(0, 0, 0, 0) 70%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.badge-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.badge-tag.fandom {
+  background: hsla(var(--primary), 0.2);
+  border: 1px solid hsla(var(--primary), 0.6);
+  color: hsl(var(--primary-hue) 40% 90%);
+}
+
+.badge-tag.race {
+  background: hsla(var(--accent-gold), 0.15);
+  border: 1px solid hsla(var(--accent-gold), 0.6);
+  color: hsl(var(--amber-hue) 40% 90%);
+}
+
+.badge-tag.gender {
+  background: hsla(var(--accent-green), 0.15);
+  border: 1px solid hsla(var(--accent-green), 0.6);
+  color: hsl(var(--emerald-hue) 40% 90%);
+}
+
+/* Ambient Particles */
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: radial-gradient(circle at 20% 30%, rgba(65, 30, 120, 0.15) 0%, transparent 40%),
+              radial-gradient(circle at 80% 70%, rgba(140, 80, 20, 0.1) 0%, transparent 40%),
+              hsl(var(--bg-deep));
+  background-size: 200% 200%;
+  animation: floatBackground 20s infinite ease-in-out;
+  overflow: hidden;
+}
+
+.ambient-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(var(--accent-gold));
+  filter: blur(1px);
+  opacity: 0.3;
+  animation: floatParticle 8s infinite ease-in-out;
+}

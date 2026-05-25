@@ -10,6 +10,7 @@ frontend/.expo/
 dist/
 build/
 web-build/
+node_modules/
 
 # Python
 __pycache__/
