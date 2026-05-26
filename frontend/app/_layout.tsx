@@ -6,7 +6,8 @@ import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useUser } from '../hooks/useUser';
 import { Colors } from '../theme';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
+import DiceLoadingScreen from '../components/DiceLoadingScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -125,11 +126,7 @@ function RootLayoutNav() {
   }, [isAuthenticated, isLoading, isLoadingProfiles, profiles, segments]);
 
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
+    return <DiceLoadingScreen />;
   }
 
   return (

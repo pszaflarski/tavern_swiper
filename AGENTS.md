@@ -38,6 +38,8 @@
 6. **FEATURE BRANCHES ONLY**: Never commit directly to `dev`, `test`, or `prod` without user approval.
 7. **ZERO-TRUST AUTH**: Every endpoint (except `/auth/login`, `/auth/register`, and health/swagger) must verify the Tavern JWT. Each service has its own `auth.go` middleware.
 8. **BROWSER ISOLATION**: Always use an isolated Chromium binary and dedicated profile path for `browser_subagent` tasks to prevent profile leakage and session conflicts.
+9. **DEPLOYMENT SOURCE OF TRUTH**: For local testing or debugging, you may temporarily run `gcloud run deploy` or `gcloud functions deploy`. However, for final and persistent deployments, you MUST merge/push to the deploy branches (`dev`, `test`, `prod`) to trigger Cloud Build CI/CD. This ensures environment consistency and infrastructure-as-code parity.
+10. **PRODUCTION SAFETY & CONSENT**: Never perform production changes in the same logical job or command sequence as dev/test changes. Any modification to `tavern-swiper-prod` requires explicit, isolated user consent (e.g., "Yes, proceed with Prod"). Every production-modifying action must be preceded by: "⚠️ WARNING: This command will modify the PRODUCTION environment."
 
 ## JWT Architecture
 

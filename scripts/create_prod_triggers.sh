@@ -101,9 +101,15 @@ create_backend_trigger "quests-prod-deploy" \
     "services/quests/quests_go/cloudbuild.yaml" "services/quests/quests_go" "quests_go" "quests" \
     "_DB_ID=quests-prod,_JWT_SECRET=$JWT_SECRET"
 
-# 11. Frontend (no _DIR_NAME — matches dev trigger structure)
+# 11. Characters
+create_backend_trigger "characters-prod-deploy" \
+    "services/characters/characters_go/cloudbuild.yaml" "services/characters/characters_go" "characters_go" "characters" \
+    "_DB_ID=characters-prod,_JWT_SECRET=$JWT_SECRET"
+
+# 12. Frontend (no _DIR_NAME — matches dev trigger structure)
 create_frontend_trigger "frontend-prod-deploy" \
     "frontend/cloudbuild.yaml" "frontend" "app" \
     "_FIREBASE_API_KEY=$FIREBASE_KEY,_FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_SENDER_ID,_FIREBASE_APP_ID=$FIREBASE_APP_ID"
 
 echo "✅ All production triggers created!"
+

@@ -1,0 +1,556 @@
+basePath: /characters
+definitions:
+  main.CharTag:
+    properties:
+      category:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  main.CharacterCreate:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+      fandom:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      gender:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      image_ids:
+        items:
+          type: string
+        type: array
+      race:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      tagline:
+        type: string
+    required:
+    - display_name
+    type: object
+  main.CharacterOut:
+    properties:
+      bio:
+        type: string
+      character_id:
+        type: string
+      created_at:
+        type: string
+      display_name:
+        type: string
+      fandom:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      gender:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      images:
+        items:
+          $ref: '#/definitions/main.ImageOut'
+        type: array
+      race:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      tagline:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  main.CharacterUpdate:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+      fandom:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      gender:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      image_ids:
+        items:
+          type: string
+        type: array
+      race:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      tagline:
+        type: string
+    type: object
+  main.ImageOut:
+    properties:
+      artist_handle:
+        type: string
+      artist_link:
+        type: string
+      artist_name:
+        type: string
+      character_id:
+        type: string
+      created_at:
+        type: string
+      image_id:
+        type: string
+      position:
+        type: integer
+      source_type:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+    type: object
+  main.ImageUpdate:
+    properties:
+      artist_handle:
+        type: string
+      artist_link:
+        type: string
+      artist_name:
+        type: string
+      position:
+        type: integer
+      source_type:
+        type: string
+    type: object
+  main.Tag:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      status:
+        description: '"active" or "pending"'
+        type: string
+      updated_at:
+        type: string
+    type: object
+  main.TagCreate:
+    properties:
+      category:
+        type: string
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+    required:
+    - category
+    - name
+    type: object
+  main.TagSearchQuery:
+    properties:
+      category:
+        type: string
+      name:
+        description: partial prefix
+        type: string
+    required:
+    - category
+    - name
+    type: object
+  main.TagUpdate:
+    properties:
+      category:
+        type: string
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      status:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Predefined character templates, images, and attribution metadata.
+  title: Characters Service API
+  version: "1.0"
+paths:
+  /characters/:
+    get:
+      parameters:
+      - description: Fandom tag slug or ID
+        in: query
+        name: fandom
+        type: string
+      - description: Race tag slug or ID
+        in: query
+        name: race
+        type: string
+      - description: Gender tag slug or ID
+        in: query
+        name: gender
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.CharacterOut'
+            type: array
+      summary: List and search predefined characters
+      tags:
+      - characters
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Character creation payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.CharacterCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.CharacterOut'
+      security:
+      - BearerAuth: []
+      summary: Create a character (Admin only)
+      tags:
+      - characters
+  /characters/{id}:
+    delete:
+      parameters:
+      - description: Character ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a character (Admin only)
+      tags:
+      - characters
+    get:
+      parameters:
+      - description: Character ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.CharacterOut'
+      summary: Get a character by ID
+      tags:
+      - characters
+    put:
+      parameters:
+      - description: Character ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.CharacterUpdate'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.CharacterOut'
+      security:
+      - BearerAuth: []
+      summary: Update a character (Admin only)
+      tags:
+      - characters
+  /characters/random:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.CharacterOut'
+      summary: Get a random character
+      tags:
+      - characters
+  /images/:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Character ID
+        in: formData
+        name: character_id
+        required: true
+        type: string
+      - description: Source Type (artist | ai_generated)
+        in: formData
+        name: source_type
+        required: true
+        type: string
+      - description: Artist Handle
+        in: formData
+        name: artist_handle
+        type: string
+      - description: Artist Name
+        in: formData
+        name: artist_name
+        type: string
+      - description: Artist Link
+        in: formData
+        name: artist_link
+        type: string
+      - description: Position (default 0)
+        in: formData
+        name: position
+        type: integer
+      - description: Image file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.ImageOut'
+      security:
+      - BearerAuth: []
+      summary: Upload a character image (Admin only)
+      tags:
+      - images
+  /images/{id}:
+    delete:
+      parameters:
+      - description: Image ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete an image (Admin only)
+      tags:
+      - images
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Image ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ImageUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ImageOut'
+      security:
+      - BearerAuth: []
+      summary: Update image metadata (Admin only)
+      tags:
+      - images
+  /images/by-artist/{handle}:
+    get:
+      parameters:
+      - description: Artist Handle
+        in: path
+        name: handle
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.ImageOut'
+            type: array
+      summary: Get all images by artist handle
+      tags:
+      - images
+  /tags/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tag data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TagCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.Tag'
+      security:
+      - BearerAuth: []
+      summary: Create a new character tag (Admin only)
+      tags:
+      - tags
+  /tags/{id}:
+    delete:
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a character tag (Admin only)
+      tags:
+      - tags
+    get:
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Tag'
+      summary: Get a character tag by ID
+      tags:
+      - tags
+    put:
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TagUpdate'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Tag'
+      security:
+      - BearerAuth: []
+      summary: Update a character tag (Admin only)
+      tags:
+      - tags
+  /tags/by-category/{category}:
+    get:
+      parameters:
+      - description: Category
+        in: path
+        name: category
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+      summary: List character tags in a category
+      tags:
+      - tags
+  /tags/by-slug/{slug}:
+    get:
+      parameters:
+      - description: Tag Slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Tag'
+      summary: Get a character tag by slug
+      tags:
+      - tags
+  /tags/search:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Search query
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.TagSearchQuery'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+      summary: Search character tags by category and name prefix
+      tags:
+      - tags
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

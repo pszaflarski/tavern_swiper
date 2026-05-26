@@ -492,7 +492,7 @@ function ConversationScreenInner() {
             ) : null
           }
           ListEmptyComponent={
-            <View style={[styles.emptyContainer, { transform: [{ scaleY: -1 }] }]}>
+            <View style={[styles.emptyContainer, { transform: [{ rotateX: '180deg' }] }]}>
               <Text style={styles.emptyText}>The air is thick with unspoken words.</Text>
               <Text style={styles.emptySubText}>Break the silence with a greeting.</Text>
             </View>

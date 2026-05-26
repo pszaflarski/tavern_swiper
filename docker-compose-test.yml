@@ -275,6 +275,30 @@ services:
     networks:
       - tavern-net
 
+  characters:
+    build:
+      context: ./services/characters/characters_go
+    ports:
+      - "8012:8012"
+    environment:
+      - FIRESTORE_DATABASE_ID=characters-test
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - tavern-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/characters/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
 networks:
   tavern-net:
     driver: bridge

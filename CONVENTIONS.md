@@ -149,6 +149,11 @@ const key = 'AUTH_URL';
 const url = process.env[`EXPO_PUBLIC_${key}`];
 ```
 
+### Jest Unit Testing (Frontend)
+
+- **Provider Mocking**: Components relying on global state (e.g., `useQueryClient` or `ActiveProfileContext`) must be rendered with a custom wrapper providing fresh instances of those contexts (e.g., `<QueryClientProvider>`) to avoid cross-test cache pollution.
+- **ESM Transpilation**: Ensure modern ES module dependencies (like `@firebase/util` and `firebase`) are included in Jest's `transformIgnorePatterns` so they are properly transpiled into CommonJS.
+
 ## Anti-Patterns (NEVER DO)
 
 | Anti-Pattern | Why | Instead |

@@ -114,6 +114,10 @@ BACKEND_TRIGGERS=(
     "messages-test-deploy"
     "router-dev-deploy"
     "router-test-deploy"
+    "quests-dev-deploy"
+    "quests-test-deploy"
+    "characters-dev-deploy"
+    "characters-test-deploy"
 )
 
 for TRIGGER in "${BACKEND_TRIGGERS[@]}"; do
