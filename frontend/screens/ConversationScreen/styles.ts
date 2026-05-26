@@ -217,7 +217,7 @@ export const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing[4],
     alignItems: 'center' as const,
-    transform: [{ scaleY: -1 }],
+    transform: [{ rotateX: '180deg' }],
   },
   loadingMoreText: {
     fontFamily: Fonts.scribe,
