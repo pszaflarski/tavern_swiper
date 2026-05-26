@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ActivityIndicator, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Fonts } from '../../theme';
 import { useProfile } from '../../hooks/useProfiles';
 import { Ionicons } from '@expo/vector-icons';
 import { SwipeCard, SwipeProfile } from '../../components/SwipeDeck';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 
 export default function ProfilePreviewScreen() {
@@ -34,12 +35,7 @@ export default function ProfilePreviewScreen() {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Summoning the vision...</Text>
-      </View>
-    );
+    return <DiceLoadingScreen message="Summoning the vision..." />;
   }
 
   if (!profile) {

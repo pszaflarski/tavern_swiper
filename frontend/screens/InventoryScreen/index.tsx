@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import { Colors, Spacing } from '../../theme';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 import { useUser } from '../../hooks/useUser';
 import { useInventory, InventoryEntry } from '../../hooks/useInventory';
@@ -148,10 +149,7 @@ function InventoryScreenInner() {
             ),
           }}
         />
-        <View style={styles.centeredContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.centeredText}>Opening your pouch…</Text>
-        </View>
+        <DiceLoadingScreen message="Opening your pouch…" />
       </View>
     );
   }

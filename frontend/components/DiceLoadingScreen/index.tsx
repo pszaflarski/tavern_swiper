@@ -229,10 +229,10 @@ function LiveDiceScene({ dieType, onSettled }: LiveDiceSceneProps) {
  * sequential dice rolling animation. A random die rolls, settles,
  * holds for 0.5s, then a new random die rolls. Repeats until unmounted.
  */
-export default function DiceLoadingScreen() {
+export default function DiceLoadingScreen({ message: fixedMessage }: { message?: string } = {}) {
   const [dieType, setDieType] = useState<DieType>(getRandomDie);
   const [rollKey, setRollKey] = useState(0);
-  const [message, setMessage] = useState(getRandomMessage);
+  const [displayMessage, setDisplayMessage] = useState(fixedMessage ?? getRandomMessage);
 
   // Pulsing dot animation for the loading text
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
@@ -270,9 +270,9 @@ export default function DiceLoadingScreen() {
     timerRef.current = setTimeout(() => {
       setDieType(getRandomDie());
       setRollKey((k) => k + 1);
-      setMessage(getRandomMessage());
+      if (!fixedMessage) setDisplayMessage(getRandomMessage());
     }, 500);
-  }, []);
+  }, [fixedMessage]);
 
   return (
     <View style={styles.container}>
@@ -298,7 +298,7 @@ export default function DiceLoadingScreen() {
 
       {/* Loading Text */}
       <Animated.Text style={[styles.loadingText, { opacity: pulseAnim }]}>
-        {message}
+        {displayMessage}
       </Animated.Text>
     </View>
   );

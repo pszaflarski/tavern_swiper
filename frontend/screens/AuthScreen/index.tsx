@@ -11,6 +11,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { styles } from './styles';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { auth } from '../../lib/firebase';
 import {
   signInWithEmailAndPassword,
@@ -32,11 +33,7 @@ export default function AuthScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   if (authLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
+    return <DiceLoadingScreen />;
   }
 
   if (isAuthenticated) {
