@@ -256,14 +256,22 @@ export default function DiceLoadingScreen() {
     return () => loop.stop();
   }, [pulseAnim]);
 
+  // Timer ref for cleanup on unmount
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const handleSettled = useCallback(() => {
     // Wait 0.5s, then roll a new random die
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setDieType(getRandomDie());
       setRollKey((k) => k + 1);
       setMessage(getRandomMessage());
     }, 500);
-    return () => clearTimeout(timer);
   }, []);
 
   return (
