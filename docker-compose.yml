@@ -260,6 +260,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+  characters:
+    build:
+      context: ./services/characters/characters_go
+    ports:
+      - "8012:8012"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PORT=8012
+      - FIRESTORE_DATABASE_ID=characters-dev
+    env_file: ./services/characters/characters_go/.env
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/characters/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 
 networks:

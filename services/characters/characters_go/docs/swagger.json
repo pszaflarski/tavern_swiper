@@ -1,0 +1,870 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Predefined character templates, images, and attribution metadata.",
+        "title": "Characters Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/characters",
+    "paths": {
+        "/characters/": {
+            "get": {
+                "tags": [
+                    "characters"
+                ],
+                "summary": "List and search predefined characters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Fandom tag slug or ID",
+                        "name": "fandom",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Race tag slug or ID",
+                        "name": "race",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gender tag slug or ID",
+                        "name": "gender",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.CharacterOut"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Create a character (Admin only)",
+                "parameters": [
+                    {
+                        "description": "Character creation payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterOut"
+                        }
+                    }
+                }
+            }
+        },
+        "/characters/random": {
+            "get": {
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Get a random character",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterOut"
+                        }
+                    }
+                }
+            }
+        },
+        "/characters/{id}": {
+            "get": {
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Get a character by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterOut"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Update a character (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterOut"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Delete a character (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/images/": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "images"
+                ],
+                "summary": "Upload a character image (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character ID",
+                        "name": "character_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source Type (artist | ai_generated)",
+                        "name": "source_type",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Artist Handle",
+                        "name": "artist_handle",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Artist Name",
+                        "name": "artist_name",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Artist Link",
+                        "name": "artist_link",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Position (default 0)",
+                        "name": "position",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Image file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/main.ImageOut"
+                        }
+                    }
+                }
+            }
+        },
+        "/images/by-artist/{handle}": {
+            "get": {
+                "tags": [
+                    "images"
+                ],
+                "summary": "Get all images by artist handle",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Artist Handle",
+                        "name": "handle",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.ImageOut"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/images/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "images"
+                ],
+                "summary": "Update image metadata (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Image ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.ImageUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.ImageOut"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "images"
+                ],
+                "summary": "Delete an image (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Image ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/tags/": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Create a new character tag (Admin only)",
+                "parameters": [
+                    {
+                        "description": "Tag data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.TagCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/by-category/{category}": {
+            "get": {
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List character tags in a category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category",
+                        "name": "category",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Tag"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/by-slug/{slug}": {
+            "get": {
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get a character tag by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag Slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/search": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Search character tags by category and name prefix",
+                "parameters": [
+                    {
+                        "description": "Search query",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.TagSearchQuery"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Tag"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/{id}": {
+            "get": {
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get a character tag by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Update a character tag (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.TagUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.Tag"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Delete a character tag (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.CharTag": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.CharacterCreate": {
+            "type": "object",
+            "required": [
+                "display_name"
+            ],
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "gender": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "image_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "tagline": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.CharacterOut": {
+            "type": "object",
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "character_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "gender": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ImageOut"
+                    }
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "tagline": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.CharacterUpdate": {
+            "type": "object",
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "gender": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "image_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "tagline": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.ImageOut": {
+            "type": "object",
+            "properties": {
+                "artist_handle": {
+                    "type": "string"
+                },
+                "artist_link": {
+                    "type": "string"
+                },
+                "artist_name": {
+                    "type": "string"
+                },
+                "character_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "image_id": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "source_type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.ImageUpdate": {
+            "type": "object",
+            "properties": {
+                "artist_handle": {
+                    "type": "string"
+                },
+                "artist_link": {
+                    "type": "string"
+                },
+                "artist_name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "source_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.Tag": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"active\" or \"pending\"",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagCreate": {
+            "type": "object",
+            "required": [
+                "category",
+                "name"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagSearchQuery": {
+            "type": "object",
+            "required": [
+                "category",
+                "name"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "name": {
+                    "description": "partial prefix",
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagUpdate": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
