@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Pressable, Image, ActivityIndicator, Platform, Animated } from 'react-native';
+import { View, Text, FlatList, Pressable, Image, Platform, Animated } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 
 /** Individual profile card with hamburger-expand pattern */
@@ -260,12 +261,7 @@ function ProfilesScreenInner() {
   );
 
   if (isActuallyLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Consulting the Archives...</Text>
-      </View>
-    );
+    return <DiceLoadingScreen message="Consulting the Archives..." />;
   }
 
   return (
@@ -291,10 +287,7 @@ function ProfilesScreenInner() {
       </TouchableOpacity> */}
 
       {profiles === undefined ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Awakening the Archive...</Text>
-        </View>
+        <DiceLoadingScreen message="Awakening the Archive..." />
       ) : profiles.length > 0 ? (
         <FlatList
           data={profiles}

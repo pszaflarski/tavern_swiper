@@ -10,6 +10,7 @@ import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { useRouter } from 'expo-router';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 import { useUnreadStatus } from '../../hooks/useUnreadStatus';
 
@@ -98,10 +99,7 @@ function MessagesScreenInner() {
         </View>
 
         {isLoadingContent ? (
-          <View style={{ padding: Spacing[10], alignItems: 'center' }}>
-            <ActivityIndicator color={Colors.primary} size="large" />
-            <Text style={[styles.headerSub, { marginTop: Spacing[4] }]}>Consulting the Oracle...</Text>
-          </View>
+          <DiceLoadingScreen message="Consulting the Oracle..." />
         ) : (
           <>
             {/* New Matches Section */}

@@ -218,6 +218,20 @@ jest.mock('expo-font', () => ({
   loadAsync: jest.fn(() => Promise.resolve()),
 }));
 
+// Mock DiceLoadingScreen — uses @react-three/fiber + cannon-es which don't work in jsdom.
+// Renders a lightweight placeholder that exposes the message prop for test assertions.
+jest.mock('./components/DiceLoadingScreen', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ message }: { message?: string }) =>
+      React.createElement(View, { testID: 'dice-loading-screen' },
+        message ? React.createElement(Text, null, message) : React.createElement(Text, null, 'Rolling for initiative…')
+      ),
+  };
+});
+
 // Mock react-native-keyboard-controller
 jest.mock('react-native-keyboard-controller', () => {
   return {

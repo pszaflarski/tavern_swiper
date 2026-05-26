@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SwipeDeck from '../../components/SwipeDeck';
@@ -10,6 +10,7 @@ import { useProfileContext } from '../../context/ProfileContext';
 import { useDiscoveryDeck } from './useDiscoveryDeck';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 
 function TavernScreenInner() {
@@ -52,10 +53,9 @@ function TavernScreenInner() {
   if (isLoadingUser || isLoadingActiveProfile || isLoadingProfiles || isInitialLoad) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.headerSub}>Summoning the realm...</Text>
+        <DiceLoadingScreen message="Summoning the realm..." />
         {loadTimedOut && (
-          <>
+          <View style={{ position: 'absolute', bottom: '20%', alignItems: 'center' }}>
             <Text style={styles.emptyDesc}>The scrying spell is taking longer than expected.</Text>
             <Pressable 
               style={({ pressed }) => [
@@ -67,7 +67,7 @@ function TavernScreenInner() {
             >
               <Text style={{ color: Colors.primary, fontFamily: Fonts.scribe }}>TRY AGAIN</Text>
             </Pressable>
-          </>
+          </View>
         )}
       </View>
     );
