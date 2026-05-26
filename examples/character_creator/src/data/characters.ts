@@ -6,6 +6,7 @@ export interface CharacterPreset {
   gender: string;
   fandom: string;
   image: string;
+  class: string; // D&D Class (Fighter, Rogue, Wizard, Cleric, Druid, Ranger, Paladin)
 }
 
 export const CHARACTER_PRESETS: CharacterPreset[] = [
@@ -16,7 +17,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Male",
     fandom: "D&D",
-    image: "1f2ee97a-1bce-4da8-abe8-e5ae8c429868_1080x1350.jpg"
+    image: "1f2ee97a-1bce-4da8-abe8-e5ae8c429868_1080x1350.jpg",
+    class: "Druid"
   },
   {
     name: "Sylas Vane",
@@ -25,7 +27,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Male",
     fandom: "D&D",
-    image: "2bbfac57-b369-1ad6-edc7-d7fc29b9c651_1080x1350.jpg"
+    image: "2bbfac57-b369-1ad6-edc7-d7fc29b9c651_1080x1350.jpg",
+    class: "Rogue"
   },
   {
     name: "Garok Ironbound",
@@ -34,7 +37,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Orc",
     gender: "Male",
     fandom: "D&D",
-    image: "2d799bbf-e43b-46ed-a48b-7a93629cef22_1080x1350.jpg"
+    image: "2d799bbf-e43b-46ed-a48b-7a93629cef22_1080x1350.jpg",
+    class: "Paladin"
   },
   {
     name: "Aiden of Oakhaven",
@@ -43,7 +47,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Male",
     fandom: "D&D",
-    image: "2dff66ec-c121-7164-b339-87fce85af7e0_1080x1350.jpg"
+    image: "2dff66ec-c121-7164-b339-87fce85af7e0_1080x1350.jpg",
+    class: "Fighter"
   },
   {
     name: "Malakar the Pale",
@@ -52,7 +57,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Male",
     fandom: "D&D",
-    image: "42f61adf-86ee-417f-a535-304aa4c50f94_1080x1350.jpg"
+    image: "42f61adf-86ee-417f-a535-304aa4c50f94_1080x1350.jpg",
+    class: "Fighter"
   },
   {
     name: "Evelyn of the Frost Peaks",
@@ -61,7 +67,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Female",
     fandom: "D&D",
-    image: "47e47060-c479-45f2-b8a2-0d034e91d192_1080x1350.jpg"
+    image: "47e47060-c479-45f2-b8a2-0d034e91d192_1080x1350.jpg",
+    class: "Paladin"
   },
   {
     name: "Lord Korthas the Undying",
@@ -70,7 +77,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Undead",
     gender: "Male",
     fandom: "D&D",
-    image: "4d7e7069-5a8f-44cb-88c6-dbeece1e4caa_1080x1350.jpg"
+    image: "4d7e7069-5a8f-44cb-88c6-dbeece1e4caa_1080x1350.jpg",
+    class: "Paladin"
   },
   {
     name: "Lilith Starspire",
@@ -79,7 +87,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "539d70c7-0626-4314-ae95-22aaf0ed26c8_1080x1350.jpg"
+    image: "539d70c7-0626-4314-ae95-22aaf0ed26c8_1080x1350.jpg",
+    class: "Wizard"
   },
   {
     name: "Garrick Sunshield",
@@ -88,7 +97,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Male",
     fandom: "D&D",
-    image: "67bccd3e-89e0-4933-9277-df4ebd18add4_1080x1350.jpg"
+    image: "67bccd3e-89e0-4933-9277-df4ebd18add4_1080x1350.jpg",
+    class: "Paladin"
   },
   {
     name: "Aria Starwind",
@@ -97,7 +107,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "6c8df807-3ded-459e-8283-46b678d14595_1080x1350.jpg"
+    image: "6c8df807-3ded-459e-8283-46b678d14595_1080x1350.jpg",
+    class: "Fighter"
   },
   {
     name: "Aurelia the Angelic Blade",
@@ -106,7 +117,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Female",
     fandom: "D&D",
-    image: "733977df-f3b1-4aa2-88d4-148fe12895f3_1080x1350.jpg"
+    image: "733977df-f3b1-4aa2-88d4-148fe12895f3_1080x1350.jpg",
+    class: "Paladin"
   },
   {
     name: "Malkor the Defiant",
@@ -115,7 +127,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Orc",
     gender: "Male",
     fandom: "D&D",
-    image: "80540bf2-b6e1-4df6-9a61-8b6d0baeec67_1080x1350.jpg"
+    image: "80540bf2-b6e1-4df6-9a61-8b6d0baeec67_1080x1350.jpg",
+    class: "Druid"
   },
   {
     name: "Sylvia the Golden Lily",
@@ -124,7 +137,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "8aa2e880-9348-4ac1-a027-041ce59d279b_1080x1350.jpg"
+    image: "8aa2e880-9348-4ac1-a027-041ce59d279b_1080x1350.jpg",
+    class: "Paladin"
   },
   {
     name: "Kaelen Stormborn",
@@ -133,7 +147,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Male",
     fandom: "D&D",
-    image: "9098b7a3-f9c2-4b37-9b5a-b23b4af0dbe6_1080x1350.jpg"
+    image: "9098b7a3-f9c2-4b37-9b5a-b23b4af0dbe6_1080x1350.jpg",
+    class: "Fighter"
   },
   {
     name: "Alandra Mooncrest",
@@ -142,7 +157,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "b1960a9c-95b0-41e8-a080-9d531d084341_1080x1350.jpg"
+    image: "b1960a9c-95b0-41e8-a080-9d531d084341_1080x1350.jpg",
+    class: "Cleric"
   },
   {
     name: "Talia Greenweave",
@@ -151,7 +167,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "cfe53962-a733-429a-8f8e-7e77fb67f5b0_1080x1350.jpg"
+    image: "cfe53962-a733-429a-8f8e-7e77fb67f5b0_1080x1350.jpg",
+    class: "Druid"
   },
   {
     name: "Elysia Swifthand",
@@ -160,7 +177,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "d21e8587-95ac-443f-80c1-c3872cdbd383_1080x1350.jpg"
+    image: "d21e8587-95ac-443f-80c1-c3872cdbd383_1080x1350.jpg",
+    class: "Wizard"
   },
   {
     name: "Fiona Leafbloom",
@@ -169,7 +187,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "d6ab92f3-5c4f-4115-a4c8-95f5c298732a_1080x1350.jpg"
+    image: "d6ab92f3-5c4f-4115-a4c8-95f5c298732a_1080x1350.jpg",
+    class: "Druid"
   },
   {
     name: "Ignis the Stone Guard",
@@ -178,7 +197,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Undead",
     gender: "Male",
     fandom: "D&D",
-    image: "df3abe2c-a526-413b-ba77-0493259f7fa6_1080x1350.jpg"
+    image: "df3abe2c-a526-413b-ba77-0493259f7fa6_1080x1350.jpg",
+    class: "Fighter"
   },
   {
     name: "Talia Wavecrest",
@@ -187,7 +207,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "efac4ed7-d6b2-4f4d-95e0-a5e6a5f0fab0_1080x1350.jpg"
+    image: "efac4ed7-d6b2-4f4d-95e0-a5e6a5f0fab0_1080x1350.jpg",
+    class: "Ranger"
   },
   {
     name: "Kailani Stormwave",
@@ -196,7 +217,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "f5d73fde-eef1-48a4-8b68-f54c024d0403_1080x1350.jpg"
+    image: "f5d73fde-eef1-48a4-8b68-f54c024d0403_1080x1350.jpg",
+    class: "Ranger"
   },
   {
     name: "Theseus of Mycenae",
@@ -205,7 +227,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Human",
     gender: "Male",
     fandom: "D&D",
-    image: "f8467863-6f69-4ad4-afb7-712a0b77b474_1080x1350.jpg"
+    image: "f8467863-6f69-4ad4-afb7-712a0b77b474_1080x1350.jpg",
+    class: "Fighter"
   },
   {
     name: "Sylvia Frostbloom",
@@ -214,6 +237,7 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     race: "Elf",
     gender: "Female",
     fandom: "D&D",
-    image: "fa1d86b2-8d5f-40df-86d0-c00052d5e3e1_1080x1350.jpg"
+    image: "fa1d86b2-8d5f-40df-86d0-c00052d5e3e1_1080x1350.jpg",
+    class: "Paladin"
   }
 ];
