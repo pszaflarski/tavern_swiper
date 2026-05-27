@@ -52,10 +52,10 @@ function TavernScreenInner() {
 
   if (isLoadingUser || isLoadingActiveProfile || isLoadingProfiles || isInitialLoad) {
     return (
-      <View style={styles.centered}>
+      <View style={{ flex: 1 }}>
         <DiceLoadingScreen message="Summoning the realm..." />
         {loadTimedOut && (
-          <View style={{ position: 'absolute', bottom: '20%', alignItems: 'center' }}>
+          <View style={{ position: 'absolute', bottom: '20%', left: 0, right: 0, alignItems: 'center' }}>
             <Text style={styles.emptyDesc}>The scrying spell is taking longer than expected.</Text>
             <Pressable 
               style={({ pressed }) => [
