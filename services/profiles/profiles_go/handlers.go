@@ -322,11 +322,13 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 					if !ok1 || !ok2 || !ok3 || !ok4 {
 						continue // skip malformed tag
 					}
+					status, _ := m["status"].(string)
 					res = append(res, ProfileTag{
 						ID:       id,
 						Category: cat,
 						Name:     name,
 						Slug:     slug,
+						Status:   status,
 					})
 				}
 			}
@@ -782,7 +784,7 @@ func handleGetProfilesBatch(c *gin.Context) {
 // @Failure      503  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /user/me/active [get]
-func handleGetMyActiveProfile(c *gin.Context) {
+func handleGetMyActiveProfile(c *gin.Context, publisher Publisher) {
 	auth := GetAuth(c)
 	client, err := getDBFunc(c.Request.Context())
 	if err != nil {
@@ -822,7 +824,17 @@ func handleGetMyActiveProfile(c *gin.Context) {
 	// Activate this one
 	docAny.Ref().Update(c.Request.Context(), []firestore.Update{
 		{Path: "is_active", Value: true},
+		{Path: "updated_at", Value: firestore.ServerTimestamp},
 	})
+	// Publish event so discovery cache stays in sync
+	if publisher != nil {
+		activatedDoc, _ := docAny.Ref().Get(c.Request.Context())
+		if activatedDoc != nil && activatedDoc.Exists() {
+			activatedProfile, _ := docToProfile(activatedDoc)
+			activatedProfile.IsActive = true
+			publisher.PublishUpserted(c.Request.Context(), activatedProfile)
+		}
+	}
 
 	p, _ := docToProfile(docAny)
 	p.IsActive = true // Update the local copy for response
@@ -1059,6 +1071,7 @@ func tagsToInterface(tags []ProfileTag) []interface{} {
 			"category": t.Category,
 			"name":     t.Name,
 			"slug":     t.Slug,
+			"status":   t.Status,
 		}
 	}
 	return res

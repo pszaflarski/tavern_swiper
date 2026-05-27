@@ -26,6 +26,7 @@ import { useImageSlots } from './useImageSlots';
 import { prepareImageUpload } from '../../lib/imageProcessing';
 import * as FileSystem from 'expo-file-system';
 import { styles } from './styles';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 
 const GRID_SPACING = PROFILE.GRID_SPACING;
 const MAX_ITEM_WIDTH = PROFILE.MAX_ITEM_WIDTH;
@@ -167,12 +168,7 @@ export default function CreateAndEditProfileScreen() {
   const isPending = createProfile.isPending || updateProfile.isPending;
 
   if (isEditing && isLoadingProfile) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Recalling the legend...</Text>
-      </View>
-    );
+    return <DiceLoadingScreen message="Recalling the legend..." />;
   }
 
   return (

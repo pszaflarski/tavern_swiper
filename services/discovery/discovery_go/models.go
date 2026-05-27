@@ -1,15 +1,19 @@
 package main
 
 type DiscoveryProfile struct {
-	ProfileID      string   `json:"profile_id"`
-	DisplayName    string   `json:"display_name"`
-	Tagline        *string  `json:"tagline"`
-	Bio            *string  `json:"bio"`
-	Gender         *string  `json:"gender"`
-	ImageURLs      []string `json:"image_urls"`
-	CharacterClass *string  `json:"character_class"`
-	Realm          *string  `json:"realm"`
-	Talents        []string `json:"talents"`
+	ProfileID   string              `json:"profile_id"`
+	DisplayName string              `json:"display_name"`
+	Tagline     *string             `json:"tagline,omitempty"`
+	Bio         *string             `json:"bio,omitempty"`
+	ImageURLs   []string            `json:"image_urls"`
+	Gender      []map[string]string `json:"gender,omitempty"`
+	Race        []map[string]string `json:"race,omitempty"`
+	Fandom      []map[string]string `json:"fandom,omitempty"`
+	Interests   []map[string]string `json:"interests,omitempty"`
+	Events      []map[string]string `json:"events,omitempty"`
+	LookingFor  []map[string]string `json:"looking_for,omitempty"`
+	Age         *int                `json:"age,omitempty"`
+	IsOC        *bool               `json:"is_oc,omitempty"`
 }
 
 type FeedResponse struct {

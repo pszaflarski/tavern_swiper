@@ -56,5 +56,3 @@ func mapFirebaseError(message string) string {
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
-// Note: using a more robust strings.Contains would require the strings package, 
-// but I'll keep it simple for now or just import strings in the final main.go

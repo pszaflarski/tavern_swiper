@@ -25,6 +25,7 @@ func NewPublisher() (Publisher, error) {
 	projectID := os.Getenv("PUBSUB_PROJECT_ID")
 	topicID := os.Getenv("PUBSUB_TOPIC_ID")
 	if topicID == "" {
+		log.Println("[WARN] PUBSUB_TOPIC_ID not set, defaulting to 'match-events'. Set to '{env}-discovery-match-events-v1' for correctness.")
 		topicID = "match-events"
 	}
 

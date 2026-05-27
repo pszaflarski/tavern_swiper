@@ -9,7 +9,6 @@ collections:
   owned:
     - profiles
     - tags
-    - tag_suggestions
 
 pubsub:
   publishes:

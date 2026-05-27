@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import DiceOverlay from '../../components/DiceOverlay';
 import { MESSAGES } from '../../constants';
 import { styles } from './styles';
@@ -362,11 +363,7 @@ function ConversationScreenInner() {
   }));
 
   if (isLoadingInbox && !conversation) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
+    return <DiceLoadingScreen />;
   }
 
   return (
@@ -403,10 +400,7 @@ function ConversationScreenInner() {
       />
 
       {isLoadingMessages && messages.length === 0 ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={Colors.primary} />
-          <Text style={styles.loadingText}>Reading the scrolls...</Text>
-        </View>
+        <DiceLoadingScreen message="Reading the scrolls..." />
       ) : (
         <FlatList
           ref={flatListRef}

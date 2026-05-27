@@ -20,6 +20,8 @@ func httpError(c *gin.Context, status int, message string) {
 func validationError(c *gin.Context, err error) {
 	msg := err.Error()
 	errType := "value_error"
+	input := msg
+	field := "body"
 	if strings.Contains(msg, "bool") {
 		msg = "Input should be a valid boolean, unable to interpret input"
 		errType = "bool_parsing"
@@ -27,8 +29,8 @@ func validationError(c *gin.Context, err error) {
 
 	items := []interface{}{
 		map[string]interface{}{
-			"input": "not-a-bool",
-			"loc":   []interface{}{"body", "is_premium"},
+			"input": input,
+			"loc":   []interface{}{"body", field},
 			"msg":   msg,
 			"type":  errType,
 		},

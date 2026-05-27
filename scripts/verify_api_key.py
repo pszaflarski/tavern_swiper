@@ -1,10 +1,17 @@
+import os
+import sys
 import requests
-import json
 
 KEYS = {
-    "frontend": "AIzaSyCnKm4gayoO0C35CNeMJ7E82fFITvVpGAw",
-    "auth_service": "AIzaSyCLDTIuGwoRcGLF1woXC6I1644-jSSXjNk"
+    "frontend": os.environ.get("FRONTEND_API_KEY", ""),
+    "auth_service": os.environ.get("AUTH_SERVICE_API_KEY", ""),
 }
+
+if not all(KEYS.values()):
+    print("ERROR: Set FRONTEND_API_KEY and AUTH_SERVICE_API_KEY env vars")
+    print("  export FRONTEND_API_KEY=<your Firebase Web API key>")
+    print("  export AUTH_SERVICE_API_KEY=<your auth service Firebase key>")
+    sys.exit(1)
 
 def verify_key(name, key):
     # We use a non-existent email/password to see what error the API returns.

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Pressable, Image, ActivityIndicator, Platform, Animated } from 'react-native';
+import { View, Text, FlatList, Pressable, Image, Platform, Animated } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 
 /** Individual profile card with hamburger-expand pattern */
@@ -56,7 +57,13 @@ function ProfileCard({
       >
         {/* Normal card content */}
         {!expanded && (
-          <View style={styles.cardNormalContent}>
+          <Pressable
+            style={styles.cardNormalContent}
+            onPress={() => { if (!isActive) onSetActive(); }}
+            testID={`profile-card-tap-${item.profile_id}`}
+            accessibilityLabel={isActive ? `${item.display_name} is active` : `Tap to activate ${item.display_name}`}
+            accessibilityRole="button"
+          >
             <View style={styles.profileImageContainer}>
               {item.image_urls?.[0] ? (
                 <Image source={{ uri: item.image_urls[0] }} style={styles.profileImage} />
@@ -93,7 +100,7 @@ function ProfileCard({
             >
               <Ionicons name="ellipsis-vertical" size={22} color={Colors.outline} />
             </Pressable>
-          </View>
+          </Pressable>
         )}
 
         {/* Expanded action overlay */}
@@ -260,12 +267,7 @@ function ProfilesScreenInner() {
   );
 
   if (isActuallyLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Consulting the Archives...</Text>
-      </View>
-    );
+    return <DiceLoadingScreen message="Consulting the Archives..." />;
   }
 
   return (
@@ -291,10 +293,7 @@ function ProfilesScreenInner() {
       </TouchableOpacity> */}
 
       {profiles === undefined ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Awakening the Archive...</Text>
-        </View>
+        <DiceLoadingScreen message="Awakening the Archive..." />
       ) : profiles.length > 0 ? (
         <FlatList
           data={profiles}

@@ -118,12 +118,46 @@ describe('Profiles Screen', () => {
     expect(queryByTestId('preview-profile-button-1')).toBeNull();
   });
 
-  it('shows "Set Active" button only for non-active profiles', () => {
+  it('shows "Set Active" button only for non-active profiles in the expanded menu', () => {
     const { getByTestId, queryByTestId } = render(<ProfilesScreen />);
     
     // Profile 1 is active — expand it
     fireEvent.press(getByTestId('profile-menu-1'));
     expect(queryByTestId('select-profile-button-1')).toBeNull();
+  });
+
+  it('calls setActiveProfileId when a non-active profile card is tapped', () => {
+    const mockSetActive = jest.fn();
+    (useProfileContext as jest.Mock).mockReturnValue({
+      activeProfileId: '1',
+      setActiveProfileId: mockSetActive,
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: [],
+    });
+
+    const { getByTestId } = render(<ProfilesScreen />);
+    
+    // Profile 2 is NOT active — tapping its card should activate it
+    fireEvent.press(getByTestId('profile-card-tap-2'));
+    expect(mockSetActive).toHaveBeenCalledWith('2');
+  });
+
+  it('does NOT call setActiveProfileId when the already-active profile card is tapped', () => {
+    const mockSetActive = jest.fn();
+    (useProfileContext as jest.Mock).mockReturnValue({
+      activeProfileId: '1',
+      setActiveProfileId: mockSetActive,
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: [],
+    });
+
+    const { getByTestId } = render(<ProfilesScreen />);
+    
+    // Profile 1 IS active — tapping its card should do nothing
+    fireEvent.press(getByTestId('profile-card-tap-1'));
+    expect(mockSetActive).not.toHaveBeenCalled();
   });
 
   it('shows loading state', () => {

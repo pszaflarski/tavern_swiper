@@ -24,7 +24,7 @@
   },
   {
     "createTime": "2026-04-19T14:10:20.362900904Z",
-    "filename": "services/discovery_subscriber/cloudbuild.yaml",
+    "filename": "services/discovery/discovery_subscriber/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -34,7 +34,7 @@
     },
     "id": "ed86ec32-99a6-4483-ae5e-2e22120dd3fd",
     "includedFiles": [
-      "services/discovery_subscriber/**"
+      "services/discovery/discovery_subscriber/**"
     ],
     "name": "discovery-subscriber-dev-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/ed86ec32-99a6-4483-ae5e-2e22120dd3fd",
@@ -49,7 +49,7 @@
   },
   {
     "createTime": "2026-04-19T14:04:00.657044457Z",
-    "filename": "services/messages_subscriber/cloudbuild.yaml",
+    "filename": "services/messages/messages_subscriber/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -59,7 +59,7 @@
     },
     "id": "3c4e099d-43f9-499f-8cc1-2c356f12f0d2",
     "includedFiles": [
-      "services/messages_subscriber/**"
+      "services/messages/messages_subscriber/**"
     ],
     "name": "messages-subscriber-test-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/3c4e099d-43f9-499f-8cc1-2c356f12f0d2",
@@ -74,7 +74,7 @@
   },
   {
     "createTime": "2026-04-19T14:03:59.247794244Z",
-    "filename": "services/messages_subscriber/cloudbuild.yaml",
+    "filename": "services/messages/messages_subscriber/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -84,7 +84,7 @@
     },
     "id": "82de0208-f6d8-4bdc-a09f-1e8da643b9e9",
     "includedFiles": [
-      "services/messages_subscriber/**"
+      "services/messages/messages_subscriber/**"
     ],
     "name": "messages-subscriber-dev-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/82de0208-f6d8-4bdc-a09f-1e8da643b9e9",
@@ -99,7 +99,7 @@
   },
   {
     "createTime": "2026-04-19T00:48:00.570605500Z",
-    "filename": "services/discovery_subscriber/cloudbuild.yaml",
+    "filename": "services/discovery/discovery_subscriber/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -109,7 +109,7 @@
     },
     "id": "73305c62-10b6-4607-892d-6cb108c7db0b",
     "includedFiles": [
-      "services/discovery_subscriber/**"
+      "services/discovery/discovery_subscriber/**"
     ],
     "name": "discovery-subscriber-test-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/73305c62-10b6-4607-892d-6cb108c7db0b",
@@ -148,7 +148,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:40.062261235Z",
-    "filename": "services/users_go/cloudbuild.yaml",
+    "filename": "services/auth/users_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -158,7 +158,7 @@
     },
     "id": "0ece2461-57a3-4674-8247-126d0e40e300",
     "includedFiles": [
-      "services/users_go/**"
+      "services/auth/users_go/**"
     ],
     "name": "users-test-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/0ece2461-57a3-4674-8247-126d0e40e300",
@@ -173,7 +173,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:38.546089812Z",
-    "filename": "services/messages_go/cloudbuild.yaml",
+    "filename": "services/messages/messages_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -183,7 +183,7 @@
     },
     "id": "64d8b8bf-4978-4269-b7c5-3248de8c962d",
     "includedFiles": [
-      "services/messages_go/**"
+      "services/messages/messages_go/**"
     ],
     "name": "messages-test-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/64d8b8bf-4978-4269-b7c5-3248de8c962d",
@@ -198,7 +198,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:37.262918852Z",
-    "filename": "services/profiles_go/cloudbuild.yaml",
+    "filename": "services/profiles/profiles_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -208,7 +208,7 @@
     },
     "id": "88b4db2a-2f6b-4d55-bd9a-58b26057b270",
     "includedFiles": [
-      "services/profiles_go/**"
+      "services/profiles/profiles_go/**"
     ],
     "name": "profiles-test-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/88b4db2a-2f6b-4d55-bd9a-58b26057b270",
@@ -223,7 +223,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:36.002763318Z",
-    "filename": "services/discovery_go/cloudbuild.yaml",
+    "filename": "services/discovery/discovery_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -233,7 +233,7 @@
     },
     "id": "16e773b3-6035-4fa7-809a-125a8924aaa1",
     "includedFiles": [
-      "services/discovery_go/**"
+      "services/discovery/discovery_go/**"
     ],
     "name": "discovery-test-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/16e773b3-6035-4fa7-809a-125a8924aaa1",
@@ -248,7 +248,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:34.775845057Z",
-    "filename": "services/auth_go/cloudbuild.yaml",
+    "filename": "services/auth/auth_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -258,7 +258,7 @@
     },
     "id": "cccaae19-aab4-4d84-8ac3-1d382c6cb997",
     "includedFiles": [
-      "services/auth_go/**"
+      "services/auth/auth_go/**"
     ],
     "name": "auth-test-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/cccaae19-aab4-4d84-8ac3-1d382c6cb997",
@@ -275,7 +275,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:31.896843045Z",
-    "filename": "services/users_go/cloudbuild.yaml",
+    "filename": "services/auth/users_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -285,7 +285,7 @@
     },
     "id": "6f591180-55f5-4beb-adea-b3cf204b1712",
     "includedFiles": [
-      "services/users_go/**"
+      "services/auth/users_go/**"
     ],
     "name": "users-dev-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/6f591180-55f5-4beb-adea-b3cf204b1712",
@@ -300,7 +300,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:27.893943623Z",
-    "filename": "services/messages_go/cloudbuild.yaml",
+    "filename": "services/messages/messages_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -310,7 +310,7 @@
     },
     "id": "c37ca30a-3488-494b-ae45-681d7e20fba7",
     "includedFiles": [
-      "services/messages_go/**"
+      "services/messages/messages_go/**"
     ],
     "name": "messages-dev-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/c37ca30a-3488-494b-ae45-681d7e20fba7",
@@ -325,7 +325,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:23.996086771Z",
-    "filename": "services/profiles_go/cloudbuild.yaml",
+    "filename": "services/profiles/profiles_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -335,7 +335,7 @@
     },
     "id": "c56dcd59-f071-4534-b578-13706949e3e5",
     "includedFiles": [
-      "services/profiles_go/**"
+      "services/profiles/profiles_go/**"
     ],
     "name": "profiles-dev-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/c56dcd59-f071-4534-b578-13706949e3e5",
@@ -350,7 +350,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:19.612512404Z",
-    "filename": "services/discovery_go/cloudbuild.yaml",
+    "filename": "services/discovery/discovery_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -360,7 +360,7 @@
     },
     "id": "78184a63-dd71-4473-bb8f-31ac2ad1da06",
     "includedFiles": [
-      "services/discovery_go/**"
+      "services/discovery/discovery_go/**"
     ],
     "name": "discovery-dev-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/78184a63-dd71-4473-bb8f-31ac2ad1da06",
@@ -375,7 +375,7 @@
   },
   {
     "createTime": "2026-04-18T18:53:15.804932063Z",
-    "filename": "services/auth_go/cloudbuild.yaml",
+    "filename": "services/auth/auth_go/cloudbuild.yaml",
     "github": {
       "name": "tavern_swiper",
       "owner": "pszaflarski",
@@ -385,7 +385,7 @@
     },
     "id": "c6fe0338-f34b-458b-a393-b963491710b0",
     "includedFiles": [
-      "services/auth_go/**"
+      "services/auth/auth_go/**"
     ],
     "name": "auth-dev-deploy",
     "resourceName": "projects/tavern-swiper-dev/locations/global/triggers/c6fe0338-f34b-458b-a393-b963491710b0",

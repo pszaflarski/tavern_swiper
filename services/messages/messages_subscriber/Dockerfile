@@ -12,7 +12,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o subscriber-bin .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -o subscriber-bin .
 
 # Run stage
 FROM alpine:3.23

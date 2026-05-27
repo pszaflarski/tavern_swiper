@@ -8,16 +8,9 @@
   "test_get_feed_success": {
     "profiles": [
       {
-        "bio": null,
-        "character_class": null,
         "display_name": "Legolas",
-        "gender": null,
         "image_urls": [],
-        "is_active": true,
-        "profile_id": "p2",
-        "realm": null,
-        "tagline": null,
-        "talents": []
+        "profile_id": "p2"
       }
     ]
   },
@@ -27,16 +20,9 @@
   "test_get_feed_with_filtering": {
     "profiles": [
       {
-        "bio": null,
-        "character_class": null,
         "display_name": "Gimli",
-        "gender": null,
         "image_urls": [],
-        "is_active": true,
-        "profile_id": "p3",
-        "realm": null,
-        "tagline": null,
-        "talents": []
+        "profile_id": "p3"
       }
     ]
   },
@@ -77,6 +63,7 @@
     "created_at": "2026-04-17T12:00:00+00:00",
     "direction": "right",
     "id": null,
+    "match_id": null,
     "swipe_id": "fixed-swipe-id-for-snapshot",
     "swiped_profile_id": "p2",
     "swiper_profile_id": "p1"

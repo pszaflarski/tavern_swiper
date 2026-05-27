@@ -1,11 +1,19 @@
 #!/bin/bash
+# Create production Cloud Build triggers for all services.
+#
+# REQUIRED ENV VARS — set before running:
+#   export JWT_SECRET=$(gcloud secrets versions access latest --secret=jwt-secret --project=tavern-swiper-prod)
+#   export FIREBASE_KEY=<your Firebase Web API key>
+#   export FIREBASE_SENDER_ID=<your Firebase Messaging Sender ID>
+#   export FIREBASE_APP_ID=<your Firebase App ID>
+
 PROJECT_ID="tavern-swiper-prod"
 REPO_OWNER="pszaflarski"
 REPO_NAME="tavern_swiper"
-JWT_SECRET="ofPjAHbf1C2otI/rpoA5SUjom0wd0qcNGlG0bv5G2sI="
-FIREBASE_KEY="AIzaSyAe4-eeKUvy1SBYSFzHO5f92Cu1HuBPonI"
-FIREBASE_SENDER_ID="43551826902"
-FIREBASE_APP_ID="1:43551826902:web:a6dd705d465b60447bba77"
+JWT_SECRET="${JWT_SECRET:?ERROR: JWT_SECRET env var required. Use: export JWT_SECRET=\$(gcloud secrets versions access latest --secret=jwt-secret --project=tavern-swiper-prod)}"
+FIREBASE_KEY="${FIREBASE_KEY:?ERROR: FIREBASE_KEY env var required}"
+FIREBASE_SENDER_ID="${FIREBASE_SENDER_ID:?ERROR: FIREBASE_SENDER_ID env var required}"
+FIREBASE_APP_ID="${FIREBASE_APP_ID:?ERROR: FIREBASE_APP_ID env var required}"
 
 # Function to create a backend service trigger
 # $1=name, $2=yaml, $3=included_files_path, $4=dir_name, $5=service_name, $6=extra_subs

@@ -18,11 +18,12 @@ import (
 const TAGS_COLLECTION = "tags"
 
 var ValidCategories = map[string]bool{
-	"gender":    true,
-	"race":      true,
-	"fandom":    true,
-	"interests": true,
-	"events":    true,
+	"gender":      true,
+	"race":        true,
+	"fandom":      true,
+	"interests":   true,
+	"events":      true,
+	"looking_for": true,
 }
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+__[a-z0-9_]+$`)
@@ -40,10 +41,11 @@ func generateSlugWithUniqueness(ctx context.Context, client FirestoreClient, cat
 	
 	baseSlug := fmt.Sprintf("%s__%s", category, base)
 	
-	// Check if exists
+	// Check if exists, using a short random suffix on collision to avoid
+	// race conditions from the non-transactional check-then-set pattern.
 	slug := baseSlug
-	suffix := 1
-	for {
+	const maxRetries = 10
+	for attempt := 0; attempt < maxRetries; attempt++ {
 		existing, err := client.Collection(TAGS_COLLECTION).Where("slug", "==", slug).Documents(ctx).GetAll()
 		if err != nil {
 			return "", err
@@ -51,9 +53,10 @@ func generateSlugWithUniqueness(ctx context.Context, client FirestoreClient, cat
 		if len(existing) == 0 {
 			return slug, nil
 		}
-		slug = fmt.Sprintf("%s_%d", baseSlug, suffix)
-		suffix++
+		// Append a short random suffix to avoid race conditions
+		slug = fmt.Sprintf("%s_%s", baseSlug, uuid.New().String()[:6])
 	}
+	return "", fmt.Errorf("failed to generate unique slug after %d attempts", maxRetries)
 }
 
 // handleGetTag godoc
