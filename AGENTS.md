@@ -26,6 +26,13 @@
 | `messages_go` | messages | 8005 | `messages-{env}` | `services/messages/messages_go/` |
 | `messages_subscriber` | messages | 8008 | `messages-{env}` | `services/messages/messages_subscriber/` |
 | `router_go` | router | 8010 | `router-{env}` | `services/router/router_go/` |
+| `bots_go` | bots | 8011 | `bots-{env}` | `services/bots/bots_go/` |
+| `bots_subscriber` | bots | 8080 | `bots-{env}` | `services/bots/bots_subscriber/` |
+| `agent_router` | ai | 8000 | MongoDB (via Secret Manager) | `services/agent_router/` |
+| `characters_go` | characters | 8012 | `characters-{env}` | `services/characters/characters_go/` |
+| `quests_go` | quests | 8013 | `quests-{env}` | `services/quests/quests_go/` |
+
+> **Note:** `agent_router` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`.
 
 ## Absolute Rules
 
@@ -55,7 +62,9 @@ All backend services share the same `JWT_SECRET` for local HMAC-based token veri
 | Publisher | Topic | Subscriber | Cache Collection |
 |-----------|-------|------------|-----------------|
 | `profiles_go` | `{env}-profiles-profile-events-v1` | `discovery_subscriber` | `profiles_profiles_cache` in discovery DB |
+| `profiles_go` | `{env}-profiles-profile-events-v1` | `bots_subscriber` | Bot welcome swipes on new profiles |
 | `discovery_go` | `{env}-discovery-match-events-v1` | `messages_subscriber` | `discovery_matches_cache` in messages DB |
+| `messages_go` | `{env}-messages-message-events-v1` | `bots_subscriber` | Bot AI reply generation |
 
 Events use **Protobuf** serialization. Subscribers are push-based (Cloud Run endpoints or local pull in Docker).
 

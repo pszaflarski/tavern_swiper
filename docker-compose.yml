@@ -285,6 +285,62 @@ services:
       timeout: 5s
       retries: 3
 
+  bots:
+    build:
+      context: ./services/bots/bots_go
+    ports:
+      - "8011:8011"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PORT=8011
+      - FIRESTORE_DATABASE_ID=bots-dev
+      - ROUTER_SERVICE_URL=http://router:8010
+      - ROUTER_TAG=default
+      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
+    env_file: ./services/bots/bots_go/.env
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      router:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/bots/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  quests:
+    build:
+      context: ./services/quests/quests_go
+    ports:
+      - "8013:8013"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PORT=8013
+      - FIRESTORE_DATABASE_ID=quests-dev
+    env_file: ./services/quests/quests_go/.env
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/quests/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 
 networks:
   default:

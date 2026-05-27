@@ -52,7 +52,7 @@ Full profile lifecycle management including creation, updates, image uploads wit
 
 ### Tags System (`/profiles/tags`)
 
-Granular filtering attributes (gender, race, fandom, interests) with admin-managed lifecycle and user suggestions.
+Granular filtering attributes (gender, race, fandom, interests, events, looking_for) with admin-managed lifecycle.
 
 - `POST /profiles/tags/` — Create tag (Admin+)
 - `GET /profiles/tags/{id}` — Get tag by ID
@@ -62,9 +62,6 @@ Granular filtering attributes (gender, race, fandom, interests) with admin-manag
 - `POST /profiles/tags/validate` — Validate tag combinations exist
 - `PUT /profiles/tags/{id}` — Update tag (Admin+)
 - `DELETE /profiles/tags/{id}` — Delete tag (Admin+)
-- `POST /profiles/tags/suggest` — User tag suggestion
-- `GET /profiles/tags/suggestions` — List suggestions (Admin+)
-- `DELETE /profiles/tags/suggestions/{id}` — Reject suggestion (Admin+)
 
 ## Cross-Service Dependencies
 
@@ -102,8 +99,16 @@ All events use **Protobuf** serialization (`proto/profile_events.proto`).
 | `user_id` | string | Owner's Firebase UID |
 | `display_name` | string | Hero name |
 | `bio` | string | Hero backstory |
-| `image_url` | string | GCS public URL |
-| `tags` | array | Denormalized tag objects `{id, name, slug, category}` |
+| `tagline` | string | Short tagline |
+| `image_urls` | array\<string\> | GCS public URLs |
+| `gender` | array\<tag\> | Gender tag objects `{id, name, slug, category, status}` |
+| `race` | array\<tag\> | Race tag objects |
+| `fandom` | array\<tag\> | Fandom tag objects |
+| `interests` | array\<tag\> | Interest tag objects |
+| `events` | array\<tag\> | Event tag objects |
+| `looking_for` | array\<tag\> | Looking-for tag objects |
+| `age` | int | Age (optional) |
+| `is_oc` | bool | Whether this is an original character |
 | `is_active` | bool | Whether this is the user's current identity |
 | `created_at` | timestamp | Server-side timestamp |
 | `updated_at` | timestamp | Server-side timestamp |
@@ -113,7 +118,7 @@ All events use **Protobuf** serialization (`proto/profile_events.proto`).
 |-------|------|-------------|
 | `name` | string | Display name |
 | `slug` | string | URL-safe unique identifier |
-| `category` | string | `gender`, `race`, `fandom`, `interest` |
+| `category` | string | `gender`, `race`, `fandom`, `interests`, `events`, `looking_for` |
 | `status` | string | `approved`, `pending` |
 | `created_at` | timestamp | Server-side timestamp |
 

@@ -393,8 +393,12 @@ func createUserHandler(c *gin.Context) {
 // @Router       / [delete]
 func purgeAllUsersHandler(c *gin.Context) {
 	ctx := c.Request.Context()
-	db, _ := getDBFunc(ctx)
-	
+	db, err := getDBFunc(ctx)
+	if err != nil {
+		c.JSON(500, gin.H{"detail": "database unavailable"})
+		return
+	}
+
 	authSvc := serviceURLs.Get("auth")
 
 	// L2: Paginated purge for users

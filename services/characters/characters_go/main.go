@@ -23,7 +23,7 @@ import (
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8012"
 	}
 
 	r := gin.Default()
