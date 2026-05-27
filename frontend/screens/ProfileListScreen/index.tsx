@@ -57,7 +57,13 @@ function ProfileCard({
       >
         {/* Normal card content */}
         {!expanded && (
-          <View style={styles.cardNormalContent}>
+          <Pressable
+            style={styles.cardNormalContent}
+            onPress={() => { if (!isActive) onSetActive(); }}
+            testID={`profile-card-tap-${item.profile_id}`}
+            accessibilityLabel={isActive ? `${item.display_name} is active` : `Tap to activate ${item.display_name}`}
+            accessibilityRole="button"
+          >
             <View style={styles.profileImageContainer}>
               {item.image_urls?.[0] ? (
                 <Image source={{ uri: item.image_urls[0] }} style={styles.profileImage} />
@@ -94,7 +100,7 @@ function ProfileCard({
             >
               <Ionicons name="ellipsis-vertical" size={22} color={Colors.outline} />
             </Pressable>
-          </View>
+          </Pressable>
         )}
 
         {/* Expanded action overlay */}
