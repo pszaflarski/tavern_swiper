@@ -1,8 +1,0 @@
-# Tavern Swiper Workspace Rules
-
-Adhere to the project identity, service directory, database isolation, and operational rules defined in the primary documentation:
-
-- [AGENTS.md](file:///home/peter/Documents/tavern_swiper/AGENTS.md) — System boundaries, service registry, absolute environment rules, and deployment policies.
-- [CONVENTIONS.md](file:///home/peter/Documents/tavern_swiper/CONVENTIONS.md) — Code patterns, naming conventions, unit tests, and frontend/backend implementation templates.
-
-Please read those files first before suggesting or making changes to the codebase.

@@ -23,7 +23,7 @@ func setupTest(publisher Publisher) *gin.Engine {
 		p.GET("/:id", handleGetProfile)
 		p.POST("/batch", handleGetProfilesBatch)
 		p.GET("/user/me", handleListMyProfiles)
-		p.GET("/user/me/active", handleGetMyActiveProfile)
+		p.GET("/user/me/active", func(c *gin.Context) { handleGetMyActiveProfile(c, publisher) })
 		p.GET("/user/:user_id", handleListProfilesForUser)
 		p.PUT("/:id", func(c *gin.Context) { handleUpdateProfile(c, publisher) })
 		p.POST("/:id/set_active", func(c *gin.Context) { handleSetProfileActive(c, publisher) })

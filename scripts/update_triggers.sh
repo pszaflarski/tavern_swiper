@@ -7,8 +7,14 @@ set -e
 PROJECT="tavern-swiper-dev"
 TMPFILE="/tmp/trigger_update.yaml"
 
-ROUTER_DEV_URL="https://router-dev-hhqol7siba-uc.a.run.app"
-ROUTER_TEST_URL="https://router-test-hhqol7siba-uc.a.run.app"
+# Resolve router URLs dynamically (fallback to env vars if gcloud unavailable)
+ROUTER_DEV_URL="${ROUTER_DEV_URL:-$(gcloud run services describe router-dev --project=$PROJECT --region=us-central1 --format='value(status.url)' 2>/dev/null || echo '')}"
+ROUTER_TEST_URL="${ROUTER_TEST_URL:-$(gcloud run services describe router-test --project=$PROJECT --region=us-central1 --format='value(status.url)' 2>/dev/null || echo '')}"
+
+if [ -z "$ROUTER_DEV_URL" ] || [ -z "$ROUTER_TEST_URL" ]; then
+  echo "ERROR: Could not resolve router URLs. Set ROUTER_DEV_URL and ROUTER_TEST_URL env vars, or ensure gcloud is authenticated."
+  exit 1
+fi
 
 # Map: trigger_name -> router_url
 declare -A TRIGGERS

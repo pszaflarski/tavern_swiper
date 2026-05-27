@@ -117,7 +117,11 @@ func TestSnapshotsParity(t *testing.T) {
 		r.ServeHTTP(w, req)
 		assertParity(t, "test_get_feed_not_found", w.Body.Bytes(), snaps)
 
-		// test_get_feed_unauthorized_profile
+		// test_get_feed_unauthorized_profile — request p2 as user u1 (who owns p1, not p2)
+		req, _ = http.NewRequest("GET", "/discovery/feed/p2", nil)
+		for k, v := range headers { req.Header.Set(k, v) }
+		w = httptest.NewRecorder()
+		r.ServeHTTP(w, req)
 		assertParity(t, "test_get_feed_unauthorized_profile", w.Body.Bytes(), snaps)
 		
 		// resilience: malformed cache profile (missing profile_id)
@@ -201,6 +205,12 @@ func TestSnapshotsParity(t *testing.T) {
 							},
 						},
 					},
+					PROFILES_CACHE: {
+						docs: map[string]*mockDoc{
+							"p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}},
+							"p2": {id: "p2", exists: true, data: map[string]interface{}{"user_id": "u2", "profile_id": "p2"}},
+						},
+					},
 				},
 			}, nil
 		}
@@ -227,6 +237,11 @@ func TestSnapshotsParity(t *testing.T) {
 							},
 						},
 					},
+					PROFILES_CACHE: {
+						docs: map[string]*mockDoc{
+							"p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}},
+						},
+					},
 				},
 			}, nil
 		}
@@ -250,6 +265,11 @@ func TestSnapshotsParity(t *testing.T) {
 									// MISSING id
 								},
 							},
+						},
+					},
+					PROFILES_CACHE: {
+						docs: map[string]*mockDoc{
+							"p1": {id: "p1", exists: true, data: map[string]interface{}{"user_id": "u1", "profile_id": "p1"}},
 						},
 					},
 				},

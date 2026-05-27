@@ -1,3 +1,6 @@
+// Undo the global mock from jest.setup.js so we test the REAL component here.
+jest.unmock('../../DiceLoadingScreen');
+
 // ─── Mocks ───
 
 // Track Canvas renders to detect key-triggered remounts

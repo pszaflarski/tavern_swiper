@@ -16,9 +16,6 @@ var (
 	db     FirestoreClient
 	dbOnce sync.Once
 	dbErr  error
-	// realFSClient holds the underlying *firestore.Client for pipeline operations.
-	// It is set once during DB initialization and accessed by getFeedCandidatesFunc.
-	realFSClient *firestore.Client
 )
 
 // Function pointer to allow mocking in tests
@@ -59,8 +56,9 @@ var getFeedCandidatesFunc = realGetFeedCandidates
 
 // feedCandidateFields are the fields projected by the pipeline select stage.
 var feedCandidateFields = []any{
-	"profile_id", "display_name", "bio", "tagline", "gender",
-	"character_class", "realm", "image_urls", "talents",
+	"profile_id", "display_name", "bio", "tagline",
+	"gender", "race", "fandom", "interests", "events", "looking_for",
+	"image_urls", "age", "is_oc",
 }
 
 func realGetFeedCandidates(ctx context.Context, collection string, excludeIDs []string, limit int) ([]FeedCandidate, error) {

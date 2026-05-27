@@ -143,7 +143,7 @@ services:
     ports:
       - "8010:8010"
     environment:
-      - FIRESTORE_DATABASE_ID=router-dev
+      - FIRESTORE_DATABASE_ID=router-test
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
     volumes:

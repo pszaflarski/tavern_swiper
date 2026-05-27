@@ -25,7 +25,11 @@ type RealPublisher struct {
 
 func NewPublisher(ctx context.Context) (Publisher, error) {
 	projectID := getEnv("PUBSUB_PROJECT_ID", "tavern-swiper-dev")
-	tID := getEnv("PUBSUB_TOPIC_ID", "profile-updates")
+	tID := os.Getenv("PUBSUB_TOPIC_ID")
+	if tID == "" {
+		log.Println("[WARN] PUBSUB_TOPIC_ID not set, defaulting to 'profile-updates'. Set to '{env}-profiles-profile-events-v1' for correctness.")
+		tID = "profile-updates"
+	}
 
 	// Check for emulator
 	if host := os.Getenv("PUBSUB_EMULATOR_HOST"); host != "" {
@@ -107,9 +111,10 @@ func toProtoTags(tags []ProfileTag) []*pb.ProfileTag {
 	res := make([]*pb.ProfileTag, len(tags))
 	for i, t := range tags {
 		res[i] = &pb.ProfileTag{
-			Id:   t.ID,
-			Name: t.Name,
-			Slug: t.Slug,
+			Id:       t.ID,
+			Name:     t.Name,
+			Slug:     t.Slug,
+			Category: t.Category,
 		}
 	}
 	return res
