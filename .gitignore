@@ -63,3 +63,6 @@ scratch.py
 scratch/
 *.apk
 *.aab
+
+# Examples
+examples/
