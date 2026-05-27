@@ -14,7 +14,6 @@ import Animated, {
   withDelay,
   withTiming,
   runOnJS,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Spacing, Shadow } from '../theme';
@@ -80,6 +79,7 @@ export default function MatchSplash() {
   const rightCardX = useSharedValue(SCREEN_W);
   const textScale = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);
+  const actionsScale = useSharedValue(0);
 
   const leftCardStyle = useAnimatedStyle(() => ({
     transform: [
@@ -103,16 +103,23 @@ export default function MatchSplash() {
     opacity: overlayOpacity.value,
   }));
 
+  const actionsStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: actionsScale.value }],
+    opacity: actionsScale.value,
+  }));
+
   useEffect(() => {
     if (isMatchVisible) {
       overlayOpacity.value = withTiming(1, { duration: 400 });
       leftCardX.value = withDelay(300, withSpring(0, { damping: 14 }));
       rightCardX.value = withDelay(500, withSpring(0, { damping: 14 }));
       textScale.value = withDelay(800, withSpring(1, { damping: 12 }));
+      actionsScale.value = withDelay(1200, withSpring(1, { damping: 12 }));
     } else {
       leftCardX.value = withTiming(-SCREEN_W, { duration: 300 });
       rightCardX.value = withTiming(SCREEN_W, { duration: 300 });
       textScale.value = withTiming(0, { duration: 200 });
+      actionsScale.value = withTiming(0, { duration: 200 });
       overlayOpacity.value = withTiming(0, { duration: 300 }, (finished) => {
         if (finished) {
           runOnJS(clearMatchedProfile)();
@@ -198,7 +205,7 @@ export default function MatchSplash() {
         </View>
 
         {/* Actions */}
-        <Animated.View entering={ZoomIn.delay(1200)} style={[styles.actions, { paddingBottom: insets.bottom + Spacing[4] }]}>
+        <Animated.View style={[styles.actions, { paddingBottom: insets.bottom + Spacing[4] }, actionsStyle]}>
           <Pressable 
             style={({ pressed }) => [
               styles.primaryButton,
