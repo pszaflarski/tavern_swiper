@@ -7,6 +7,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	_ "tavern-swiper.app/users_go/docs"
 
@@ -22,7 +23,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8082" // Default for Users service
+		port = "8006" // Default for Users service
 	}
 
 	// Resolve service URLs from the router (hard fail if unavailable)
@@ -31,11 +32,16 @@ func main() {
 	r := gin.Default()
 
 	// Middleware
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
-	}))
+	origins := os.Getenv("ALLOWED_ORIGINS")
+	config := cors.DefaultConfig()
+	if origins != "" {
+		config.AllowOrigins = strings.Split(origins, ",")
+	} else {
+		config.AllowAllOrigins = true
+	}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	r.Use(cors.New(config))
 
 	// Swagger UI (before auth)
 	r.GET("/users/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

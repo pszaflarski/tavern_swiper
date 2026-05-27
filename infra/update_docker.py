@@ -9,7 +9,10 @@ SERVICES = [
     "messages/messages_go",
     "messages/messages_subscriber",
     "profiles/profiles_go",
-    "router/router_go"
+    "router/router_go",
+    "bots/bots_go",
+    "characters/characters_go",
+    "quests/quests_go"
 ]
 
 def update_dockerignore():

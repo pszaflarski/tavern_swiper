@@ -28,7 +28,6 @@ const (
 	COLLECTION_CONVERSATIONS         = "conversations"
 	COLLECTION_PROFILE_CONVERSATIONS = "profile_conversations"
 	COLLECTION_CACHE                 = "discovery_matches_cache"
-	COLLECTION_PROFILES              = "profiles"
 )
 
 
@@ -179,7 +178,7 @@ func handleCreateConversation(c *gin.Context) {
 		"id":               convID,
 		"participants_key": participantsKey,
 		"participant_ids":  pids,
-		"created_by":       pids[0],
+		"created_by":       body.ParticipantProfileIDs[0],
 		"created_at":       firestore.ServerTimestamp,
 		"updated_at":       firestore.ServerTimestamp,
 	})

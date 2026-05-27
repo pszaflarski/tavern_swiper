@@ -104,11 +104,20 @@ Listens for profile events published by the **Profiles boundary** via Pub/Sub an
 | Field | Type | Description |
 |-------|------|-------------|
 | Document ID | string | Profile ID (mirrors profiles DB) |
-| `display_name` | string | Cached from profiles service |
-| `bio` | string | Cached from profiles service |
-| `image_url` | string | Cached from profiles service |
-| `tags` | array | Cached tag objects |
+| `profile_id` | string | Profile ID |
 | `user_id` | string | Owner UID |
+| `display_name` | string | Cached from profiles service |
+| `tagline` | string | Cached tagline |
+| `bio` | string | Cached bio |
+| `image_urls` | array\<string\> | Cached image URLs |
+| `gender` | array\<tag\> | Cached gender tags `{id, name, slug}` |
+| `race` | array\<tag\> | Cached race tags |
+| `fandom` | array\<tag\> | Cached fandom tags |
+| `interests` | array\<tag\> | Cached interest tags |
+| `events` | array\<tag\> | Cached event tags |
+| `looking_for` | array\<tag\> | Cached looking-for tags |
+| `age` | int | Cached age |
+| `is_oc` | bool | Cached original character flag |
 
 ## Event Flow
 
@@ -125,7 +134,6 @@ Discovery API → Pub/Sub (match events) → Messages Subscriber → Firestore (
 2. Get all swipes by this profile from `swipes` collection
 3. Query `profiles_profiles_cache` via Firestore Pipeline, excluding:
    - The requesting profile itself
-   - All profiles belonging to the same `user_id`
    - All already-swiped profiles
 4. Return results sorted deterministically by document ID
 

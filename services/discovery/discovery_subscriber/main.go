@@ -159,11 +159,10 @@ func toFirestoreTags(tags []*pb.ProfileTag) []interface{} {
 	res := make([]interface{}, len(tags))
 	for i, t := range tags {
 		res[i] = map[string]interface{}{
-			"id":   t.Id,
-			"name": t.Name,
-			"slug": t.Slug,
-			// Note: Category is not in proto but could be inferred or added to proto if needed.
-			// Since they are already keyed by category in the parent map, it might be redundant.
+			"id":       t.Id,
+			"name":     t.Name,
+			"slug":     t.Slug,
+			"category": t.Category,
 		}
 	}
 	return res

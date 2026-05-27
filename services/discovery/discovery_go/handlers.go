@@ -21,6 +21,28 @@ const (
 	PROFILES_CACHE     = "profiles_profiles_cache"
 )
 
+// extractTags parses a Firestore tag array field (e.g. gender, race, fandom)
+// from raw map[string]interface{} data into []map[string]string.
+func extractTags(data map[string]interface{}, key string) []map[string]string {
+	raw, ok := data[key].([]interface{})
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	tags := make([]map[string]string, 0, len(raw))
+	for _, item := range raw {
+		if m, ok := item.(map[string]interface{}); ok {
+			tag := make(map[string]string)
+			for k, v := range m {
+				if s, ok := v.(string); ok {
+					tag[k] = s
+				}
+			}
+			tags = append(tags, tag)
+		}
+	}
+	return tags
+}
+
 // handleHealth godoc
 // @Summary      Health check
 // @Description  Returns the health status of the discovery service.
@@ -147,7 +169,6 @@ func handleGetFeed(c *gin.Context) {
 	// 3. Hydrate response from pipeline results
 	profiles := make([]DiscoveryProfile, 0)
 	for _, candidate := range candidates {
-		var p DiscoveryProfile
 		data := candidate.Data
 		pID, ok := data["profile_id"].(string)
 		if !ok || pID == "" {
@@ -155,46 +176,50 @@ func handleGetFeed(c *gin.Context) {
 			continue
 		}
 
-		p.ProfileID = pID
-		p.DisplayName, _ = data["display_name"].(string)
-
-		if val, ok := data["bio"].(string); ok {
-			p.Bio = &val
-		}
-		if val, ok := data["tagline"].(string); ok {
-			p.Tagline = &val
-		}
-		if val, ok := data["gender"].(string); ok {
-			p.Gender = &val
-		}
-		if val, ok := data["character_class"].(string); ok {
-			p.CharacterClass = &val
-		}
-		if val, ok := data["realm"].(string); ok {
-			p.Realm = &val
-		}
+		displayName, _ := data["display_name"].(string)
 
 		// Handle image_urls (coerce null to empty list if needed)
+		var imageURLs []string
 		if val, ok := data["image_urls"].([]interface{}); ok {
-			p.ImageURLs = []string{}
+			imageURLs = make([]string, 0, len(val))
 			for _, v := range val {
 				if s, ok := v.(string); ok {
-					p.ImageURLs = append(p.ImageURLs, s)
+					imageURLs = append(imageURLs, s)
 				}
 			}
 		} else {
-			p.ImageURLs = []string{}
+			imageURLs = []string{}
 		}
 
-		if val, ok := data["talents"].([]interface{}); ok {
-			p.Talents = []string{}
-			for _, v := range val {
-				if s, ok := v.(string); ok {
-					p.Talents = append(p.Talents, s)
-				}
+		p := DiscoveryProfile{
+			ProfileID:   pID,
+			DisplayName: displayName,
+			ImageURLs:   imageURLs,
+			Gender:      extractTags(data, "gender"),
+			Race:        extractTags(data, "race"),
+			Fandom:      extractTags(data, "fandom"),
+			Interests:   extractTags(data, "interests"),
+			Events:      extractTags(data, "events"),
+			LookingFor:  extractTags(data, "looking_for"),
+		}
+		if v, ok := data["bio"].(string); ok {
+			p.Bio = &v
+		}
+		if v, ok := data["tagline"].(string); ok {
+			p.Tagline = &v
+		}
+		if v, ok := data["age"]; ok {
+			switch a := v.(type) {
+			case int64:
+				i := int(a)
+				p.Age = &i
+			case float64:
+				i := int(a)
+				p.Age = &i
 			}
-		} else {
-			p.Talents = []string{}
+		}
+		if v, ok := data["is_oc"].(bool); ok {
+			p.IsOC = &v
 		}
 
 		profiles = append(profiles, p)
@@ -223,6 +248,11 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 	if err := c.ShouldBindJSON(&body); err != nil {
 		// Matching user's request: default errors are fine
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error(), "body": body})
+		return
+	}
+
+	if body.Direction != "left" && body.Direction != "right" {
+		c.JSON(http.StatusBadRequest, gin.H{"detail": "direction must be 'left' or 'right'"})
 		return
 	}
 
@@ -261,7 +291,11 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 		"modified_at":       firestore.ServerTimestamp,
 		"is_deleted":        false,
 	}
-	_, _ = client.Collection(SWIPES_COLLECTION).Doc(swipeID).Set(ctx, swipeData)
+	if _, err := client.Collection(SWIPES_COLLECTION).Doc(swipeID).Set(ctx, swipeData); err != nil {
+		log.Printf("[ERROR] Failed to write swipe %s: %v", swipeID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to record swipe"})
+		return
+	}
 
 	var matchID *string
 	if body.Direction == "right" {
@@ -287,7 +321,11 @@ func handleRecordSwipe(c *gin.Context, publisher Publisher) {
 				"profiles":   ids,
 				"created_at": firestore.ServerTimestamp,
 			}
-			_, _ = client.Collection(MATCHES_COLLECTION).Doc(mID).Set(ctx, matchData)
+			if _, err := client.Collection(MATCHES_COLLECTION).Doc(mID).Set(ctx, matchData); err != nil {
+				log.Printf("[ERROR] Failed to write match %s: %v", mID, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to create match"})
+				return
+			}
 
 			// Publish Event
 			if publisher != nil {

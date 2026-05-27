@@ -334,9 +334,19 @@ func deleteAllHandler(c *gin.Context) {
 		return
 	}
 
-	for _, uid := range uids {
-		// Bulk delete in batches of 100 for safety (SDK supports up to 1000)
-		authClient.DeleteUsers(c.Request.Context(), []string{uid})
+	// Bulk delete in batches of 500 (Firebase SDK maximum)
+	batchSize := 500
+	for i := 0; i < len(uids); i += batchSize {
+		end := i + batchSize
+		if end > len(uids) {
+			end = len(uids)
+		}
+		result, err := authClient.DeleteUsers(c.Request.Context(), uids[i:end])
+		if err != nil {
+			log.Printf("WARN: batch delete error at offset %d: %v", i, err)
+		} else if result.FailureCount > 0 {
+			log.Printf("WARN: %d failures in batch at offset %d", result.FailureCount, i)
+		}
 	}
 
 	c.Status(http.StatusNoContent)
