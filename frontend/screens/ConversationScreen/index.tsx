@@ -401,6 +401,11 @@ function ConversationScreenInner() {
 
       {isLoadingMessages && messages.length === 0 ? (
         <DiceLoadingScreen message="Reading the scrolls..." />
+      ) : invertedMessages.length === 0 ? (
+        <View style={[styles.emptyContainer]}>
+          <Text style={styles.emptyText}>The air is thick with unspoken words.</Text>
+          <Text style={styles.emptySubText}>Break the silence with a greeting.</Text>
+        </View>
       ) : (
         <FlatList
           ref={flatListRef}
@@ -484,12 +489,6 @@ function ConversationScreenInner() {
                 <Text style={styles.loadingMoreText}>Unrolling older scrolls...</Text>
               </View>
             ) : null
-          }
-          ListEmptyComponent={
-            <View style={[styles.emptyContainer, { transform: [{ rotateX: '180deg' }] }]}>
-              <Text style={styles.emptyText}>The air is thick with unspoken words.</Text>
-              <Text style={styles.emptySubText}>Break the silence with a greeting.</Text>
-            </View>
           }
         />
       )}
