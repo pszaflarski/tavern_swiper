@@ -151,6 +151,13 @@ docker compose up --build
 ```
 *Note: Containers dynamically listen on the port provided by the `$PORT` environment variable.*
 
+### 6. AI Agent Standalone Debug Server (Python)
+If you only need to test the LLM agents (`grogmar` and `lira`) and their quest/checkpoint tool-calling flows without booting the entire microservice stack:
+```bash
+.venv/bin/python3 services/agent_router/debug_server.py
+```
+For detailed UI interaction steps and verification instructions, see [services/agent_router/DEBUG.md](file:///home/peter/Documents/tavern_swiper/services/agent_router/DEBUG.md).
+
 ---
 
 ## ⚙️ Firestore Indexing
