@@ -54,6 +54,7 @@ jest.mock('../../hooks/useMessages', () => ({
   useInvolvedMatches: jest.fn(),
   useConversationMessages: jest.fn(),
   useSendMessage: jest.fn(),
+  useTypingIndicator: jest.fn(() => ({ isOtherTyping: false, onTextChange: jest.fn() })),
   useRollDice: jest.fn(() => ({
     mutateAsync: jest.fn(),
     invalidateAfterRoll: jest.fn(),
