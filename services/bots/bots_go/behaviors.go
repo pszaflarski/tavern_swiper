@@ -10,10 +10,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // handleBehaviorTrigger receives a generic trigger and dispatches
@@ -349,53 +351,68 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			enrichedMetadata["sender_profile_id"] = senderProfileID
 			enrichedMetadata["bot_profile_id"] = bp.profileID
 
-			// 5. Call agent_router to generate a reply
-			aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata)
-			if err != nil {
-				msg := fmt.Sprintf("Agent router failed for '%s': %v", bp.agentName, err)
-				log.Printf("[ERROR] %s", msg)
-				details = append(details, msg)
-				continue
-			}
-
-			// 6. Parse structured response and post each item
-			items := parseAgentResponse(aiResponse)
-			postFailed := false
-			for _, item := range items {
-				var postErr error
-				switch item.Type {
-				case "narration":
-					postErr = postBotNarration(token, conversationID, bp.profileID, item.Content)
-				default: // "message" or fallback
-					postErr = postBotMessage(token, conversationID, bp.profileID, item.Content)
-				}
-				if postErr != nil {
-					msg := fmt.Sprintf("Failed to post %s for '%s': %v", item.Type, bp.agentName, postErr)
+			// 5. Call agent_router — async (fire-and-forget) or sync based on feature flag.
+			if os.Getenv("USE_ASYNC_AGENT") == "true" {
+				err := callAgentRouterAsync(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata, bp.profileID, bp.botUserID, bp.behaviorType, senderProfileID)
+				if err != nil {
+					msg := fmt.Sprintf("Async agent request failed for '%s': %v", bp.agentName, err)
 					log.Printf("[ERROR] %s", msg)
 					details = append(details, msg)
-					postFailed = true
-					break
+					continue
 				}
-			}
-			if postFailed {
-				continue
-			}
+				msg := fmt.Sprintf("Bot '%s' async reply requested for conversation %s", bp.agentName, conversationID)
+				log.Printf("[INFO] %s", msg)
+				details = append(details, msg)
+				triggered++
+			} else {
+				// Synchronous path (original behavior)
+				aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata)
+				if err != nil {
+					msg := fmt.Sprintf("Agent router failed for '%s': %v", bp.agentName, err)
+					log.Printf("[ERROR] %s", msg)
+					details = append(details, msg)
+					continue
+				}
 
-			msg := fmt.Sprintf("Bot '%s' replied in conversation %s (%d items)", bp.agentName, conversationID, len(items))
-			log.Printf("[INFO] %s", msg)
-			details = append(details, msg)
-			triggered++
+				// Parse structured response and post each item
+				items := parseAgentResponse(aiResponse)
+				postFailed := false
+				for _, item := range items {
+					var postErr error
+					switch item.Type {
+					case "narration":
+						postErr = postBotNarration(token, conversationID, bp.profileID, item.Content)
+					default: // "message" or fallback
+						postErr = postBotMessage(token, conversationID, bp.profileID, item.Content)
+					}
+					if postErr != nil {
+						msg := fmt.Sprintf("Failed to post %s for '%s': %v", item.Type, bp.agentName, postErr)
+						log.Printf("[ERROR] %s", msg)
+						details = append(details, msg)
+						postFailed = true
+						break
+					}
+				}
+				if postFailed {
+					continue
+				}
 
-			// 7. meet_the_tavern_keepers milestone — async, no narration needed.
-			if bp.behaviorType == "tavern_keeper" {
-				go func(botProfileID string) {
-					defer func() {
-						if r := recover(); r != nil {
-							log.Printf("[CRITICAL] 🔥 PANIC in quest goroutine: %v", r)
-						}
-					}()
-					tryCompleteQuest(token, "meet_the_tavern_keepers", senderProfileID, botProfileID)
-				}(bp.profileID)
+				msg := fmt.Sprintf("Bot '%s' replied in conversation %s (%d items)", bp.agentName, conversationID, len(items))
+				log.Printf("[INFO] %s", msg)
+				details = append(details, msg)
+				triggered++
+
+				// 7. meet_the_tavern_keepers milestone — async, no narration needed.
+				if bp.behaviorType == "tavern_keeper" {
+					go func(botProfileID string) {
+						defer func() {
+							if r := recover(); r != nil {
+								log.Printf("[CRITICAL] 🔥 PANIC in quest goroutine: %v", r)
+							}
+						}()
+						tryCompleteQuest(token, "meet_the_tavern_keepers", senderProfileID, botProfileID)
+					}(bp.profileID)
+				}
 			}
 		}
 	}
@@ -724,4 +741,203 @@ func lookupUserIDByProfile(token, profileID string) (string, error) {
 	}
 
 	return profile.UserID, nil
+}
+
+// mintCallbackJWT creates a short-lived internal JWT for authenticating
+// agent_router → bots_go callback requests. 10-minute TTL to allow for
+// LLM processing time.
+func mintCallbackJWT() (string, error) {
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"sub":  "bots-callback-internal",
+		"role": "bot",
+		"iat":  now.Unix(),
+		"exp":  now.Add(10 * time.Minute).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+// callAgentRouterAsync sends a fire-and-forget request to agent_router's
+// /invoke-async endpoint. The agent_router will POST the result to the
+// bots_go callback endpoint when processing completes.
+func callAgentRouterAsync(botToken, agentName, prompt, conversationID, messageType string, metadata map[string]interface{}, botProfileID, botUserID, behaviorType, senderProfileID string) error {
+	agentRouterURL := serviceURLs.Get("agent_router")
+	botsURL := serviceURLs.Get("bots")
+
+	// Mint a callback JWT for the agent_router → bots_go callback
+	callbackJWT, err := mintCallbackJWT()
+	if err != nil {
+		return fmt.Errorf("failed to mint callback JWT: %w", err)
+	}
+
+	payload := map[string]interface{}{
+		"prompt":       prompt,
+		"agent":        agentName,
+		"thread_id":    conversationID,
+		"message_type": messageType,
+		"metadata":     metadata,
+		"callback_url": botsURL + "/bots/agent-callback",
+		"callback_headers": map[string]string{
+			"Authorization": "Bearer " + callbackJWT,
+		},
+		"callback_metadata": map[string]interface{}{
+			"conversation_id":   conversationID,
+			"bot_profile_id":    botProfileID,
+			"bot_user_id":       botUserID,
+			"sender_profile_id": senderProfileID,
+			"behavior_type":     behaviorType,
+			"agent_name":        agentName,
+		},
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", agentRouterURL+"/invoke-async", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+botToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Short timeout — we only need the 202 Accepted, not the AI response
+	asyncClient := &http.Client{Timeout: 15 * time.Second}
+	resp, err := asyncClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("HTTP error calling agent_router /invoke-async: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		return fmt.Errorf("agent_router /invoke-async error (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var asyncResp AgentAsyncResponse
+	if err := json.NewDecoder(resp.Body).Decode(&asyncResp); err != nil {
+		log.Printf("[WARN] Failed to decode async response, but request was accepted: %v", err)
+	} else {
+		log.Printf("[INFO] Async agent request accepted (request_id=%s) for conversation %s", asyncResp.RequestID, conversationID)
+	}
+
+	return nil
+}
+
+// handleAgentCallback receives the result from agent_router's async processing
+// and posts the AI response to the conversation.
+//
+// @Summary      Receive async agent callback
+// @Description  Called by agent_router when async processing completes
+// @Tags         behaviors
+// @Accept       json
+// @Produce      json
+// @Param        payload body AgentCallbackRequest true "Callback payload"
+// @Success      200 {string} string "OK"
+// @Failure      400 {object} ErrorResponse
+// @Failure      500 {object} ErrorResponse
+// @Router       /bots/agent-callback [post]
+func handleAgentCallback(c *gin.Context) {
+	var req AgentCallbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpError(c, http.StatusBadRequest, "Invalid callback payload")
+		return
+	}
+
+	log.Printf("[INFO] Agent callback received (request_id=%s, status=%s)", req.RequestID, req.Status)
+
+	// Handle error callbacks — ACK but don't process
+	if req.Status == "error" {
+		log.Printf("[ERROR] Agent callback error for request %s: %s — %s", req.RequestID, req.Error, req.Detail)
+		c.Status(http.StatusOK)
+		return
+	}
+
+	if req.Status != "success" {
+		log.Printf("[WARN] Agent callback unknown status '%s' for request %s", req.Status, req.RequestID)
+		c.Status(http.StatusOK)
+		return
+	}
+
+	// Extract context from callback_metadata
+	conversationID, _ := req.CallbackMetadata["conversation_id"].(string)
+	botProfileID, _ := req.CallbackMetadata["bot_profile_id"].(string)
+	botUserID, _ := req.CallbackMetadata["bot_user_id"].(string)
+	senderProfileID, _ := req.CallbackMetadata["sender_profile_id"].(string)
+	behaviorType, _ := req.CallbackMetadata["behavior_type"].(string)
+
+	if conversationID == "" || botProfileID == "" || botUserID == "" {
+		log.Printf("[ERROR] Agent callback missing required metadata (conv=%s, bot=%s, user=%s)", conversationID, botProfileID, botUserID)
+		httpError(c, http.StatusBadRequest, "Missing required callback_metadata fields")
+		return
+	}
+
+	// Idempotency check — skip if we've already processed this request_id
+	ctx := c.Request.Context()
+	client, err := getDBFunc(ctx)
+	if err != nil {
+		log.Printf("[ERROR] handleAgentCallback - getDBFunc: %v", err)
+		httpError(c, http.StatusInternalServerError, "Failed to connect to database")
+		return
+	}
+
+	callbackDoc := client.Collection("bot_events").Doc("cb-" + req.RequestID)
+	existingDoc, err := callbackDoc.Get(ctx)
+	if err == nil && existingDoc.Exists() {
+		log.Printf("[INFO] Agent callback already processed (request_id=%s), skipping", req.RequestID)
+		c.Status(http.StatusOK)
+		return
+	}
+
+	// Record the callback as received
+	_, _ = callbackDoc.Set(ctx, map[string]interface{}{
+		"event_id":   "cb-" + req.RequestID,
+		"trigger":    "agent_callback",
+		"status":     "processing",
+		"context":    req.CallbackMetadata,
+		"created_at": time.Now().UTC(),
+	})
+
+	// Re-authenticate the bot user (original JWT may have expired during LLM processing)
+	token, err := authenticateBotUser(ctx, client, botUserID)
+	if err != nil {
+		log.Printf("[ERROR] Agent callback auth failed for bot_user %s: %v", botUserID, err)
+		httpError(c, http.StatusInternalServerError, "Failed to authenticate bot user")
+		return
+	}
+
+	// Parse and post the response (same logic as the sync path)
+	items := parseAgentResponse(req.Response)
+	for _, item := range items {
+		var postErr error
+		switch item.Type {
+		case "narration":
+			postErr = postBotNarration(token, conversationID, botProfileID, item.Content)
+		default:
+			postErr = postBotMessage(token, conversationID, botProfileID, item.Content)
+		}
+		if postErr != nil {
+			log.Printf("[ERROR] Agent callback failed to post %s: %v", item.Type, postErr)
+			// Continue posting remaining items even if one fails
+		}
+	}
+
+	// Fire milestone quest completion (same as sync path)
+	if behaviorType == "tavern_keeper" {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[CRITICAL] 🔥 PANIC in callback quest goroutine: %v", r)
+				}
+			}()
+			tryCompleteQuest(token, "meet_the_tavern_keepers", senderProfileID, botProfileID)
+		}()
+	}
+
+	// Mark the callback as processed
+	_, _ = callbackDoc.Set(ctx, map[string]interface{}{
+		"event_id":   "cb-" + req.RequestID,
+		"trigger":    "agent_callback",
+		"status":     "processed",
+		"context":    req.CallbackMetadata,
+		"created_at": time.Now().UTC(),
+	})
+
+	log.Printf("[INFO] Agent callback processed (request_id=%s, conversation=%s, items=%d)", req.RequestID, conversationID, len(items))
+	c.Status(http.StatusOK)
 }

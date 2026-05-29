@@ -147,6 +147,98 @@ const docTemplate = `{
                 }
             }
         },
+        "/bots/agent-callback": {
+            "post": {
+                "description": "Called by agent_router when async processing completes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "behaviors"
+                ],
+                "summary": "Receive async agent callback",
+                "parameters": [
+                    {
+                        "description": "Callback payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.AgentCallbackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bots/behaviors/trigger": {
+            "post": {
+                "description": "Allows triggering behaviors for bots based on events (e.g. profile_created)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "behaviors"
+                ],
+                "summary": "Trigger a bot behavior",
+                "parameters": [
+                    {
+                        "description": "Trigger Details",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.BehaviorTriggerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.BehaviorTriggerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Returns the health status of the bots service.",
@@ -574,6 +666,78 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "main.AgentCallbackRequest": {
+            "type": "object",
+            "properties": {
+                "agent": {
+                    "type": "string"
+                },
+                "callback_metadata": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "response": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"success\" or \"error\"",
+                    "type": "string"
+                },
+                "thread_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.BehaviorTriggerRequest": {
+            "type": "object",
+            "required": [
+                "context",
+                "trigger"
+            ],
+            "properties": {
+                "behavior_type": {
+                    "description": "optional — if empty, bots_go queries all matching behaviors",
+                    "type": "string"
+                },
+                "context": {
+                    "description": "event-specific data",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "trigger": {
+                    "description": "e.g. \"profile_created\", \"profile_deleted\"",
+                    "type": "string"
+                }
+            }
+        },
+        "main.BehaviorTriggerResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "per-profile action summaries",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "triggered": {
+                    "description": "number of bot profiles that acted",
+                    "type": "integer"
+                }
+            }
+        },
         "main.BotCreate": {
             "type": "object",
             "required": [

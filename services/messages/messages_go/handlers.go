@@ -155,6 +155,25 @@ func handleCreateConversation(c *gin.Context) {
 		}
 	}
 
+	// Fallback: check the conversations collection directly.
+	// This handles conversations created before the dedup collection existed.
+	legacyIter := client.Collection(COLLECTION_CONVERSATIONS).Where("participants_key", "==", participantsKey).Limit(1).Documents(ctx)
+	legacyDocs, legacyErr := legacyIter.GetAll()
+	if legacyErr == nil && len(legacyDocs) > 0 {
+		legacyData := legacyDocs[0].Data()
+		if existingID, ok := legacyData["id"].(string); ok && existingID != "" {
+			// Backfill the dedup entry so future requests use the fast path
+			dedupRef.Set(ctx, map[string]interface{}{
+				"conversation_id":  existingID,
+				"participants_key": participantsKey,
+				"created_at":       firestore.ServerTimestamp,
+			})
+			log.Printf("[INFO] Backfilled dedup entry for legacy conversation %s", existingID)
+			c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
+			return
+		}
+	}
+
 	// 4. Verification step (check match cache for 1-on-1 chats)
 	if len(pids) == 2 {
 		matchID := fmt.Sprintf("match_%s_%s", pids[0], pids[1])
@@ -183,8 +202,10 @@ func handleCreateConversation(c *gin.Context) {
 		"updated_at":       firestore.ServerTimestamp,
 	})
 
-	// Write the dedup doc — keyed by participants_key so it's deterministic
-	batch.Set(dedupRef, map[string]interface{}{
+	// Write the dedup doc — keyed by participants_key so it's deterministic.
+	// Using Create (not Set) so that if a concurrent request already wrote
+	// the dedup doc, this batch fails atomically.
+	batch.Create(dedupRef, map[string]interface{}{
 		"conversation_id":  convID,
 		"participants_key": participantsKey,
 		"created_at":       firestore.ServerTimestamp,

@@ -1,5 +1,55 @@
 basePath: /bots
 definitions:
+  main.AgentCallbackRequest:
+    properties:
+      agent:
+        type: string
+      callback_metadata:
+        additionalProperties: true
+        type: object
+      detail:
+        type: string
+      error:
+        type: string
+      model:
+        type: string
+      request_id:
+        type: string
+      response:
+        type: string
+      status:
+        description: '"success" or "error"'
+        type: string
+      thread_id:
+        type: string
+    type: object
+  main.BehaviorTriggerRequest:
+    properties:
+      behavior_type:
+        description: optional — if empty, bots_go queries all matching behaviors
+        type: string
+      context:
+        additionalProperties: true
+        description: event-specific data
+        type: object
+      trigger:
+        description: e.g. "profile_created", "profile_deleted"
+        type: string
+    required:
+    - context
+    - trigger
+    type: object
+  main.BehaviorTriggerResponse:
+    properties:
+      details:
+        description: per-profile action summaries
+        items:
+          type: string
+        type: array
+      triggered:
+        description: number of bot profiles that acted
+        type: integer
+    type: object
   main.BotCreate:
     properties:
       description:
@@ -503,6 +553,66 @@ paths:
       summary: Purge all bots
       tags:
       - admin
+  /bots/agent-callback:
+    post:
+      consumes:
+      - application/json
+      description: Called by agent_router when async processing completes
+      parameters:
+      - description: Callback payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/main.AgentCallbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Receive async agent callback
+      tags:
+      - behaviors
+  /bots/behaviors/trigger:
+    post:
+      consumes:
+      - application/json
+      description: Allows triggering behaviors for bots based on events (e.g. profile_created)
+      parameters:
+      - description: Trigger Details
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/main.BehaviorTriggerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.BehaviorTriggerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Trigger a bot behavior
+      tags:
+      - behaviors
   /health:
     get:
       description: Returns the health status of the bots service.
