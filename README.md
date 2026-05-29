@@ -194,8 +194,12 @@ Several convenience scripts are available in the `scripts/` directory to assist 
 | `clear_system.py` | `.venv/bin/python3 scripts/clear_system.py [dev/test]` | Purges Firestore and GCS data. Add `--clear-firebase` to also wipe Auth. |
 | `delete_user.py` | `.venv/bin/python3 scripts/delete_user.py <email>` | Deletes a single identity from Firebase Auth by email. |
 | `seed_profiles.py` | `.venv/bin/python3 scripts/seed_profiles.py [dev/test]` | Populates the realm with authentic sample hero identities. |
+| `seed_objects.py` | `.venv/bin/python3 scripts/seed_objects.py [dev/test]` | Seeds items, quest templates, and checkpoint templates into the quests DB. |
 | `setup-databases.sh` | `bash scripts/setup-databases.sh [dev/test/prod]` | Creates all Firestore databases and applies indexes. |
 | `switch_env.sh` | `bash scripts/switch_env.sh [local/dev/test]` | Switches frontend to point at a different backend environment. |
+
+> [!CAUTION]
+> **Seeding order matters.** After running `clear_system.py`, you must run **both** `seed_profiles.py` (bots) **and** `seed_objects.py` (quests/checkpoints). Without `seed_objects.py`, bot agents will see no checkpoint templates, quests will silently fail to complete, and inventory rewards will never be granted.
 
 ### Manual Database Creation
 

@@ -22,3 +22,10 @@ This workflow performs a deep purge of the `-test` environment (Firestore + Fire
    # The script now automatically discovers Cloud Run URLs for 'test'
    source .venv/bin/activate && python3 scripts/seed_profiles.py test
    ```
+
+4. Seed quest templates, checkpoint templates, and item definitions
+   ```bash
+   # CRITICAL: Without this step, bot agents will have no checkpoint templates
+   # and quests will silently fail to complete (no rewards granted).
+   source .venv/bin/activate && python3 scripts/seed_objects.py test
+   ```
