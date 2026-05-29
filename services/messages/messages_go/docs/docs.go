@@ -183,7 +183,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all messages in a conversation, sorted by creation time.",
+                "description": "Returns messages in a conversation, sorted by creation time (ascending). Supports optional cursor-based pagination via limit/before/after query params. Without ?limit, returns all messages as a bare array for backwards compatibility.",
                 "produces": [
                     "application/json"
                 ],
@@ -198,16 +198,31 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max messages to return (1-100, default: all)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor: return messages older than this RFC3339 timestamp",
+                        "name": "before",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor: return messages newer than this RFC3339 timestamp",
+                        "name": "after",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "When ?limit is provided",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.MessageOut"
-                            }
+                            "$ref": "#/definitions/main.PaginatedMessagesResponse"
                         }
                     },
                     "500": {
@@ -274,6 +289,73 @@ const docTemplate = `{
                     },
                     "422": {
                         "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/conversations/{id}/typing": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 10 seconds.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Signal typing activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Typing payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -420,6 +502,12 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "typing": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "unread": {
                     "type": "boolean"
                 },
@@ -476,6 +564,11 @@ const docTemplate = `{
                 "initiated_by": {
                     "description": "profile_id of who triggered the event",
                     "type": "string"
+                },
+                "metadata": {
+                    "description": "raw mechanical data",
+                    "type": "object",
+                    "additionalProperties": true
                 },
                 "target": {
                     "description": "optional target profile_ids",
@@ -553,6 +646,32 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "main.PaginatedMessagesResponse": {
+            "type": "object",
+            "properties": {
+                "has_more": {
+                    "type": "boolean"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.MessageOut"
+                    }
+                },
+                "newest_timestamp": {
+                    "type": "string"
+                },
+                "oldest_timestamp": {
+                    "type": "string"
+                },
+                "typing": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         }

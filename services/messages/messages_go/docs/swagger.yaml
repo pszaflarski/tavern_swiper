@@ -24,6 +24,10 @@ definitions:
         items:
           type: string
         type: array
+      typing:
+        additionalProperties:
+          type: string
+        type: object
       unread:
         type: boolean
       updated_at:
@@ -63,6 +67,10 @@ definitions:
       initiated_by:
         description: profile_id of who triggered the event
         type: string
+      metadata:
+        additionalProperties: true
+        description: raw mechanical data
+        type: object
       target:
         description: optional target profile_ids
         items:
@@ -113,6 +121,23 @@ definitions:
         type: string
       type:
         type: string
+    type: object
+  main.PaginatedMessagesResponse:
+    properties:
+      has_more:
+        type: boolean
+      messages:
+        items:
+          $ref: '#/definitions/main.MessageOut'
+        type: array
+      newest_timestamp:
+        type: string
+      oldest_timestamp:
+        type: string
+      typing:
+        additionalProperties:
+          type: string
+        type: object
     type: object
 info:
   contact: {}
@@ -194,22 +219,34 @@ paths:
       - conversations
   /conversations/{id}/messages:
     get:
-      description: Returns all messages in a conversation, sorted by creation time.
+      description: Returns messages in a conversation, sorted by creation time (ascending).
+        Supports optional cursor-based pagination via limit/before/after query params.
+        Without ?limit, returns all messages as a bare array for backwards compatibility.
       parameters:
       - description: Conversation ID
         in: path
         name: id
         required: true
         type: string
+      - description: 'Max messages to return (1-100, default: all)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Cursor: return messages older than this RFC3339 timestamp'
+        in: query
+        name: before
+        type: string
+      - description: 'Cursor: return messages newer than this RFC3339 timestamp'
+        in: query
+        name: after
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: When ?limit is provided
           schema:
-            items:
-              $ref: '#/definitions/main.MessageOut'
-            type: array
+            $ref: '#/definitions/main.PaginatedMessagesResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -269,6 +306,50 @@ paths:
       summary: Send a message
       tags:
       - messages
+  /conversations/{id}/typing:
+    post:
+      consumes:
+      - application/json
+      description: Records that a profile is currently typing in a conversation. The
+        typing state is cleared automatically when a message is sent or after 10 seconds.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Typing payload
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Signal typing activity
+      tags:
+      - conversations
   /conversations/profile/{profile_id}:
     get:
       description: Returns all conversations that include the given profile, sorted

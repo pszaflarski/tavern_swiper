@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profilesApi, discoveryApi, messagesApi } from '../lib/api';
 import { Profile } from './useProfiles';
@@ -25,6 +25,7 @@ export interface Conversation {
   created_at?: string;
   updated_at?: string;
   unread?: boolean;
+  typing?: Record<string, string>;
 }
 
 export interface EventMetadata {
@@ -49,6 +50,7 @@ export interface PaginatedMessagesResponse {
   has_more: boolean;
   oldest_timestamp?: string;
   newest_timestamp?: string;
+  typing?: Record<string, string>;
 }
 
 export interface DiceRollResult {
@@ -187,26 +189,31 @@ export function useConversationMessages(
           `/messages/conversations/${conversationId}/messages?${params}`
         );
         const pollData = res.data as PaginatedMessagesResponse;
-        if (pollData.messages?.length > 0) {
-          // Prepend new messages to the first page (newest page)
-          queryClient.setQueryData(
-            ['messages', conversationId, profileId],
-            (old: any) => {
-              if (!old?.pages?.[0]) return old;
-              return {
-                ...old,
-                pages: [
-                  {
-                    ...old.pages[0],
+
+        // Always update query data — even when no new messages arrived,
+        // the typing map may have changed (e.g. bot started typing).
+        queryClient.setQueryData(
+          ['messages', conversationId, profileId],
+          (old: any) => {
+            if (!old?.pages?.[0]) return old;
+
+            const hasNewMessages = pollData.messages?.length > 0;
+            return {
+              ...old,
+              pages: [
+                {
+                  ...old.pages[0],
+                  ...(hasNewMessages && {
                     messages: [...old.pages[0].messages, ...pollData.messages],
                     newest_timestamp: pollData.newest_timestamp ?? old.pages[0].newest_timestamp,
-                  },
-                  ...old.pages.slice(1),
-                ],
-              };
-            }
-          );
-        }
+                  }),
+                  typing: pollData.typing ?? null,
+                },
+                ...old.pages.slice(1),
+              ],
+            };
+          }
+        );
       } catch (err) {
         // Silently swallow polling errors — the next interval will retry
       }
@@ -215,12 +222,32 @@ export function useConversationMessages(
     return () => clearInterval(interval);
   }, [pausePolling, conversationId, profileId, queryClient]);
 
+  // Track the latest typing map from poll responses.
+  const typingMapRef = useRef<Record<string, string> | null>(null);
+  const [typingMap, setTypingMap] = useState<Record<string, string> | null>(null);
+
+  // Update typing state from the latest page data.
+  useEffect(() => {
+    const pages = infiniteQuery.data?.pages;
+    if (pages && pages.length > 0) {
+      const latestTyping = pages[0].typing ?? null;
+      // Only update state if the value actually changed (avoid re-renders)
+      const prev = typingMapRef.current;
+      const changed = JSON.stringify(prev) !== JSON.stringify(latestTyping);
+      if (changed) {
+        typingMapRef.current = latestTyping;
+        setTypingMap(latestTyping);
+      }
+    }
+  }, [infiniteQuery.data?.pages]);
+
   return {
     data: messages,
     isLoading: infiniteQuery.isLoading,
     fetchNextPage: infiniteQuery.fetchNextPage,
     hasNextPage: !!infiniteQuery.hasNextPage,
     isFetchingNextPage: infiniteQuery.isFetchingNextPage,
+    typing: typingMap,
   };
 }
 
@@ -387,3 +414,106 @@ export function useInvolvedMatches(profileId: string | undefined) {
   };
 }
 
+/**
+ * Typing indicator debounce interval in milliseconds.
+ * The frontend will POST at most once per this interval while the user types.
+ */
+const TYPING_DEBOUNCE_MS = 3000;
+
+/**
+ * Hook to manage typing indicators for a conversation.
+ *
+ * - Sends debounced POST /conversations/:id/typing when the local user types.
+ * - Reads the typing map from the latest poll response to determine if the
+ *   other participant is typing.
+ * - Optimistically clears the indicator when a message from the typing
+ *   profile arrives.
+ */
+export function useTypingIndicator(
+  conversationId: string | undefined,
+  myProfileId: string | undefined,
+  typing: Record<string, string> | null | undefined,
+  messages: Message[],
+) {
+  const lastSentRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track latest message count to detect new arrivals for optimistic clearing
+  const prevMessageCountRef = useRef<number>(0);
+  const [optimisticClear, setOptimisticClear] = useState<string | null>(null);
+
+  // Debounced typing signal — fire immediately if enough time has elapsed,
+  // otherwise schedule a delayed fire.
+  const signalTyping = useCallback(() => {
+    if (!conversationId || !myProfileId) return;
+
+    const now = Date.now();
+    const elapsed = now - lastSentRef.current;
+
+    if (elapsed >= TYPING_DEBOUNCE_MS) {
+      // Fire immediately
+      lastSentRef.current = now;
+      messagesApi.post(`/messages/conversations/${conversationId}/typing`, {
+        profile_id: myProfileId,
+      }).catch(() => { /* silently swallow — non-critical */ });
+    } else if (!timerRef.current) {
+      // Schedule a fire for when the debounce window expires
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        lastSentRef.current = Date.now();
+        messagesApi.post(`/messages/conversations/${conversationId}/typing`, {
+          profile_id: myProfileId,
+        }).catch(() => {});
+      }, TYPING_DEBOUNCE_MS - elapsed);
+    }
+  }, [conversationId, myProfileId]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
+  // onTextChange — call this from the TextInput's onChangeText.
+  // Only signals typing when the user is actually entering text.
+  const onTextChange = useCallback((text: string) => {
+    if (text.length > 0) {
+      signalTyping();
+    }
+  }, [signalTyping]);
+
+  // Optimistic clear: when a new message arrives from the profile that was
+  // showing as typing, clear the indicator locally without waiting for the
+  // next poll tick.
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current && messages.length > 0) {
+      const newest = messages[messages.length - 1];
+      if (newest.sender_profile_id && newest.sender_profile_id !== myProfileId) {
+        setOptimisticClear(newest.sender_profile_id);
+      }
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages, myProfileId]);
+
+  // Reset optimistic clear when the server-side typing map changes
+  useEffect(() => {
+    setOptimisticClear(null);
+  }, [typing]);
+
+  // Derive isOtherTyping from the typing map
+  const isOtherTyping = useMemo(() => {
+    if (!typing || !myProfileId) return false;
+    const otherTypers = Object.keys(typing).filter(pid => pid !== myProfileId);
+    if (otherTypers.length === 0) return false;
+    // If we optimistically cleared this profile, hide the indicator
+    if (optimisticClear && otherTypers.every(pid => pid === optimisticClear)) {
+      return false;
+    }
+    return true;
+  }, [typing, myProfileId, optimisticClear]);
+
+  return { isOtherTyping, onTextChange };
+}

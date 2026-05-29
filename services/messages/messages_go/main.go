@@ -71,6 +71,7 @@ func main() {
 		// Messages for a specific conversation
 		m.POST("/conversations/:id/messages", handleSendMessage)
 		m.GET("/conversations/:id/messages", handleGetMessages)
+		m.POST("/conversations/:id/typing", handleTyping)
 
 		// Dice
 		m.POST("/roll-dice", handleRollDice)
