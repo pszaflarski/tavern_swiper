@@ -10,12 +10,13 @@ import {
   ActivityIndicator,
   PanResponder,
   useWindowDimensions,
+  Animated as RNAnimated,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
-import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice } from '../../hooks/useMessages';
+import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator } from '../../hooks/useMessages';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -41,6 +42,49 @@ const DICE_IMAGES: Record<string, any> = {
   d12: require('../../assets/dice/pentagon/12.png'),
   d20: require('../../assets/dice/triangle/20.png'),
 };
+
+// ---------------------------------------------------------------------------
+// Animated typing dots — three dots that pulse in sequence
+// ---------------------------------------------------------------------------
+function TypingBubble() {
+  const dot1 = useRef(new RNAnimated.Value(0)).current;
+  const dot2 = useRef(new RNAnimated.Value(0)).current;
+  const dot3 = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = (dot: RNAnimated.Value, delay: number) =>
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.delay(delay),
+          RNAnimated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+          RNAnimated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+          RNAnimated.delay(600 - delay),
+        ])
+      );
+
+    const a1 = animate(dot1, 0);
+    const a2 = animate(dot2, 200);
+    const a3 = animate(dot3, 400);
+    a1.start(); a2.start(); a3.start();
+
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, [dot1, dot2, dot3]);
+
+  const dotStyle = (anim: RNAnimated.Value) => ({
+    opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }],
+  });
+
+  return (
+    <View style={styles.typingContainer} testID="typing-indicator">
+      <View style={styles.typingBubble}>
+        <RNAnimated.View style={[styles.typingDot, dotStyle(dot1)]} />
+        <RNAnimated.View style={[styles.typingDot, dotStyle(dot2)]} />
+        <RNAnimated.View style={[styles.typingDot, dotStyle(dot3)]} />
+      </View>
+    </View>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Equipped die circle — freely draggable, tap to roll, drag off bottom to dismiss
@@ -177,9 +221,18 @@ function ConversationScreenInner() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    typing,
   } = useConversationMessages(
     conversationId,
     activeProfileId,
+  );
+
+  // Typing indicator
+  const { isOtherTyping, onTextChange } = useTypingIndicator(
+    conversationId,
+    activeProfileId,
+    typing,
+    messages,
   );
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { mutateAsync: rollDice } = useRollDice();
@@ -481,7 +534,12 @@ function ConversationScreenInner() {
             }
           }}
           onEndReachedThreshold={0.5}
-          ListHeaderComponent={<Animated.View style={listBottomSpacerStyle} />}
+          ListHeaderComponent={
+            <>
+              {isOtherTyping && <TypingBubble />}
+              <Animated.View style={listBottomSpacerStyle} />
+            </>
+          }
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.loadingMore}>
@@ -501,7 +559,10 @@ function ConversationScreenInner() {
             placeholder="Compose a missive..."
             placeholderTextColor={Colors.outline}
             value={messageText}
-            onChangeText={setMessageText}
+            onChangeText={(text) => {
+              setMessageText(text);
+              onTextChange(text);
+            }}
             multiline
             maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
             testID="message-input"

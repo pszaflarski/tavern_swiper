@@ -351,6 +351,9 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			enrichedMetadata["sender_profile_id"] = senderProfileID
 			enrichedMetadata["bot_profile_id"] = bp.profileID
 
+			// 4½. Signal typing before LLM generation
+			postBotTyping(token, conversationID, bp.profileID)
+
 			// 5. Call agent_router — async (fire-and-forget) or sync based on feature flag.
 			if os.Getenv("USE_ASYNC_AGENT") == "true" {
 				err := callAgentRouterAsync(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata, bp.profileID, bp.botUserID, bp.behaviorType, senderProfileID)
@@ -520,6 +523,33 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	}
 
 	return nil
+}
+
+// postBotTyping signals that a bot is typing in a conversation.
+// Fire-and-forget — errors are logged but never block the reply flow.
+func postBotTyping(token, conversationID, botProfileID string) {
+	messagesURL := serviceURLs.Get("messages")
+
+	payload := map[string]string{
+		"profile_id": botProfileID,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", messagesURL+"/messages/conversations/"+conversationID+"/typing", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("[WARN] Failed to post typing indicator for bot %s in %s: %v", botProfileID, conversationID, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		log.Printf("[WARN] Typing indicator for bot %s returned HTTP %d: %s", botProfileID, resp.StatusCode, string(respBody))
+	}
 }
 // AgentResponseItem represents a single item in a structured agent response.
 type AgentResponseItem struct {
