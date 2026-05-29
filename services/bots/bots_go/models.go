@@ -99,3 +99,27 @@ type BotEvent struct {
 	Status       string                 `json:"status" firestore:"status"` // "received", "processed", "ignored"
 	CreatedAt    time.Time              `json:"created_at" firestore:"created_at"`
 }
+
+// Async Agent Callback Models
+
+// AgentCallbackRequest is the payload POSTed by agent_router when async
+// processing completes (success or failure).
+type AgentCallbackRequest struct {
+	RequestID        string                 `json:"request_id"`
+	Status           string                 `json:"status"`            // "success" or "error"
+	Response         string                 `json:"response,omitempty"`
+	Error            string                 `json:"error,omitempty"`
+	Detail           string                 `json:"detail,omitempty"`
+	ThreadID         string                 `json:"thread_id,omitempty"`
+	Agent            string                 `json:"agent,omitempty"`
+	Model            string                 `json:"model,omitempty"`
+	CallbackMetadata map[string]interface{} `json:"callback_metadata"`
+}
+
+// AgentAsyncResponse is the 202 Accepted response from agent_router's
+// /invoke-async endpoint.
+type AgentAsyncResponse struct {
+	Status    string `json:"status"`
+	RequestID string `json:"request_id"`
+}
+

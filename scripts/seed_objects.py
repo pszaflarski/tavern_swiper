@@ -1,10 +1,16 @@
 """
-Seed the item_definitions collection in the quests service.
+Seed items, quest templates, and checkpoint templates into the quests service.
 
 This script:
 1. Connects directly to Firestore (quests-{env}) using ADC
-2. Creates (or updates) item definitions with deterministic IDs
+2. Creates (or updates) item definitions, quest templates, and checkpoint templates
 3. Idempotent — safe to run multiple times
+
+IMPORTANT: This script MUST be run after seeding bots (seed_profiles.py) or
+after clearing the environment (clear_system.py). Without it, bot agents
+will have no checkpoint templates to evaluate, and quests like 'oi_ya_git'
+will silently fail — the LLM sees "No checkpoints assigned to you" and
+never triggers quest completion or inventory rewards.
 
 Usage:
     .venv/bin/python3 scripts/seed_objects.py [dev|test]
