@@ -190,11 +190,6 @@ export function useConversationMessages(
         );
         const pollData = res.data as PaginatedMessagesResponse;
 
-        // DEBUG: trace typing data from poll
-        if (pollData.typing && Object.keys(pollData.typing).length > 0) {
-          console.log('[TYPING DEBUG] poll returned typing:', JSON.stringify(pollData.typing), 'msgs:', pollData.messages?.length ?? 0);
-        }
-
         // Always update query data — even when no new messages arrived,
         // the typing map may have changed (e.g. bot started typing).
         queryClient.setQueryData(
@@ -240,7 +235,6 @@ export function useConversationMessages(
       const prev = typingMapRef.current;
       const changed = JSON.stringify(prev) !== JSON.stringify(latestTyping);
       if (changed) {
-        console.log('[TYPING DEBUG] state updated:', JSON.stringify(latestTyping));
         typingMapRef.current = latestTyping;
         setTypingMap(latestTyping);
       }
