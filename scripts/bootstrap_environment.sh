@@ -35,10 +35,16 @@ fi
 if firebase projects:list | grep -q "$PROJECT"; then
     echo "✅ Firebase project $PROJECT already exists."
 else
-    echo "Creating new Firebase project..."
-    # Warning: this requires interactive login if not authenticated as a service account,
-    # but works perfectly in environments where 'firebase login' has been run.
-    firebase projects:create "$PROJECT" --display-name "Tavern Swiper $ENV"
+    echo "Checking if GCP project $PROJECT already exists..."
+    if gcloud projects describe "$PROJECT" &>/dev/null; then
+        echo "GCP project exists. Adding Firebase to it..."
+        firebase projects:addfirebase "$PROJECT"
+    else
+        echo "Creating new GCP and Firebase project..."
+        # Warning: this requires interactive login if not authenticated as a service account,
+        # but works perfectly in environments where 'firebase login' has been run.
+        firebase projects:create "$PROJECT" --display-name "Tavern Swiper $ENV"
+    fi
 fi
 
 # Set the active gcloud project to match the newly created/verified Firebase project
@@ -52,7 +58,9 @@ gcloud services enable \
   pubsub.googleapis.com \
   secretmanager.googleapis.com \
   cloudbuild.googleapis.com \
-  iam.googleapis.com
+  iam.googleapis.com \
+  artifactregistry.googleapis.com \
+  containerregistry.googleapis.com
 
 echo "🔑 Creating Service Account 'tavern-swiper-sa'..."
 SA_EMAIL="tavern-swiper-sa@${PROJECT}.iam.gserviceaccount.com"
@@ -81,6 +89,30 @@ for ROLE in "${ROLES[@]}"; do
     --quiet
 done
 
+echo "🛡️  Setting up Cloud Build Service Account permissions..."
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format="value(projectNumber)")
+CLOUDBUILD_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+
+# Grant Cloud Build SA the ability to impersonate our runtime SA
+gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
+  --member="serviceAccount:${CLOUDBUILD_SA}" \
+  --role="roles/iam.serviceAccountUser" \
+  --condition=None \
+  --quiet
+
+echo "🔐 Provisioning Secret Manager Secrets..."
+SECRETS=("MONGODB_URI")
+for SECRET in "${SECRETS[@]}"; do
+  if gcloud secrets describe "$SECRET" &>/dev/null; then
+    echo "✅ Secret $SECRET already exists."
+  else
+    echo "Creating secret $SECRET..."
+    gcloud secrets create "$SECRET" --replication-policy="automatic"
+    echo "dummy-value" | gcloud secrets versions add "$SECRET" --data-file=-
+    echo "⚠️  Created placeholder for $SECRET. Update it in the GCP Console!"
+  fi
+done
+
 echo "🗄️  Setting up Databases..."
 bash "$(dirname "$0")/setup-databases.sh" "$ENV"
 
@@ -106,7 +138,7 @@ else
   # Using standard location based on dev/prod split observed in setup-databases
   REGION="us-central1"
   if [[ "$ENV" == "prod" ]]; then
-    REGION="nam5"
+    REGION="us"
   fi
   gcloud storage buckets create "gs://$BUCKET_NAME" --location="$REGION" --uniform-bucket-level-access
 fi
