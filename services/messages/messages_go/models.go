@@ -38,10 +38,11 @@ type MessageOut struct {
 // explicitly requests pagination via the ?limit query parameter.
 // Without ?limit, the endpoint returns a bare []MessageOut for backwards compat.
 type PaginatedMessagesResponse struct {
-	Messages        []MessageOut `json:"messages"`
-	HasMore         bool         `json:"has_more"`
-	OldestTimestamp string       `json:"oldest_timestamp,omitempty"`
-	NewestTimestamp string       `json:"newest_timestamp,omitempty"`
+	Messages        []MessageOut      `json:"messages"`
+	HasMore         bool              `json:"has_more"`
+	OldestTimestamp string            `json:"oldest_timestamp,omitempty"`
+	NewestTimestamp string            `json:"newest_timestamp,omitempty"`
+	Typing          map[string]string `json:"typing,omitempty"`
 }
 
 type ConversationCreate struct {
@@ -56,13 +57,14 @@ type LastMessageInfo struct {
 }
 
 type ConversationOut struct {
-	ID              string           `json:"id"`
-	ParticipantIDs  []string         `json:"participant_ids"`
-	OtherProfileID  *string          `json:"other_profile_id,omitempty"`
-	LastMessage     *LastMessageInfo `json:"last_message"`
-	CreatedAt       *string          `json:"created_at,omitempty"`
-	UpdatedAt       *string          `json:"updated_at,omitempty"`
-	Unread          bool             `json:"unread"`
+	ID              string            `json:"id"`
+	ParticipantIDs  []string          `json:"participant_ids"`
+	OtherProfileID  *string           `json:"other_profile_id,omitempty"`
+	LastMessage     *LastMessageInfo  `json:"last_message"`
+	CreatedAt       *string           `json:"created_at,omitempty"`
+	UpdatedAt       *string           `json:"updated_at,omitempty"`
+	Unread          bool              `json:"unread"`
+	Typing          map[string]string `json:"typing,omitempty"`
 }
 
 // --- New internal Firestore models ---

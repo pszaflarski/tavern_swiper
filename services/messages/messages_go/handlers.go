@@ -367,6 +367,15 @@ func handleSendMessage(c *gin.Context) {
 	}
 	batch.Set(convRef, convUpdate, firestore.MergeAll)
 
+	// Clear typing indicator for the sender — they just sent a message.
+	// This must be a separate Update (not part of the Set+MergeAll above)
+	// so the dot in "typing.<id>" is treated as a nested-path separator.
+	if body.SenderProfileID != "" {
+		batch.Update(convRef, []firestore.Update{
+			{Path: "typing." + body.SenderProfileID, Value: firestore.Delete},
+		})
+	}
+
 	// Update denormalized updated_at in ProfileConversation mappings for sorting
 	convSnap, err := convRef.Get(ctx)
 	if err == nil && convSnap.Exists() {
@@ -614,6 +623,10 @@ func handleGetMessages(c *gin.Context) {
 		resp.OldestTimestamp = results[0].SentAt
 		resp.NewestTimestamp = results[len(results)-1].SentAt
 	}
+
+	// Include active typing indicators (TTL-filtered)
+	resp.Typing = filterTypingMap(convDoc.Data())
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -736,6 +749,7 @@ func handleListConversations(c *gin.Context) {
 			CreatedAt:      &createdAt,
 			UpdatedAt:      &updatedAt,
 			Unread:         unreadMap[convID],
+			Typing:         filterTypingMap(d),
 		})
 	}
 
@@ -984,4 +998,105 @@ func handleRollDice(c *gin.Context) {
 		ConversationID: convID,
 		MessageID:      messageID,
 	})
+}
+
+// typingTTL is how long a typing indicator remains valid.
+const typingTTL = 10 * time.Second
+
+// filterTypingMap extracts the "typing" map from a conversation document and
+// removes entries older than typingTTL. Returns nil if no active typers.
+func filterTypingMap(data map[string]interface{}) map[string]string {
+	raw, ok := data["typing"].(map[string]interface{})
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+
+	now := _now()
+	result := make(map[string]string)
+	for profileID, v := range raw {
+		var ts time.Time
+		switch t := v.(type) {
+		case time.Time:
+			ts = t
+		case string:
+			parsed, err := time.Parse(time.RFC3339, t)
+			if err != nil {
+				continue
+			}
+			ts = parsed
+		default:
+			continue
+		}
+
+		if now.Sub(ts) <= typingTTL {
+			result[profileID] = ts.Format(time.RFC3339)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+// handleTyping godoc
+// @Summary      Signal typing activity
+// @Description  Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 10 seconds.
+// @Tags         conversations
+// @Accept       json
+// @Param        id    path      string  true  "Conversation ID"
+// @Param        body  body      object  true  "Typing payload"  SchemaExample({"profile_id": "abc123"})
+// @Success      204   "No Content"
+// @Failure      400   {object}  map[string]string
+// @Failure      403   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /conversations/{id}/typing [post]
+func handleTyping(c *gin.Context) {
+	auth := GetAuth(c)
+	convID := c.Param("id")
+
+	var body struct {
+		ProfileID string `json:"profile_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"detail": "profile_id is required"})
+		return
+	}
+
+	ctx := context.Background()
+	client, err := getDBFunc(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Internal server error"})
+		return
+	}
+
+	// Verify caller owns this profile
+	if !verifyProfileOwnership(auth, body.ProfileID, profilesClient) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to type as this profile"})
+		return
+	}
+
+	// Verify participant membership
+	pcID := fmt.Sprintf("%s_%s", body.ProfileID, convID)
+	pcSnap, err := client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID).Get(ctx)
+	if err != nil || !pcSnap.Exists() {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not a participant in this conversation"})
+		return
+	}
+
+	// Update the typing map on the conversation document.
+	// Use Update (not Set+MergeAll) so the dot in "typing.<id>" is treated
+	// as a nested-path separator, creating typing: {<id>: value}.
+	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
+	_, err = convRef.Update(ctx, []firestore.Update{
+		{Path: "typing." + body.ProfileID, Value: _now().UTC().Format(time.RFC3339)},
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed to update typing state for %s in %s: %v", body.ProfileID, convID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to update typing state"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

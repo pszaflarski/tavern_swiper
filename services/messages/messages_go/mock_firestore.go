@@ -108,6 +108,24 @@ func (d *mockDoc) Set(ctx context.Context, data interface{}, opts ...firestore.S
 		for k, v := range m {
 			if v == firestore.ServerTimestamp {
 				d.data[k] = time.Now().UTC()
+			} else if isFirestoreDelete(v) {
+				// Handle dot-path deletes (e.g., "typing.profile_id": firestore.Delete)
+				parts := splitDotPath(k)
+				if len(parts) == 2 {
+					if nested, ok := d.data[parts[0]].(map[string]interface{}); ok {
+						delete(nested, parts[1])
+					}
+				} else {
+					delete(d.data, k)
+				}
+			} else if parts := splitDotPath(k); len(parts) == 2 {
+				// Handle dot-path sets (e.g., "typing.profile_id": "2026-...")
+				nested, ok := d.data[parts[0]].(map[string]interface{})
+				if !ok {
+					nested = make(map[string]interface{})
+					d.data[parts[0]] = nested
+				}
+				nested[parts[1]] = v
 			} else {
 				d.data[k] = v
 			}
@@ -146,13 +164,59 @@ func (d *mockDoc) Set(ctx context.Context, data interface{}, opts ...firestore.S
 	return &firestore.WriteResult{}, nil
 }
 
+// splitDotPath splits a key on the first dot for nested field access.
+// Returns a single-element slice if there's no dot.
+func splitDotPath(key string) []string {
+	for i, ch := range key {
+		if ch == '.' {
+			return []string{key[:i], key[i+1:]}
+		}
+	}
+	return []string{key}
+}
+
+// isFirestoreDelete checks if a value is a firestore.Delete sentinel.
+// The sentinel is an unexported type, so we check via fmt.Sprintf.
+func isFirestoreDelete(v interface{}) bool {
+	return fmt.Sprintf("%v", v) == "Delete"
+}
+
 func (d *mockDoc) Update(ctx context.Context, updates []firestore.Update, opts ...firestore.Precondition) (*firestore.WriteResult, error) {
 	d.exists = true
 	for _, u := range updates {
 		if u.Value == firestore.ServerTimestamp {
-			d.data[u.Path] = time.Now().UTC()
+			parts := splitDotPath(u.Path)
+			if len(parts) == 2 {
+				nested, ok := d.data[parts[0]].(map[string]interface{})
+				if !ok {
+					nested = make(map[string]interface{})
+					d.data[parts[0]] = nested
+				}
+				nested[parts[1]] = time.Now().UTC()
+			} else {
+				d.data[u.Path] = time.Now().UTC()
+			}
+		} else if isFirestoreDelete(u.Value) {
+			parts := splitDotPath(u.Path)
+			if len(parts) == 2 {
+				if nested, ok := d.data[parts[0]].(map[string]interface{}); ok {
+					delete(nested, parts[1])
+				}
+			} else {
+				delete(d.data, u.Path)
+			}
 		} else {
-			d.data[u.Path] = u.Value
+			parts := splitDotPath(u.Path)
+			if len(parts) == 2 {
+				nested, ok := d.data[parts[0]].(map[string]interface{})
+				if !ok {
+					nested = make(map[string]interface{})
+					d.data[parts[0]] = nested
+				}
+				nested[parts[1]] = u.Value
+			} else {
+				d.data[u.Path] = u.Value
+			}
 		}
 	}
 	return &firestore.WriteResult{}, nil
