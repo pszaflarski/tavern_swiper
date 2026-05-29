@@ -185,9 +185,38 @@ func (d *mockDoc) Update(ctx context.Context, updates []firestore.Update, opts .
 	d.exists = true
 	for _, u := range updates {
 		if u.Value == firestore.ServerTimestamp {
-			d.data[u.Path] = time.Now().UTC()
+			parts := splitDotPath(u.Path)
+			if len(parts) == 2 {
+				nested, ok := d.data[parts[0]].(map[string]interface{})
+				if !ok {
+					nested = make(map[string]interface{})
+					d.data[parts[0]] = nested
+				}
+				nested[parts[1]] = time.Now().UTC()
+			} else {
+				d.data[u.Path] = time.Now().UTC()
+			}
+		} else if isFirestoreDelete(u.Value) {
+			parts := splitDotPath(u.Path)
+			if len(parts) == 2 {
+				if nested, ok := d.data[parts[0]].(map[string]interface{}); ok {
+					delete(nested, parts[1])
+				}
+			} else {
+				delete(d.data, u.Path)
+			}
 		} else {
-			d.data[u.Path] = u.Value
+			parts := splitDotPath(u.Path)
+			if len(parts) == 2 {
+				nested, ok := d.data[parts[0]].(map[string]interface{})
+				if !ok {
+					nested = make(map[string]interface{})
+					d.data[parts[0]] = nested
+				}
+				nested[parts[1]] = u.Value
+			} else {
+				d.data[u.Path] = u.Value
+			}
 		}
 	}
 	return &firestore.WriteResult{}, nil

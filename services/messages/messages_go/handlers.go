@@ -362,12 +362,19 @@ func handleSendMessage(c *gin.Context) {
 	}
 	if body.SenderProfileID != "" {
 		convUpdate["last_message_sender_id"] = body.SenderProfileID
-		// Clear typing indicator for the sender — they just sent a message
-		convUpdate["typing."+body.SenderProfileID] = firestore.Delete
 	} else {
 		convUpdate["last_message_sender_id"] = ""
 	}
 	batch.Set(convRef, convUpdate, firestore.MergeAll)
+
+	// Clear typing indicator for the sender — they just sent a message.
+	// This must be a separate Update (not part of the Set+MergeAll above)
+	// so the dot in "typing.<id>" is treated as a nested-path separator.
+	if body.SenderProfileID != "" {
+		batch.Update(convRef, []firestore.Update{
+			{Path: "typing." + body.SenderProfileID, Value: firestore.Delete},
+		})
+	}
 
 	// Update denormalized updated_at in ProfileConversation mappings for sorting
 	convSnap, err := convRef.Get(ctx)
@@ -1078,11 +1085,13 @@ func handleTyping(c *gin.Context) {
 		return
 	}
 
-	// Update the typing map on the conversation document
+	// Update the typing map on the conversation document.
+	// Use Update (not Set+MergeAll) so the dot in "typing.<id>" is treated
+	// as a nested-path separator, creating typing: {<id>: value}.
 	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
-	_, err = convRef.Set(ctx, map[string]interface{}{
-		"typing." + body.ProfileID: _now().UTC().Format(time.RFC3339),
-	}, firestore.MergeAll)
+	_, err = convRef.Update(ctx, []firestore.Update{
+		{Path: "typing." + body.ProfileID, Value: _now().UTC().Format(time.RFC3339)},
+	})
 	if err != nil {
 		log.Printf("[ERROR] Failed to update typing state for %s in %s: %v", body.ProfileID, convID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to update typing state"})
