@@ -336,10 +336,20 @@ func (q *mockQuery) Documents(ctx context.Context) DocumentIterator {
 
 type mockBatch struct {
 	WriteBatch
+	failed bool
 }
 
 func (b *mockBatch) Set(dr DocumentRef, data interface{}, opts ...firestore.SetOption) WriteBatch {
 	dr.Set(context.Background(), data, opts...)
+	return b
+}
+func (b *mockBatch) Create(dr DocumentRef, data interface{}) WriteBatch {
+	snap, _ := dr.Get(context.Background())
+	if snap != nil && snap.Exists() {
+		b.failed = true
+		return b
+	}
+	dr.Set(context.Background(), data)
 	return b
 }
 func (b *mockBatch) Update(dr DocumentRef, updates []firestore.Update, opts ...firestore.Precondition) WriteBatch {
@@ -351,6 +361,9 @@ func (b *mockBatch) Delete(dr DocumentRef) WriteBatch {
 	return b
 }
 func (b *mockBatch) Commit(ctx context.Context) ([]*firestore.WriteResult, error) {
+	if b.failed {
+		return nil, fmt.Errorf("batch commit failed: document already exists")
+	}
 	return []*firestore.WriteResult{}, nil
 }
 

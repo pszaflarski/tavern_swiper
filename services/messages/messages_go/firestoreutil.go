@@ -54,6 +54,7 @@ type Query interface {
 
 type WriteBatch interface {
 	Set(dr DocumentRef, data interface{}, opts ...firestore.SetOption) WriteBatch
+	Create(dr DocumentRef, data interface{}) WriteBatch
 	Update(dr DocumentRef, updates []firestore.Update, opts ...firestore.Precondition) WriteBatch
 	Delete(dr DocumentRef) WriteBatch
 	Commit(ctx context.Context) ([]*firestore.WriteResult, error)
@@ -292,6 +293,11 @@ type realBatch struct {
 
 func (b *realBatch) Set(dr DocumentRef, data interface{}, opts ...firestore.SetOption) WriteBatch {
 	b.WriteBatch.Set(dr.(*realDoc).DocumentRef, data, opts...)
+	return b
+}
+
+func (b *realBatch) Create(dr DocumentRef, data interface{}) WriteBatch {
+	b.WriteBatch.Create(dr.(*realDoc).DocumentRef, data)
 	return b
 }
 
