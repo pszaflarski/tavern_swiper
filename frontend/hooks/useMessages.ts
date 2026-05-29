@@ -189,26 +189,36 @@ export function useConversationMessages(
           `/messages/conversations/${conversationId}/messages?${params}`
         );
         const pollData = res.data as PaginatedMessagesResponse;
-        if (pollData.messages?.length > 0) {
-          // Prepend new messages to the first page (newest page)
-          queryClient.setQueryData(
-            ['messages', conversationId, profileId],
-            (old: any) => {
-              if (!old?.pages?.[0]) return old;
-              return {
-                ...old,
-                pages: [
-                  {
-                    ...old.pages[0],
+
+        // DEBUG: trace typing data from poll
+        if (pollData.typing && Object.keys(pollData.typing).length > 0) {
+          console.log('[TYPING DEBUG] poll returned typing:', JSON.stringify(pollData.typing), 'msgs:', pollData.messages?.length ?? 0);
+        }
+
+        // Always update query data — even when no new messages arrived,
+        // the typing map may have changed (e.g. bot started typing).
+        queryClient.setQueryData(
+          ['messages', conversationId, profileId],
+          (old: any) => {
+            if (!old?.pages?.[0]) return old;
+
+            const hasNewMessages = pollData.messages?.length > 0;
+            return {
+              ...old,
+              pages: [
+                {
+                  ...old.pages[0],
+                  ...(hasNewMessages && {
                     messages: [...old.pages[0].messages, ...pollData.messages],
                     newest_timestamp: pollData.newest_timestamp ?? old.pages[0].newest_timestamp,
-                  },
-                  ...old.pages.slice(1),
-                ],
-              };
-            }
-          );
-        }
+                  }),
+                  typing: pollData.typing ?? null,
+                },
+                ...old.pages.slice(1),
+              ],
+            };
+          }
+        );
       } catch (err) {
         // Silently swallow polling errors — the next interval will retry
       }
@@ -230,6 +240,7 @@ export function useConversationMessages(
       const prev = typingMapRef.current;
       const changed = JSON.stringify(prev) !== JSON.stringify(latestTyping);
       if (changed) {
+        console.log('[TYPING DEBUG] state updated:', JSON.stringify(latestTyping));
         typingMapRef.current = latestTyping;
         setTypingMap(latestTyping);
       }

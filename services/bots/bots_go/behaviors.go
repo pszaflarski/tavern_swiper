@@ -352,10 +352,13 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			enrichedMetadata["bot_profile_id"] = bp.profileID
 
 			// 4½. Signal typing before LLM generation
-			postBotTyping(token, conversationID, bp.profileID)
-
 			// 5. Call agent_router — async (fire-and-forget) or sync based on feature flag.
 			if os.Getenv("USE_ASYNC_AGENT") == "true" {
+				// Async: single typing signal (heartbeat goroutine can't survive
+				// across Cloud Run request boundaries — the callback will clear it
+				// when the message is posted, and the 10s TTL is the safety net).
+				sendTypingSignal(token, conversationID, bp.profileID)
+
 				err := callAgentRouterAsync(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata, bp.profileID, bp.botUserID, bp.behaviorType, senderProfileID)
 				if err != nil {
 					msg := fmt.Sprintf("Async agent request failed for '%s': %v", bp.agentName, err)
@@ -368,9 +371,13 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 				details = append(details, msg)
 				triggered++
 			} else {
-				// Synchronous path (original behavior)
+				// Synchronous path: heartbeat keeps the typing indicator alive
+				// for the full duration of the blocking LLM call.
+				stopTyping := startBotTyping(token, conversationID, bp.profileID)
+
 				aiResponse, err := callAgentRouter(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata)
 				if err != nil {
+					stopTyping()
 					msg := fmt.Sprintf("Agent router failed for '%s': %v", bp.agentName, err)
 					log.Printf("[ERROR] %s", msg)
 					details = append(details, msg)
@@ -396,6 +403,12 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 						break
 					}
 				}
+
+				// Stop the typing heartbeat — the message(s) have been posted
+				// (or failed), and handleSendMessage already cleared the typing
+				// map atomically.
+				stopTyping()
+
 				if postFailed {
 					continue
 				}
@@ -525,9 +538,38 @@ func postBotMessage(token, conversationID, senderProfileID, content string) erro
 	return nil
 }
 
-// postBotTyping signals that a bot is typing in a conversation.
-// Fire-and-forget — errors are logged but never block the reply flow.
-func postBotTyping(token, conversationID, botProfileID string) {
+// startBotTyping signals that a bot is typing in a conversation and returns
+// a cancel function that stops the heartbeat. The typing indicator is refreshed
+// every 5 seconds (well within the 10-second server-side TTL) so it stays
+// visible for the full duration of LLM generation.
+//
+// Call the returned cancel function as soon as the bot's reply has been posted.
+func startBotTyping(token, conversationID, botProfileID string) func() {
+	// Send the first signal immediately (synchronously, to ensure it lands
+	// before the LLM request is dispatched).
+	sendTypingSignal(token, conversationID, botProfileID)
+
+	// Background heartbeat — refresh every 5 seconds.
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				sendTypingSignal(token, conversationID, botProfileID)
+			}
+		}
+	}()
+
+	return func() { close(stop) }
+}
+
+// sendTypingSignal sends a single typing POST to the messages service.
+// Fire-and-forget — errors are logged but never block.
+func sendTypingSignal(token, conversationID, botProfileID string) {
 	messagesURL := serviceURLs.Get("messages")
 
 	payload := map[string]string{
