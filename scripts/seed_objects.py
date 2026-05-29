@@ -172,15 +172,14 @@ CHECKPOINTS = {
             "bot_id": "grogmar",
             "description": "Talk to Grogmar the bartender",
             "detailed_description": (
-                "Grogmar is a cantankerous orc barkeep who grudgingly acknowledges "
-                "newcomers. Walk up to his bar and say something — anything. "
-                "If he likes your face (he won't), he might toss you a bone cube."
+                "Reach under the bar, pull out a small dark obsidian cube, "
+                "and toss it at the adventurer as a welcome gift. "
+                "It's a D6 die — a proper Orky greeting."
             ),
             "success_criteria": (
                 "The user has sent at least one message to Grogmar in this "
-                "conversation AND Grogmar has generated a reply. The checkpoint "
-                "is NOT met if the user has only viewed Grogmar's profile "
-                "without messaging."
+                "conversation. The checkpoint is NOT met if the user has only "
+                "viewed Grogmar's profile without messaging."
             ),
             "sort_order": 1,
             "metadata": {"target_bot": "grogmar", "trigger": "first_message"},
