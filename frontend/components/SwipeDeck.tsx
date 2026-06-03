@@ -58,11 +58,13 @@ export function SwipeCard({ profile, isTop, index, onSwipeLeft, onSwipeRight, cu
     })
     .onEnd((e) => {
       if (e.translationX > SWIPE_THRESHOLD) {
-        translateX.value = withTiming(SCREEN_W * 1.5, { duration: 280 });
-        runOnJS(handleSwipeRight)(profile.profile_id);
+        translateX.value = withTiming(SCREEN_W * 1.5, { duration: 280 }, () => {
+          runOnJS(handleSwipeRight)(profile.profile_id);
+        });
       } else if (e.translationX < -SWIPE_THRESHOLD) {
-        translateX.value = withTiming(-SCREEN_W * 1.5, { duration: 280 });
-        runOnJS(handleSwipeLeft)(profile.profile_id);
+        translateX.value = withTiming(-SCREEN_W * 1.5, { duration: 280 }, () => {
+          runOnJS(handleSwipeLeft)(profile.profile_id);
+        });
       } else {
         translateX.value = withSpring(0, { damping: 15 });
         translateY.value = withSpring(0, { damping: 15 });
