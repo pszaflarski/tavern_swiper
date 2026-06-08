@@ -71,31 +71,44 @@ type ImageOut struct {
 
 // Tag is the full document from the character_tags collection.
 type Tag struct {
-	ID          string     `json:"id"`
-	Category    string     `json:"category"`
-	Name        string     `json:"name"`
-	Slug        string     `json:"slug"`
-	MultiSelect bool       `json:"multi_select"`
-	Status      string     `json:"status"` // "active" or "pending"
-	CreatedAt   *time.Time `json:"created_at"`
-	UpdatedAt   *time.Time `json:"updated_at"`
+	ID           string     `json:"id"`
+	Category     string     `json:"category"`
+	Name         string     `json:"name"`
+	Slug         string     `json:"slug"`
+	MultiSelect  bool       `json:"multi_select"`
+	Status       string     `json:"status"` // "active" or "pending"
+	ParentID     *string    `json:"parent_id,omitempty"`
+	DisplayOrder int        `json:"display_order"`
+	CreatedAt    *time.Time `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
+}
+
+// TagTreeNode is the response for tree traversal endpoints.
+type TagTreeNode struct {
+	Tag
+	IsRoot     bool `json:"is_root"`
+	ChildCount int  `json:"child_count"`
 }
 
 // TagCreate is the POST body for creating a character tag.
 type TagCreate struct {
-	Category    string `json:"category" binding:"required"`
-	Name        string `json:"name" binding:"required"`
-	Slug        string `json:"slug"`
-	MultiSelect *bool  `json:"multi_select"`
+	Category     string  `json:"category" binding:"required"`
+	Name         string  `json:"name" binding:"required"`
+	Slug         string  `json:"slug"`
+	MultiSelect  *bool   `json:"multi_select"`
+	ParentID     *string `json:"parent_id"`
+	DisplayOrder *int    `json:"display_order"`
 }
 
 // TagUpdate is the PUT body for updating a character tag (admin only).
 type TagUpdate struct {
-	Category    *string `json:"category"`
-	Name        *string `json:"name"`
-	Slug        *string `json:"slug"`
-	MultiSelect *bool   `json:"multi_select"`
-	Status      *string `json:"status"`
+	Category     *string `json:"category"`
+	Name         *string `json:"name"`
+	Slug         *string `json:"slug"`
+	MultiSelect  *bool   `json:"multi_select"`
+	Status       *string `json:"status"`
+	ParentID     *string `json:"parent_id"`
+	DisplayOrder *int    `json:"display_order"`
 }
 
 // TagSearchQuery is used for the tag autocomplete search endpoint.

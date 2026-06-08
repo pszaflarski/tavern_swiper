@@ -33,10 +33,14 @@ endpoints:
     - POST /characters/tags/search            # search tags by prefix
     - GET /characters/tags/by-slug/{slug}     # get tag by slug
     - GET /characters/tags/by-category/{cat}  # list tags in category
+    - GET /characters/tags/roots              # list root tags (no parent)
     - GET /characters/tags/{id}               # get tag by ID
+    - GET /characters/tags/{id}/children      # list direct children of a tag
+    - GET /characters/tags/{id}/ancestors     # walk up parent chain to root
+    - GET /characters/tags/{id}/tree          # full subtree as flat list with depth
     - POST /characters/tags/                  # create tag (admin)
     - PUT /characters/tags/{id}               # update tag (admin)
-    - DELETE /characters/tags/{id}            # delete tag (admin)
+    - DELETE /characters/tags/{id}            # delete tag (admin, blocked if children exist)
 
 dependencies:
   env_vars:
@@ -53,6 +57,9 @@ testing:
 notes:
   - Read-only for regular users, admin-only mutations
   - Characters are predefined templates for the character creation flow
-  - Tags owned by this service: fandom, race, gender
+  - Tags support parent-child hierarchy via parent_id field
+  - Root tags (parent_id = null) are entry points for the wizard (currently fandoms)
+  - Categories are open-ended (no whitelist) — hierarchy determines valid options
   - Images support artist attribution (handle, name, link) and AI-generated source types
   - Firestore only allows one array-contains per query so tag filters are mutually exclusive
+  - Deleting a tag is blocked if it has children (must delete or re-parent children first)
