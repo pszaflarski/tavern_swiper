@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  PixelRatio,
   useWindowDimensions,
   Image,
 } from 'react-native';
@@ -159,12 +160,19 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
     setIsProcessing(true);
     try {
+      // On Android, Image.getSize() returns physical pixels but the aperture
+      // and gesture translations are in dp.  Pass the device pixel ratio so
+      // calculateTransformCrop can bridge the two coordinate spaces.
+      // iOS returns dp-equivalent values, so pixelRatio is 1.
+      const pr = Platform.OS === 'android' ? PixelRatio.get() : 1;
+
       const cropData = calculateTransformCrop(
         { width: imgLayout.naturalWidth, height: imgLayout.naturalHeight },
         { width: apertureWidth, height: apertureHeight },
         scale.value,
         translateX.value,
-        translateY.value
+        translateY.value,
+        pr
       );
 
       const processedUri = await processProfileAsset(imageUri, cropData);

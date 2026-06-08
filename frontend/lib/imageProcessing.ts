@@ -11,36 +11,54 @@ export interface CropData {
 /**
  * Map visual transformation (pan/zoom) back to the natural image pixel space.
  * 
- * @param imageDim Natural dimensions of the source image
- * @param apertureDim Dimensions of the 4:5 viewing portal (UI space)
- * @param scale Total zoom applied by user (where 1.0 is the center-fit-cover scale)
- * @param translateX Horizontal offset in UI space
- * @param translateY Vertical offset in UI space
+ * @param imageDim Natural dimensions of the source image (physical pixels)
+ * @param apertureDim Dimensions of the 4:5 viewing portal (dp / UI space)
+ * @param scale Total zoom applied by user (dp-space; where initial value is aperture(dp)/image(px))
+ * @param translateX Horizontal offset in dp / UI space
+ * @param translateY Vertical offset in dp / UI space
+ * @param pixelRatio Device pixel ratio to bridge dp→px conversion (Android).
+ *                   On iOS/web Image.getSize returns dp-equivalent values, so pass 1.
  */
 export function calculateTransformCrop(
   imageDim: { width: number; height: number },
   apertureDim: { width: number; height: number },
   scale: number,
   translateX: number,
-  translateY: number
+  translateY: number,
+  pixelRatio: number = 1
 ): CropData {
+  // Convert dp-space inputs to physical pixel space.
+  // On Android Image.getSize() returns physical pixels, but the aperture and
+  // gesture translations are in dp.  Multiplying by pixelRatio unifies them.
+  // `scale` was computed as aperture(dp) / image(px), so scale*pixelRatio gives
+  // aperture(px) / image(px) — a proper unitless ratio in pixel space.
+  const apertureW_px = apertureDim.width * pixelRatio;
+  const apertureH_px = apertureDim.height * pixelRatio;
+  const tx_px = translateX * pixelRatio;
+  const ty_px = translateY * pixelRatio;
+  const effectiveScale = scale * pixelRatio;
+
   // 1. Calculate the 'natural' size of the viewing portal in image pixels
-  const awNatural = apertureDim.width / scale;
-  const ahNatural = apertureDim.height / scale;
+  const awNatural = apertureW_px / effectiveScale;
+  const ahNatural = apertureH_px / effectiveScale;
 
   // 2. Calculate offsets in natural pixel space
-  const offsetX = -translateX / scale;
-  const offsetY = -translateY / scale;
+  const offsetX = -tx_px / effectiveScale;
+  const offsetY = -ty_px / effectiveScale;
 
   // 3. Project the center-relative offsets back to the image origin (top-left)
   const x = (imageDim.width - awNatural) / 2 + offsetX;
   const y = (imageDim.height - ahNatural) / 2 + offsetY;
 
+  // 4. Clamp crop rectangle within image bounds
+  const clampedW = Math.min(Math.round(awNatural), imageDim.width);
+  const clampedH = Math.min(Math.round(ahNatural), imageDim.height);
+
   return {
     x: Math.max(0, Math.round(x)),
     y: Math.max(0, Math.round(y)),
-    width: Math.round(awNatural),
-    height: Math.round(ahNatural),
+    width: clampedW,
+    height: clampedH,
   };
 }
 

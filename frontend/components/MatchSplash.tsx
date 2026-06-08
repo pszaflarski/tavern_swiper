@@ -141,8 +141,8 @@ export default function MatchSplash() {
         style={[
           styles.container,
           {
-            paddingTop: insets.top + Spacing[4],
-            paddingBottom: insets.bottom + Spacing[4],
+            paddingTop: (insets?.top ?? 0) + Spacing[4],
+            paddingBottom: (insets?.bottom ?? 0) + Spacing[4],
           }
         ]}
       >
@@ -205,7 +205,7 @@ export default function MatchSplash() {
         </View>
 
         {/* Actions */}
-        <Animated.View style={[styles.actions, { paddingBottom: insets.bottom + Spacing[4] }, actionsStyle]}>
+        <Animated.View style={[styles.actions, { paddingBottom: (insets?.bottom ?? 0) + Spacing[4] }, actionsStyle]}>
           <Pressable 
             style={({ pressed }) => [
               styles.primaryButton,

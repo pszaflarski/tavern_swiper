@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { hydrateServiceUrls } from '../lib/api';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export {
   ErrorBoundary,
@@ -78,17 +79,19 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <ProfileProvider>
-              <MatchProvider>
-                <RootLayoutNav />
-              </MatchProvider>
-            </ProfileProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </KeyboardProvider>
+      <SafeAreaProvider>
+        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <ProfileProvider>
+                <MatchProvider>
+                  <RootLayoutNav />
+                </MatchProvider>
+              </ProfileProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
