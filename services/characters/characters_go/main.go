@@ -77,11 +77,19 @@ func main() {
 			tGroup.GET("/by-slug/:slug", handleGetTagBySlug)
 			tGroup.GET("/by-category/:category", handleListTagsByCategory)
 
+			// Hierarchy traversal routes (before /:id to avoid catch-all)
+			tGroup.GET("/roots", handleListRootTags)
+
 			// Admin tag mutation
 			tGroup.GET("/:id", handleGetTag)
 			tGroup.POST("/", handleCreateTag)
 			tGroup.PUT("/:id", handleUpdateTag)
 			tGroup.DELETE("/:id", handleDeleteTag)
+
+			// Hierarchy routes that take /:id as prefix
+			tGroup.GET("/:id/children", handleListChildren)
+			tGroup.GET("/:id/ancestors", handleListAncestors)
+			tGroup.GET("/:id/tree", handleGetSubtree)
 		}
 	}
 
