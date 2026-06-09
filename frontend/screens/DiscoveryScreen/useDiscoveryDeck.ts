@@ -117,13 +117,19 @@ export function useDiscoveryDeck(activeProfileId: string | null | undefined, isA
       {
         onSuccess: (data) => {
           if (data.match_id) {
-            const swipedProfile = deck.find(p => p.profile_id === id);
-            if (swipedProfile) {
-              showMatch({
-                profile_id: swipedProfile.profile_id,
-                display_name: swipedProfile.display_name,
-                image_url: swipedProfile.image_urls?.[0] || '',
-              });
+            try {
+              const swipedProfile = deck.find(p => p.profile_id === id);
+              if (swipedProfile) {
+                showMatch({
+                  profile_id: swipedProfile.profile_id,
+                  display_name: swipedProfile.display_name || 'A Mysterious Soul',
+                  image_url: swipedProfile.image_urls?.[0] || '',
+                });
+              }
+            } catch (e) {
+              // Match is recorded in the backend regardless — the user will
+              // see it in the messages tab even if the splash animation fails.
+              console.warn('[useDiscoveryDeck] Match splash failed, swallowing:', e);
             }
           }
         },
