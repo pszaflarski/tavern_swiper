@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import {
   loadImage,
   processProfileAsset,
+  preprocessForCropper,
   formatBytes,
   TARGET_WIDTH,
   TARGET_HEIGHT,
@@ -77,12 +78,20 @@ export default function App() {
     [naturalDims, getCoverScale],
   );
 
-  const handleFile = useCallback((file: File) => {
+  const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    const url = URL.createObjectURL(file);
+    const rawUrl = URL.createObjectURL(file);
+
+    // Preprocess: resize oversized images and bake in EXIF orientation
+    // before they enter the cropper. This keeps the viewport crop math
+    // accurate regardless of the original image dimensions.
+    const { url, width, height } = await preprocessForCropper(rawUrl);
+    URL.revokeObjectURL(rawUrl);
+
     setImageUrl(url);
     setImageName(file.name);
     setImageSize(file.size);
+    setNaturalDims({ w: width, h: height });
     setProcessed(null);
     setZoom(1);
     setPan({ x: 0, y: 0 });

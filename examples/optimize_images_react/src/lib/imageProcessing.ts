@@ -64,6 +64,55 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** Max dimension (longest side) for images entering the cropper.
+ *  2× the 1080 target width — enough quality, small enough to
+ *  keep the cropper math accurate across platforms.              */
+const MAX_CROPPER_DIM = 2160;
+
+/**
+ * Preprocess a raw image before it enters the cropper.
+ *
+ * 1. Draws through Canvas, which bakes in any browser-applied EXIF rotation.
+ * 2. Downsizes to MAX_CROPPER_DIM on the longest side if oversized.
+ * 3. Does NOT crop — that's the cropper's job.
+ *
+ * Returns { url, width, height } for the preprocessed image.
+ */
+export async function preprocessForCropper(
+  src: string
+): Promise<{ url: string; width: number; height: number }> {
+  const img = await loadImage(src);
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const longest = Math.max(w, h);
+
+  let outW = w;
+  let outH = h;
+
+  if (longest > MAX_CROPPER_DIM) {
+    const scale = MAX_CROPPER_DIM / longest;
+    outW = Math.round(w * scale);
+    outH = Math.round(h * scale);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0, outW, outH);
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed.'))),
+      'image/jpeg',
+      0.95 // near-lossless; final compression happens in processProfileAsset
+    );
+  });
+
+  const url = URL.createObjectURL(blob);
+  return { url, width: outW, height: outH };
+}
+
 /**
  * Normalizes user-selected imagery to the project's canonical profile specification.
  * Target: 1080×1350px, JPEG, 75% Quality.
