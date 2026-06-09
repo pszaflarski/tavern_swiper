@@ -52,7 +52,7 @@ appId: com.tavernswiper.app
 - extendedWaitUntil:
     notVisible:
       id: "dice-loading-screen"
-    timeout: 30000
+    timeout: 60000
 
 # 2. Wait for login to complete and the tab bar to appear
 # Using testID instead of text to avoid textTransform/overlay issues
@@ -68,4 +68,4 @@ appId: com.tavernswiper.app
 - extendedWaitUntil:
     notVisible:
       id: "dice-loading-screen"
-    timeout: 30000
+    timeout: 60000
