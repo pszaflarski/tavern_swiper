@@ -64,19 +64,17 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Max dimension (longest side) for images entering the cropper.
- *  2× the 1080 target width — enough quality, small enough to
- *  keep the cropper math accurate across platforms.              */
-const MAX_CROPPER_DIM = 2160;
-
 /**
  * Preprocess a raw image before it enters the cropper.
  *
- * 1. Draws through Canvas, which bakes in any browser-applied EXIF rotation.
- * 2. Downsizes to MAX_CROPPER_DIM on the longest side if oversized.
- * 3. Does NOT crop — that's the cropper's job.
+ * Resizes the image so it exactly matches the target profile dimensions
+ * on at least one axis (1080 wide or 1350 tall). The cropper then only
+ * needs to trim the overflow on the other axis.
  *
- * Returns { url, width, height } for the preprocessed image.
+ * - Landscape/wide images → height = 1350, width > 1080 (crop sides)
+ * - Portrait/tall images  → width = 1080, height > 1350 (crop top/bottom)
+ * - Also bakes in EXIF orientation via Canvas draw.
+ * - Does NOT crop — that's the cropper's job.
  */
 export async function preprocessForCropper(
   src: string
@@ -84,15 +82,21 @@ export async function preprocessForCropper(
   const img = await loadImage(src);
   const w = img.naturalWidth;
   const h = img.naturalHeight;
-  const longest = Math.max(w, h);
 
-  let outW = w;
-  let outH = h;
+  const imageRatio = w / h;
+  const targetRatio = TARGET_WIDTH / TARGET_HEIGHT; // 0.8
 
-  if (longest > MAX_CROPPER_DIM) {
-    const scale = MAX_CROPPER_DIM / longest;
-    outW = Math.round(w * scale);
-    outH = Math.round(h * scale);
+  let outW: number;
+  let outH: number;
+
+  if (imageRatio > targetRatio) {
+    // Wider than 4:5 — fit height to 1350, width will exceed 1080
+    outH = TARGET_HEIGHT;
+    outW = Math.round(w * (TARGET_HEIGHT / h));
+  } else {
+    // Taller than 4:5 — fit width to 1080, height will exceed 1350
+    outW = TARGET_WIDTH;
+    outH = Math.round(h * (TARGET_WIDTH / w));
   }
 
   const canvas = document.createElement('canvas');

@@ -3,6 +3,7 @@ import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { PROFILE } from '../../constants';
+import { preprocessForCropper } from '../../lib/imageProcessing';
 
 export function useImageSlots(initialImages: string[] = []) {
   const [imageUrls, setImageUrls] = useState<string[]>(initialImages);
@@ -32,7 +33,11 @@ export function useImageSlots(initialImages: string[] = []) {
     });
 
     if (!result.canceled) {
-      setPendingImageUri(result.assets[0].uri);
+      // Preprocess: resize to target dimensions (1080/1350) and bake in
+      // EXIF orientation before the cropper sees the image.
+      const preprocessedUri = await preprocessForCropper(result.assets[0].uri);
+
+      setPendingImageUri(preprocessedUri);
       setActiveSlotIndex(index);
       setIsCropperVisible(true);
     }

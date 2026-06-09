@@ -1,5 +1,52 @@
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import { Platform } from 'react-native';
+import { Image, Platform } from 'react-native';
+
+/** Target profile image dimensions */
+const TARGET_WIDTH = 1080;
+const TARGET_HEIGHT = 1350;
+
+/**
+ * Preprocess a raw camera/gallery image before it enters the cropper.
+ *
+ * Resizes the image so it exactly matches the target profile dimensions
+ * on at least one axis (1080 wide or 1350 tall). The cropper then only
+ * needs to trim the overflow on the other axis.
+ *
+ * - Landscape/wide images → height = 1350, width > 1080 (crop sides)
+ * - Portrait/tall images  → width = 1080, height > 1350 (crop top/bottom)
+ * - Bakes in EXIF orientation (manipulateAsync auto-applies it).
+ * - Does NOT crop — that's the cropper's job.
+ */
+export async function preprocessForCropper(uri: string): Promise<string> {
+  const { width, height } = await new Promise<{ width: number; height: number }>(
+    (resolve, reject) =>
+      Image.getSize(
+        uri,
+        (w, h) => resolve({ width: w, height: h }),
+        (err) => reject(err)
+      )
+  );
+
+  const imageRatio = width / height;
+  const targetRatio = TARGET_WIDTH / TARGET_HEIGHT; // 0.8
+
+  const actions: any[] = [];
+
+  if (imageRatio > targetRatio) {
+    // Wider than 4:5 — fit height to 1350, width will exceed 1080
+    actions.push({ resize: { height: TARGET_HEIGHT } });
+  } else {
+    // Taller than 4:5 — fit width to 1080, height will exceed 1350
+    actions.push({ resize: { width: TARGET_WIDTH } });
+  }
+
+  const result = await manipulateAsync(uri, actions, {
+    compress: 1, // lossless at this stage; the cropper pipeline compresses later
+    format: SaveFormat.JPEG,
+  });
+
+  return result.uri;
+}
 
 export interface CropData {
   x: number;
