@@ -43,6 +43,7 @@ import { AuthProvider } from '../context/AuthContext';
 import { ProfileProvider, useProfileContext } from '../context/ProfileContext';
 import { MatchProvider } from '../context/MatchContext';
 import MatchSplash from '../components/MatchSplash';
+import SilentErrorBoundary from '../components/SilentErrorBoundary';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -140,7 +141,9 @@ function RootLayoutNav() {
         <Stack.Screen name="profiles" options={{ headerShown: false }} />
         <Stack.Screen name="inventory" options={{ headerShown: false }} />
       </Stack>
-      <MatchSplash />
+      <SilentErrorBoundary label="MatchSplash">
+        <MatchSplash />
+      </SilentErrorBoundary>
       <Toast />
     </>
   );
