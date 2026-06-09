@@ -42,7 +42,6 @@ export default function App() {
   const [processed, setProcessed] = useState<ProcessedResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const cropBoxRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -53,22 +52,18 @@ export default function App() {
 
   // ——— Single Mode Helpers ———
   const getCoverScale = useCallback(() => {
-    const box = cropBoxRef.current;
-    if (!box || !naturalDims.w) return 1;
-    const r = box.getBoundingClientRect();
-    return Math.max(r.width / naturalDims.w, r.height / naturalDims.h);
+    if (!naturalDims.w) return 1;
+    return Math.max(APERTURE_W / naturalDims.w, APERTURE_H / naturalDims.h);
   }, [naturalDims]);
 
   const clampPan = useCallback(
     (px: number, py: number, z: number) => {
-      const box = cropBoxRef.current;
-      if (!box || !naturalDims.w) return { x: 0, y: 0 };
-      const r = box.getBoundingClientRect();
+      if (!naturalDims.w) return { x: 0, y: 0 };
       const cs = getCoverScale() * z;
       const dw = naturalDims.w * cs;
       const dh = naturalDims.h * cs;
-      const maxX = Math.max(0, (dw - r.width) / 2);
-      const maxY = Math.max(0, (dh - r.height) / 2);
+      const maxX = Math.max(0, (dw - APERTURE_W) / 2);
+      const maxY = Math.max(0, (dh - APERTURE_H) / 2);
       return {
         x: Math.max(-maxX, Math.min(maxX, px)),
         y: Math.max(-maxY, Math.min(maxY, py)),
@@ -140,18 +135,16 @@ export default function App() {
     setIsProcessing(true);
     try {
       const freshImg = await loadImage(imageUrl);
-      const box = cropBoxRef.current;
-      if (!box) throw new Error('Crop box not mounted');
-      const r = box.getBoundingClientRect();
       const cs = getCoverScale() * zoom;
 
-      const imgLeft = (r.width - naturalDims.w * cs) / 2 + pan.x;
-      const imgTop = (r.height - naturalDims.h * cs) / 2 + pan.y;
+      // All math in pixel space using the fixed aperture dimensions
+      const imgLeft = (APERTURE_W - naturalDims.w * cs) / 2 + pan.x;
+      const imgTop = (APERTURE_H - naturalDims.h * cs) / 2 + pan.y;
 
       const cropX = Math.max(0, Math.round(-imgLeft / cs));
       const cropY = Math.max(0, Math.round(-imgTop / cs));
-      const cropW = Math.round(r.width / cs);
-      const cropH = Math.round(r.height / cs);
+      const cropW = Math.round(APERTURE_W / cs);
+      const cropH = Math.round(APERTURE_H / cs);
 
       const cropData: CropData = {
         x: cropX,
@@ -228,7 +221,7 @@ export default function App() {
         // Auto-Crop Math: target aspect ratio is 4/5 (0.8)
         // Center horizontally, align to the top vertically (y = 0)
         const ratio = w / h;
-        const targetRatio = 4 / 5;
+        const targetRatio = ASPECT_RATIO;
         let cropX = 0;
         let cropY = 0;
         let cropW = w;
@@ -379,7 +372,6 @@ export default function App() {
               <div className="editor-body">
                 <div className="viewport-panel">
                   <div
-                    ref={cropBoxRef}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
@@ -403,9 +395,9 @@ export default function App() {
                     {/* Shroud overlays around the 4:5 aperture */}
                     <div className="shroud">
                       <div className="shroud-row" />
-                      <div className="shroud-middle" style={{ height: 350 }}>
+                      <div className="shroud-middle" style={{ height: APERTURE_H }}>
                         <div className="shroud-cell" />
-                        <div className="aperture" style={{ width: 280, height: 350 }} />
+                        <div className="aperture" style={{ width: APERTURE_W, height: APERTURE_H }} />
                         <div className="shroud-cell" />
                       </div>
                       <div className="shroud-row" />
