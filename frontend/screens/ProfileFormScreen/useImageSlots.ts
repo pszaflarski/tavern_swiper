@@ -3,7 +3,7 @@ import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { PROFILE } from '../../constants';
-import { preprocessForCropper } from '../../lib/imageProcessing';
+import { preprocessForCropper, PreprocessResult } from '../../lib/imageProcessing';
 
 export function useImageSlots(initialImages: string[] = []) {
   const [imageUrls, setImageUrls] = useState<string[]>(initialImages);
@@ -11,6 +11,7 @@ export function useImageSlots(initialImages: string[] = []) {
   // Image Processing State
   const [isCropperVisible, setIsCropperVisible] = useState(false);
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+  const [pendingImageDims, setPendingImageDims] = useState<{ width: number; height: number } | null>(null);
   const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
 
   const pickImage = async (index: number) => {
@@ -33,13 +34,24 @@ export function useImageSlots(initialImages: string[] = []) {
     });
 
     if (!result.canceled) {
-      // Preprocess: resize to target dimensions (1080/1350) and bake in
-      // EXIF orientation before the cropper sees the image.
-      const preprocessedUri = await preprocessForCropper(result.assets[0].uri);
-
-      setPendingImageUri(preprocessedUri);
+      // Show the cropper immediately with a loading spinner while we preprocess.
+      setPendingImageUri(null);
+      setPendingImageDims(null);
       setActiveSlotIndex(index);
       setIsCropperVisible(true);
+
+      try {
+        // Preprocess: resize to target dimensions (1080/1350) and bake in
+        // EXIF orientation before the cropper sees the image.
+        const preprocessed = await preprocessForCropper(result.assets[0].uri);
+
+        setPendingImageUri(preprocessed.uri);
+        setPendingImageDims({ width: preprocessed.width, height: preprocessed.height });
+      } catch (error) {
+        console.error('Image preprocessing failed:', error);
+        setIsCropperVisible(false);
+        Alert.alert('Vision Obscured', 'The image could not be prepared. Please try a different one.');
+      }
     }
   };
 
@@ -80,6 +92,8 @@ export function useImageSlots(initialImages: string[] = []) {
     setIsCropperVisible,
     pendingImageUri,
     setPendingImageUri,
+    pendingImageDims,
+    setPendingImageDims,
     activeSlotIndex,
     setActiveSlotIndex,
     pickImage,
