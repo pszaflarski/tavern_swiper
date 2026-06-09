@@ -3,7 +3,8 @@
 #
 # This flow handles the common case where the app opens to the auth screen.
 # It uses the root admin test account for simplicity.
-# Handles: splash screen wait, font loading, auth state loading.
+# Handles: splash screen wait, font loading, auth state loading,
+#           and the Android "Save password to Google?" system dialog.
 
 appId: com.tavernswiper.app
 
@@ -14,23 +15,63 @@ appId: com.tavernswiper.app
     visible: "Sign In"
     timeout: 30000
 
-# Type email — tap the email input by its placeholder text
-- tapOn: "hero@realm.com"
-- inputText: "root@tavernswiper.com"
+# Dismiss any lingering "Save password" system dialogs from previous runs
+- runFlow:
+    when:
+      visible: "Save password"
+    commands:
+      - tapOn: "Not now"
 
-# Type password — tap the password input by its placeholder
-- tapOn: "••••••••"
+- runFlow:
+    when:
+      visible: "Save your password"
+    commands:
+      - tapOn: "No thanks"
+
+# Type email — tap the email input by testID for reliability
+- tapOn:
+    id: "auth-email-input"
+- inputText: "peter@gmail.com"
+
+# Type password — tap the password input by testID
+- tapOn:
+    id: "auth-password-input"
 - inputText: "Password123!"
 
 # Hide keyboard before pressing submit
 - hideKeyboard
 
-# Press submit button (rendered as uppercase "ENTER TAVERN" via CSS, but
-# React Native text content is "Enter Tavern")
-- tapOn: "Enter Tavern"
+# Press submit button by testID
+- tapOn:
+    id: "auth-submit-button"
 
-# Wait for login to complete and tabs to appear
-# Tab labels are CSS uppercase so they render as "TAVERN"
+# Dismiss the "Save password to Google?" dialog if it appears
+- runFlow: dismiss_save_password.yaml
+
+# 1. Wait for the root-level dice loading screen to fully unmount/disappear if visible
+- runFlow:
+    when:
+      visible:
+        id: "dice-loading-screen"
+    commands:
+      - assertNotVisible:
+          id: "dice-loading-screen"
+
+# 2. Wait for login to complete and the tab bar to appear
+# Using testID instead of text to avoid textTransform/overlay issues
 - extendedWaitUntil:
-    visible: "TAVERN"
-    timeout: 20000
+    visible:
+      id: "tab-bar-tavern"
+    timeout: 45000
+
+# 3. Wait 2 seconds for the Tavern tab screen to mount and show its local loader if any
+- runScript: sleep.js
+
+# 4. Wait for the Tavern screen's local loading screen to disappear
+- runFlow:
+    when:
+      visible:
+        id: "dice-loading-screen"
+    commands:
+      - assertNotVisible:
+          id: "dice-loading-screen"

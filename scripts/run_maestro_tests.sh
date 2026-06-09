@@ -343,6 +343,10 @@ main() {
     ensure_adb_server
     start_emulator
 
+    # Disable Autofill service to prevent "Save password to Google?" prompts
+    log "Disabling Android Autofill service on emulator..."
+    "$ADB_BIN" shell settings put secure autofill_service null || true
+
     # Install the app
     install_apk
 

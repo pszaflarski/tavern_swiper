@@ -1,10 +1,9 @@
 # Tab Navigation Tests
-# Analogous to: __tests__/Navigation.test.tsx
 #
 # Verifies:
-# - All 4 tab buttons are present (TAVERN, PROFILES, MESSAGES, ACCOUNT)
+# - All 4 tab buttons are present (Tavern, Profiles, Messages, Account)
 # - Each tab is tappable and navigates to the correct screen
-# NOTE: Tab labels have CSS textTransform: 'uppercase' so they render as ALL CAPS
+# - Screens load their testID containers
 
 appId: com.tavernswiper.app
 
@@ -15,33 +14,44 @@ appId: com.tavernswiper.app
     clearState: true
 - runFlow: helpers/auth_login_helper.yaml
 
-# --- Test: All tab labels are visible ---
-- assertVisible: "TAVERN"
-- assertVisible: "PROFILES"
-- assertVisible: "MESSAGES"
-- assertVisible: "ACCOUNT"
+# --- Test: All tab bar buttons are present (using testIDs) ---
+- assertVisible:
+    id: "tab-bar-tavern"
+- assertVisible:
+    id: "tab-bar-profiles"
+- assertVisible:
+    id: "tab-bar-messages"
+- assertVisible:
+    id: "tab-bar-account"
 
 # --- Test: Navigate to Profiles tab ---
-- tapOn: "PROFILES"
+- tapOn:
+    id: "tab-bar-profiles"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "profiles-screen"
     timeout: 10000
 
 # --- Test: Navigate to Messages tab ---
-- tapOn: "MESSAGES"
+- tapOn:
+    id: "tab-bar-messages"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "messages-screen"
     timeout: 10000
 
 # --- Test: Navigate to Account tab ---
-- tapOn: "ACCOUNT"
+- tapOn:
+    id: "tab-bar-account"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "account-screen"
     timeout: 10000
 
 # --- Test: Navigate back to Tavern tab ---
-- tapOn: "TAVERN"
+- tapOn:
+    id: "tab-bar-tavern"
 - waitForAnimationToEnd

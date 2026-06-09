@@ -1,10 +1,9 @@
 # Swiping / Discovery Screen Tests
-# Analogous to: __tests__/Swiping.test.tsx
 #
 # Verifies:
-# - Tavern screen renders
-# - Swipe left and right buttons are present (when profiles exist)
-# - Or no-profile prompt is shown
+# - Tavern screen renders (one of two states)
+# - Swipe left and right buttons are present (when profiles + cards exist)
+# - Or no-profile / empty deck state is shown
 
 appId: com.tavernswiper.app
 
@@ -15,24 +14,25 @@ appId: com.tavernswiper.app
     clearState: true
 - runFlow: helpers/auth_login_helper.yaml
 
-# Ensure we're on the Tavern tab (already there after login)
-- tapOn: "TAVERN"
+# Ensure we're on the Tavern tab (should already be here after login)
+- tapOn:
+    id: "tab-bar-tavern"
 - waitForAnimationToEnd
 
-# --- Test: Tavern screen renders (one of two states) ---
-# Either the main tavern-screen or the no-profile screen must appear
+# --- Test: Tavern screen renders (one of multiple states) ---
+
+# State 1: Active profile with swipeable cards
 - runFlow:
     when:
       visible:
         id: "tavern-screen"
     commands:
-      # --- Test: Swipe buttons are present ---
       - assertVisible:
           id: "swipe-left-button"
       - assertVisible:
           id: "swipe-right-button"
 
-# Handle the no-profile case
+# State 2: No profile — needs to create one first
 - runFlow:
     when:
       visible:
@@ -40,3 +40,17 @@ appId: com.tavernswiper.app
     commands:
       - assertVisible:
           id: "forge-identity-button"
+
+# State 3: Has profile but deck is empty (no cards to swipe)
+- runFlow:
+    when:
+      visible: "No Heroes Found"
+    commands:
+      - assertVisible: "The realm is quiet tonight..."
+
+# State 4: Loading / scrying
+- runFlow:
+    when:
+      visible: "Scrying The Realm..."
+    commands:
+      - assertVisible: "Searching distant lands..."
