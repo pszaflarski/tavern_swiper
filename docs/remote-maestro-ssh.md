@@ -19,45 +19,43 @@ Look for `tau-ephemeral-instance-1` (IP `100.126.229.101`).
 
 ---
 
-### 2. Build the x86_64 APK Locally
-To test on the remote x86_64 Android emulator, your APK must include the `x86_64` architecture. Build the local-variant APK with emulator architecture compatibility enabled:
-
+### 2. Sync Code to the Remote VM
+Commit your local changes and push them to your branch on GitHub, then SSH into the VM and pull them:
 ```bash
-cd frontend
-# Set EAS build variable to target emulator architectures (arm64-v8a + x86_64)
-EAS_BUILD_EMULATOR=true npm run build:local
+gcloud compute ssh peter@tau-ephemeral-instance \
+  --zone=northamerica-northeast2-b \
+  --project=tavern-swiper-dev \
+  --command="cd ~/Documents/tavern_swiper && git pull"
 ```
-This produces your test APK (usually located at `frontend/dist/` or `frontend/android/app/build/outputs/apk/release/app-release.apk`).
 
 ---
 
-### 3. Transfer the APK to the Remote VM
-Upload the compiled APK from your local machine to the remote VM using `gcloud compute scp`:
+### 3. Build the Emulator APK on the VM (Highmem Performance)
+Since the VM runs in `n2-highmem-8` mode with 64 GB of RAM and 8 CPU cores, compiling the Android build on the VM is extremely fast and avoids consuming local host memory. 
 
+Trigger the EAS local build on the VM using the `emulator` build profile (which automatically targets the x86_64 emulator architecture):
 ```bash
-gcloud compute scp \
-  /path/to/local/app-release.apk \
-  peter@tau-ephemeral-instance:~/Documents/tavern_swiper/frontend/app-release.apk \
+gcloud compute ssh peter@tau-ephemeral-instance \
   --zone=northamerica-northeast2-b \
-  --project=tavern-swiper-dev
+  --project=tavern-swiper-dev \
+  --command="cd ~/Documents/tavern_swiper/frontend && npx eas-cli build --platform android --profile emulator --local"
 ```
+EAS will compile the application and output a file named like `build-*.apk` directly in the `frontend/` directory.
 
 ---
 
 ### 4. Run the Maestro Tests via SSH
-Connect to the remote VM via SSH and execute the Maestro test suite. 
-
-You can execute this as a one-liner SSH command that starts the emulator, installs the uploaded APK, runs the tests, and shuts down the emulator:
+Execute the Maestro test suite on the VM. The test runner script will automatically find the newly built APK in the `frontend/` directory:
 
 ```bash
 gcloud compute ssh peter@tau-ephemeral-instance \
   --zone=northamerica-northeast2-b \
   --project=tavern-swiper-dev \
-  --command="cd ~/Documents/tavern_swiper/frontend && bash ../scripts/run_maestro_tests.sh --apk ./app-release.apk"
+  --command="cd ~/Documents/tavern_swiper/frontend && bash ../scripts/run_maestro_tests.sh"
 ```
 
 > [!NOTE]
-> The `run_maestro_tests.sh` script automatically handles spinning up the AVD `MaestroTest` in headless mode (if not already running), cleaning up old artifacts, running the Maestro runner inside a memory-limited Docker container (2GB RAM limit), and terminating the emulator on exit.
+> The `run_maestro_tests.sh` script automatically handles spinning up the AVD `MaestroTest` in headless mode (if not already running), cleaning up old artifacts, installing the newly compiled APK, running the Maestro runner inside a memory-limited Docker container (2GB RAM limit), and terminating the emulator on exit.
 
 ---
 
