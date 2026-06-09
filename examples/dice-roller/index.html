@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚔️ Tavern Dice Roller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0e1a;
+      color: #e2e8f0;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Canvas fills everything ── */
+    #scene-container {
+      flex: 1;
+      position: relative;
+    }
+    #scene-container canvas { display: block; }
+
+    /* ── Result overlay ── */
+    .result-overlay {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .result-overlay.visible { opacity: 1; }
+    .result-value {
+      font-family: 'Cinzel', serif;
+      font-size: 80px;
+      font-weight: 900;
+      color: #f59e0b;
+      text-shadow:
+        0 0 20px rgba(245,158,11,0.8),
+        0 0 60px rgba(245,158,11,0.4),
+        0 4px 8px rgba(0,0,0,0.6);
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Bottom panel ── */
+    .panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(180deg, rgba(15,23,42,0.0) 0%, rgba(15,23,42,0.85) 40%, rgba(15,23,42,0.98) 100%);
+      padding: 40px 24px 28px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .history {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      min-height: 32px;
+      flex-wrap: wrap;
+    }
+    .history-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+    .history-pip {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(30,41,59,0.8);
+      border: 1.5px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 14px;
+      color: #cbd5e1;
+      transition: all 0.3s ease;
+    }
+    .history-pip.latest {
+      border-color: #f59e0b;
+      color: #f59e0b;
+      box-shadow: 0 0 12px rgba(245,158,11,0.3);
+    }
+
+    .roll-btn {
+      width: 100%;
+      max-width: 400px;
+      height: 56px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #0f172a;
+      font-family: 'Cinzel', serif;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow:
+        0 4px 16px rgba(245,158,11,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    .roll-btn:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 8px 24px rgba(245,158,11,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .roll-btn:active {
+      transform: translateY(0);
+    }
+    .roll-btn.rolling {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .roll-btn .shimmer {
+      position: absolute;
+      top: 0; left: -100%; bottom: 0;
+      width: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      animation: shimmer 2s infinite;
+    }
+    @keyframes shimmer {
+      100% { left: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="scene-container">
+    <div class="result-overlay" id="result-overlay">
+      <div class="result-value" id="result-value"></div>
+    </div>
+    <div class="panel">
+      <div class="history" id="history"></div>
+      <button class="roll-btn" id="roll-btn" onclick="rollDie()">
+        <span class="shimmer"></span>
+        🎲 ROLL
+      </button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/",
+      "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/+esm"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import * as CANNON from 'cannon-es';
+
+    // ─── Constants ───
+    const DIE_SIZE = 1;
+    const HALF = DIE_SIZE / 2;
+    const SETTLE_THRESHOLD = 0.08;
+    const SETTLE_FRAMES = 45;
+    const WORLD_HEIGHT = 8; // ortho frustum half-height in world units
+    const WALL_HEIGHT = 4;  // how tall the invisible walls are
+
+    // ─── State ───
+    let scene, camera, renderer;
+    let world, dieBody, dieMesh;
+    let rolling = false;
+    let settleCounter = 0;
+    let rollHistory = [];
+    let wallBodies = [];
+    let worldHalfW, worldHalfH;
+
+    // ─── Face definitions ───
+    // Standard d6: opposite faces sum to 7
+    // Three.js BoxGeometry face order: +x, -x, +y, -y, +z, -z
+    const FACE_DEFS = [
+      { value: 2, normal: new THREE.Vector3(1, 0, 0) },
+      { value: 5, normal: new THREE.Vector3(-1, 0, 0) },
+      { value: 3, normal: new THREE.Vector3(0, 1, 0) },
+      { value: 4, normal: new THREE.Vector3(0, -1, 0) },
+      { value: 1, normal: new THREE.Vector3(0, 0, 1) },
+      { value: 6, normal: new THREE.Vector3(0, 0, -1) },
+    ];
+
+    const PIP_LAYOUTS = {
+      1: [[0, 0]],
+      2: [[-0.5, -0.5], [0.5, 0.5]],
+      3: [[-0.5, -0.5], [0, 0], [0.5, 0.5]],
+      4: [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]],
+      5: [[-0.5, -0.5], [0.5, -0.5], [0, 0], [-0.5, 0.5], [0.5, 0.5]],
+      6: [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0], [0.5, 0], [-0.5, 0.5], [0.5, 0.5]],
+    };
+
+    // ─── Pip textures ───
+    function createDieTexture(faceValue) {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Deep navy face
+      const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size * 0.7);
+      grad.addColorStop(0, '#2a3a5c');
+      grad.addColorStop(1, '#1a2744');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+
+      // Gold border
+      ctx.strokeStyle = 'rgba(245,158,11,0.3)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.roundRect(4, 4, size - 8, size - 8, 16);
+      ctx.stroke();
+
+      // Pips
+      const pips = PIP_LAYOUTS[faceValue];
+      const pipRadius = size * 0.08;
+      pips.forEach(([u, v]) => {
+        const cx = size / 2 + u * size * 0.32;
+        const cy = size / 2 + v * size * 0.32;
+
+        // Shadow
+        ctx.beginPath();
+        ctx.arc(cx + 2, cy + 2, pipRadius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fill();
+
+        // Pip
+        const pipGrad = ctx.createRadialGradient(cx - 2, cy - 2, 0, cx, cy, pipRadius);
+        pipGrad.addColorStop(0, '#fde68a');
+        pipGrad.addColorStop(0.7, '#f59e0b');
+        pipGrad.addColorStop(1, '#d97706');
+        ctx.beginPath();
+        ctx.arc(cx, cy, pipRadius, 0, Math.PI * 2);
+        ctx.fillStyle = pipGrad;
+        ctx.fill();
+      });
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createDieMesh() {
+      const geometry = new THREE.BoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE);
+      const faceOrder = [2, 5, 3, 4, 1, 6];
+      const materials = faceOrder.map(v =>
+        new THREE.MeshStandardMaterial({
+          map: createDieTexture(v),
+          roughness: 0.35,
+          metalness: 0.1,
+        })
+      );
+      const mesh = new THREE.Mesh(geometry, materials);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    // ─── Determine top face ───
+    function getTopFace(body) {
+      const worldUp = new CANNON.Vec3(0, 1, 0);
+      let bestDot = -Infinity;
+      let bestValue = 1;
+      for (const fd of FACE_DEFS) {
+        const wn = body.quaternion.vmult(new CANNON.Vec3(fd.normal.x, fd.normal.y, fd.normal.z));
+        const dot = wn.dot(worldUp);
+        if (dot > bestDot) { bestDot = dot; bestValue = fd.value; }
+      }
+      return bestValue;
+    }
+
+    // ─── Compute world dimensions from viewport ───
+    function getWorldDims() {
+      const container = document.getElementById('scene-container');
+      const aspect = container.clientWidth / container.clientHeight;
+      worldHalfH = WORLD_HEIGHT;
+      worldHalfW = WORLD_HEIGHT * aspect;
+      return { halfW: worldHalfW, halfH: worldHalfH };
+    }
+
+    // ─── Create / update walls to match viewport ───
+    function rebuildWalls() {
+      // Remove old walls
+      wallBodies.forEach(b => world.removeBody(b));
+      wallBodies = [];
+
+      const { halfW, halfH } = getWorldDims();
+      const wallMat = new CANNON.Material({ friction: 0.2, restitution: 0.7 });
+
+      // Walls are planes facing inward
+      // Bottom wall (at -z in top-down, which is -halfH on the z axis)
+      // In our top-down view: camera looks down Y axis.
+      // Floor is XZ plane at y=0. Walls are vertical planes bounding XZ.
+      const wallDefs = [
+        // +X wall (right edge)
+        { pos: [halfW, WALL_HEIGHT / 2, 0], axis: [0, 1, 0], angle: -Math.PI / 2 },
+        // -X wall (left edge)
+        { pos: [-halfW, WALL_HEIGHT / 2, 0], axis: [0, 1, 0], angle: Math.PI / 2 },
+        // +Z wall (bottom edge of screen in top-down)
+        { pos: [0, WALL_HEIGHT / 2, halfH], axis: [0, 1, 0], angle: Math.PI },
+        // -Z wall (top edge of screen)
+        { pos: [0, WALL_HEIGHT / 2, -halfH], axis: [0, 1, 0], angle: 0 },
+      ];
+
+      wallDefs.forEach(({ pos, axis, angle }) => {
+        const body = new CANNON.Body({
+          mass: 0,
+          shape: new CANNON.Plane(),
+          material: wallMat,
+        });
+        body.position.set(...pos);
+        body.quaternion.setFromAxisAngle(new CANNON.Vec3(...axis), angle);
+        world.addBody(body);
+        wallBodies.push(body);
+      });
+    }
+
+    // ─── Build edge glow meshes ───
+    let edgeMeshes = [];
+    function rebuildEdgeGlow() {
+      edgeMeshes.forEach(m => scene.remove(m));
+      edgeMeshes = [];
+
+      const { halfW, halfH } = getWorldDims();
+      const thickness = 0.08;
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: '#f59e0b',
+        transparent: true,
+        opacity: 0.15,
+      });
+
+      // Horizontal edges (top & bottom)
+      [halfH, -halfH].forEach(z => {
+        const geo = new THREE.PlaneGeometry(halfW * 2, thickness);
+        const mesh = new THREE.Mesh(geo, glowMat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.set(0, 0.01, z);
+        scene.add(mesh);
+        edgeMeshes.push(mesh);
+      });
+
+      // Vertical edges (left & right)
+      [halfW, -halfW].forEach(x => {
+        const geo = new THREE.PlaneGeometry(thickness, halfH * 2);
+        const mesh = new THREE.Mesh(geo, glowMat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.set(x, 0.01, 0);
+        scene.add(mesh);
+        edgeMeshes.push(mesh);
+      });
+    }
+
+    // ─── Init ───
+    function init() {
+      const container = document.getElementById('scene-container');
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+      container.insertBefore(renderer.domElement, container.firstChild);
+
+      // Scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color('#0a0e1a');
+
+      // Orthographic camera — top-down
+      const { halfW, halfH } = getWorldDims();
+      camera = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, 0.1, 50);
+      camera.position.set(0, 20, 0);
+      camera.lookAt(0, 0, 0);
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+      dirLight.position.set(3, 15, 4);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 40;
+      dirLight.shadow.camera.left = -halfW;
+      dirLight.shadow.camera.right = halfW;
+      dirLight.shadow.camera.top = halfH;
+      dirLight.shadow.camera.bottom = -halfH;
+      dirLight.shadow.bias = -0.001;
+      scene.add(dirLight);
+
+      const warmLight = new THREE.PointLight('#ffd700', 0.4, 30);
+      warmLight.position.set(-4, 10, -3);
+      scene.add(warmLight);
+
+      // Floor — dark felt table
+      const floorGeo = new THREE.PlaneGeometry(halfW * 2 + 2, halfH * 2 + 2);
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: '#0f1525',
+        roughness: 0.9,
+        metalness: 0.05,
+      });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      // Subtle grid
+      const gridHelper = new THREE.GridHelper(Math.max(halfW, halfH) * 2 + 2, 40, 0x151d30, 0x151d30);
+      gridHelper.position.y = 0.002;
+      gridHelper.material.opacity = 0.25;
+      gridHelper.material.transparent = true;
+      scene.add(gridHelper);
+
+      // Edge glow
+      rebuildEdgeGlow();
+
+      // ─── Physics ───
+      world = new CANNON.World({ gravity: new CANNON.Vec3(0, -40, 0) });
+      world.broadphase = new CANNON.NaiveBroadphase();
+      world.solver.iterations = 20;
+
+      // Floor
+      const floorBody = new CANNON.Body({
+        mass: 0,
+        shape: new CANNON.Plane(),
+        material: new CANNON.Material({ friction: 0.6, restitution: 0.25 }),
+      });
+      floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+      world.addBody(floorBody);
+
+      // Walls
+      rebuildWalls();
+
+      // Die
+      const dieShape = new CANNON.Box(new CANNON.Vec3(HALF, HALF, HALF));
+      const dieMat = new CANNON.Material({ friction: 0.4, restitution: 0.45 });
+      dieBody = new CANNON.Body({
+        mass: 1,
+        shape: dieShape,
+        material: dieMat,
+        linearDamping: 0.15,
+        angularDamping: 0.2,
+      });
+      dieBody.position.set(0, HALF + 0.01, 0);
+      world.addBody(dieBody);
+
+      // Contact materials
+      const floorDieContact = new CANNON.ContactMaterial(floorBody.material, dieMat, {
+        friction: 0.5,
+        restitution: 0.25,
+      });
+      world.addContactMaterial(floorDieContact);
+
+      // Die mesh
+      dieMesh = createDieMesh();
+      dieMesh.position.set(0, HALF + 0.01, 0);
+      scene.add(dieMesh);
+
+      // Resize
+      window.addEventListener('resize', onResize);
+
+      animate();
+    }
+
+    function onResize() {
+      const container = document.getElementById('scene-container');
+      const { halfW, halfH } = getWorldDims();
+
+      camera.left = -halfW;
+      camera.right = halfW;
+      camera.top = halfH;
+      camera.bottom = -halfH;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(container.clientWidth, container.clientHeight);
+
+      rebuildWalls();
+      rebuildEdgeGlow();
+    }
+
+    // ─── Roll — violent throw from a random edge ───
+    window.rollDie = function rollDie() {
+      if (rolling) return;
+      rolling = true;
+      settleCounter = 0;
+
+      const btn = document.getElementById('roll-btn');
+      btn.classList.add('rolling');
+      btn.textContent = '🎲 Rolling…';
+
+      const overlay = document.getElementById('result-overlay');
+      overlay.classList.remove('visible');
+
+      const { halfW, halfH } = getWorldDims();
+      const margin = 1.5;
+
+      // Pick a random edge to throw FROM
+      const edge = Math.floor(Math.random() * 4);
+      let startX, startZ, velX, velZ;
+
+      switch (edge) {
+        case 0: // left edge → throw right
+          startX = -halfW + margin;
+          startZ = (Math.random() - 0.5) * halfH;
+          velX = 15 + Math.random() * 20;
+          velZ = (Math.random() - 0.5) * 20;
+          break;
+        case 1: // right edge → throw left
+          startX = halfW - margin;
+          startZ = (Math.random() - 0.5) * halfH;
+          velX = -(15 + Math.random() * 20);
+          velZ = (Math.random() - 0.5) * 20;
+          break;
+        case 2: // top edge → throw down
+          startX = (Math.random() - 0.5) * halfW;
+          startZ = -halfH + margin;
+          velX = (Math.random() - 0.5) * 20;
+          velZ = 15 + Math.random() * 20;
+          break;
+        case 3: // bottom edge → throw up
+          startX = (Math.random() - 0.5) * halfW;
+          startZ = halfH - margin;
+          velX = (Math.random() - 0.5) * 20;
+          velZ = -(15 + Math.random() * 20);
+          break;
+      }
+
+      dieBody.position.set(startX, 3 + Math.random() * 2, startZ);
+      dieBody.velocity.set(velX, -(5 + Math.random() * 5), velZ);
+      dieBody.angularVelocity.set(
+        (Math.random() - 0.5) * 40,
+        (Math.random() - 0.5) * 40,
+        (Math.random() - 0.5) * 40
+      );
+      dieBody.quaternion.setFromEuler(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
+      );
+      dieBody.wakeUp();
+    };
+
+    function showResult(value) {
+      rolling = false;
+      rollHistory.push(value);
+      if (rollHistory.length > 10) rollHistory.shift();
+
+      const overlay = document.getElementById('result-overlay');
+      const resultEl = document.getElementById('result-value');
+      resultEl.textContent = value;
+      resultEl.style.animation = 'none';
+      resultEl.offsetHeight;
+      resultEl.style.animation = '';
+      overlay.classList.add('visible');
+
+      const historyEl = document.getElementById('history');
+      if (rollHistory.length > 0) {
+        historyEl.innerHTML = '<span class="history-label">History</span>' +
+          rollHistory.map((v, i) =>
+            `<div class="history-pip ${i === rollHistory.length - 1 ? 'latest' : ''}">${v}</div>`
+          ).join('');
+      }
+
+      const btn = document.getElementById('roll-btn');
+      btn.classList.remove('rolling');
+      btn.innerHTML = '<span class="shimmer"></span>🎲 ROLL';
+    }
+
+    // ─── Loop ───
+    const fixedTimeStep = 1 / 60;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      world.step(fixedTimeStep, fixedTimeStep, 3);
+
+      dieMesh.position.copy(dieBody.position);
+      dieMesh.quaternion.copy(dieBody.quaternion);
+
+      if (rolling) {
+        const vLen = dieBody.velocity.length();
+        const aLen = dieBody.angularVelocity.length();
+        if (vLen < SETTLE_THRESHOLD && aLen < SETTLE_THRESHOLD) {
+          settleCounter++;
+          if (settleCounter >= SETTLE_FRAMES) {
+            showResult(getTopFace(dieBody));
+          }
+        } else {
+          settleCounter = 0;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    init();
+  </script>
+</body>
+</html>

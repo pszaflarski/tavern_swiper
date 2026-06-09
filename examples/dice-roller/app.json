@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "dice-roller",
+    "slug": "dice-roller",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "dice-roller",
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
