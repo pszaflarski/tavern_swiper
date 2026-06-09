@@ -49,13 +49,10 @@ appId: com.tavernswiper.app
 - runFlow: dismiss_save_password.yaml
 
 # 1. Wait for the root-level dice loading screen to fully unmount/disappear if visible
-- runFlow:
-    when:
-      visible:
-        id: "dice-loading-screen"
-    commands:
-      - assertNotVisible:
-          id: "dice-loading-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "dice-loading-screen"
+    timeout: 30000
 
 # 2. Wait for login to complete and the tab bar to appear
 # Using testID instead of text to avoid textTransform/overlay issues
@@ -68,10 +65,7 @@ appId: com.tavernswiper.app
 - runScript: sleep.js
 
 # 4. Wait for the Tavern screen's local loading screen to disappear
-- runFlow:
-    when:
-      visible:
-        id: "dice-loading-screen"
-    commands:
-      - assertNotVisible:
-          id: "dice-loading-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "dice-loading-screen"
+    timeout: 30000
