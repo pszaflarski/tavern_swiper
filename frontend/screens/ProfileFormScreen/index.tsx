@@ -56,6 +56,7 @@ export default function CreateAndEditProfileScreen() {
     setIsCropperVisible,
     pendingImageUri,
     setPendingImageUri,
+    pendingImageDims,
     setActiveSlotIndex,
     pickImage,
     handleCropComplete,
@@ -398,6 +399,7 @@ export default function CreateAndEditProfileScreen() {
       <ImageCropperModal
         isVisible={isCropperVisible}
         imageUri={pendingImageUri}
+        imageDimensions={pendingImageDims}
         onClose={() => setIsCropperVisible(false)}
         onCropComplete={handleCropComplete}
       />

@@ -275,7 +275,7 @@ export default function DiceLoadingScreen({ message: fixedMessage }: { message?:
   }, [fixedMessage]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="dice-loading-screen">
       {/* Dice Canvas */}
       <View style={styles.canvasContainer}>
         <Canvas
