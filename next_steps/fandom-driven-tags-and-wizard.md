@@ -1,7 +1,8 @@
 # Fandom-Driven Tags & Character Creator Wizard
 
-> **Status**: Recommendation — not yet approved for implementation
-> **Context**: The character creator wizard (see `examples/character_creator/`) needs to generate profiles from preset characters. The tag system must handle fandom-specific categories without polluting the universal profile model.
+> **Status**: Implemented on feature branch `implement-character-creation-wizard` (Not yet merged to `dev` / `test` / `prod`)
+> **Branch**: `implement-character-creation-wizard`
+> **Context**: The React Native wizard screen flow, styles, and API integrations are complete. Jest unit/integration tests and Maestro E2E test specs have been created. The backend routing configuration has been pushed to `dev`, but all frontend changes remain isolated on the feature branch for verification.
 
 ## Problem
 
