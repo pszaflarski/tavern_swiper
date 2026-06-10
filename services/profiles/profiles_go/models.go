@@ -11,6 +11,7 @@ type ProfileCreate struct {
 	IsActive    bool         `json:"is_active"`
 	Age         *int         `json:"age"`
 	IsOC        *bool        `json:"is_oc"`
+	Generated   *bool        `json:"generated"`
 	
 	// Categorized tags
 	Gender      []ProfileTag `json:"gender"`
@@ -32,6 +33,7 @@ type ProfileUpdate struct {
 	IsActive    *bool         `json:"is_active"`
 	Age         *int          `json:"age"`
 	IsOC        *bool         `json:"is_oc"`
+	Generated   *bool         `json:"generated"`
 	
 	// Categorized tags
 	Gender      *[]ProfileTag `json:"gender"`
@@ -59,6 +61,7 @@ type ProfileOut struct {
 	IsActive    bool         `json:"is_active"`
 	Age         *int         `json:"age"`
 	IsOC        *bool        `json:"is_oc"`
+	Generated   bool         `json:"generated"`
 	
 	// Categorized tags
 	Gender      []ProfileTag `json:"gender"`

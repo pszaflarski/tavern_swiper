@@ -90,6 +90,7 @@ func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) error
 				Interests:   toProtoTags(p.Interests),
 				Events:      toProtoTags(p.Events),
 				LookingFor:  toProtoTags(p.LookingFor),
+				Generated:   p.Generated,
 			},
 		},
 	}

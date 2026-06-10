@@ -143,6 +143,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		"is_active":    true,
 		"age":          body.Age,
 		"is_oc":         body.IsOC,
+		"generated":    ptrBoolOrFalse(body.Generated),
 		"gender":       tagsToInterface(body.Gender),
 		"race":         tagsToInterface(body.Race),
 		"fandom":       tagsToInterface(body.Fandom),
@@ -347,6 +348,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		IsActive:    reqBool("is_active"),
 		Age:         getPtrInt("age"),
 		IsOC:        getPtrBool("is_oc"),
+		Generated:   reqBool("generated"),
 		Gender:      getTags("gender"),
 		Race:        getTags("race"),
 		Fandom:      getTags("fandom"),
@@ -558,6 +560,9 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	}
 	if body.IsOC != nil {
 		updates = append(updates, firestore.Update{Path: "is_oc", Value: *body.IsOC})
+	}
+	if body.Generated != nil {
+		updates = append(updates, firestore.Update{Path: "generated", Value: *body.Generated})
 	}
 	if body.Gender != nil {
 		updates = append(updates, firestore.Update{Path: "gender", Value: tagsToInterface(*body.Gender)})
@@ -1091,4 +1096,12 @@ func collectAllTags(gender, race, fandom, interests, events, lookingFor []Profil
 		}
 	}
 	return res
+}
+
+// ptrBoolOrFalse returns the value of a *bool, or false if nil.
+func ptrBoolOrFalse(b *bool) bool {
+	if b != nil {
+		return *b
+	}
+	return false
 }

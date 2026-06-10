@@ -158,6 +158,7 @@ type ProfileUpserted struct {
 	Interests     []*ProfileTag          `protobuf:"bytes,13,rep,name=interests,proto3" json:"interests,omitempty"`
 	Events        []*ProfileTag          `protobuf:"bytes,14,rep,name=events,proto3" json:"events,omitempty"`
 	LookingFor    []*ProfileTag          `protobuf:"bytes,15,rep,name=looking_for,json=lookingFor,proto3" json:"looking_for,omitempty"`
+	Generated     bool                   `protobuf:"varint,16,opt,name=generated,proto3" json:"generated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -295,6 +296,13 @@ func (x *ProfileUpserted) GetLookingFor() []*ProfileTag {
 		return x.LookingFor
 	}
 	return nil
+}
+
+func (x *ProfileUpserted) GetGenerated() bool {
+	if x != nil {
+		return x.Generated
+	}
+	return false
 }
 
 type ProfileDeleted struct {
@@ -503,12 +511,13 @@ var File_profile_events_proto protoreflect.FileDescriptor
 
 const file_profile_events_proto_rawDesc = "" +
 	"\n" +
-	"\x14profile_events.proto\x12\aprofile\"D\n" +
+	"\x14profile_events.proto\x12\aprofile\"`\n" +
 	"\n" +
 	"ProfileTag\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04slug\x18\x03 \x01(\tR\x04slug\"\xce\x04\n" +
+	"\x04slug\x18\x03 \x01(\tR\x04slug\x12\x1a\n" +
+	"\bcategory\x18\x04 \x01(\tR\bcategory\"\xec\x04\n" +
 	"\x0fProfileUpserted\x12\x1d\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\x12\x17\n" +
@@ -528,7 +537,8 @@ const file_profile_events_proto_rawDesc = "" +
 	"\tinterests\x18\r \x03(\v2\x13.profile.ProfileTagR\tinterests\x12+\n" +
 	"\x06events\x18\x0e \x03(\v2\x13.profile.ProfileTagR\x06events\x124\n" +
 	"\vlooking_for\x18\x0f \x03(\v2\x13.profile.ProfileTagR\n" +
-	"lookingForB\n" +
+	"lookingFor\x12\x1c\n" +
+	"\tgenerated\x18\x10 \x01(\bR\tgeneratedB\n" +
 	"\n" +
 	"\b_taglineB\x06\n" +
 	"\x04_bioB\x06\n" +
