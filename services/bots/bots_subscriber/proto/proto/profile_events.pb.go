@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v3.21.12
-// source: profile_events.proto
+// source: proto/profile_events.proto
 
 package proto
 
@@ -57,11 +57,11 @@ func (x ProfileEvent_EventType) String() string {
 }
 
 func (ProfileEvent_EventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_profile_events_proto_enumTypes[0].Descriptor()
+	return file_proto_profile_events_proto_enumTypes[0].Descriptor()
 }
 
 func (ProfileEvent_EventType) Type() protoreflect.EnumType {
-	return &file_profile_events_proto_enumTypes[0]
+	return &file_proto_profile_events_proto_enumTypes[0]
 }
 
 func (x ProfileEvent_EventType) Number() protoreflect.EnumNumber {
@@ -70,7 +70,7 @@ func (x ProfileEvent_EventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProfileEvent_EventType.Descriptor instead.
 func (ProfileEvent_EventType) EnumDescriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{4, 0}
+	return file_proto_profile_events_proto_rawDescGZIP(), []int{4, 0}
 }
 
 type ProfileTag struct {
@@ -78,14 +78,13 @@ type ProfileTag struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Slug          string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
-	Category      string                 `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ProfileTag) Reset() {
 	*x = ProfileTag{}
-	mi := &file_profile_events_proto_msgTypes[0]
+	mi := &file_proto_profile_events_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -97,7 +96,7 @@ func (x *ProfileTag) String() string {
 func (*ProfileTag) ProtoMessage() {}
 
 func (x *ProfileTag) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[0]
+	mi := &file_proto_profile_events_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -110,7 +109,7 @@ func (x *ProfileTag) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileTag.ProtoReflect.Descriptor instead.
 func (*ProfileTag) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{0}
+	return file_proto_profile_events_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ProfileTag) GetId() string {
@@ -130,13 +129,6 @@ func (x *ProfileTag) GetName() string {
 func (x *ProfileTag) GetSlug() string {
 	if x != nil {
 		return x.Slug
-	}
-	return ""
-}
-
-func (x *ProfileTag) GetCategory() string {
-	if x != nil {
-		return x.Category
 	}
 	return ""
 }
@@ -165,7 +157,7 @@ type ProfileUpserted struct {
 
 func (x *ProfileUpserted) Reset() {
 	*x = ProfileUpserted{}
-	mi := &file_profile_events_proto_msgTypes[1]
+	mi := &file_proto_profile_events_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -177,7 +169,7 @@ func (x *ProfileUpserted) String() string {
 func (*ProfileUpserted) ProtoMessage() {}
 
 func (x *ProfileUpserted) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[1]
+	mi := &file_proto_profile_events_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -190,7 +182,7 @@ func (x *ProfileUpserted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileUpserted.ProtoReflect.Descriptor instead.
 func (*ProfileUpserted) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{1}
+	return file_proto_profile_events_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ProfileUpserted) GetProfileId() string {
@@ -314,7 +306,7 @@ type ProfileDeleted struct {
 
 func (x *ProfileDeleted) Reset() {
 	*x = ProfileDeleted{}
-	mi := &file_profile_events_proto_msgTypes[2]
+	mi := &file_proto_profile_events_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -326,7 +318,7 @@ func (x *ProfileDeleted) String() string {
 func (*ProfileDeleted) ProtoMessage() {}
 
 func (x *ProfileDeleted) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[2]
+	mi := &file_proto_profile_events_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -339,7 +331,7 @@ func (x *ProfileDeleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileDeleted.ProtoReflect.Descriptor instead.
 func (*ProfileDeleted) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{2}
+	return file_proto_profile_events_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ProfileDeleted) GetProfileId() string {
@@ -359,7 +351,7 @@ type AllProfilesDeleted struct {
 
 func (x *AllProfilesDeleted) Reset() {
 	*x = AllProfilesDeleted{}
-	mi := &file_profile_events_proto_msgTypes[3]
+	mi := &file_proto_profile_events_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -371,7 +363,7 @@ func (x *AllProfilesDeleted) String() string {
 func (*AllProfilesDeleted) ProtoMessage() {}
 
 func (x *AllProfilesDeleted) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[3]
+	mi := &file_proto_profile_events_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -384,7 +376,7 @@ func (x *AllProfilesDeleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllProfilesDeleted.ProtoReflect.Descriptor instead.
 func (*AllProfilesDeleted) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{3}
+	return file_proto_profile_events_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AllProfilesDeleted) GetAdminUserId() string {
@@ -416,7 +408,7 @@ type ProfileEvent struct {
 
 func (x *ProfileEvent) Reset() {
 	*x = ProfileEvent{}
-	mi := &file_profile_events_proto_msgTypes[4]
+	mi := &file_proto_profile_events_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -428,7 +420,7 @@ func (x *ProfileEvent) String() string {
 func (*ProfileEvent) ProtoMessage() {}
 
 func (x *ProfileEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_events_proto_msgTypes[4]
+	mi := &file_proto_profile_events_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -441,7 +433,7 @@ func (x *ProfileEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileEvent.ProtoReflect.Descriptor instead.
 func (*ProfileEvent) Descriptor() ([]byte, []int) {
-	return file_profile_events_proto_rawDescGZIP(), []int{4}
+	return file_proto_profile_events_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ProfileEvent) GetType() ProfileEvent_EventType {
@@ -507,17 +499,16 @@ func (*ProfileEvent_Deleted) isProfileEvent_Event() {}
 
 func (*ProfileEvent_AllDeleted) isProfileEvent_Event() {}
 
-var File_profile_events_proto protoreflect.FileDescriptor
+var File_proto_profile_events_proto protoreflect.FileDescriptor
 
-const file_profile_events_proto_rawDesc = "" +
+const file_proto_profile_events_proto_rawDesc = "" +
 	"\n" +
-	"\x14profile_events.proto\x12\aprofile\"`\n" +
+	"\x1aproto/profile_events.proto\x12\aprofile\"D\n" +
 	"\n" +
 	"ProfileTag\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04slug\x18\x03 \x01(\tR\x04slug\x12\x1a\n" +
-	"\bcategory\x18\x04 \x01(\tR\bcategory\"\xec\x04\n" +
+	"\x04slug\x18\x03 \x01(\tR\x04slug\"\xec\x04\n" +
 	"\x0fProfileUpserted\x12\x1d\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\x12\x17\n" +
@@ -564,20 +555,20 @@ const file_profile_events_proto_rawDesc = "" +
 	"\x05eventB\tZ\a./protob\x06proto3"
 
 var (
-	file_profile_events_proto_rawDescOnce sync.Once
-	file_profile_events_proto_rawDescData []byte
+	file_proto_profile_events_proto_rawDescOnce sync.Once
+	file_proto_profile_events_proto_rawDescData []byte
 )
 
-func file_profile_events_proto_rawDescGZIP() []byte {
-	file_profile_events_proto_rawDescOnce.Do(func() {
-		file_profile_events_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_profile_events_proto_rawDesc), len(file_profile_events_proto_rawDesc)))
+func file_proto_profile_events_proto_rawDescGZIP() []byte {
+	file_proto_profile_events_proto_rawDescOnce.Do(func() {
+		file_proto_profile_events_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_profile_events_proto_rawDesc), len(file_proto_profile_events_proto_rawDesc)))
 	})
-	return file_profile_events_proto_rawDescData
+	return file_proto_profile_events_proto_rawDescData
 }
 
-var file_profile_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_profile_events_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_profile_events_proto_goTypes = []any{
+var file_proto_profile_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_profile_events_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_profile_events_proto_goTypes = []any{
 	(ProfileEvent_EventType)(0), // 0: profile.ProfileEvent.EventType
 	(*ProfileTag)(nil),          // 1: profile.ProfileTag
 	(*ProfileUpserted)(nil),     // 2: profile.ProfileUpserted
@@ -585,7 +576,7 @@ var file_profile_events_proto_goTypes = []any{
 	(*AllProfilesDeleted)(nil),  // 4: profile.AllProfilesDeleted
 	(*ProfileEvent)(nil),        // 5: profile.ProfileEvent
 }
-var file_profile_events_proto_depIdxs = []int32{
+var file_proto_profile_events_proto_depIdxs = []int32{
 	1,  // 0: profile.ProfileUpserted.gender:type_name -> profile.ProfileTag
 	1,  // 1: profile.ProfileUpserted.race:type_name -> profile.ProfileTag
 	1,  // 2: profile.ProfileUpserted.fandom:type_name -> profile.ProfileTag
@@ -603,13 +594,13 @@ var file_profile_events_proto_depIdxs = []int32{
 	0,  // [0:10] is the sub-list for field type_name
 }
 
-func init() { file_profile_events_proto_init() }
-func file_profile_events_proto_init() {
-	if File_profile_events_proto != nil {
+func init() { file_proto_profile_events_proto_init() }
+func file_proto_profile_events_proto_init() {
+	if File_proto_profile_events_proto != nil {
 		return
 	}
-	file_profile_events_proto_msgTypes[1].OneofWrappers = []any{}
-	file_profile_events_proto_msgTypes[4].OneofWrappers = []any{
+	file_proto_profile_events_proto_msgTypes[1].OneofWrappers = []any{}
+	file_proto_profile_events_proto_msgTypes[4].OneofWrappers = []any{
 		(*ProfileEvent_Upserted)(nil),
 		(*ProfileEvent_Deleted)(nil),
 		(*ProfileEvent_AllDeleted)(nil),
@@ -618,18 +609,18 @@ func file_profile_events_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_profile_events_proto_rawDesc), len(file_profile_events_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_profile_events_proto_rawDesc), len(file_proto_profile_events_proto_rawDesc)),
 			NumEnums:      1,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_profile_events_proto_goTypes,
-		DependencyIndexes: file_profile_events_proto_depIdxs,
-		EnumInfos:         file_profile_events_proto_enumTypes,
-		MessageInfos:      file_profile_events_proto_msgTypes,
+		GoTypes:           file_proto_profile_events_proto_goTypes,
+		DependencyIndexes: file_proto_profile_events_proto_depIdxs,
+		EnumInfos:         file_proto_profile_events_proto_enumTypes,
+		MessageInfos:      file_proto_profile_events_proto_msgTypes,
 	}.Build()
-	File_profile_events_proto = out.File
-	file_profile_events_proto_goTypes = nil
-	file_profile_events_proto_depIdxs = nil
+	File_proto_profile_events_proto = out.File
+	file_proto_profile_events_proto_goTypes = nil
+	file_proto_profile_events_proto_depIdxs = nil
 }
