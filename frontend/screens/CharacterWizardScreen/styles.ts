@@ -276,7 +276,7 @@ export const styles = StyleSheet.create({
   // ── Character Card (full-bleed discovery style) ────────────────────
   characterCard: {
     width: '100%',
-    aspectRatio: 3 / 4,
+    aspectRatio: 4 / 5,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     backgroundColor: Colors.background,
@@ -300,12 +300,8 @@ export const styles = StyleSheet.create({
   },
   // Hero info overlaid at the bottom of the image
   characterCardBody: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     padding: Spacing[5],
-    paddingBottom: Spacing[6],
+    paddingBottom: Spacing[3],
   },
   badgeRow: {
     flexDirection: 'row',
@@ -415,6 +411,12 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing[3],
     width: '100%',
+    paddingHorizontal: Spacing[4],
+    paddingTop: Spacing[3],
+    paddingBottom: Spacing[5],
+    borderTopWidth: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   actionButton: {
     flexDirection: 'row',

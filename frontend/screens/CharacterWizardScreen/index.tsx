@@ -71,80 +71,70 @@ export default function CharacterWizardScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <View>
-              <View style={styles.headerTitleRow}>
-                <Ionicons name="sparkles" size={22} color={Colors.tertiary} />
-                <Text style={styles.headerTitle}>Tavern Swiper</Text>
+      {step < 5 ? (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View>
+                <View style={styles.headerTitleRow}>
+                  <Ionicons name="sparkles" size={22} color={Colors.tertiary} />
+                  <Text style={styles.headerTitle}>Tavern Swiper</Text>
+                </View>
+
               </View>
-              <Text style={styles.headerSubtitle}>Character Creator Wizard</Text>
+              <Pressable
+                onPress={handleClose}
+                style={({ pressed }) => [{
+                  padding: 8,
+                  borderRadius: 8,
+                  backgroundColor: pressed ? Colors.surfaceContainerHigh : 'transparent',
+                }]}
+                accessibilityLabel="Close wizard"
+                accessibilityRole="button"
+                testID="wizard-close-button"
+              >
+                <Ionicons name="close" size={24} color={Colors.outline} />
+              </Pressable>
             </View>
-            <Pressable
-              onPress={handleClose}
-              style={({ pressed }) => [{
-                padding: 8,
-                borderRadius: 8,
-                backgroundColor: pressed ? Colors.surfaceContainerHigh : 'transparent',
-              }]}
-              accessibilityLabel="Close wizard"
-              accessibilityRole="button"
-              testID="wizard-close-button"
-            >
-              <Ionicons name="close" size={24} color={Colors.outline} />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Main Wizard Panel */}
-        <View style={styles.glassPanel}>
-          {/* Animated Step Content */}
-          <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-            {step === 1 && (
-              <StepFandom fandom={fandom} onSelect={setFandom} />
-            )}
-            {step === 2 && (
-              <StepGender gender={gender} onSelect={setGender} />
-            )}
-            {step === 3 && (
-              <StepRace fandom={fandom} race={race} onSelect={setRace} />
-            )}
-            {step === 4 && (
-              <StepClass fandom={fandom} characterClass={characterClass} onSelect={setCharacterClass} />
-            )}
-            {step === 5 && (
-              <StepResult
-                fandom={fandom}
-                gender={gender}
-                race={race}
-                characterClass={characterClass}
-                onReset={handleReset}
-              />
-            )}
-          </Animated.View>
-
-          {/* Progress Dots */}
-          <View style={styles.progressDotsContainer}>
-            {STEPS.map(s => (
-              <View
-                key={s.num}
-                style={[
-                  styles.progressDot,
-                  step === s.num && styles.progressDotActive,
-                  step > s.num && styles.progressDotCompleted,
-                ]}
-              />
-            ))}
           </View>
 
-          {/* Navigation Controls (hidden on result screen) */}
-          {step < 5 && (
+          {/* Main Wizard Panel */}
+          <View style={styles.glassPanel}>
+            <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
+              {step === 1 && (
+                <StepFandom fandom={fandom} onSelect={setFandom} />
+              )}
+              {step === 2 && (
+                <StepGender gender={gender} onSelect={setGender} />
+              )}
+              {step === 3 && (
+                <StepRace fandom={fandom} race={race} onSelect={setRace} />
+              )}
+              {step === 4 && (
+                <StepClass fandom={fandom} characterClass={characterClass} onSelect={setCharacterClass} />
+              )}
+            </Animated.View>
+
+            {/* Progress Dots */}
+            <View style={styles.progressDotsContainer}>
+              {STEPS.map(s => (
+                <View
+                  key={s.num}
+                  style={[
+                    styles.progressDot,
+                    step === s.num && styles.progressDotActive,
+                    step > s.num && styles.progressDotCompleted,
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Navigation Controls */}
             <View style={styles.navRow}>
               <Pressable
                 onPress={handleBack}
@@ -175,9 +165,19 @@ export default function CharacterWizardScreen() {
                 <Ionicons name="arrow-forward" size={16} color={Colors.onPrimary} />
               </Pressable>
             </View>
-          )}
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      ) : (
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <StepResult
+            fandom={fandom}
+            gender={gender}
+            race={race}
+            characterClass={characterClass}
+            onReset={handleReset}
+          />
+        </Animated.View>
+      )}
     </View>
   );
 }

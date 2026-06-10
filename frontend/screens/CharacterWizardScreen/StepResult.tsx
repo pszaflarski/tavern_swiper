@@ -54,6 +54,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
   const [currentIndex, setCurrentIndex] = useState(0);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [isAdopting, setIsAdopting] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -79,8 +80,14 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
   const currentMatch = matches[currentIndex] || null;
   const hasMultipleMatches = matches.length > 1;
 
-  const handleNext = () => setCurrentIndex(prev => (prev + 1) % matches.length);
-  const handlePrev = () => setCurrentIndex(prev => (prev - 1 + matches.length) % matches.length);
+  const handleNext = () => {
+    setCurrentIndex(prev => (prev + 1) % matches.length);
+    setImageIndex(0); // reset image index when switching characters
+  };
+  const handlePrev = () => {
+    setCurrentIndex(prev => (prev - 1 + matches.length) % matches.length);
+    setImageIndex(0);
+  };
 
   // Build the profile creation payload from the real character data
   const buildPayload = () => {
@@ -166,7 +173,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
   const { char, score } = currentMatch;
   const maxScore = 7;
   const isExactMatch = score === maxScore;
-  const imageUrl = char.images?.[0]?.url;
+  const imageUrl = char.images?.[imageIndex]?.url || char.images?.[0]?.url;
 
   // Extract tag names for display
   const raceName = char.race?.[0]?.name || race;
@@ -174,87 +181,63 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
   const fandomName = char.fandom?.[0]?.name || fandom;
 
   return (
-    <ScrollView contentContainerStyle={styles.resultContainer} showsVerticalScrollIndicator={false}>
-      {/* Title */}
-      <Text style={styles.stepTitle}>Adventurer Summoned!</Text>
-      <Text style={styles.resultSubtitle}>
-        {isExactMatch
-          ? '🎯 Found an exact match in the tavern archives!'
-          : '🍻 Showing the closest matching heroes from the tavern!'}
-      </Text>
-
-      {/* Character Card */}
-      <View style={{ position: 'relative', width: '100%' }}>
-        <View style={styles.characterCard}>
-          {/* Full-bleed character image */}
-          <View style={styles.characterImageArea}>
-            {imageUrl ? (
-              <Image
-                source={{ uri: imageUrl }}
-                style={StyleSheet.absoluteFillObject}
-                resizeMode="cover"
-              />
-            ) : (
-              <Text style={styles.characterImagePlaceholder}>⚔️</Text>
-            )}
-          </View>
-
-          {/* Dark gradient overlay for text readability */}
-          <View style={[styles.characterGradient, { backgroundColor: 'transparent' }]}>
-            <View style={{ flex: 1, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' } as any} />
-          </View>
-
-          {/* Card body */}
-          <View style={styles.characterCardBody}>
-            {/* Tag badges */}
-            <View style={styles.badgeRow}>
-              <View style={[styles.badge, styles.badgeFandom]}>
-                <Text style={styles.badgeText}>{fandomName}</Text>
-              </View>
-              <View style={[styles.badge, styles.badgeRace]}>
-                <Text style={styles.badgeText}>{raceName}</Text>
-              </View>
-              <View style={[styles.badge, styles.badgeGender]}>
-                <Text style={styles.badgeText}>{genderName}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.characterName}>{char.display_name}</Text>
-            <Text style={styles.characterTagline}>"{char.tagline}"</Text>
-            <Text style={styles.characterBio} numberOfLines={4}>{char.bio}</Text>
-          </View>
-        </View>
-
-        {/* Carousel navigation arrows */}
-        {hasMultipleMatches && (
-          <>
-            <Pressable
-              style={[styles.carouselNavButton, styles.carouselNavLeft]}
-              onPress={handlePrev}
-            >
-              <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
-            </Pressable>
-            <Pressable
-              style={[styles.carouselNavButton, styles.carouselNavRight]}
-              onPress={handleNext}
-            >
-              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-            </Pressable>
-          </>
-        )}
-      </View>
-
-      {/* Match counter */}
-      {hasMultipleMatches && (
-        <View style={styles.matchCounter}>
-          <Ionicons name="sparkles" size={14} color={Colors.tertiary} />
-          <Text style={styles.matchCounterText}>
-            Adventurer {currentIndex + 1} of {matches.length} matching
-          </Text>
+    <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      {/* Full-screen background image */}
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[StyleSheet.absoluteFillObject, styles.characterImageArea]}>
+          <Text style={styles.characterImagePlaceholder}>⚔️</Text>
         </View>
       )}
 
-      {/* Action buttons */}
+      {/* Dark gradient overlay at bottom for text readability */}
+      <View style={[styles.characterGradient, { backgroundColor: 'transparent' }]}>
+        <View style={{ flex: 1, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' } as any} />
+      </View>
+
+      {/* Hero info overlaid at bottom of image, above buttons */}
+      <View style={styles.characterCardBody}>
+        <View style={styles.badgeRow}>
+          <View style={[styles.badge, styles.badgeFandom]}>
+            <Text style={styles.badgeText}>{fandomName}</Text>
+          </View>
+          <View style={[styles.badge, styles.badgeRace]}>
+            <Text style={styles.badgeText}>{raceName}</Text>
+          </View>
+          <View style={[styles.badge, styles.badgeGender]}>
+            <Text style={styles.badgeText}>{genderName}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.characterName}>{char.display_name}</Text>
+        <Text style={styles.characterTagline}>"{char.tagline}"</Text>
+        <Text style={styles.characterBio} numberOfLines={4}>{char.bio}</Text>
+      </View>
+
+      {/* Image navigation arrows — only shown when character has multiple images */}
+      {char.images && char.images.length > 1 && (
+        <>
+          <Pressable
+            style={[styles.carouselNavButton, styles.carouselNavLeft]}
+            onPress={() => setImageIndex(prev => (prev - 1 + char.images.length) % char.images.length)}
+          >
+            <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
+          </Pressable>
+          <Pressable
+            style={[styles.carouselNavButton, styles.carouselNavRight]}
+            onPress={() => setImageIndex(prev => (prev + 1) % char.images.length)}
+          >
+            <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          </Pressable>
+        </>
+      )}
+
+      {/* Action buttons — fixed at bottom */}
       <View style={styles.actionsRow}>
         <Pressable
           style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.7 }]}
@@ -286,29 +269,6 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
         </Pressable>
       </View>
 
-      {/* JSON Inspector (collapsible) */}
-      <View style={styles.inspectorContainer}>
-        <Pressable
-          style={styles.inspectorHeader}
-          onPress={() => setInspectorOpen(!inspectorOpen)}
-        >
-          <Ionicons
-            name={inspectorOpen ? 'chevron-down' : 'chevron-forward'}
-            size={12}
-            color={Colors.outline}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.inspectorHeaderText}>Inspect Database Payload JSON</Text>
-        </Pressable>
-        {inspectorOpen && (
-          <View style={styles.inspectorBody}>
-            <Text style={styles.inspectorCode}>
-              {JSON.stringify(generatedPayload, null, 2)}
-            </Text>
-          </View>
-        )}
-      </View>
-
       {/* Adopting overlay */}
       {isAdopting && (
         <View style={styles.adoptingOverlay}>
@@ -316,6 +276,6 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
           <Text style={styles.adoptingText}>Summoning Hero...</Text>
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 }
