@@ -43,32 +43,16 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
     if (!currentMatch) return null;
     const { preset } = currentMatch;
 
-    const payload: any = {
+    // Only send core fields — tags require real IDs from the backend's
+    // tags collection and are validated on create.  The user can add
+    // tags later from the profile editor.
+    return {
       display_name: preset.name,
       tagline: preset.tagline,
       bio: preset.bio,
       is_oc: false,
       generated: true,
     };
-
-    // Add tags in the format the profiles API expects
-    if (fandom) {
-      payload.fandom = [{ id: `wiz-f-${fandom.toLowerCase()}`, category: 'fandom', name: fandom === 'D&D' ? 'Forgotten Realms (D&D)' : fandom, slug: fandom.toLowerCase().replace(/&/g, 'n') }];
-    }
-    if (preset.race) {
-      payload.race = [{ id: `wiz-r-${preset.race.toLowerCase()}`, category: 'race', name: preset.race, slug: preset.race.toLowerCase() }];
-    }
-    if (preset.gender) {
-      payload.gender = [{ id: `wiz-g-${preset.gender.toLowerCase()}`, category: 'gender', name: preset.gender, slug: preset.gender.toLowerCase() }];
-    }
-    // Class goes in other_tags
-    if (preset.class) {
-      payload.other_tags = {
-        class: [{ id: `wiz-c-${preset.class.toLowerCase()}`, category: 'class', name: preset.class, slug: preset.class.toLowerCase() }],
-      };
-    }
-
-    return payload;
   };
 
   const handleAdopt = async () => {
