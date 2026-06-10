@@ -242,4 +242,27 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing[10],
     minHeight: 64,
   },
+
+  // ── Character Wizard Button ────────────────────────────
+  wizardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing[2],
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[5],
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.tertiaryContainer,
+    marginTop: Spacing[2],
+    ...Shadow.waxSeal,
+  },
+  wizardButtonText: {
+    fontFamily: Fonts.heroic,
+    fontSize: 15,
+    color: Colors.tertiary,
+    letterSpacing: 1,
+    flex: 1,
+  },
 });

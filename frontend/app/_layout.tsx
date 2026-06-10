@@ -140,6 +140,7 @@ function RootLayoutNav() {
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         <Stack.Screen name="profiles" options={{ headerShown: false }} />
         <Stack.Screen name="inventory" options={{ headerShown: false }} />
+        <Stack.Screen name="character-wizard" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       </Stack>
       <SilentErrorBoundary label="MatchSplash">
         <MatchSplash />
