@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -21,6 +22,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [isAdopting, setIsAdopting] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const selections: WizardSelections = { fandom, gender, race, characterClass };
   const matches = scorePresets(selections);
@@ -46,6 +48,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
       tagline: preset.tagline,
       bio: preset.bio,
       is_oc: false,
+      generated: true,
     };
 
     // Add tags in the format the profiles API expects
@@ -75,6 +78,8 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
     setIsAdopting(true);
     try {
       await profilesApi.post('/profiles/', payload);
+      // Refresh profiles cache so routing guard sees the new generated profile
+      await queryClient.refetchQueries({ queryKey: ['profiles'] });
       Toast.show({
         type: 'success',
         text1: '⚔️ Hero Adopted!',
