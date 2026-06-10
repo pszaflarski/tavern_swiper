@@ -1044,6 +1044,9 @@
                         "$ref": "#/definitions/main.ProfileTag"
                     }
                 },
+                "generated": {
+                    "type": "boolean"
+                },
                 "image_urls": {
                     "type": "array",
                     "items": {
@@ -1061,6 +1064,12 @@
                 },
                 "is_oc": {
                     "type": "boolean"
+                },
+                "looking_for": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "other_tags": {
                     "description": "OtherTags for dynamic categories",
@@ -1120,6 +1129,9 @@
                         "$ref": "#/definitions/main.ProfileTag"
                     }
                 },
+                "generated": {
+                    "type": "boolean"
+                },
                 "image_urls": {
                     "type": "array",
                     "items": {
@@ -1137,6 +1149,12 @@
                 },
                 "is_oc": {
                     "type": "boolean"
+                },
+                "looking_for": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "other_tags": {
                     "description": "OtherTags for dynamic categories",
@@ -1219,6 +1237,9 @@
                         "$ref": "#/definitions/main.ProfileTag"
                     }
                 },
+                "generated": {
+                    "type": "boolean"
+                },
                 "image_urls": {
                     "type": "array",
                     "items": {
@@ -1236,6 +1257,12 @@
                 },
                 "is_oc": {
                     "type": "boolean"
+                },
+                "looking_for": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "other_tags": {
                     "description": "OtherTags for dynamic categories",

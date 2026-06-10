@@ -35,6 +35,8 @@ definitions:
         items:
           $ref: '#/definitions/main.ProfileTag'
         type: array
+      generated:
+        type: boolean
       image_urls:
         items:
           type: string
@@ -47,6 +49,10 @@ definitions:
         type: boolean
       is_oc:
         type: boolean
+      looking_for:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       other_tags:
         additionalProperties:
           items:
@@ -88,6 +94,8 @@ definitions:
         items:
           $ref: '#/definitions/main.ProfileTag'
         type: array
+      generated:
+        type: boolean
       image_urls:
         items:
           type: string
@@ -100,6 +108,10 @@ definitions:
         type: boolean
       is_oc:
         type: boolean
+      looking_for:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       other_tags:
         additionalProperties:
           items:
@@ -154,6 +166,8 @@ definitions:
         items:
           $ref: '#/definitions/main.ProfileTag'
         type: array
+      generated:
+        type: boolean
       image_urls:
         items:
           type: string
@@ -166,6 +180,10 @@ definitions:
         type: boolean
       is_oc:
         type: boolean
+      looking_for:
+        items:
+          $ref: '#/definitions/main.ProfileTag'
+        type: array
       other_tags:
         additionalProperties:
           items:

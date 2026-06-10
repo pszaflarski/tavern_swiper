@@ -128,10 +128,13 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	// Collect all tags for validation
 	allTags := collectAllTags(body.Gender, body.Race, body.Fandom, body.Interests, body.Events, body.LookingFor, body.OtherTags)
 
-	// Finding #4: Tag validation
-	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
-		send400(c, err.Error())
-		return
+	// Skip tag validation for generated profiles (e.g. character wizard) —
+	// their tags come from a trusted source and may not exist in the tags collection.
+	if !ptrBoolOrFalse(body.Generated) {
+		if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
+			send400(c, err.Error())
+			return
+		}
 	}
 
 	data := map[string]interface{}{
@@ -143,6 +146,7 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		"is_active":    true,
 		"age":          body.Age,
 		"is_oc":         body.IsOC,
+		"generated":    ptrBoolOrFalse(body.Generated),
 		"gender":       tagsToInterface(body.Gender),
 		"race":         tagsToInterface(body.Race),
 		"fandom":       tagsToInterface(body.Fandom),
@@ -347,6 +351,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		IsActive:    reqBool("is_active"),
 		Age:         getPtrInt("age"),
 		IsOC:        getPtrBool("is_oc"),
+		Generated:   reqBool("generated"),
 		Gender:      getTags("gender"),
 		Race:        getTags("race"),
 		Fandom:      getTags("fandom"),
@@ -558,6 +563,9 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	}
 	if body.IsOC != nil {
 		updates = append(updates, firestore.Update{Path: "is_oc", Value: *body.IsOC})
+	}
+	if body.Generated != nil {
+		updates = append(updates, firestore.Update{Path: "generated", Value: *body.Generated})
 	}
 	if body.Gender != nil {
 		updates = append(updates, firestore.Update{Path: "gender", Value: tagsToInterface(*body.Gender)})
@@ -1091,4 +1099,12 @@ func collectAllTags(gender, race, fandom, interests, events, lookingFor []Profil
 		}
 	}
 	return res
+}
+
+// ptrBoolOrFalse returns the value of a *bool, or false if nil.
+func ptrBoolOrFalse(b *bool) bool {
+	if b != nil {
+		return *b
+	}
+	return false
 }

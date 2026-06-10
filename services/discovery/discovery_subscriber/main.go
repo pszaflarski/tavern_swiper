@@ -125,6 +125,7 @@ func processEvent(ctx context.Context, client FirestoreClient, event *pb.Profile
 			"interests":    toFirestoreTags(p.Interests),
 			"events":       toFirestoreTags(p.Events),
 			"looking_for":  toFirestoreTags(p.LookingFor),
+			"generated":    p.Generated,
 			"updated_at":   firestore.ServerTimestamp,
 		}
 

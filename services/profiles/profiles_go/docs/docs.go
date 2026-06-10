@@ -1051,6 +1051,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/main.ProfileTag"
                     }
                 },
+                "generated": {
+                    "type": "boolean"
+                },
                 "image_urls": {
                     "type": "array",
                     "items": {
@@ -1068,6 +1071,12 @@ const docTemplate = `{
                 },
                 "is_oc": {
                     "type": "boolean"
+                },
+                "looking_for": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "other_tags": {
                     "description": "OtherTags for dynamic categories",
@@ -1127,6 +1136,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/main.ProfileTag"
                     }
                 },
+                "generated": {
+                    "type": "boolean"
+                },
                 "image_urls": {
                     "type": "array",
                     "items": {
@@ -1144,6 +1156,12 @@ const docTemplate = `{
                 },
                 "is_oc": {
                     "type": "boolean"
+                },
+                "looking_for": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "other_tags": {
                     "description": "OtherTags for dynamic categories",
@@ -1226,6 +1244,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/main.ProfileTag"
                     }
                 },
+                "generated": {
+                    "type": "boolean"
+                },
                 "image_urls": {
                     "type": "array",
                     "items": {
@@ -1243,6 +1264,12 @@ const docTemplate = `{
                 },
                 "is_oc": {
                     "type": "boolean"
+                },
+                "looking_for": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.ProfileTag"
+                    }
                 },
                 "other_tags": {
                     "description": "OtherTags for dynamic categories",
