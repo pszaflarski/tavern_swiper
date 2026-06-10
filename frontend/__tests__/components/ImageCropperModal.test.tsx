@@ -35,6 +35,7 @@ describe('ImageCropperModal', () => {
       <ImageCropperModal
         isVisible={true}
         imageUri={testImageUri}
+        imageDimensions={{ width: 2000, height: 1000 }}
         onClose={mockOnClose}
         onCropComplete={mockOnCropComplete}
       />
@@ -52,6 +53,7 @@ describe('ImageCropperModal', () => {
       <ImageCropperModal
         isVisible={true}
         imageUri={testImageUri}
+        imageDimensions={{ width: 2000, height: 1000 }}
         onClose={mockOnClose}
         onCropComplete={mockOnCropComplete}
       />
@@ -66,6 +68,7 @@ describe('ImageCropperModal', () => {
       <ImageCropperModal
         isVisible={true}
         imageUri={testImageUri}
+        imageDimensions={{ width: 2000, height: 1000 }}
         onClose={mockOnClose}
         onCropComplete={mockOnCropComplete}
       />
@@ -84,6 +87,7 @@ describe('ImageCropperModal', () => {
       <ImageCropperModal
         isVisible={true}
         imageUri={testImageUri}
+        imageDimensions={{ width: 2000, height: 1000 }}
         onClose={mockOnClose}
         onCropComplete={mockOnCropComplete}
       />
@@ -116,6 +120,7 @@ describe('ImageCropperModal', () => {
       <ImageCropperModal
         isVisible={true}
         imageUri={testImageUri}
+        imageDimensions={null}
         onClose={mockOnClose}
         onCropComplete={mockOnCropComplete}
       />

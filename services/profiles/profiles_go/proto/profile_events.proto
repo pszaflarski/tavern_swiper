@@ -27,6 +27,7 @@ message ProfileUpserted {
   repeated ProfileTag interests = 13;
   repeated ProfileTag events = 14;
   repeated ProfileTag looking_for = 15;
+  bool generated = 16;
 }
 
 message ProfileDeleted {
