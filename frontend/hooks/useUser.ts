@@ -59,8 +59,9 @@ export function useUser() {
       // 2. Clear local Tavern session and cache
       await clearTavernSession();
       
+      // clear() removes all queries. Do NOT re-create with setQueryData(null)
+      // — that poisons the cache for the next login within staleTime.
       queryClient.clear();
-      queryClient.setQueryData(['user', 'me'], null);
       
       // 3. Clear global context state immediately
       setFirebaseUser(null);
