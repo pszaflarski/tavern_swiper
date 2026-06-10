@@ -79,3 +79,55 @@ The app connects to different backends based on `EXPO_PUBLIC_FIREBASE_PROJECT_ID
 - **Prod**: `tavern-swiper-prod` (uses `google-services.prod.json`)
 
 API base URLs and Firebase config are set via environment variables in `.env`.
+
+---
+
+## Local Builds (EAS)
+
+We build our Android APK (for emulators/preview) and AAB (for production) locally using `eas-cli`. 
+
+The compilation settings are dynamically optimized by our Gradle config plugin [withOptimizedGradle.js](file:///home/peter/Documents/tavern_swiper/frontend/plugins/withOptimizedGradle.js) to leverage high-spec development machines when opted-in, while maintaining a safe default for smaller machines.
+
+### 1. Build Modes
+
+* **Low-Memory Mode (Default):** Safe for standard developers, CI/CD, or systems with $\le$ 8GB RAM. Caps Gradle's JVM heap at 2GB, disables parallel compilation, and limits compile workers to 1 to prevent OOM (Out of Memory) compiler crashes.
+* **High-Performance Mode (Opt-in):** Harnesses multi-core CPUs and large RAM arrays (e.g., 64GB / 8+ cores). Automatically allocates up to 8GB heap, enables parallel compilation, sets native C++ parallelism, and enables Gradle build cache.
+
+---
+
+### 2. Build Commands
+
+Make sure your terminal is in the `frontend` directory:
+
+```bash
+cd frontend
+```
+
+#### Build Emulator APK
+* Generates an `.apk` file that can be dragged directly into the Android Emulator.
+* Uses local development credentials.
+
+* **Standard (Safe Default):**
+  ```bash
+  ./run_local_build.sh
+  ```
+* **Hardware-Optimized (High Memory/CPU):**
+  ```bash
+  HIGH_PERFORMANCE_BUILD=true ./run_local_build.sh
+  ```
+
+#### Build Production AAB
+* Generates an `.aab` file (Android App Bundle) for Google Play Console submission.
+* Fetches production release keystores from EAS Cloud. Requires a logged-in Expo account with project permissions.
+* Production env vars are injected from `eas.json`.
+
+* **Standard (Safe Default):**
+  ```bash
+  npx eas-cli build --profile production --platform android --local
+  ```
+* **Hardware-Optimized (High Memory/CPU):**
+  * We also override `CMAKE_BUILD_PARALLEL_LEVEL` (hardcoded to `1` in `eas.json` for cloud builds) to compile native C++ dependencies at maximum speed.
+  ```bash
+  HIGH_PERFORMANCE_BUILD=true CMAKE_BUILD_PARALLEL_LEVEL=6 npx eas-cli build --profile production --platform android --local
+  ```
+

@@ -1,10 +1,9 @@
 # Messages / Inbox Screen Tests
-# Analogous to: __tests__/Messages.test.tsx
 #
 # Verifies:
 # - Messages screen renders
-# - Screen title is shown
-# - Content loads (loading, empty state, or matches/inbox)
+# - Screen testID is present
+# - Content loads (loading finishes, empty or populated state appears)
 
 appId: com.tavernswiper.app
 
@@ -16,15 +15,41 @@ appId: com.tavernswiper.app
 - runFlow: helpers/auth_login_helper.yaml
 
 # Navigate to Messages tab
-- tapOn: "MESSAGES"
+- tapOn:
+    id: "tab-bar-messages"
+- waitForAnimationToEnd
+
+# Wait for the dice loading screen to fully unmount/disappear if visible
+- runFlow:
+    when:
+      visible:
+        id: "dice-loading-screen"
+    commands:
+      - assertNotVisible:
+          id: "dice-loading-screen"
+
 - extendedWaitUntil:
     visible:
       id: "messages-screen"
     timeout: 10000
 
-# --- Test: Screen title is shown ---
+# --- Test: Screen renders ---
 - assertVisible:
     id: "messages-screen"
 
+
 # --- Test: Content loads (wait for loading to finish) ---
 - waitForAnimationToEnd
+
+# --- Test: Either inbox items or empty state is shown ---
+- runFlow:
+    when:
+      visible: "Silence reigns in the tavern."
+    commands:
+      - assertVisible: "Silence reigns in the tavern."
+
+- runFlow:
+    when:
+      visible: "Inbox"
+    commands:
+      - assertVisible: "Inbox"

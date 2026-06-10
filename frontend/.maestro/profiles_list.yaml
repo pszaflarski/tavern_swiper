@@ -1,10 +1,9 @@
 # Profiles List Screen Tests
-# Analogous to: __tests__/Profiles.test.tsx
 #
 # Verifies:
 # - Profiles screen renders
 # - Profile list or empty state is shown
-# - "Forge New Identity" button is present
+# - "Forge New Identity" button or add-profile button is present
 
 appId: com.tavernswiper.app
 
@@ -16,21 +15,33 @@ appId: com.tavernswiper.app
 - runFlow: helpers/auth_login_helper.yaml
 
 # Navigate to Profiles tab
-- tapOn: "PROFILES"
+- tapOn:
+    id: "tab-bar-profiles"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "profiles-screen"
     timeout: 10000
 
-# --- Test: Either profiles exist or empty state is shown ---
-- runFlow:
-    when:
-      visible: "Forge New Identity"
-    commands:
-      - assertVisible: "Forge New Identity"
+# --- Test: Screen renders ---
+- assertVisible:
+    id: "profiles-screen"
 
+# --- Test: Either profiles exist or empty state is shown ---
+# Case 1: No profiles — empty state CTA is shown
 - runFlow:
     when:
-      visible: "Forge Your First Hero"
+      visible:
+        id: "empty-state-add-profile-button"
     commands:
-      - assertVisible: "Forge Your First Hero"
+      - assertVisible: "Forge Your First Identity"
+      - assertVisible: "You must forge an identity before your legend can begin."
+
+# Case 2: Profiles exist — add-profile button (+) is shown at the bottom
+- runFlow:
+    when:
+      visible:
+        id: "add-profile-button"
+    commands:
+      - assertVisible:
+          id: "add-profile-button"
