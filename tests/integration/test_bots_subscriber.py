@@ -19,10 +19,10 @@ async def auth_user():
         return await register_user(client)
 
 
-async def poll_for_bot_event(trigger, profile_id, timeout=5):
+async def poll_for_bot_event(trigger, profile_id, timeout=15):
     """
     Poll the bot_events collection in the bots DB for a record matching
-    the given trigger and profile_id in its context.
+    the given trigger and profile_id in its context, and has status "processed".
     """
     db = firestore.Client(project=FIRESTORE_PROJECT, database=BOTS_DB)
     collection = "bot_events"
@@ -35,7 +35,7 @@ async def poll_for_bot_event(trigger, profile_id, timeout=5):
         for doc in docs:
             data = doc.to_dict()
             ctx = data.get("context", {})
-            if ctx.get("profile_id") == profile_id:
+            if ctx.get("profile_id") == profile_id and data.get("status") == "processed":
                 return data
         await asyncio.sleep(1)
     return None
