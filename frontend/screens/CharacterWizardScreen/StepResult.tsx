@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -184,19 +184,24 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
       </Text>
 
       {/* Character Card */}
-      <View style={{ position: 'relative' }}>
+      <View style={{ position: 'relative', width: '100%' }}>
         <View style={styles.characterCard}>
-          {/* Character image */}
+          {/* Full-bleed character image */}
           <View style={styles.characterImageArea}>
             {imageUrl ? (
               <Image
                 source={{ uri: imageUrl }}
-                style={{ width: '100%', height: '100%', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
+                style={StyleSheet.absoluteFillObject}
                 resizeMode="cover"
               />
             ) : (
               <Text style={styles.characterImagePlaceholder}>⚔️</Text>
             )}
+          </View>
+
+          {/* Dark gradient overlay for text readability */}
+          <View style={[styles.characterGradient, { backgroundColor: 'transparent' }]}>
+            <View style={{ flex: 1, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' } as any} />
           </View>
 
           {/* Card body */}
@@ -227,13 +232,13 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
               style={[styles.carouselNavButton, styles.carouselNavLeft]}
               onPress={handlePrev}
             >
-              <Ionicons name="chevron-back" size={18} color={Colors.onSurface} />
+              <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
             </Pressable>
             <Pressable
               style={[styles.carouselNavButton, styles.carouselNavRight]}
               onPress={handleNext}
             >
-              <Ionicons name="chevron-forward" size={18} color={Colors.onSurface} />
+              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
             </Pressable>
           </>
         )}
