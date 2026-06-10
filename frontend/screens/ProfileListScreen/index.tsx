@@ -224,7 +224,7 @@ function ProfilesScreenInner() {
         title,
         message,
         [
-          { text: 'Spar Them', style: 'cancel' },
+          { text: 'Spare Them', style: 'cancel' },
           { 
             text: 'Erase', 
             style: 'destructive',

@@ -3,6 +3,9 @@ credentials/
 .env*
 google-services.json
 auth_log.txt
+*.keystore
+*.jks
+*.pem
 
 # Noise and Dependencies (Saves context window/tokens)
 node_modules/
@@ -14,10 +17,30 @@ venv/
 .pytest_cache/
 .android_sdk/
 .maestro/
+.browser-test/
+tmp/
+**/tmp/
 
 # Binary Assets (Useless for text-based LLMs)
-'sample profiles'/*.jpg
-'sample profiles'/*.png
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.ico
+*.avif
+*.pdf
+*.zip
+*.tar*
+*.gz
+*.apk
+*.aab
+*.jar
+*.so
+*.a
+*.exe
+*.dll
+*.bin
 
 # OS and Editor configs
 .DS_Store
@@ -28,7 +51,3 @@ venv/
 build/
 dist/
 out/
-
-
-# frontend/
-# services/
