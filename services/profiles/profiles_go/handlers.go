@@ -128,10 +128,13 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 	// Collect all tags for validation
 	allTags := collectAllTags(body.Gender, body.Race, body.Fandom, body.Interests, body.Events, body.LookingFor, body.OtherTags)
 
-	// Finding #4: Tag validation
-	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
-		send400(c, err.Error())
-		return
+	// Skip tag validation for generated profiles (e.g. character wizard) —
+	// their tags come from a trusted source and may not exist in the tags collection.
+	if !ptrBoolOrFalse(body.Generated) {
+		if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
+			send400(c, err.Error())
+			return
+		}
 	}
 
 	data := map[string]interface{}{
