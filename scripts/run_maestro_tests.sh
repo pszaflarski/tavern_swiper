@@ -125,6 +125,19 @@ start_emulator() {
     while [ $elapsed -lt $EMULATOR_BOOT_TIMEOUT ]; do
         if "$ADB_BIN" shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; then
             ok "Emulator booted in ${elapsed}s"
+            
+            # Wait for network connectivity (ping 8.8.8.8)
+            log "Waiting for emulator network connectivity..."
+            local net_elapsed=0
+            while [ $net_elapsed -lt 30 ]; do
+                if "$ADB_BIN" shell ping -c 1 -W 2 8.8.8.8 &>/dev/null; then
+                    ok "Emulator network is online!"
+                    return 0
+                fi
+                sleep 2
+                net_elapsed=$((net_elapsed + 2))
+            done
+            warn "Emulator network check timed out, proceeding anyway..."
             return 0
         fi
         sleep 2
