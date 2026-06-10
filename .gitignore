@@ -64,3 +64,4 @@ scratch/
 *.apk
 *.aab
 .browser-test/
+**/proto/proto/
