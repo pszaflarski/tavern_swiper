@@ -603,8 +603,39 @@ func handleValidateProfile(c *gin.Context) {
 		}
 
 		if dbTagline == reqTagline && dbBio == reqBio {
-			c.JSON(http.StatusOK, ValidationResponse{IsGenerated: true})
-			return
+			// Resolve the character images to compare URLs
+			charOut, err := resolveCharacterOut(c.Request.Context(), client, doc)
+			if err != nil {
+				log.Printf("[WARN] Failed to resolve character %s for validation: %v", doc.ID(), err)
+				continue
+			}
+
+			// Extract character image URLs
+			var charImageURLs []string
+			for _, img := range charOut.Images {
+				charImageURLs = append(charImageURLs, img.URL)
+			}
+
+			// Compare lengths
+			if len(body.ImageURLs) != len(charImageURLs) {
+				continue // Length mismatch, try next document
+			}
+
+			// Compare elements. We assume order doesn't necessarily have to match but usually does.
+			// Let's do exact ordered match for simplicity, or we could sort/map them.
+			// The original prompt implies validation of "generated profile", so it should match exactly.
+			imagesMatch := true
+			for i := range body.ImageURLs {
+				if body.ImageURLs[i] != charImageURLs[i] {
+					imagesMatch = false
+					break
+				}
+			}
+
+			if imagesMatch {
+				c.JSON(http.StatusOK, ValidationResponse{IsGenerated: true})
+				return
+			}
 		}
 	}
 

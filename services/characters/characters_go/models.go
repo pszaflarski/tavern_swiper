@@ -106,9 +106,10 @@ type TagSearchQuery struct {
 
 // ProfileValidationRequest represents a profile blob to validate against predefined characters.
 type ProfileValidationRequest struct {
-	DisplayName string  `json:"display_name" binding:"required"`
-	Tagline     *string `json:"tagline"`
-	Bio         *string `json:"bio"`
+	DisplayName string   `json:"display_name" binding:"required"`
+	Tagline     *string  `json:"tagline"`
+	Bio         *string  `json:"bio"`
+	ImageURLs   []string `json:"image_urls"`
 }
 
 // ValidationResponse is the response to the validation endpoint.

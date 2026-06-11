@@ -245,7 +245,7 @@ func TestValidateProfile(t *testing.T) {
 		return mockDB, nil
 	}
 
-	// 1. Setup mock character
+	// 1. Setup mock character and images
 	mockDB.Collection(CHARACTERS_COLLECTION).(*mockCollection).queryRes = []*mockSnap{
 		{
 			id:     "char-1",
@@ -254,15 +254,23 @@ func TestValidateProfile(t *testing.T) {
 				"display_name": "Geralt of Rivia",
 				"tagline":      "The White Wolf",
 				"bio":          "Mutated monster hunter.",
+				"image_ids":    []interface{}{"img-1"},
 			},
 		},
 	}
+	mockDB.Collection(IMAGES_COLLECTION).Doc("img-1").Set(context.Background(), map[string]interface{}{
+		"url":          "https://example.com/geralt.jpg",
+		"source_type":  "generated",
+		"character_id": "char-1",
+		"position":     0,
+	})
 
 	// 2. Test successful match
 	validReq := ProfileValidationRequest{
 		DisplayName: "Geralt of Rivia",
 		Tagline:     ptrStr("The White Wolf"),
 		Bio:         ptrStr("Mutated monster hunter."),
+		ImageURLs:   []string{"https://example.com/geralt.jpg"},
 	}
 	body, _ := json.Marshal(validReq)
 	w := httptest.NewRecorder()
@@ -280,6 +288,7 @@ func TestValidateProfile(t *testing.T) {
 		DisplayName: "Geralt of Rivia",
 		Tagline:     ptrStr("The White Wolf"),
 		Bio:         ptrStr("Just a normal human."),
+		ImageURLs:   []string{"https://example.com/geralt.jpg"},
 	}
 	body2, _ := json.Marshal(invalidReq)
 	w2 := httptest.NewRecorder()
@@ -291,4 +300,22 @@ func TestValidateProfile(t *testing.T) {
 	var resp2 ValidationResponse
 	_ = json.Unmarshal(w2.Body.Bytes(), &resp2)
 	assert.False(t, resp2.IsGenerated)
+
+	// 4. Test failure (modified images)
+	invalidImgReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Mutated monster hunter."),
+		ImageURLs:   []string{"https://example.com/hacked.jpg"},
+	}
+	body3, _ := json.Marshal(invalidImgReq)
+	w3 := httptest.NewRecorder()
+	req3, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body3))
+	req3.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w3, req3)
+
+	assert.Equal(t, http.StatusOK, w3.Code)
+	var resp3 ValidationResponse
+	_ = json.Unmarshal(w3.Body.Bytes(), &resp3)
+	assert.False(t, resp3.IsGenerated)
 }
