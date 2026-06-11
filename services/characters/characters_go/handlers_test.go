@@ -42,6 +42,7 @@ func setupTestEngine() *gin.Engine {
 	{
 		cGroup.GET("/", handleListAllCharacters)
 		cGroup.GET("/random", handleGetRandomCharacter)
+		cGroup.POST("/validate", handleValidateProfile)
 		cGroup.GET("/:id", handleGetCharacter)
 
 		cGroup.POST("/", handleCreateCharacter)
@@ -233,4 +234,61 @@ func TestSearchTags(t *testing.T) {
 	_ = json.Unmarshal(w.Body.Bytes(), &tags)
 	assert.Equal(t, 1, len(tags))
 	assert.Equal(t, "The Witcher 3", tags[0].Name)
+}
+
+func TestValidateProfile(t *testing.T) {
+	r := setupTestEngine()
+	adminToken := signGoTestToken("admin-123", "admin")
+
+	mockDB := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mockDB, nil
+	}
+
+	// 1. Setup mock character
+	mockDB.Collection(CHARACTERS_COLLECTION).(*mockCollection).queryRes = []*mockSnap{
+		{
+			id:     "char-1",
+			exists: true,
+			data: map[string]interface{}{
+				"display_name": "Geralt of Rivia",
+				"tagline":      "The White Wolf",
+				"bio":          "Mutated monster hunter.",
+			},
+		},
+	}
+
+	// 2. Test successful match
+	validReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Mutated monster hunter."),
+	}
+	body, _ := json.Marshal(validReq)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp ValidationResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.True(t, resp.IsGenerated)
+
+	// 3. Test failure (modified bio)
+	invalidReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Just a normal human."),
+	}
+	body2, _ := json.Marshal(invalidReq)
+	w2 := httptest.NewRecorder()
+	req2, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body2))
+	req2.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+	var resp2 ValidationResponse
+	_ = json.Unmarshal(w2.Body.Bytes(), &resp2)
+	assert.False(t, resp2.IsGenerated)
 }
