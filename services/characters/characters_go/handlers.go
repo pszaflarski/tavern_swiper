@@ -549,3 +549,95 @@ func safeStr(val interface{}) string {
 	}
 	return ""
 }
+
+// handleValidateProfile godoc
+// @Summary      Validate if a profile is a generated character
+// @Tags         characters
+// @Accept       json
+// @Produce      json
+// @Param        body  body  ProfileValidationRequest  true  "Profile validation payload"
+// @Success      200  {object}  ValidationResponse
+// @Router       /characters/validate [post]
+func handleValidateProfile(c *gin.Context) {
+	var body ProfileValidationRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": err.Error()})
+		return
+	}
+
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		send503(c, "Database connection error")
+		return
+	}
+
+	// Query characters by display name
+	docs, err := client.Collection(CHARACTERS_COLLECTION).Where("display_name", "==", body.DisplayName).Documents(c.Request.Context()).GetAll()
+	if err != nil {
+		send500(c, "Failed to query characters: "+err.Error())
+		return
+	}
+
+	// For strict matching, we check if there's any document that exactly matches tagline and bio.
+	for _, doc := range docs {
+		d := doc.Data()
+
+		dbTagline := ""
+		if v, ok := d["tagline"].(string); ok {
+			dbTagline = v
+		}
+
+		dbBio := ""
+		if v, ok := d["bio"].(string); ok {
+			dbBio = v
+		}
+
+		reqTagline := ""
+		if body.Tagline != nil {
+			reqTagline = *body.Tagline
+		}
+
+		reqBio := ""
+		if body.Bio != nil {
+			reqBio = *body.Bio
+		}
+
+		if dbTagline == reqTagline && dbBio == reqBio {
+			// Resolve the character images to compare URLs
+			charOut, err := resolveCharacterOut(c.Request.Context(), client, doc)
+			if err != nil {
+				log.Printf("[WARN] Failed to resolve character %s for validation: %v", doc.ID(), err)
+				continue
+			}
+
+			// Extract character image URLs
+			var charImageURLs []string
+			for _, img := range charOut.Images {
+				charImageURLs = append(charImageURLs, img.URL)
+			}
+
+			// Compare lengths
+			if len(body.ImageURLs) != len(charImageURLs) {
+				continue // Length mismatch, try next document
+			}
+
+			// Compare elements. We assume order doesn't necessarily have to match but usually does.
+			// Let's do exact ordered match for simplicity, or we could sort/map them.
+			// The original prompt implies validation of "generated profile", so it should match exactly.
+			imagesMatch := true
+			for i := range body.ImageURLs {
+				if body.ImageURLs[i] != charImageURLs[i] {
+					imagesMatch = false
+					break
+				}
+			}
+
+			if imagesMatch {
+				c.JSON(http.StatusOK, ValidationResponse{IsGenerated: true})
+				return
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, ValidationResponse{IsGenerated: false})
+}

@@ -43,6 +43,7 @@ func setupTestEngine() *gin.Engine {
 	{
 		cGroup.GET("/", handleListAllCharacters)
 		cGroup.GET("/random", handleGetRandomCharacter)
+		cGroup.POST("/validate", handleValidateProfile)
 		cGroup.GET("/:id", handleGetCharacter)
 
 		cGroup.POST("/", handleCreateCharacter)
@@ -642,4 +643,88 @@ func TestTagDisplayOrder(t *testing.T) {
 	_ = json.Unmarshal(w.Body.Bytes(), &tag)
 	assert.Equal(t, 5, tag.DisplayOrder)
 	assert.Equal(t, "Fighter", tag.Name)
+}
+
+func TestValidateProfile(t *testing.T) {
+	r := setupTestEngine()
+	adminToken := signGoTestToken("admin-123", "admin")
+
+	mockDB := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mockDB, nil
+	}
+
+	// 1. Setup mock character and images
+	mockDB.Collection(CHARACTERS_COLLECTION).(*mockCollection).queryRes = []*mockSnap{
+		{
+			id:     "char-1",
+			exists: true,
+			data: map[string]interface{}{
+				"display_name": "Geralt of Rivia",
+				"tagline":      "The White Wolf",
+				"bio":          "Mutated monster hunter.",
+				"image_ids":    []interface{}{"img-1"},
+			},
+		},
+	}
+	mockDB.Collection(IMAGES_COLLECTION).Doc("img-1").Set(context.Background(), map[string]interface{}{
+		"url":          "https://example.com/geralt.jpg",
+		"source_type":  "generated",
+		"character_id": "char-1",
+		"position":     0,
+	})
+
+	// 2. Test successful match
+	validReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Mutated monster hunter."),
+		ImageURLs:   []string{"https://example.com/geralt.jpg"},
+	}
+	body, _ := json.Marshal(validReq)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp ValidationResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.True(t, resp.IsGenerated)
+
+	// 3. Test failure (modified bio)
+	invalidReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Just a normal human."),
+		ImageURLs:   []string{"https://example.com/geralt.jpg"},
+	}
+	body2, _ := json.Marshal(invalidReq)
+	w2 := httptest.NewRecorder()
+	req2, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body2))
+	req2.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+	var resp2 ValidationResponse
+	_ = json.Unmarshal(w2.Body.Bytes(), &resp2)
+	assert.False(t, resp2.IsGenerated)
+
+	// 4. Test failure (modified images)
+	invalidImgReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Mutated monster hunter."),
+		ImageURLs:   []string{"https://example.com/hacked.jpg"},
+	}
+	body3, _ := json.Marshal(invalidImgReq)
+	w3 := httptest.NewRecorder()
+	req3, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body3))
+	req3.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w3, req3)
+
+	assert.Equal(t, http.StatusOK, w3.Code)
+	var resp3 ValidationResponse
+	_ = json.Unmarshal(w3.Body.Bytes(), &resp3)
+	assert.False(t, resp3.IsGenerated)
 }
