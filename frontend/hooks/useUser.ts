@@ -59,8 +59,7 @@ export function useUser() {
       // 2. Clear local Tavern session and cache
       await clearTavernSession();
       
-      // clear() removes all queries. Do NOT re-create with setQueryData(null)
-      // — that poisons the cache for the next login within staleTime.
+      // clear() removes all queries and prevents stale cache on next login.
       queryClient.clear();
       
       // 3. Clear global context state immediately
@@ -76,7 +75,7 @@ export function useUser() {
   };
 
   return {
-    user: userQuery.data,
+    user: activeUid ? (userQuery.data ?? null) : null,
     uid: activeUid,
     isLoading: !authInitialized || (!!activeUid && !userQuery.data && !userQuery.isError),
     firebaseUser,
