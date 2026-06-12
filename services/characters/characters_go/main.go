@@ -56,6 +56,7 @@ func main() {
 		// Public Character routes
 		cGroup.GET("/", handleListAllCharacters)
 		cGroup.GET("/random", handleGetRandomCharacter)
+		cGroup.POST("/validate", handleValidateProfile)
 		cGroup.GET("/:id", handleGetCharacter)
 
 		// Admin Character mutation routes

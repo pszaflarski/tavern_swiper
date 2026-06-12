@@ -116,3 +116,16 @@ type TagSearchQuery struct {
 	Category string `json:"category" binding:"required"`
 	Name     string `json:"name" binding:"required"` // partial prefix
 }
+
+// ProfileValidationRequest represents a profile blob to validate against predefined characters.
+type ProfileValidationRequest struct {
+	DisplayName string   `json:"display_name" binding:"required"`
+	Tagline     *string  `json:"tagline"`
+	Bio         *string  `json:"bio"`
+	ImageURLs   []string `json:"image_urls"`
+}
+
+// ValidationResponse is the response to the validation endpoint.
+type ValidationResponse struct {
+	IsGenerated bool `json:"is_generated"`
+}
