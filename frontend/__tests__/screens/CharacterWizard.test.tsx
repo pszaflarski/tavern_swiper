@@ -4,12 +4,12 @@ import CharacterWizardScreen from '../../screens/CharacterWizardScreen';
 import { charactersApi, profilesApi } from '../../lib/api';
 import Toast from 'react-native-toast-message';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 
 // Mock the API client
 jest.mock('../../lib/api', () => ({
   charactersApi: {
     get: jest.fn(),
+    post: jest.fn(),
   },
   profilesApi: {
     post: jest.fn(),
@@ -37,28 +37,33 @@ jest.mock('expo-router', () => ({
   useFocusEffect: jest.fn((cb) => cb()),
 }));
 
-const mockCharacters = [
-  {
-    character_id: 'char-1',
-    display_name: 'Aethelgard Moonwhisper',
-    tagline: 'The forest speaks to those who listen.',
-    bio: 'A wandering elven druid who has lived for over three centuries.',
-    fandom: [{ id: 'f1', category: 'fandom', name: 'D&D', slug: 'dnd' }],
-    race: [{ id: 'r1', category: 'race', name: 'Elf', slug: 'elf' }],
-    gender: [{ id: 'g1', category: 'gender', name: 'Male', slug: 'male' }],
-    images: [{ image_id: 'img-1', url: 'http://example.com/aethelgard.jpg', source_type: 'gcs', position: 0 }],
-  },
-  {
-    character_id: 'char-2',
-    display_name: 'Lilith Starspire',
-    tagline: 'Forbidden shadow magic.',
-    bio: 'An elven shadow wizard.',
-    fandom: [{ id: 'f1', category: 'fandom', name: 'D&D', slug: 'dnd' }],
-    race: [{ id: 'r1', category: 'race', name: 'Elf', slug: 'elf' }],
-    gender: [{ id: 'g2', category: 'gender', name: 'Female', slug: 'female' }],
-    images: [{ image_id: 'img-2', url: 'http://example.com/lilith.jpg', source_type: 'gcs', position: 0 }],
-  }
-];
+const mockFandoms = [{ id: 'tag-dnd', category: 'fandom', name: 'D&D', slug: 'fandom__dnd' }];
+const mockGenders = [{ id: 'tag-male', category: 'gender', name: 'Male', slug: 'gender__male' }];
+const mockRaces = [{ id: 'tag-elf', category: 'race', name: 'Elf', slug: 'race__elf' }];
+const mockClasses = [{ id: 'tag-fighter', category: 'class', name: 'Fighter', slug: 'class__fighter' }];
+
+const mockGeneratedCharacter = {
+  character_id: 'char-id-123',
+  display_name: 'Aethelgard Moonwhisper',
+  tagline: 'The forest speaks to those who listen.',
+  bio: 'A wandering elven druid.',
+  fandom: [{ id: 'tag-dnd', category: 'fandom', name: 'D&D', slug: 'fandom__dnd' }],
+  race: [{ id: 'tag-elf', category: 'race', name: 'Elf', slug: 'race__elf' }],
+  gender: [{ id: 'tag-male', category: 'gender', name: 'Male', slug: 'gender__male' }],
+  class: [{ id: 'tag-fighter', category: 'class', name: 'Fighter', slug: 'class__fighter' }],
+  images: [],
+  status: 'pending',
+};
+
+const mockCharacterWithImage = {
+  ...mockGeneratedCharacter,
+  images: [{ image_id: 'img-123', url: 'http://example.com/portrait.jpg', source_type: 'ai_generated', position: 0 }],
+};
+
+const mockAdoptedCharacter = {
+  ...mockCharacterWithImage,
+  status: 'adopted',
+};
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -79,7 +84,24 @@ describe('Character Wizard Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (charactersApi.get as jest.Mock).mockResolvedValue({ data: mockCharacters });
+
+    // Mock category tags fetching
+    (charactersApi.get as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/by-category/fandom')) return Promise.resolve({ data: mockFandoms });
+      if (url.includes('/by-category/gender')) return Promise.resolve({ data: mockGenders });
+      if (url.includes('/by-category/race')) return Promise.resolve({ data: mockRaces });
+      if (url.includes('/by-category/class')) return Promise.resolve({ data: mockClasses });
+      return Promise.resolve({ data: [] });
+    });
+
+    // Mock generate, generate-image, and adopt endpoints
+    (charactersApi.post as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/generate-image')) return Promise.resolve({ data: mockCharacterWithImage });
+      if (url.includes('/adopt')) return Promise.resolve({ data: mockAdoptedCharacter });
+      if (url.includes('/generate')) return Promise.resolve({ data: mockGeneratedCharacter });
+      return Promise.resolve({ data: {} });
+    });
+
     (profilesApi.post as jest.Mock).mockResolvedValue({ data: { profile_id: 'new-profile-id' } });
 
     // Mock query client to include refetchQueries
@@ -136,73 +158,50 @@ describe('Character Wizard Screen', () => {
     expect(getByText(/Select Fantasy Race/i)).toBeTruthy();
   });
 
-  it('completes selection and shows a matching character at Step 5', async () => {
+  it('resolves tags, generates details, and fires background portrait generation at Step 5', async () => {
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    // Step 1
+    // Navigate to step 5
     fireEvent.press(getByText('Dungeons & Dragons'));
     fireEvent.press(getByTestId('wizard-next-button'));
-
-    // Step 2
     fireEvent.press(getByText('Male'));
     fireEvent.press(getByTestId('wizard-next-button'));
-
-    // Step 3
     fireEvent.press(getByText('Elf'));
     fireEvent.press(getByTestId('wizard-next-button'));
-
-    // Step 4
     fireEvent.press(getByText('Fighter'));
     fireEvent.press(getByTestId('wizard-next-button'));
 
-    // Step 5 loading / result
+    // Wait for tag resolution and details generation
     await waitFor(() => {
-      expect(charactersApi.get).toHaveBeenCalledWith('/characters/');
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/generate', expect.objectContaining({
+        fandom: [{ id: 'tag-dnd', category: 'fandom', name: 'D&D', slug: 'fandom__dnd' }],
+        gender: [{ id: 'tag-male', category: 'gender', name: 'Male', slug: 'gender__male' }],
+        race: [{ id: 'tag-elf', category: 'race', name: 'Elf', slug: 'race__elf' }],
+        class: [{ id: 'tag-fighter', category: 'class', name: 'Fighter', slug: 'class__fighter' }],
+      }));
     });
 
-    // Check that we see the first match (Aethelgard Moonwhisper has D&D, Elf, Male matching selections)
+    // Check that we see the generated character details
     await waitFor(() => {
       expect(getByText('Aethelgard Moonwhisper')).toBeTruthy();
       expect(getByText('"The forest speaks to those who listen."')).toBeTruthy();
     });
 
-    // Check that the buttons "Adopt This Hero" and "Back to Start" are visible
+    // Verify background image generation call
+    await waitFor(() => {
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/char-id-123/generate-image');
+    });
+
+    // Verify buttons "Adopt This Hero" and "Back to Start" are visible
     expect(getByText('Adopt This Hero')).toBeTruthy();
     expect(getByText('Back to Start')).toBeTruthy();
   });
 
-  it('cycles through matches when clicking Next Match if multiple exist', async () => {
-    const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
-
-    // Go through steps choosing D&D + Elf (both mock characters are D&D + Elf)
-    fireEvent.press(getByText('Dungeons & Dragons'));
-    fireEvent.press(getByTestId('wizard-next-button'));
-    fireEvent.press(getByTestId('wizard-next-button')); // Skip Gender
-    fireEvent.press(getByText('Elf'));
-    fireEvent.press(getByTestId('wizard-next-button'));
-    fireEvent.press(getByTestId('wizard-next-button')); // Skip Class
-
-    // Wait for character fetch
-    await waitFor(() => {
-      expect(getByText('Aethelgard Moonwhisper')).toBeTruthy();
+  it('shows empty state when details generation fails', async () => {
+    (charactersApi.post as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/generate')) return Promise.reject(new Error('Generation failed'));
+      return Promise.resolve({ data: {} });
     });
-
-    // Next Match button should be visible since both match Elf
-    const nextMatchBtn = getByText('Next Match');
-    expect(nextMatchBtn).toBeTruthy();
-
-    // Tap Next Match
-    fireEvent.press(nextMatchBtn);
-
-    // Should now show the second character
-    await waitFor(() => {
-      expect(getByText('Lilith Starspire')).toBeTruthy();
-    });
-  });
-
-  it('shows empty state when no character matches the criteria', async () => {
-    // Return empty characters array
-    (charactersApi.get as jest.Mock).mockResolvedValue({ data: [] });
 
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
@@ -238,21 +237,29 @@ describe('Character Wizard Screen', () => {
       expect(getByText('Aethelgard Moonwhisper')).toBeTruthy();
     });
 
+    // Wait for the background image to be generated so the Adopt button is enabled
+    await waitFor(() => {
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/char-id-123/generate-image');
+    });
+
     // Click "Adopt This Hero"
     fireEvent.press(getByText('Adopt This Hero'));
 
     await waitFor(() => {
+      // Verifies character adopt endpoint called
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/char-id-123/adopt');
+
       // Verifies profilesApi.post was called with correct structure
       expect(profilesApi.post).toHaveBeenCalledWith('/profiles/', expect.objectContaining({
         display_name: 'Aethelgard Moonwhisper',
         tagline: 'The forest speaks to those who listen.',
-        bio: 'A wandering elven druid who has lived for over three centuries.',
+        bio: 'A wandering elven druid.',
         is_oc: false,
         generated: true,
-        image_urls: ['http://example.com/aethelgard.jpg'],
-        fandom: [{ id: 'f1', category: 'fandom', name: 'D&D', slug: 'dnd' }],
-        race: [{ id: 'r1', category: 'race', name: 'Elf', slug: 'elf' }],
-        gender: [{ id: 'g1', category: 'gender', name: 'Male', slug: 'male' }],
+        image_urls: ['http://example.com/portrait.jpg'],
+        fandom: [{ id: 'tag-dnd', category: 'fandom', name: 'D&D', slug: 'fandom__dnd' }],
+        race: [{ id: 'tag-elf', category: 'race', name: 'Elf', slug: 'race__elf' }],
+        gender: [{ id: 'tag-male', category: 'gender', name: 'Male', slug: 'gender__male' }],
       }));
 
       // Verifies toast notification and router redirect
@@ -265,6 +272,7 @@ describe('Character Wizard Screen', () => {
   });
 
   it('shows toast error message if adoption fails', async () => {
+    // Mock profiles post to fail
     (profilesApi.post as jest.Mock).mockRejectedValue(new Error('Network error'));
 
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
@@ -282,6 +290,11 @@ describe('Character Wizard Screen', () => {
       expect(getByText('Aethelgard Moonwhisper')).toBeTruthy();
     });
 
+    // Wait for the background image to be generated so the Adopt button is enabled
+    await waitFor(() => {
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/char-id-123/generate-image');
+    });
+
     // Click "Adopt This Hero"
     fireEvent.press(getByText('Adopt This Hero'));
 
@@ -293,3 +306,4 @@ describe('Character Wizard Screen', () => {
     });
   });
 });
+

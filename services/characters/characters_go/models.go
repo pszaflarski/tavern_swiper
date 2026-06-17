@@ -137,5 +137,7 @@ type ProfileValidationRequest struct {
 
 // ValidationResponse is the response to the validation endpoint.
 type ValidationResponse struct {
-	IsGenerated bool `json:"is_generated"`
+	IsGenerated bool   `json:"is_generated"`
+	Status      string `json:"status,omitempty"`
 }
+
