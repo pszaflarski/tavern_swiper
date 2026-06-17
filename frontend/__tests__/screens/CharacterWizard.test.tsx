@@ -173,12 +173,16 @@ describe('Character Wizard Screen', () => {
 
     // Wait for tag resolution and details generation
     await waitFor(() => {
-      expect(charactersApi.post).toHaveBeenCalledWith('/characters/generate', expect.objectContaining({
-        fandom: [{ id: 'tag-dnd', category: 'fandom', name: 'D&D', slug: 'fandom__dnd' }],
-        gender: [{ id: 'tag-male', category: 'gender', name: 'Male', slug: 'gender__male' }],
-        race: [{ id: 'tag-elf', category: 'race', name: 'Elf', slug: 'race__elf' }],
-        class: [{ id: 'tag-fighter', category: 'class', name: 'Fighter', slug: 'class__fighter' }],
-      }));
+      expect(charactersApi.post).toHaveBeenCalledWith(
+        '/characters/generate',
+        expect.objectContaining({
+          fandom: [{ id: 'tag-dnd', category: 'fandom', name: 'D&D', slug: 'fandom__dnd' }],
+          gender: [{ id: 'tag-male', category: 'gender', name: 'Male', slug: 'gender__male' }],
+          race: [{ id: 'tag-elf', category: 'race', name: 'Elf', slug: 'race__elf' }],
+          class: [{ id: 'tag-fighter', category: 'class', name: 'Fighter', slug: 'class__fighter' }],
+        }),
+        expect.any(Object)
+      );
     });
 
     // Check that we see the generated character details
@@ -351,7 +355,7 @@ describe('Character Wizard Screen', () => {
     fireEvent.press(nextProfileBtn);
     await waitFor(() => {
       // Assert that details generation was triggered again
-      expect(charactersApi.post).toHaveBeenCalledWith('/characters/generate', expect.any(Object));
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/generate', expect.any(Object), expect.any(Object));
     });
   });
 });

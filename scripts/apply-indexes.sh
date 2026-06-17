@@ -36,7 +36,7 @@ create_index() {
   local coll=$2
   local fields=$3 # format: "field1:order,field2:order" or "field1:array"
   
-  local cmd="gcloud firestore indexes composite create --database=$db --collection-group=$coll"
+  local cmd="gcloud firestore indexes composite create --database=$db --collection-group=$coll --async"
   
   # Split fields by comma
   IFS=',' read -ra ADDR <<< "$fields"
