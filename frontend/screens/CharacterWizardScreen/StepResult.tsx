@@ -288,6 +288,12 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
       {/* Details overlay — scrollable full bio */}
       {showDetails && (
         <View style={detailStyles.overlay}>
+          <Pressable
+            style={({ pressed }) => [detailStyles.closeButton, pressed && { opacity: 0.7 }]}
+            onPress={() => setShowDetails(false)}
+          >
+            <Ionicons name="close-circle-outline" size={32} color={Colors.onSurface} />
+          </Pressable>
           <ScrollView
             style={detailStyles.scroll}
             contentContainerStyle={detailStyles.scrollContent}
@@ -320,23 +326,11 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
         </View>
       )}
 
-      {/* Info button */}
-      <Pressable
-        style={({ pressed }) => [detailStyles.infoButton, pressed && { opacity: 0.7 }]}
-        onPress={() => setShowDetails(!showDetails)}
-        testID="wizard-info-button"
-      >
-        <Ionicons
-          name={showDetails ? 'close-circle-outline' : 'information-circle-outline'}
-          size={28}
-          color={Colors.onSurface}
-        />
-      </Pressable>
 
       {/* Hero info overlaid at bottom of image, above buttons */}
       {!showDetails && (
         <View style={styles.characterCardBody}>
-          <View style={styles.badgeRow}>
+          <View style={[styles.badgeRow, { alignItems: 'center' }]}>
             <View style={[styles.badge, styles.badgeFandom]}>
               <Text style={styles.badgeText}>{fandomName}</Text>
             </View>
@@ -355,6 +349,18 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
                 <Text style={styles.badgeText}>{className}</Text>
               </View>
             ) : null}
+            <View style={{ flex: 1 }} />
+            <Pressable
+              style={({ pressed }) => [detailStyles.infoButton, pressed && { opacity: 0.7 }]}
+              onPress={() => setShowDetails(!showDetails)}
+              testID="wizard-info-button"
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={28}
+                color={Colors.onSurface}
+              />
+            </Pressable>
           </View>
 
           <Text style={styles.characterName}>{character.display_name}</Text>
@@ -482,16 +488,18 @@ const detailStyles = StyleSheet.create({
     marginBottom: 4,
   },
   infoButton: {
-    position: 'absolute',
-    bottom: 80,
-    right: 16,
-    zIndex: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 24,
-    width: 48,
-    height: 48,
+    borderRadius: 20,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
+    marginRight: 16,
+    marginBottom: 8,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
 });
