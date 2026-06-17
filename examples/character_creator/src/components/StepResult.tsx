@@ -7,6 +7,7 @@ interface StepResultProps {
   race: string;
   characterClass: string;
   onReset: () => void;
+  routerUrl: string;
 }
 
 interface CharacterDetails {
@@ -22,6 +23,7 @@ export default function StepResult({
   race,
   characterClass,
   onReset,
+  routerUrl,
 }: StepResultProps) {
   const [isForging, setIsForging] = useState(false);
   const [forgingStep, setForgingStep] = useState(0);
@@ -35,7 +37,7 @@ export default function StepResult({
 
   // Log steps shown during generation
   const forgingLogs = [
-    'Connecting to local agent router (http://localhost:8000)...',
+    `Connecting to agent router (${routerUrl})...`,
     'Invoking character_generator graph...',
     'Requesting model gemini-flash-lite...',
     'Parsing structured JSON output...',
@@ -62,7 +64,7 @@ export default function StepResult({
     let characterData: CharacterDetails;
 
     try {
-      const response = await fetch('http://localhost:8000/invoke', {
+      const response = await fetch(`${routerUrl}/invoke`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +111,7 @@ export default function StepResult({
       console.error('[Forge API Error]:', err);
       setError(
         err.message === 'Failed to fetch'
-          ? 'Cannot connect to agent router. Please ensure the agent router is running locally on http://localhost:8000 (run: python debug_server.py or equivalent)'
+          ? `Cannot connect to agent router at ${routerUrl}. Please ensure it is running and accessible.`
           : err.message || 'An error occurred during AI character generation.'
       );
       setIsForging(false);
@@ -119,7 +121,7 @@ export default function StepResult({
     // Fetch the image using the generated image_prompt in the background of the sheet page
     setIsGeneratingImage(true);
     try {
-      const imgResponse = await fetch('http://localhost:8000/generate-image', {
+      const imgResponse = await fetch(`${routerUrl}/generate-image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +152,7 @@ export default function StepResult({
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/generate-image', {
+      const response = await fetch(`${routerUrl}/generate-image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -12,6 +12,7 @@ export default function CharacterWizard() {
   const [gender, setGender] = useState('');
   const [race, setRace] = useState('');
   const [characterClass, setCharacterClass] = useState('');
+  const [routerType, setRouterType] = useState<'local' | 'cloud'>('local');
 
   const stepsList = [
     { num: 1, label: 'Fandom' },
@@ -56,7 +57,31 @@ export default function CharacterWizard() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 mt-2">
+    <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 mt-2">
+      {/* Router Target Selector Header */}
+      <div className="glass-panel flex flex-wrap justify-between items-center py-3 px-6 gap-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-2.5 h-2.5 rounded-full ${routerType === 'local' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
+          <span className="font-rpg text-sm text-primary-fixed uppercase tracking-wider">
+            Router Endpoint Target:
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setRouterType('local')}
+            className={`rpg-btn !py-1 !px-3 text-xs ${routerType === 'local' ? 'rpg-btn-primary' : ''}`}
+          >
+            Local Dev (localhost:8000)
+          </button>
+          <button
+            onClick={() => setRouterType('cloud')}
+            className={`rpg-btn !py-1 !px-3 text-xs ${routerType === 'cloud' ? 'rpg-btn-primary' : ''}`}
+          >
+            Cloud Dev (GCP Run)
+          </button>
+        </div>
+      </div>
+
       {/* Step Panels */}
       <div className="glass-panel min-h-380 flex flex-col justify-between">
         <div className="flex-grow mb-6">
@@ -83,6 +108,7 @@ export default function CharacterWizard() {
               race={race}
               characterClass={characterClass}
               onReset={handleReset}
+              routerUrl={routerType === 'local' ? 'http://localhost:8000' : 'https://agent-router-dev-374390417125.us-central1.run.app'}
             />
           )}
         </div>
