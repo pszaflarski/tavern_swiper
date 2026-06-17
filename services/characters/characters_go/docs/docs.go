@@ -90,6 +90,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/characters/generate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Generate character details using AI",
+                "parameters": [
+                    {
+                        "description": "Tags to generate character from",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterGenerateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterOut"
+                        }
+                    }
+                }
+            }
+        },
         "/characters/random": {
             "get": {
                 "tags": [
@@ -101,6 +139,39 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/main.CharacterOut"
+                        }
+                    }
+                }
+            }
+        },
+        "/characters/validate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Validate if a profile is a generated character",
+                "parameters": [
+                    {
+                        "description": "Profile validation payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.ProfileValidationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.ValidationResponse"
                         }
                     }
                 }
@@ -189,6 +260,78 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/characters/{id}/adopt": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Adopt a pending character",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterOut"
+                        }
+                    }
+                }
+            }
+        },
+        "/characters/{id}/generate-image": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "characters"
+                ],
+                "summary": "Generate character image using Imagen",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.CharacterOut"
+                        }
                     }
                 }
             }
@@ -456,6 +599,29 @@ const docTemplate = `{
                 }
             }
         },
+        "/tags/roots": {
+            "get": {
+                "description": "Returns all tags where parent_id is null, ordered by display_order.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List root tags (no parent)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.TagTreeNode"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tags/search": {
             "post": {
                 "consumes": [
@@ -559,6 +725,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Deletes a tag. Blocked if the tag has children.",
                 "tags": [
                     "tags"
                 ],
@@ -575,6 +742,114 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/tags/{id}/ancestors": {
+            "get": {
+                "description": "Walks up the parent_id chain and returns the ordered path from root to the given tag.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List ancestors of a tag (root to tag path)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Tag"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/{id}/children": {
+            "get": {
+                "description": "Returns all tags whose parent_id matches the given tag ID. Optionally filter by category.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List direct children of a tag",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Parent Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter children by category",
+                        "name": "category",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.TagTreeNode"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/{id}/tree": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the tag and all its descendants as a flat list with depth metadata.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get full subtree rooted at a tag",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Root Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
                     }
                 }
             }
@@ -639,6 +914,35 @@ const docTemplate = `{
                 }
             }
         },
+        "main.CharacterGenerateRequest": {
+            "type": "object",
+            "properties": {
+                "class": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "fandom": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "gender": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                },
+                "race": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
+                }
+            }
+        },
         "main.CharacterOut": {
             "type": "object",
             "properties": {
@@ -647,6 +951,12 @@ const docTemplate = `{
                 },
                 "character_id": {
                     "type": "string"
+                },
+                "class": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CharTag"
+                    }
                 },
                 "created_at": {
                     "type": "string"
@@ -677,6 +987,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/main.CharTag"
                     }
+                },
+                "status": {
+                    "type": "string"
                 },
                 "tagline": {
                     "type": "string"
@@ -779,6 +1092,29 @@ const docTemplate = `{
                 }
             }
         },
+        "main.ProfileValidationRequest": {
+            "type": "object",
+            "required": [
+                "display_name"
+            ],
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "image_urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tagline": {
+                    "type": "string"
+                }
+            }
+        },
         "main.Tag": {
             "type": "object",
             "properties": {
@@ -788,6 +1124,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "display_order": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -795,6 +1134,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "parent_id": {
                     "type": "string"
                 },
                 "slug": {
@@ -819,10 +1161,16 @@ const docTemplate = `{
                 "category": {
                     "type": "string"
                 },
+                "display_order": {
+                    "type": "integer"
+                },
                 "multi_select": {
                     "type": "boolean"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "parent_id": {
                     "type": "string"
                 },
                 "slug": {
@@ -846,11 +1194,26 @@ const docTemplate = `{
                 }
             }
         },
-        "main.TagUpdate": {
+        "main.TagTreeNode": {
             "type": "object",
             "properties": {
                 "category": {
                     "type": "string"
+                },
+                "child_count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_root": {
+                    "type": "boolean"
                 },
                 "multi_select": {
                     "type": "boolean"
@@ -858,11 +1221,52 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"active\" or \"pending\"",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagUpdate": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "multi_select": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
                 "slug": {
                     "type": "string"
                 },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "main.ValidationResponse": {
+            "type": "object",
+            "properties": {
+                "is_generated": {
+                    "type": "boolean"
                 }
             }
         }

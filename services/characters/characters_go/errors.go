@@ -43,6 +43,11 @@ type ErrorResponse struct {
 	Detail string `json:"detail"`
 }
 
+func send401(c *gin.Context, msg string) {
+	log.Printf("[ERROR] HTTP 401: %s", msg)
+	c.JSON(http.StatusUnauthorized, ErrorResponse{Detail: msg})
+}
+
 func send403(c *gin.Context, msg string) {
 	log.Printf("[ERROR] HTTP 403: %s", msg)
 	c.JSON(http.StatusForbidden, ErrorResponse{Detail: msg})

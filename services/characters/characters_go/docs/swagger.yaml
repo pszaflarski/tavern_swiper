@@ -38,12 +38,35 @@ definitions:
     required:
     - display_name
     type: object
+  main.CharacterGenerateRequest:
+    properties:
+      class:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      fandom:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      gender:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+      race:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
+    type: object
   main.CharacterOut:
     properties:
       bio:
         type: string
       character_id:
         type: string
+      class:
+        items:
+          $ref: '#/definitions/main.CharTag'
+        type: array
       created_at:
         type: string
       display_name:
@@ -64,6 +87,8 @@ definitions:
         items:
           $ref: '#/definitions/main.CharTag'
         type: array
+      status:
+        type: string
       tagline:
         type: string
       updated_at:
@@ -130,17 +155,36 @@ definitions:
       source_type:
         type: string
     type: object
+  main.ProfileValidationRequest:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+      image_urls:
+        items:
+          type: string
+        type: array
+      tagline:
+        type: string
+    required:
+    - display_name
+    type: object
   main.Tag:
     properties:
       category:
         type: string
       created_at:
         type: string
+      display_order:
+        type: integer
       id:
         type: string
       multi_select:
         type: boolean
       name:
+        type: string
+      parent_id:
         type: string
       slug:
         type: string
@@ -154,9 +198,13 @@ definitions:
     properties:
       category:
         type: string
+      display_order:
+        type: integer
       multi_select:
         type: boolean
       name:
+        type: string
+      parent_id:
         type: string
       slug:
         type: string
@@ -175,18 +223,55 @@ definitions:
     - category
     - name
     type: object
+  main.TagTreeNode:
+    properties:
+      category:
+        type: string
+      child_count:
+        type: integer
+      created_at:
+        type: string
+      display_order:
+        type: integer
+      id:
+        type: string
+      is_root:
+        type: boolean
+      multi_select:
+        type: boolean
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+      status:
+        description: '"active" or "pending"'
+        type: string
+      updated_at:
+        type: string
+    type: object
   main.TagUpdate:
     properties:
       category:
         type: string
+      display_order:
+        type: integer
       multi_select:
         type: boolean
       name:
+        type: string
+      parent_id:
         type: string
       slug:
         type: string
       status:
         type: string
+    type: object
+  main.ValidationResponse:
+    properties:
+      is_generated:
+        type: boolean
     type: object
 info:
   contact: {}
@@ -295,6 +380,73 @@ paths:
       summary: Update a character (Admin only)
       tags:
       - characters
+  /characters/{id}/adopt:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Character ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.CharacterOut'
+      security:
+      - BearerAuth: []
+      summary: Adopt a pending character
+      tags:
+      - characters
+  /characters/{id}/generate-image:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Character ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.CharacterOut'
+      security:
+      - BearerAuth: []
+      summary: Generate character image using Imagen
+      tags:
+      - characters
+  /characters/generate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tags to generate character from
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.CharacterGenerateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.CharacterOut'
+      security:
+      - BearerAuth: []
+      summary: Generate character details using AI
+      tags:
+      - characters
   /characters/random:
     get:
       responses:
@@ -303,6 +455,27 @@ paths:
           schema:
             $ref: '#/definitions/main.CharacterOut'
       summary: Get a random character
+      tags:
+      - characters
+  /characters/validate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Profile validation payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.ProfileValidationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ValidationResponse'
+      summary: Validate if a profile is a generated character
       tags:
       - characters
   /images/:
@@ -439,6 +612,7 @@ paths:
       - tags
   /tags/{id}:
     delete:
+      description: Deletes a tag. Blocked if the tag has children.
       parameters:
       - description: Tag ID
         in: path
@@ -491,6 +665,79 @@ paths:
       summary: Update a character tag (Admin only)
       tags:
       - tags
+  /tags/{id}/ancestors:
+    get:
+      description: Walks up the parent_id chain and returns the ordered path from
+        root to the given tag.
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+      summary: List ancestors of a tag (root to tag path)
+      tags:
+      - tags
+  /tags/{id}/children:
+    get:
+      description: Returns all tags whose parent_id matches the given tag ID. Optionally
+        filter by category.
+      parameters:
+      - description: Parent Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filter children by category
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.TagTreeNode'
+            type: array
+      summary: List direct children of a tag
+      tags:
+      - tags
+  /tags/{id}/tree:
+    get:
+      description: Returns the tag and all its descendants as a flat list with depth
+        metadata.
+      parameters:
+      - description: Root Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get full subtree rooted at a tag
+      tags:
+      - tags
   /tags/by-category/{category}:
     get:
       parameters:
@@ -523,6 +770,21 @@ paths:
           schema:
             $ref: '#/definitions/main.Tag'
       summary: Get a character tag by slug
+      tags:
+      - tags
+  /tags/roots:
+    get:
+      description: Returns all tags where parent_id is null, ordered by display_order.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.TagTreeNode'
+            type: array
+      summary: List root tags (no parent)
       tags:
       - tags
   /tags/search:

@@ -32,6 +32,14 @@ type CharacterUpdate struct {
 	ImageIDs    *[]string  `json:"image_ids"`
 }
 
+// CharacterGenerateRequest is the POST body for initiating character generation.
+type CharacterGenerateRequest struct {
+	Fandom []CharTag `json:"fandom"`
+	Race   []CharTag `json:"race"`
+	Gender []CharTag `json:"gender"`
+	Class  []CharTag `json:"class"`
+}
+
 // CharacterOut is the response/document output with images fully resolved.
 type CharacterOut struct {
 	CharacterID string     `json:"character_id"`
@@ -41,7 +49,9 @@ type CharacterOut struct {
 	Fandom      []CharTag  `json:"fandom"`
 	Race        []CharTag  `json:"race"`
 	Gender      []CharTag  `json:"gender"`
+	Class       []CharTag  `json:"class"`
 	Images      []ImageOut `json:"images"`
+	Status      string     `json:"status"`
 	CreatedAt   *time.Time `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
 }
