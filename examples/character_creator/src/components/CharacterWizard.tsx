@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import StepGender from './StepGender.tsx';
-import StepFandom from './StepFandom.tsx';
-import StepRace from './StepRace.tsx';
-import StepClass from './StepClass.tsx';
-import StepResult from './StepResult.tsx';
+import StepFandom from './StepFandom';
+import StepGender from './StepGender';
+import StepRace from './StepRace';
+import StepClass from './StepClass';
+import StepResult from './StepResult';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function CharacterWizard() {
   const [step, setStep] = useState(1);
-  const [gender, setGender] = useState('');
   const [fandom, setFandom] = useState('');
+  const [gender, setGender] = useState('');
   const [race, setRace] = useState('');
   const [characterClass, setCharacterClass] = useState('');
 
@@ -18,24 +18,24 @@ export default function CharacterWizard() {
     { num: 2, label: 'Gender' },
     { num: 3, label: 'Race' },
     { num: 4, label: 'Class' },
-    { num: 5, label: 'Result' },
+    { num: 5, label: 'Forge' },
   ];
 
   const handleNext = () => {
     if (step < 5 && isStepValid()) {
-      setStep(prev => prev + 1);
+      setStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
     if (step > 1) {
-      setStep(prev => prev - 1);
+      setStep((prev) => prev - 1);
     }
   };
 
   const handleReset = () => {
-    setGender('');
     setFandom('');
+    setGender('');
     setRace('');
     setCharacterClass('');
     setStep(1);
@@ -43,36 +43,45 @@ export default function CharacterWizard() {
 
   const isStepValid = () => {
     if (step === 1) return fandom !== ''; // Fandom is required to start
-    return true; // Gender, Race, Class are optional, so Step 2, 3, 4 are always valid
+    return true; // Gender, Race, Class are optional
+  };
+
+  // Auto-reset dependent state if fandom changes
+  const handleFandomSelect = (selectedFandom: string) => {
+    if (selectedFandom !== fandom) {
+      setFandom(selectedFandom);
+      setRace('');
+      setCharacterClass('');
+    }
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 mt-2">
       {/* Step Panels */}
-      <div className="glass-panel p-6 md:p-8 min-h-[380px] flex flex-col justify-between">
-        <div className="flex-1 mb-6">
+      <div className="glass-panel min-h-380 flex flex-col justify-between">
+        <div className="flex-grow mb-6">
           {step === 1 && (
-            <StepFandom fandom={fandom} setFandom={setFandom} />
+            <StepFandom fandom={fandom} onSelect={handleFandomSelect} />
           )}
 
           {step === 2 && (
-            <StepGender gender={gender} setGender={setGender} />
+            <StepGender gender={gender} onSelect={setGender} />
           )}
 
           {step === 3 && (
-            <StepRace fandom={fandom} race={race} setRace={setRace} />
+            <StepRace fandom={fandom} race={race} onSelect={setRace} />
           )}
 
           {step === 4 && (
-            <StepClass fandom={fandom} characterClass={characterClass} setCharacterClass={setCharacterClass} />
+            <StepClass fandom={fandom} characterClass={characterClass} onSelect={setCharacterClass} />
           )}
 
           {step === 5 && (
-            <StepResult 
-              gender={gender} 
-              fandom={fandom} 
-              race={race} 
-              characterClass={characterClass} 
+            <StepResult
+              fandom={fandom}
+              gender={gender}
+              race={race}
+              characterClass={characterClass}
               onReset={handleReset}
             />
           )}
@@ -80,14 +89,14 @@ export default function CharacterWizard() {
 
         {/* Bottom Progress Dots Indicator */}
         <div className="progress-dots-container">
-          {stepsList.map(s => (
-            <div 
+          {stepsList.map((s) => (
+            <div
               key={s.num}
               className={`progress-dot ${
-                step === s.num 
-                  ? 'active' 
-                  : step > s.num 
-                  ? 'completed' 
+                step === s.num
+                  ? 'active'
+                  : step > s.num
+                  ? 'completed'
                   : ''
               }`}
               title={s.label}
@@ -97,11 +106,11 @@ export default function CharacterWizard() {
 
         {/* Wizard Controls (Only show if not on final result screen) */}
         {step < 5 && (
-          <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.06)] pt-4 mt-4">
+          <div className="nav-row">
             <button
               onClick={handleBack}
               disabled={step === 1}
-              className="rpg-btn rpg-btn-secondary px-5 py-2"
+              className="rpg-btn px-5 py-2"
             >
               <ArrowLeft className="w-4 h-4" />
               Back
@@ -110,7 +119,7 @@ export default function CharacterWizard() {
             <button
               onClick={handleNext}
               disabled={!isStepValid()}
-              className="rpg-btn rpg-btn-gold px-6 py-2 font-bold"
+              className="rpg-btn rpg-btn-primary px-6 py-2 font-bold"
             >
               Next
               <ArrowRight className="w-4 h-4" />

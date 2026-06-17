@@ -1,210 +1,420 @@
-import { useState } from 'react';
-import { CHARACTER_PRESETS } from '../data/characters.ts';
-import { Sparkles, ChevronLeft, ChevronRight, Check, Copy, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, Bot, Terminal, RefreshCw, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 
 interface StepResultProps {
-  gender: string;
   fandom: string;
+  gender: string;
   race: string;
   characterClass: string;
   onReset: () => void;
 }
 
-export default function StepResult({ gender, fandom, race, characterClass, onReset }: StepResultProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [copied, setCopied] = useState(false);
+interface CharacterDetails {
+  name: string;
+  tagline: string;
+  bio: string;
+  image_prompt: string;
+}
 
-  // Score-based matching engine
-  const scoredPresets = CHARACTER_PRESETS.map(preset => {
-    let score = 0;
-    
-    // Race match (highest weight)
-    if (race && preset.race.toLowerCase() === race.toLowerCase()) {
-      score += 4;
-    }
-    
-    // Gender match (medium weight)
-    if (gender && preset.gender.toLowerCase() === gender.toLowerCase()) {
-      score += 2;
-    }
-    
-    // Class match (lower weight)
-    if (characterClass && preset.class.toLowerCase() === characterClass.toLowerCase()) {
-      score += 1;
-    }
-    
-    return { preset, score };
-  })
-  .filter(item => item.score > 0) // must match at least one selected attribute
-  .sort((a, b) => b.score - a.score); // highest matches first
+export default function StepResult({
+  fandom,
+  gender,
+  race,
+  characterClass,
+  onReset,
+}: StepResultProps) {
+  const [isForging, setIsForging] = useState(false);
+  const [forgingStep, setForgingStep] = useState(0);
+  const [resultCharacter, setResultCharacter] = useState<CharacterDetails | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState(() => crypto.randomUUID());
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
 
-  // Fallback to all presets if no matching attributes
-  const matches = scoredPresets.length > 0 
-    ? scoredPresets 
-    : CHARACTER_PRESETS.map(preset => ({ preset, score: 0 }));
+  const promptText = `Universe Fandom: ${fandom}, Gender Identity: ${gender || 'any'}, Race Lineage: ${race || 'any'}, Class Role: ${characterClass || 'any'}`;
 
-  const currentMatch = matches[currentIndex] || null;
-  const hasMultipleMatches = matches.length > 1;
+  // Log steps shown during generation
+  const forgingLogs = [
+    'Connecting to local agent router (http://localhost:8000)...',
+    'Invoking character_generator graph...',
+    'Requesting model gemini-flash-lite...',
+    'Parsing structured JSON output...',
+    'Invoking Imagen 4.0 for portrait generation...',
+    'Summoning completed!',
+  ];
 
-  const handleNext = () => {
-    setCurrentIndex(prev => (prev + 1) % matches.length);
-  };
+  // Auto-increment logs for visual flair while loading
+  useEffect(() => {
+    if (!isForging) return;
+    const interval = setInterval(() => {
+      setForgingStep((prev) => (prev < forgingLogs.length - 2 ? prev + 1 : prev));
+    }, 600);
+    return () => clearInterval(interval);
+  }, [isForging]);
 
-  const handlePrev = () => {
-    setCurrentIndex(prev => (prev - 1 + matches.length) % matches.length);
-  };
+  const handleForge = async () => {
+    setIsForging(true);
+    setForgingStep(0);
+    setResultCharacter(null);
+    setImageBase64(null);
+    setError(null);
 
-  // Build the mock JSON payload for the user to understand the boundary integration
-  const generatedPayload = currentMatch ? {
-    display_name: currentMatch.preset.name,
-    tagline: currentMatch.preset.tagline,
-    bio: currentMatch.preset.bio,
-    fandom: [{ id: 'f-1', category: 'fandom', name: fandom === 'D&D' ? 'Forgotten Realms (D&D)' : fandom, slug: fandom.toLowerCase() }],
-    race: [{ id: 'r-1', category: 'race', name: currentMatch.preset.race, slug: currentMatch.preset.race.toLowerCase() }],
-    gender: [{ id: 'g-1', category: 'gender', name: currentMatch.preset.gender, slug: currentMatch.preset.gender.toLowerCase() }],
-    class: [{ id: 'c-1', category: 'class', name: currentMatch.preset.class, slug: currentMatch.preset.class.toLowerCase() }],
-    images: [
-      {
-        url: `/sample_characters/${currentMatch.preset.image}`,
-        source_type: 'ai_generated',
-        artist_name: 'Tavern Swiper Generator',
-        artist_handle: '@tavern_swiper',
-        artist_link: 'https://tavernswiper.dev',
-        position: 0
+    let characterData: CharacterDetails;
+
+    try {
+      const response = await fetch('http://localhost:8000/invoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: promptText,
+          agent: 'character_generator',
+          model: 'gemini-flash-lite',
+          thread_id: threadId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errDetails = await response.json().catch(() => ({}));
+        throw new Error(errDetails.detail || `Server returned status ${response.status}`);
       }
-    ]
-  } : null;
 
-  const handleCopyJson = () => {
-    if (!generatedPayload) return;
-    navigator.clipboard.writeText(JSON.stringify(generatedPayload, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+      const data = await response.json();
+      
+      // Parse the JSON string from the response field
+      try {
+        characterData = JSON.parse(data.response);
+      } catch (parseErr) {
+        // Fallback in case LLM outputs loose markdown or raw text instead of standard JSON
+        console.warn('Failed to parse response JSON, attempting extract', parseErr);
+        const jsonMatch = data.response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          characterData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('Agent response was not in a valid JSON format');
+        }
+      }
+
+      if (!characterData.name || !characterData.tagline || !characterData.bio || !characterData.image_prompt) {
+        throw new Error('Structured character data is missing required attributes');
+      }
+
+      // Finish log sequence and show results for details immediately
+      setForgingStep(forgingLogs.length - 2);
+      setResultCharacter(characterData);
+      setIsForging(false);
+
+    } catch (err: any) {
+      console.error('[Forge API Error]:', err);
+      setError(
+        err.message === 'Failed to fetch'
+          ? 'Cannot connect to agent router. Please ensure the agent router is running locally on http://localhost:8000 (run: python debug_server.py or equivalent)'
+          : err.message || 'An error occurred during AI character generation.'
+      );
+      setIsForging(false);
+      return;
+    }
+
+    // Fetch the image using the generated image_prompt in the background of the sheet page
+    setIsGeneratingImage(true);
+    try {
+      const imgResponse = await fetch('http://localhost:8000/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: characterData.image_prompt,
+          aspect_ratio: '3:4',
+        }),
+      });
+
+      if (!imgResponse.ok) {
+        const errDetails = await imgResponse.json().catch(() => ({}));
+        throw new Error(errDetails.detail || `Server returned status ${imgResponse.status} while generating portrait`);
+      }
+
+      const imgData = await imgResponse.json();
+      setImageBase64(imgData.image);
+    } catch (err: any) {
+      console.error('[Forge Image API Error]:', err);
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
-  if (!currentMatch) {
+  const handleRegeneratePortrait = async () => {
+    if (!resultCharacter) return;
+    setIsGeneratingImage(true);
+    setError(null);
+
+    try {
+      const response = await fetch('http://localhost:8000/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: resultCharacter.image_prompt,
+          aspect_ratio: '3:4',
+        }),
+      });
+
+      if (!response.ok) {
+        const errDetails = await response.json().catch(() => ({}));
+        throw new Error(errDetails.detail || `Server returned status ${response.status} while generating portrait`);
+      }
+
+      const data = await response.json();
+      setImageBase64(data.image);
+    } catch (err: any) {
+      console.error('[Regenerate Portrait Error]:', err);
+      setError(err.message || 'An error occurred during portrait generation.');
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  if (isForging) {
     return (
-      <div className="text-center p-8 glass-panel max-w-md mx-auto">
-        <AlertCircle className="w-12 h-12 text-accent-rose mx-auto mb-4" />
-        <h3 className="text-xl font-bold mb-2">Tavern Empty</h3>
-        <p className="text-sm text-secondary mb-6">
-          No adventurers match these criteria, and even the backup portal failed.
-        </p>
-        <button onClick={onReset} className="rpg-btn rpg-btn-primary w-full">
-          Reset Wizard
-        </button>
+      <div className="glass-panel text-center py-8 min-h-380 flex flex-col justify-center items-center">
+        <div className="mb-6 relative">
+          <div className="absolute inset-0 animate-ping rounded-full bg-emerald-500/20 w-16 h-16 mx-auto"></div>
+          <Sparkles className="w-16 h-16 text-accent-gold animate-spin duration-[4000ms] relative z-10" />
+        </div>
+        <h3 className="summary-title mb-4 font-rpg glow-text">Contacting the AI Oracle...</h3>
+        <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded p-4 font-mono text-left text-xs">
+          <div className="text-muted mb-2">&gt; terminal_log initialized</div>
+          {forgingLogs.slice(0, forgingStep + 1).map((log, index) => (
+            <div key={index} className="text-primary-fixed mb-1">
+              <span className="text-accent-gold">✓</span> {log}
+            </div>
+          ))}
+          {forgingStep < forgingLogs.length - 1 && (
+            <div className="text-secondary animate-pulse mt-2">
+              <span className="animate-ping mr-1">●</span> Generation in progress...
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
-  const { preset, score } = currentMatch;
-  const isExactMatch = score === 7;
+  if (error) {
+    return (
+      <div className="glass-panel text-center py-8 min-h-380 flex flex-col justify-center items-center">
+        <div className="mb-4 text-accent-rose">
+          <AlertCircle className="w-16 h-16 mx-auto" />
+        </div>
+        <h3 className="summary-title mb-2 font-rpg text-accent-rose">Summoning Failed</h3>
+        <p className="text-sm text-secondary max-w-md mb-6">{error}</p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => {
+              setThreadId(crypto.randomUUID());
+              onReset();
+            }}
+            className="rpg-btn px-5 py-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Go Back
+          </button>
+          <button onClick={handleForge} className="rpg-btn rpg-btn-primary px-6 py-2 font-bold">
+            <RefreshCw className="w-4 h-4" />
+            Retry Forge
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (resultCharacter) {
+    return (
+      <div className="flex flex-col gap-6 items-center">
+        <h2 className="step-title font-rpg glow-text">Adventurer Summoned!</h2>
+        <p className="step-description">
+          Successfully queried the `character_generator` agent with the `gemini-flash-lite` model.
+        </p>
+
+        {/* Customized Sheet layout with split picture frame */}
+        <div className="summary-card final-sheet w-full">
+          <div className="character-sheet-container">
+            {/* Portrait Column */}
+            <div className="portrait-side">
+              <div className="portrait-frame">
+                {isGeneratingImage ? (
+                  <div className="portrait-skeleton">
+                    <Sparkles className="w-8 h-8 text-accent-gold animate-spin duration-[3000ms]" />
+                    <span className="text-[10px] text-accent-gold font-mono tracking-wider uppercase">Forging Art...</span>
+                  </div>
+                ) : imageBase64 ? (
+                  <img
+                    src={imageBase64}
+                    alt={resultCharacter.name}
+                    className="portrait-image"
+                  />
+                ) : (
+                  <div className="portrait-skeleton">
+                    <Bot className="w-10 h-10 portrait-placeholder-icon" />
+                    <span className="text-[10px] text-muted font-mono uppercase">No Art</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Information Column */}
+            <div className="info-side">
+              <div className="badge-row mb-3 flex flex-wrap gap-2 justify-start">
+                <span className="badge-tag fandom">{fandom}</span>
+                {race && <span className="badge-tag race">{race}</span>}
+                {gender && <span className="badge-tag gender">{gender}</span>}
+                {characterClass && <span className="badge-tag">{characterClass}</span>}
+              </div>
+
+              <div className="mb-4 text-left">
+                <h3 className="character-name font-rpg text-primary-fixed text-2xl mb-1">
+                  {resultCharacter.name}
+                </h3>
+                <p className="character-tagline text-accent-gold italic text-sm">
+                  "{resultCharacter.tagline}"
+                </p>
+              </div>
+
+              <div className="generation-panel text-left !mt-0">
+                <div className="text-xs text-muted uppercase font-bold tracking-wider mb-2">
+                  Character Background Lore
+                </div>
+                <p className="text-sm text-secondary leading-relaxed font-rpg mb-4">
+                  {resultCharacter.bio}
+                </p>
+                
+                <div className="text-xs text-muted uppercase font-bold tracking-wider mb-2 pt-2 border-t border-outline-variant">
+                  Stable Diffusion Image Prompt
+                </div>
+                <p className="text-xs text-secondary leading-relaxed font-mono bg-surface-container-lowest border border-outline-variant p-2 rounded max-h-24 overflow-y-auto">
+                  {resultCharacter.image_prompt}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Row */}
+        <div className="flex flex-wrap gap-3 justify-center w-full max-w-xl mt-2">
+          <button
+            onClick={() => {
+              setThreadId(crypto.randomUUID());
+              onReset();
+            }}
+            className="rpg-btn px-4 py-2.5"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Start Over
+          </button>
+
+          <button 
+            onClick={handleRegeneratePortrait} 
+            disabled={isGeneratingImage || isForging}
+            className="rpg-btn rpg-btn-gold px-4 py-2.5 font-bold"
+          >
+            <RefreshCw className={`w-4 h-4 ${isGeneratingImage ? 'animate-spin' : ''}`} />
+            New Portrait
+          </button>
+
+          <button 
+            onClick={handleForge} 
+            disabled={isGeneratingImage || isForging}
+            className="rpg-btn rpg-btn-gold px-4 py-2.5 font-bold"
+          >
+            <RefreshCw className={`w-4 h-4 ${isForging ? 'animate-spin' : ''}`} />
+            Regenerate Hero
+          </button>
+
+          <button
+            onClick={() => alert('Adventurer adopted! Saved to your profile database.')}
+            className="rpg-btn rpg-btn-primary px-5 py-2.5 font-bold"
+          >
+            <Check className="w-4 h-4" />
+            Adopt Hero
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-center gap-6 max-w-xl mx-auto w-full">
-      <div className="text-center">
-        <h2 className="text-2xl md:text-3xl text-accent-gold mb-1">
-          Adventurer Summoned!
-        </h2>
-        <p className="text-sm text-secondary">
-          {isExactMatch 
-            ? "🎯 Found an exact match in the tavern archives!"
-            : "🍻 No exact match found. Showing the closest matching heroes!"}
+    <div className="flex flex-col gap-6">
+      <div>
+        <h2 className="step-title">AI Character Forge</h2>
+        <p className="step-description">
+          Review your selection parameters. We will invoke the local agent router to forge your character details.
         </p>
       </div>
 
-      {/* Centered RPG Character Card */}
-      <div className="relative">
-        <div className="tavern-card-container">
-          <img 
-            src={`/sample_characters/${preset.image}`} 
-            alt={preset.name} 
-            className="tavern-card-image" 
-          />
-          <div className="tavern-card-overlay">
-            <div className="badge-row">
-              <span className="badge-tag fandom">{fandom}</span>
-              <span className="badge-tag race">{preset.race}</span>
-              <span className="badge-tag gender">{preset.gender}</span>
-            </div>
-            <span className="text-[10px] text-accent-gold uppercase tracking-widest font-bold block mb-1">
-              {preset.class}
-            </span>
-            <h3 className="text-xl text-primary font-extrabold mb-1 uppercase tracking-wide">
-              {preset.name}
-            </h3>
-            <p className="text-xs text-amber-100/90 italic mb-2">
-              "{preset.tagline}"
-            </p>
-            <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-3">
-              {preset.bio}
-            </p>
+      {/* Selected Attributes Table */}
+      <div className="summary-card w-full">
+        <h3 className="summary-title font-rpg mb-4">Forge Blueprint</h3>
+        <div className="summary-badge-row">
+          <span className="summary-badge fandom">{fandom}</span>
+          {gender && <span className="summary-badge gender">{gender}</span>}
+          {race && <span className="summary-badge race">{race}</span>}
+          {characterClass && <span className="summary-badge">{characterClass}</span>}
+        </div>
+
+        <div className="flex flex-col gap-2 mb-6">
+          <div className="summary-item">
+            <span className="summary-label">Universe Fandom:</span>
+            <span className="summary-value">{fandom}</span>
           </div>
+          <div className="summary-item">
+            <span className="summary-label">Identity baseline:</span>
+            <span className="summary-value">{gender || 'Undetermined (AI Random)'}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Lineage Race:</span>
+            <span className="summary-value">{race || 'Undetermined (AI Random)'}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Class Role:</span>
+            <span className="summary-value">{characterClass || 'Undetermined (AI Random)'}</span>
+          </div>
+        </div>
 
-          {/* Overlay Navigation if multiple matches */}
-          {hasMultipleMatches && (
-            <>
-              <button
-                onClick={handlePrev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-950/80 hover:bg-[hsl(var(--primary))] text-white flex items-center justify-center transition-all shadow-md border border-slate-800"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleNext}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-950/80 hover:bg-[hsl(var(--primary))] text-white flex items-center justify-center transition-all shadow-md border border-slate-800"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </>
-          )}
+        {/* AI Prompt Mock Input */}
+        <div className="generation-panel text-left">
+          <div className="flex items-center gap-2 mb-2 text-xs text-accent-gold uppercase font-bold tracking-wider">
+            <Bot size={14} />
+            <span>AI Prompt Generator Blueprint</span>
+          </div>
+          <div className="generation-prompt-box">
+            <span>{promptText}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted">
+            <Terminal size={12} />
+            <span>Model: gemini-flash-lite (via Local Agent Router)</span>
+          </div>
         </div>
       </div>
 
-      {/* Info Status Indicator */}
-      {hasMultipleMatches && (
-        <div className="text-xs text-secondary flex items-center gap-1.5 bg-slate-950/40 px-3 py-1 rounded border border-slate-900/60 pointer-events-none">
-          <Sparkles className="w-3.5 h-3.5 text-accent-gold" />
-          <span>Adventurer {currentIndex + 1} of {matches.length} matching</span>
-        </div>
-      )}
-
-      {/* Central Action Buttons Row (Directly below Card/Status) */}
-      <div className="flex flex-wrap items-center justify-center gap-3 w-full mt-2">
-        <button 
-          onClick={onReset} 
-          className="rpg-btn rpg-btn-secondary py-2.5 px-5 text-xs flex items-center gap-1.5"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Start
-        </button>
-
-        {hasMultipleMatches && (
-          <button 
-            onClick={handleNext} 
-            className="rpg-btn rpg-btn-gold py-2.5 px-6 text-xs flex items-center gap-1.5 font-bold"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Regenerate / Next
-          </button>
-        )}
-
+      {/* Button controls */}
+      <div className="flex gap-4 justify-between w-full max-w-md mx-auto nav-row">
         <button
-          onClick={handleCopyJson}
-          className="rpg-btn rpg-btn-secondary py-2.5 px-5 text-xs flex items-center gap-1.5"
+          onClick={() => {
+            setThreadId(crypto.randomUUID());
+            onReset();
+          }}
+          className="rpg-btn px-5 py-3"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-accent-green" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? 'Copied Payload!' : 'Copy JSON'}
+          <ArrowLeft className="w-4 h-4" />
+          Reset Selection
+        </button>
+
+        <button onClick={handleForge} className="rpg-btn rpg-btn-primary px-6 py-3 font-bold">
+          <Sparkles className="w-4 h-4 text-accent-gold" />
+          Forge Character
         </button>
       </div>
-
-      {/* Collapsed Inspector at the very bottom */}
-      <details className="w-full glass-card p-3 border-slate-800 mt-4">
-        <summary className="text-[10px] text-muted uppercase tracking-wider font-semibold cursor-pointer select-none outline-none hover:text-secondary">
-          Inspect Database Payload JSON
-        </summary>
-        <pre className="text-[10px] bg-slate-950 p-3 rounded border border-slate-900 overflow-x-auto font-mono text-accent-green max-h-[140px] mt-2 scrollbar-thin">
-          {JSON.stringify(generatedPayload, null, 2)}
-        </pre>
-      </details>
     </div>
   );
 }
