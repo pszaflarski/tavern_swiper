@@ -167,6 +167,13 @@ export const styles = StyleSheet.create({
   expandedButtonPressed: {
     opacity: 0.6,
   },
+  expandedButtonDisabled: {
+    opacity: 0.4,
+    backgroundColor: Colors.surfaceContainerLow,
+  },
+  expandedButtonTextDisabled: {
+    color: Colors.outline,
+  },
   expandedButtonText: {
     fontFamily: Fonts.scribe,
     fontSize: 14,

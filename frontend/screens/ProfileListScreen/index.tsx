@@ -140,15 +140,30 @@ function ProfileCard({
             <Pressable
               style={({ pressed }) => [
                 styles.expandedButton,
-                pressed && styles.expandedButtonPressed,
+                item.generated && styles.expandedButtonDisabled,
+                pressed && !item.generated && styles.expandedButtonPressed,
               ]}
-              onPress={() => handleAction(onEdit)}
+              onPress={() => {
+                if (!item.generated) {
+                  handleAction(onEdit);
+                }
+              }}
+              disabled={item.generated}
               testID={`edit-profile-button-${item.profile_id}`}
               accessibilityLabel={`Edit ${item.display_name} profile`}
               accessibilityRole="button"
             >
-              <Ionicons name="pencil" size={20} color={Colors.primaryFixed} />
-              <Text style={styles.expandedButtonText}>Edit</Text>
+              <Ionicons
+                name="pencil"
+                size={20}
+                color={item.generated ? Colors.outline : Colors.primaryFixed}
+              />
+              <Text style={[
+                styles.expandedButtonText,
+                item.generated && styles.expandedButtonTextDisabled,
+              ]}>
+                Edit
+              </Text>
             </Pressable>
 
             <Pressable
