@@ -39,9 +39,9 @@ func setupTestEngine() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 
-	r.Use(AuthMiddleware())
-
 	r.GET("/characters/health", handleHealth)
+
+	r.Use(AuthMiddleware())
 	
 	cGroup := r.Group("/characters")
 	{
