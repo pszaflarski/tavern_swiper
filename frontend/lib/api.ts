@@ -399,9 +399,6 @@ export const usersApi = createClient('users', true);
 export const questsApi = createClient('quests', true);
 export const charactersApi = createClient('characters', true);
 
-// Set longer timeouts for slow AI generation and cold starts
-charactersApi.defaults.timeout = 60000; 
-questsApi.defaults.timeout = 30000;
 
 /**
  * Internal state check for development and reset for tests.
