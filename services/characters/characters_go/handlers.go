@@ -691,7 +691,7 @@ func handleValidateProfile(c *gin.Context) {
 			}
 
 			if imagesMatch {
-				c.JSON(http.StatusOK, ValidationResponse{IsGenerated: true})
+				c.JSON(http.StatusOK, ValidationResponse{IsGenerated: true, Status: charOut.Status})
 				return
 			}
 		}

@@ -671,6 +671,7 @@ func TestValidateProfile(t *testing.T) {
 				"tagline":      "The White Wolf",
 				"bio":          "Mutated monster hunter.",
 				"image_ids":    []interface{}{"img-1"},
+				"status":        "pending",
 			},
 		},
 	}
@@ -698,6 +699,7 @@ func TestValidateProfile(t *testing.T) {
 	var resp ValidationResponse
 	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.True(t, resp.IsGenerated)
+	assert.Equal(t, "pending", resp.Status)
 
 	// 3. Test failure (modified bio)
 	invalidReq := ProfileValidationRequest{
