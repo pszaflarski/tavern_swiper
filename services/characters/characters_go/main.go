@@ -16,11 +16,13 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
+	_ = godotenv.Load()
 	initServiceURLs()
 	port := os.Getenv("PORT")
 	if port == "" {
