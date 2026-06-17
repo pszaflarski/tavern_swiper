@@ -47,11 +47,11 @@ func main() {
 	// Swagger UI (before auth middleware)
 	r.GET("/characters/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Health check (before auth middleware)
+	r.GET("/characters/health", handleHealth)
+
 	// Global Middleware
 	r.Use(AuthMiddleware())
-
-	// Health check (bypassed in auth middleware)
-	r.GET("/characters/health", handleHealth)
 	
 	// Characters Group
 	cGroup := r.Group("/characters")

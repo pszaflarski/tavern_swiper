@@ -47,11 +47,6 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			// Health check bypass
-			if c.Request.URL.Path == "/characters/health" {
-				c.Next()
-				return
-			}
 			c.JSON(http.StatusUnauthorized, gin.H{"detail": "Authorization header required"})
 			c.Abort()
 			return
