@@ -48,6 +48,14 @@
       ]
     },
     {
+      "collectionGroup": "characters",
+      "fieldPath": "status",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
       "collectionGroup": "images",
       "fieldPath": "character_id",
       "indexes": [
