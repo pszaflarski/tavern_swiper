@@ -6,6 +6,8 @@ import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { Colors, Fonts } from '../../theme';
 import { charactersApi, profilesApi } from '../../lib/api';
+import { useUser } from '../../hooks/useUser';
+import { Profile } from '../../types';
 import { styles } from './styles';
 import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 
@@ -61,6 +63,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
 
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { uid } = useUser();
   const isMounted = useRef(true);
 
   const generateProfile = async () => {
@@ -176,7 +179,19 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
         race: character.race || [],
       };
 
-      await profilesApi.post('/profiles/', payload);
+      const res = await profilesApi.post('/profiles/', payload);
+      const newProfile = res.data;
+
+      // Update the cache immediately to prevent navigation race conditions
+      if (uid) {
+        queryClient.setQueryData(['profiles', 'user', uid], (old: Profile[] | undefined) => {
+          if (!old) return [newProfile];
+          if (old.some(p => p.profile_id === newProfile.profile_id)) return old;
+          return [...old, newProfile];
+        });
+        queryClient.setQueryData(['profiles', 'me', 'active', uid], newProfile);
+      }
+
       await queryClient.refetchQueries({ queryKey: ['profiles'] });
 
       Toast.show({
