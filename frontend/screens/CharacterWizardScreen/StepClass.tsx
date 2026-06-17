@@ -40,7 +40,6 @@ export default function StepClass({ fandom, characterClass, onSelect }: StepClas
                     {isSelected && <View style={styles.radioInner} />}
                   </View>
                 </View>
-                {opt.desc ? <Text style={styles.optionDesc}>{opt.desc}</Text> : null}
               </Pressable>
             </View>
           );

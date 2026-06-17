@@ -214,10 +214,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
 
   // Tag resolving & details generation loaders
   if (loadingState === 'resolving_tags' || loadingState === 'generating_details') {
-    const statusTitle = loadingState === 'resolving_tags' 
-      ? 'Resolving Tavern Tags...' 
-      : 'Brewing Character Details...';
-    return <DiceLoadingScreen message={statusTitle} />;
+    return <DiceLoadingScreen />;
   }
 
   // Error / no character details generated

@@ -41,17 +41,15 @@ export const styles = StyleSheet.create({
   // ── Glass Panel (main wizard area) ─────────────────────────────────
   glassPanel: {
     marginHorizontal: Spacing[4],
-    padding: Spacing[5],
+    padding: Spacing[4],
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
-    minHeight: 380,
     ...Shadow.waxSeal,
   },
   stepContent: {
     flex: 1,
-    minHeight: 280,
   },
 
   // ── Step Titles ────────────────────────────────────────────────────
@@ -74,7 +72,7 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.outline,
     textAlign: 'center',
-    marginBottom: Spacing[5],
+    marginBottom: Spacing[3],
     lineHeight: 18,
   },
 
@@ -100,12 +98,11 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerLowest,
   },
   optionCardGrid: {
-    padding: Spacing[4],
+    padding: Spacing[3],
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: Radius.md,
     borderWidth: 1.5,
     borderColor: Colors.outlineVariant,
-    minHeight: 120,
     justifyContent: 'space-between',
     ...Shadow.waxSeal,
   },
@@ -187,10 +184,13 @@ export const styles = StyleSheet.create({
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing[3],
+    gap: Spacing[2],
   },
   optionsGridItem: {
-    width: '48%' as any,
+    flexBasis: '48%' as any,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: '50%' as any,
   },
 
   // ── Progress Dots ──────────────────────────────────────────────────
@@ -199,7 +199,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing[3],
-    marginTop: Spacing[5],
+    marginTop: Spacing[3],
   },
   progressDot: {
     width: 10,
@@ -224,8 +224,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing[5],
-    paddingTop: Spacing[4],
+    marginTop: Spacing[3],
+    paddingTop: Spacing[3],
     borderTopWidth: 1,
     borderTopColor: Colors.outlineVariant,
   },
