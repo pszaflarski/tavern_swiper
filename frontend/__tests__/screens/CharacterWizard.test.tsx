@@ -2,8 +2,14 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import CharacterWizardScreen from '../../screens/CharacterWizardScreen';
 import { charactersApi, profilesApi } from '../../lib/api';
+import { useUser } from '../../hooks/useUser';
 import Toast from 'react-native-toast-message';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+
+// Mock useUser
+jest.mock('../../hooks/useUser', () => ({
+  useUser: jest.fn(),
+}));
 
 // Mock the API client
 jest.mock('../../lib/api', () => ({
@@ -84,6 +90,10 @@ describe('Character Wizard Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    (useUser as jest.Mock).mockReturnValue({
+      uid: 'user-id-123',
+    });
 
     // Mock category tags fetching
     (charactersApi.get as jest.Mock).mockImplementation((url: string) => {
