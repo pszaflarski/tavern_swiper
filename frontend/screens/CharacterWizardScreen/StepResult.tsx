@@ -7,6 +7,7 @@ import Toast from 'react-native-toast-message';
 import { Colors, Fonts } from '../../theme';
 import { charactersApi, profilesApi } from '../../lib/api';
 import { styles } from './styles';
+import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 
 interface CharacterImage {
   image_id: string;
@@ -201,16 +202,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
     const statusTitle = loadingState === 'resolving_tags' 
       ? 'Resolving Tavern Tags...' 
       : 'Brewing Character Details...';
-    const statusDesc = loadingState === 'resolving_tags'
-      ? 'Querying the character registry for active attributes.'
-      : 'Consulting the grimoire to draft your hero\'s name, tagline, and bio.';
-    return (
-      <View style={styles.emptyContainer}>
-        <ActivityIndicator size="large" color={Colors.tertiary} style={{ marginBottom: 16 }} />
-        <Text style={styles.emptyTitle}>{statusTitle}</Text>
-        <Text style={styles.emptyDesc}>{statusDesc}</Text>
-      </View>
-    );
+    return <DiceLoadingScreen message={statusTitle} />;
   }
 
   // Error / no character details generated
@@ -371,9 +363,8 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
 
       {/* Adopting overlay */}
       {isAdopting && (
-        <View style={styles.adoptingOverlay}>
-          <ActivityIndicator size="large" color={Colors.tertiary} />
-          <Text style={styles.adoptingText}>Summoning Hero...</Text>
+        <View style={StyleSheet.absoluteFillObject}>
+          <DiceLoadingScreen message="Summoning Hero..." />
         </View>
       )}
     </View>

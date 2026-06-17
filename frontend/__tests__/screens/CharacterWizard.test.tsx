@@ -245,6 +245,10 @@ describe('Character Wizard Screen', () => {
     // Click "Adopt This Hero"
     fireEvent.press(getByText('Adopt This Hero'));
 
+    // Assert that the dice loading screen is shown with correct message
+    expect(getByTestId('dice-loading-screen')).toBeTruthy();
+    expect(getByText('Summoning Hero...')).toBeTruthy();
+
     await waitFor(() => {
       // Verifies character adopt endpoint called
       expect(charactersApi.post).toHaveBeenCalledWith('/characters/char-id-123/adopt');
