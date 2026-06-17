@@ -7,16 +7,26 @@ import { AuthProvider } from '../../context/AuthContext';
 import React from 'react';
 
 // Mock dependencies
+let mockAuthStateCallback: ((user: any) => void) | null = null;
+
 jest.mock('../../lib/firebase', () => ({
   auth: {
-    signOut: jest.fn().mockResolvedValue(undefined),
-    currentUser: { uid: 'test-uid' },
-    onAuthStateChanged: jest.fn((auth, callback) => {
-      // Simulate initialized state
-      callback({ uid: 'test-uid' });
-      return jest.fn(); // unsubscribe
+    signOut: jest.fn().mockImplementation(() => {
+      // Simulate Firebase clearing the user on signOut
+      if (mockAuthStateCallback) mockAuthStateCallback(null);
+      return Promise.resolve();
     }),
+    currentUser: { uid: 'test-uid' },
   },
+}));
+
+// AuthContext imports onAuthStateChanged from 'firebase/auth' directly
+jest.mock('firebase/auth', () => ({
+  onAuthStateChanged: jest.fn((_auth: any, callback: any) => {
+    mockAuthStateCallback = callback;
+    callback({ uid: 'test-uid' });
+    return jest.fn(); // unsubscribe
+  }),
 }));
 
 jest.mock('../../lib/api', () => ({
@@ -71,9 +81,11 @@ describe('Logout Integration', () => {
     // 2. Verify Tavern session was cleared (JWT + UID in storage)
     expect(clearTavernSession).toHaveBeenCalledTimes(1);
 
-    // 3. Verify internal state was reset
-    expect(result.current.isAuthenticated).toBe(false);
-    expect(result.current.uid).toBe(null);
-    expect(result.current.user).toBe(null);
+    // 3. Verify internal state was reset (async — React needs to flush re-renders)
+    await waitFor(() => {
+      expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.uid).toBe(null);
+      expect(result.current.user).toBeNull();
+    });
   });
 });

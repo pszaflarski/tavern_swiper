@@ -1,0 +1,113 @@
+# Character Creation Wizard Tests
+#
+# Verifies:
+# - Navigation from Profiles tab to Character Wizard
+# - Step 1: Select Fandom (Dungeons & Dragons)
+# - Step 2: Select Gender (Female)
+# - Step 3: Select Race (Elf)
+# - Step 4: Select Class (Wizard)
+# - Step 5: Character details & portrait generation (via Gemini / Imagen Mock)
+# - Adopt This Hero (saves profile and returns to Profiles tab)
+
+appId: com.tavernswiper.app
+
+---
+
+# Launch the app and log in
+- launchApp:
+    clearState: true
+- runFlow: helpers/auth_login_helper.yaml
+
+# Navigate to Profiles tab
+- tapOn:
+    id: "tab-bar-profiles"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "profiles-screen"
+    timeout: 10000
+
+# Open the Character Wizard via whichever entry point is visible
+- runFlow:
+    when:
+      visible:
+        id: "character-wizard-button"
+    commands:
+      - tapOn:
+          id: "character-wizard-button"
+
+- runFlow:
+    when:
+      visible:
+        id: "empty-state-wizard-button"
+    commands:
+      - tapOn:
+          id: "empty-state-wizard-button"
+
+# Wait for the Wizard screen to mount
+- extendedWaitUntil:
+    visible: "Select Fandom Universe"
+    timeout: 15000
+
+# --- Step 1: Fandom Selection ---
+- assertVisible: "Dungeons & Dragons"
+- tapOn: "Dungeons & Dragons"
+- tapOn:
+    id: "wizard-next-button"
+
+# --- Step 2: Gender Selection ---
+- extendedWaitUntil:
+    visible: "Choose Gender Identity (optional)"
+    timeout: 5000
+- tapOn: "Female"
+- tapOn:
+    id: "wizard-next-button"
+
+# --- Step 3: Race Selection ---
+- extendedWaitUntil:
+    visible: "Select Fantasy Race (optional)"
+    timeout: 5000
+- tapOn: "Elf"
+- scrollUntilVisible:
+    element:
+      id: "wizard-next-button"
+    direction: DOWN
+- tapOn:
+    id: "wizard-next-button"
+
+# --- Step 4: Class Selection ---
+- extendedWaitUntil:
+    visible: "Choose Adventuring Class (optional)"
+    timeout: 5000
+- tapOn: "Wizard"
+- scrollUntilVisible:
+    element:
+      id: "wizard-next-button"
+    direction: DOWN
+- tapOn:
+    id: "wizard-next-button"
+
+# --- Step 5: Generation Results ---
+# Wait for the AI details/tags generation to finish (could take 20-30s on slow networks)
+- extendedWaitUntil:
+    notVisible:
+      id: "dice-loading-screen"
+    timeout: 60000
+
+# Assert that the hero info is rendered on the screen
+- assertVisible: "Adopt This Hero"
+
+# Tap Adopt to save the generated profile to the backend database
+- tapOn: "Adopt This Hero"
+
+# Wait for the summoning database transaction loader to disappear
+- extendedWaitUntil:
+    notVisible:
+      id: "dice-loading-screen"
+    timeout: 30000
+
+# Verify we navigated back to the Profiles tab and the profiles screen is visible
+- extendedWaitUntil:
+    visible:
+      id: "profiles-screen"
+    timeout: 15000

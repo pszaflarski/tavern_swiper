@@ -515,6 +515,32 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 		return
 	}
 
+	isGenerated := false
+	if g, ok := profileData["generated"].(bool); ok {
+		isGenerated = g
+	}
+	if isGenerated {
+		hasOtherUpdates := body.DisplayName != nil ||
+			body.Tagline != nil ||
+			body.Bio != nil ||
+			body.ImageURLs != nil ||
+			body.Age != nil ||
+			body.IsOC != nil ||
+			body.Generated != nil ||
+			body.Gender != nil ||
+			body.Race != nil ||
+			body.Fandom != nil ||
+			body.Interests != nil ||
+			body.Events != nil ||
+			body.LookingFor != nil ||
+			body.OtherTags != nil
+
+		if hasOtherUpdates {
+			send400(c, "Generated profiles cannot be edited")
+			return
+		}
+	}
+
 	// Collect all current and updated tags for validation
 	existingProfile, _ := docToProfile(doc)
 	

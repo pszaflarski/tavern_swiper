@@ -316,4 +316,52 @@ func TestProfileNewFields(t *testing.T) {
 		json.Unmarshal(w.Body.Bytes(), &res)
 		assert.Empty(t, res.LookingFor)
 	})
+
+	t.Run("UpdateProfile_GeneratedProfileCannotBeEdited", func(t *testing.T) {
+		mock := &mockClient{collections: map[string]*mockCollection{
+			COLLECTION: {
+				docs: map[string]*mockDoc{
+					"p-gen": {
+						id: "p-gen",
+						exists: true,
+						data: map[string]interface{}{
+							"user_id":      "user-123",
+							"display_name": "Generated Hero",
+							"generated":    true,
+						},
+					},
+				},
+			},
+		}}
+		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
+
+		// 1. Try to edit DisplayName -> should return 400
+		body := ProfileUpdate{
+			DisplayName: ptrStr("Edited Name"),
+		}
+		jsonBody, _ := json.Marshal(body)
+
+		req, _ := http.NewRequest("PUT", "/profiles/p-gen", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "Generated profiles cannot be edited")
+
+		// 2. Try to toggle IsActive -> should succeed
+		bodyActive := ProfileUpdate{
+			IsActive: ptrBool(true),
+		}
+		jsonBodyActive, _ := json.Marshal(bodyActive)
+
+		reqActive, _ := http.NewRequest("PUT", "/profiles/p-gen", bytes.NewBuffer(jsonBodyActive))
+		reqActive.Header.Set("Authorization", "Bearer "+token)
+		reqActive.Header.Set("Content-Type", "application/json")
+		wActive := httptest.NewRecorder()
+		r.ServeHTTP(wActive, reqActive)
+
+		assert.Equal(t, http.StatusOK, wActive.Code)
+	})
 }

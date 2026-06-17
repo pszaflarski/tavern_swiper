@@ -63,3 +63,5 @@ scratch.py
 scratch/
 *.apk
 *.aab
+.browser-test/
+**/proto/proto/

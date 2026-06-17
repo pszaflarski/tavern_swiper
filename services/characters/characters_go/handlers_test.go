@@ -3,7 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"image"
+	"image/png"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,7 +47,11 @@ func setupTestEngine() *gin.Engine {
 	{
 		cGroup.GET("/", handleListAllCharacters)
 		cGroup.GET("/random", handleGetRandomCharacter)
+		cGroup.POST("/validate", handleValidateProfile)
 		cGroup.GET("/:id", handleGetCharacter)
+		cGroup.POST("/generate", handleGenerateCharacterDetails)
+		cGroup.POST("/:id/generate-image", handleGenerateCharacterImage)
+		cGroup.POST("/:id/adopt", handleAdoptCharacter)
 
 		cGroup.POST("/", handleCreateCharacter)
 		cGroup.PUT("/:id", handleUpdateCharacter)
@@ -642,4 +650,240 @@ func TestTagDisplayOrder(t *testing.T) {
 	_ = json.Unmarshal(w.Body.Bytes(), &tag)
 	assert.Equal(t, 5, tag.DisplayOrder)
 	assert.Equal(t, "Fighter", tag.Name)
+}
+
+func TestValidateProfile(t *testing.T) {
+	r := setupTestEngine()
+	adminToken := signGoTestToken("admin-123", "admin")
+
+	mockDB := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mockDB, nil
+	}
+
+	// 1. Setup mock character and images
+	mockDB.Collection(CHARACTERS_COLLECTION).(*mockCollection).queryRes = []*mockSnap{
+		{
+			id:     "char-1",
+			exists: true,
+			data: map[string]interface{}{
+				"display_name": "Geralt of Rivia",
+				"tagline":      "The White Wolf",
+				"bio":          "Mutated monster hunter.",
+				"image_ids":    []interface{}{"img-1"},
+				"status":        "pending",
+			},
+		},
+	}
+	mockDB.Collection(IMAGES_COLLECTION).Doc("img-1").Set(context.Background(), map[string]interface{}{
+		"url":          "https://example.com/geralt.jpg",
+		"source_type":  "generated",
+		"character_id": "char-1",
+		"position":     0,
+	})
+
+	// 2. Test successful match
+	validReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Mutated monster hunter."),
+		ImageURLs:   []string{"https://example.com/geralt.jpg"},
+	}
+	body, _ := json.Marshal(validReq)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp ValidationResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.True(t, resp.IsGenerated)
+	assert.Equal(t, "pending", resp.Status)
+
+	// 3. Test failure (modified bio)
+	invalidReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Just a normal human."),
+		ImageURLs:   []string{"https://example.com/geralt.jpg"},
+	}
+	body2, _ := json.Marshal(invalidReq)
+	w2 := httptest.NewRecorder()
+	req2, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body2))
+	req2.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+	var resp2 ValidationResponse
+	_ = json.Unmarshal(w2.Body.Bytes(), &resp2)
+	assert.False(t, resp2.IsGenerated)
+
+	// 4. Test failure (modified images)
+	invalidImgReq := ProfileValidationRequest{
+		DisplayName: "Geralt of Rivia",
+		Tagline:     ptrStr("The White Wolf"),
+		Bio:         ptrStr("Mutated monster hunter."),
+		ImageURLs:   []string{"https://example.com/hacked.jpg"},
+	}
+	body3, _ := json.Marshal(invalidImgReq)
+	w3 := httptest.NewRecorder()
+	req3, _ := http.NewRequest("POST", "/characters/validate", bytes.NewReader(body3))
+	req3.Header.Set("Authorization", "Bearer "+adminToken)
+	r.ServeHTTP(w3, req3)
+
+	assert.Equal(t, http.StatusOK, w3.Code)
+	var resp3 ValidationResponse
+	_ = json.Unmarshal(w3.Body.Bytes(), &resp3)
+	assert.False(t, resp3.IsGenerated)
+}
+
+func TestCharacterGenerationAndAdoption(t *testing.T) {
+	r := setupTestEngine()
+	userToken := signGoTestToken("user-123", "user")
+
+	mockDB := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mockDB, nil
+	}
+
+	// 1. Stub the tag documents in the database
+	mockDB.Collection(TAGS_COLLECTION).Doc("tag-witcher").Set(context.Background(), map[string]interface{}{
+		"category":      "fandom",
+		"name":          "The Witcher",
+		"slug":          "fandom__the_witcher",
+		"multi_select":  true,
+		"status":        "active",
+		"display_order": 0,
+	})
+	mockDB.Collection(TAGS_COLLECTION).Doc("tag-elf").Set(context.Background(), map[string]interface{}{
+		"category":      "race",
+		"name":          "Elf",
+		"slug":          "race__elf",
+		"multi_select":  true,
+		"status":        "active",
+		"display_order": 0,
+	})
+	mockDB.Collection(TAGS_COLLECTION).Doc("tag-female").Set(context.Background(), map[string]interface{}{
+		"category":      "gender",
+		"name":          "Female",
+		"slug":          "gender__female",
+		"multi_select":  true,
+		"status":        "active",
+		"display_order": 0,
+	})
+	mockDB.Collection(TAGS_COLLECTION).Doc("tag-mage").Set(context.Background(), map[string]interface{}{
+		"category":      "class",
+		"name":          "Mage",
+		"slug":          "class__mage",
+		"multi_select":  true,
+		"status":        "active",
+		"display_order": 0,
+	})
+
+	// 2. Setup mock agent router
+	mockAgentRouter := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/invoke" {
+			resp := map[string]interface{}{
+				"response": `{"name": "Yennefer", "tagline": "Magic is beauty", "bio": "A powerful sorceress.", "image_prompt": "Beautiful lady mage"}`,
+			}
+			json.NewEncoder(w).Encode(resp)
+		} else if r.URL.Path == "/generate-image" {
+			myImg := image.NewRGBA(image.Rect(0, 0, 1, 1))
+			var buf bytes.Buffer
+			_ = png.Encode(&buf, myImg)
+			encoded := "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
+			resp := map[string]interface{}{
+				"image": encoded,
+			}
+			json.NewEncoder(w).Encode(resp)
+		}
+	}))
+	defer mockAgentRouter.Close()
+
+	// Update service URLs
+	serviceURLs.mu.Lock()
+	serviceURLs.urls["agent_router"] = mockAgentRouter.URL
+	serviceURLs.mu.Unlock()
+
+	// Mock GCS upload & delete functions
+	oldUpload := uploadToGCS
+	oldDeleteSingle := deleteSingleImageFunc
+	defer func() {
+		uploadToGCS = oldUpload
+		deleteSingleImageFunc = oldDeleteSingle
+	}()
+	uploadToGCS = func(ctx context.Context, characterID string, filename string, contentType string, data io.Reader) (string, error) {
+		return "https://storage.googleapis.com/mock-bucket/characters/" + characterID + "/" + filename, nil
+	}
+	deleteSingleImageFunc = func(ctx context.Context, characterID string, filename string) error {
+		return nil
+	}
+
+	// A. Generate character details
+	genReq := CharacterGenerateRequest{
+		Fandom: []CharTag{{ID: "tag-witcher", Category: "fandom", Name: "The Witcher", Slug: "fandom__the_witcher"}},
+		Race:   []CharTag{{ID: "tag-elf", Category: "race", Name: "Elf", Slug: "race__elf"}},
+		Gender: []CharTag{{ID: "tag-female", Category: "gender", Name: "Female", Slug: "gender__female"}},
+		Class:  []CharTag{{ID: "tag-mage", Category: "class", Name: "Mage", Slug: "class__mage"}},
+	}
+	genBody, _ := json.Marshal(genReq)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/characters/generate", bytes.NewReader(genBody))
+	req.Header.Set("Authorization", "Bearer "+userToken)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var charOut CharacterOut
+	err := json.Unmarshal(w.Body.Bytes(), &charOut)
+	assert.NoError(t, err)
+	assert.Equal(t, "Yennefer", charOut.DisplayName)
+	assert.Equal(t, "Magic is beauty", *charOut.Tagline)
+	assert.Equal(t, "A powerful sorceress.", *charOut.Bio)
+	assert.Equal(t, "pending", charOut.Status)
+	assert.Equal(t, 0, len(charOut.Images))
+
+	// Verify image_prompt was NOT returned in JSON output
+	var jsonMap map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &jsonMap)
+	assert.Nil(t, jsonMap["image_prompt"])
+
+	// Check Firestore stored state
+	charDoc, err := mockDB.Collection(CHARACTERS_COLLECTION).Doc(charOut.CharacterID).Get(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, charDoc.Exists())
+	assert.Equal(t, "Beautiful lady mage", charDoc.Data()["image_prompt"])
+
+	// B. Generate Image
+	wGenImg := httptest.NewRecorder()
+	reqGenImg, _ := http.NewRequest("POST", "/characters/"+charOut.CharacterID+"/generate-image", nil)
+	reqGenImg.Header.Set("Authorization", "Bearer "+userToken)
+	r.ServeHTTP(wGenImg, reqGenImg)
+
+	assert.Equal(t, http.StatusOK, wGenImg.Code)
+	var charOutWithImg CharacterOut
+	err = json.Unmarshal(wGenImg.Body.Bytes(), &charOutWithImg)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(charOutWithImg.Images))
+	assert.Equal(t, "ai_generated", charOutWithImg.Images[0].SourceType)
+	assert.Contains(t, charOutWithImg.Images[0].URL, charOut.CharacterID)
+
+	// Check image document was created in mock DB
+	imgDoc, err := mockDB.Collection(IMAGES_COLLECTION).Doc(charOutWithImg.Images[0].ImageID).Get(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, imgDoc.Exists())
+	assert.Equal(t, charOut.CharacterID, imgDoc.Data()["character_id"])
+
+	// C. Adopt Character
+	wAdopt := httptest.NewRecorder()
+	reqAdopt, _ := http.NewRequest("POST", "/characters/"+charOut.CharacterID+"/adopt", nil)
+	reqAdopt.Header.Set("Authorization", "Bearer "+userToken)
+	r.ServeHTTP(wAdopt, reqAdopt)
+
+	assert.Equal(t, http.StatusOK, wAdopt.Code)
+	var adoptedChar CharacterOut
+	err = json.Unmarshal(wAdopt.Body.Bytes(), &adoptedChar)
+	assert.NoError(t, err)
+	assert.Equal(t, "adopted", adoptedChar.Status)
 }
