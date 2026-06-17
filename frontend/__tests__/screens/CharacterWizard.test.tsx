@@ -305,5 +305,50 @@ describe('Character Wizard Screen', () => {
       }));
     });
   });
+
+  it('allows regenerating the profile and the portrait', async () => {
+    const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
+
+    // Navigate to step 5
+    fireEvent.press(getByText('Dungeons & Dragons'));
+    fireEvent.press(getByTestId('wizard-next-button'));
+    fireEvent.press(getByText('Male'));
+    fireEvent.press(getByTestId('wizard-next-button'));
+    fireEvent.press(getByText('Elf'));
+    fireEvent.press(getByTestId('wizard-next-button'));
+    fireEvent.press(getByText('Fighter'));
+    fireEvent.press(getByTestId('wizard-next-button'));
+
+    // Wait for the character to generate
+    await waitFor(() => {
+      expect(getByText('Aethelgard Moonwhisper')).toBeTruthy();
+    });
+
+    // Check that "Next Profile" and "New Portrait" buttons are visible
+    const nextProfileBtn = getByText('Next Profile');
+    const newPortraitBtn = getByText('New Portrait');
+    expect(nextProfileBtn).toBeTruthy();
+    expect(newPortraitBtn).toBeTruthy();
+
+    // Clear mock calls
+    (charactersApi.post as jest.Mock).mockClear();
+
+    // Trigger New Portrait
+    fireEvent.press(newPortraitBtn);
+    await waitFor(() => {
+      // Assert that another generate-image call is made
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/char-id-123/generate-image');
+    });
+
+    // Clear mock calls again
+    (charactersApi.post as jest.Mock).mockClear();
+
+    // Trigger Next Profile
+    fireEvent.press(nextProfileBtn);
+    await waitFor(() => {
+      // Assert that details generation was triggered again
+      expect(charactersApi.post).toHaveBeenCalledWith('/characters/generate', expect.any(Object));
+    });
+  });
 });
 

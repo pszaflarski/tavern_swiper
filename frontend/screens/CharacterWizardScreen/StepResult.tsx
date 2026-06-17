@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, Pressable, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,87 +60,91 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
 
   const router = useRouter();
   const queryClient = useQueryClient();
+  const isMounted = useRef(true);
+
+  const generateProfile = async () => {
+    try {
+      setLoadingState('resolving_tags');
+      setErrorMsg(null);
+      setCharacter(null);
+
+      // Fetch all tags in the 4 categories from characters service
+      const [fandoms, genders, races, classes] = await Promise.all([
+        charactersApi.get('/characters/tags/by-category/fandom').then(r => r.data).catch(() => []),
+        charactersApi.get('/characters/tags/by-category/gender').then(r => r.data).catch(() => []),
+        charactersApi.get('/characters/tags/by-category/race').then(r => r.data).catch(() => []),
+        charactersApi.get('/characters/tags/by-category/class').then(r => r.data).catch(() => []),
+      ]);
+
+      if (!isMounted.current) return;
+
+      // Resolve our selection strings to full CharTag objects
+      const fandomTag = fandoms.find((t: any) => t.name.toLowerCase() === fandom.toLowerCase());
+      const genderTag = genders.find((t: any) => t.name.toLowerCase() === gender.toLowerCase());
+      const raceTag = races.find((t: any) => t.name.toLowerCase() === race.toLowerCase());
+      const classTag = classes.find((t: any) => t.name.toLowerCase() === characterClass.toLowerCase());
+
+      if (!fandomTag) {
+        throw new Error(`Could not resolve fandom tag: "${fandom}"`);
+      }
+
+      const resolvedTags = {
+        fandom: [toCharTag(fandomTag)],
+        gender: genderTag ? [toCharTag(genderTag)] : [],
+        race: raceTag ? [toCharTag(raceTag)] : [],
+        class: classTag ? [toCharTag(classTag)] : [],
+      };
+
+      setLoadingState('generating_details');
+      
+      // POST to /characters/generate to create character with AI details
+      const genRes = await charactersApi.post('/characters/generate', resolvedTags);
+      if (!isMounted.current) return;
+
+      const generatedChar = genRes.data;
+      setCharacter(generatedChar);
+
+      // Start background image generation
+      setLoadingState('generating_image');
+      try {
+        const imgRes = await charactersApi.post(`/characters/${generatedChar.character_id}/generate-image`);
+        if (!isMounted.current) return;
+        setCharacter(imgRes.data);
+        setLoadingState('ready');
+      } catch (imgErr: any) {
+        console.error('[Wizard] Image generation failed:', imgErr?.response?.data || imgErr.message);
+        if (!isMounted.current) return;
+        setLoadingState('image_failed');
+      }
+    } catch (err: any) {
+      console.error('[Wizard] Details generation failed:', err?.response?.data || err.message);
+      if (!isMounted.current) return;
+      setErrorMsg(err?.response?.data?.detail || err.message || 'Could not brew details.');
+      setLoadingState('error');
+    }
+  };
 
   useEffect(() => {
-    let active = true;
-
-    async function startGenerationFlow() {
-      try {
-        setLoadingState('resolving_tags');
-        setErrorMsg(null);
-
-        // Fetch all tags in the 4 categories from characters service
-        const [fandoms, genders, races, classes] = await Promise.all([
-          charactersApi.get('/characters/tags/by-category/fandom').then(r => r.data).catch(() => []),
-          charactersApi.get('/characters/tags/by-category/gender').then(r => r.data).catch(() => []),
-          charactersApi.get('/characters/tags/by-category/race').then(r => r.data).catch(() => []),
-          charactersApi.get('/characters/tags/by-category/class').then(r => r.data).catch(() => []),
-        ]);
-
-        if (!active) return;
-
-        // Resolve our selection strings to full CharTag objects
-        const fandomTag = fandoms.find((t: any) => t.name.toLowerCase() === fandom.toLowerCase());
-        const genderTag = genders.find((t: any) => t.name.toLowerCase() === gender.toLowerCase());
-        const raceTag = races.find((t: any) => t.name.toLowerCase() === race.toLowerCase());
-        const classTag = classes.find((t: any) => t.name.toLowerCase() === characterClass.toLowerCase());
-
-        if (!fandomTag) {
-          throw new Error(`Could not resolve fandom tag: "${fandom}"`);
-        }
-
-        const resolvedTags = {
-          fandom: [toCharTag(fandomTag)],
-          gender: genderTag ? [toCharTag(genderTag)] : [],
-          race: raceTag ? [toCharTag(raceTag)] : [],
-          class: classTag ? [toCharTag(classTag)] : [],
-        };
-
-        setLoadingState('generating_details');
-        
-        // POST to /characters/generate to create character with AI details
-        const genRes = await charactersApi.post('/characters/generate', resolvedTags);
-        if (!active) return;
-
-        const generatedChar = genRes.data;
-        setCharacter(generatedChar);
-
-        // Start background image generation
-        setLoadingState('generating_image');
-        try {
-          const imgRes = await charactersApi.post(`/characters/${generatedChar.character_id}/generate-image`);
-          if (!active) return;
-          setCharacter(imgRes.data);
-          setLoadingState('ready');
-        } catch (imgErr: any) {
-          console.error('[Wizard] Image generation failed:', imgErr?.response?.data || imgErr.message);
-          if (!active) return;
-          setLoadingState('image_failed');
-        }
-      } catch (err: any) {
-        console.error('[Wizard] Details generation failed:', err?.response?.data || err.message);
-        if (!active) return;
-        setErrorMsg(err?.response?.data?.detail || err.message || 'Could not brew details.');
-        setLoadingState('error');
-      }
-    }
-
-    startGenerationFlow();
-
+    isMounted.current = true;
+    generateProfile();
     return () => {
-      active = false;
+      isMounted.current = false;
     };
   }, [fandom, gender, race, characterClass]);
 
-  const handleRetryImage = async () => {
+  const handleRegenerateImage = async () => {
     if (!character) return;
     setLoadingState('generating_image');
+    // Clear old images array so the shimmers render nicely
+    setCharacter(prev => prev ? { ...prev, images: [] } : null);
     try {
       const imgRes = await charactersApi.post(`/characters/${character.character_id}/generate-image`);
+      if (!isMounted.current) return;
       setCharacter(imgRes.data);
       setLoadingState('ready');
     } catch (imgErr: any) {
       console.error('[Wizard] Image generation retry failed:', imgErr?.response?.data || imgErr.message);
+      if (!isMounted.current) return;
       setLoadingState('image_failed');
       Toast.show({
         type: 'error',
@@ -257,7 +261,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
                 Portrait Forging Failed
               </Text>
               <Pressable
-                onPress={handleRetryImage}
+                onPress={handleRegenerateImage}
                 style={{
                   paddingVertical: 8,
                   paddingHorizontal: 16,
@@ -320,6 +324,32 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
         >
           <Ionicons name="arrow-back" size={14} color={Colors.outline} />
           <Text style={styles.actionButtonText}>Back to Start</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.actionButton,
+            (loadingState === 'resolving_tags' || loadingState === 'generating_details' || isAdopting) && styles.navButtonDisabled,
+            pressed && { opacity: 0.7 }
+          ]}
+          onPress={generateProfile}
+          disabled={loadingState === 'resolving_tags' || loadingState === 'generating_details' || isAdopting}
+        >
+          <Ionicons name="refresh" size={14} color={Colors.outline} />
+          <Text style={styles.actionButtonText}>Next Profile</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.actionButton,
+            (loadingState === 'resolving_tags' || loadingState === 'generating_details' || loadingState === 'generating_image' || isAdopting) && styles.navButtonDisabled,
+            pressed && { opacity: 0.7 }
+          ]}
+          onPress={handleRegenerateImage}
+          disabled={loadingState === 'resolving_tags' || loadingState === 'generating_details' || loadingState === 'generating_image' || isAdopting}
+        >
+          <Ionicons name="image" size={14} color={Colors.outline} />
+          <Text style={styles.actionButtonText}>New Portrait</Text>
         </Pressable>
 
         <Pressable
