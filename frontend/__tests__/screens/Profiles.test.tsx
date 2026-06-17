@@ -191,4 +191,37 @@ describe('Profiles Screen', () => {
     expect(getByTestId('empty-state-add-profile-button')).toBeTruthy();
     expect(getByText('Forge Your First Identity')).toBeTruthy();
   });
+
+  it('grays out and disables edit option for a generated profile', () => {
+    const mockProfilesWithGen = [
+      {
+        profile_id: '1',
+        display_name: 'Thorin Oakenshield',
+        bio: 'King under the mountain',
+        image_urls: ['http://example.com/thorin.jpg'],
+        generated: true,
+      },
+    ];
+    (useProfiles as jest.Mock).mockReturnValue({ 
+      data: mockProfilesWithGen, 
+      isLoading: false, 
+      isPending: false,
+      refetch: jest.fn(),
+    });
+    (useProfileContext as jest.Mock).mockReturnValue({
+      activeProfileId: '1',
+      setActiveProfileId: jest.fn(),
+      refetchActiveProfile: jest.fn(),
+      refetchProfiles: jest.fn(),
+      profiles: mockProfilesWithGen,
+    });
+
+    const { getByTestId } = render(<ProfilesScreen />);
+    
+    // Expand Profile menu
+    fireEvent.press(getByTestId('profile-menu-1'));
+    
+    const editBtn = getByTestId('edit-profile-button-1');
+    expect(editBtn.props.accessibilityState?.disabled).toBe(true);
+  });
 });

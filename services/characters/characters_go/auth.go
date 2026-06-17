@@ -9,13 +9,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 )
 
+var envLoaded = false
 var jwtSecret = []byte(getEnv("JWT_SECRET", "super-secret-tavern-key-123"))
 
 var _now = time.Now
 
 func getEnv(key, fallback string) string {
+	if !envLoaded {
+		_ = godotenv.Load()
+		envLoaded = true
+	}
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}

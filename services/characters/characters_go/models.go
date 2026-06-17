@@ -32,6 +32,14 @@ type CharacterUpdate struct {
 	ImageIDs    *[]string  `json:"image_ids"`
 }
 
+// CharacterGenerateRequest is the POST body for initiating character generation.
+type CharacterGenerateRequest struct {
+	Fandom []CharTag `json:"fandom"`
+	Race   []CharTag `json:"race"`
+	Gender []CharTag `json:"gender"`
+	Class  []CharTag `json:"class"`
+}
+
 // CharacterOut is the response/document output with images fully resolved.
 type CharacterOut struct {
 	CharacterID string     `json:"character_id"`
@@ -41,7 +49,9 @@ type CharacterOut struct {
 	Fandom      []CharTag  `json:"fandom"`
 	Race        []CharTag  `json:"race"`
 	Gender      []CharTag  `json:"gender"`
+	Class       []CharTag  `json:"class"`
 	Images      []ImageOut `json:"images"`
+	Status      string     `json:"status"`
 	CreatedAt   *time.Time `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
 }
@@ -116,3 +126,18 @@ type TagSearchQuery struct {
 	Category string `json:"category" binding:"required"`
 	Name     string `json:"name" binding:"required"` // partial prefix
 }
+
+// ProfileValidationRequest represents a profile blob to validate against predefined characters.
+type ProfileValidationRequest struct {
+	DisplayName string   `json:"display_name" binding:"required"`
+	Tagline     *string  `json:"tagline"`
+	Bio         *string  `json:"bio"`
+	ImageURLs   []string `json:"image_urls"`
+}
+
+// ValidationResponse is the response to the validation endpoint.
+type ValidationResponse struct {
+	IsGenerated bool   `json:"is_generated"`
+	Status      string `json:"status,omitempty"`
+}
+
