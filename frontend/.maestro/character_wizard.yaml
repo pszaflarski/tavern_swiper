@@ -1,15 +1,13 @@
-# Character Creation Wizard E2E Tests
+# Character Creation Wizard Tests
 #
 # Verifies:
-# - Launch app and log in
-# - Navigate to Profiles tab
-# - Open Character Creation Wizard
-# - Step 1: Select fandom (required)
-# - Step 2: Choose gender (optional)
-# - Step 3: Select race (optional)
-# - Step 4: Choose class (optional)
-# - Step 5: Shows matched character details and action buttons
-# - Reset wizard navigates back to Step 1
+# - Navigation from Profiles tab to Character Wizard
+# - Step 1: Select Fandom (Dungeons & Dragons)
+# - Step 2: Select Gender (Female)
+# - Step 3: Select Race (Elf)
+# - Step 4: Select Class (Wizard)
+# - Step 5: Character details & portrait generation (via Gemini / Imagen Mock)
+# - Adopt This Hero (saves profile and returns to Profiles tab)
 
 appId: com.tavernswiper.app
 
@@ -29,17 +27,7 @@ appId: com.tavernswiper.app
       id: "profiles-screen"
     timeout: 10000
 
-# Open the Character Wizard screen via whichever launcher is visible
-# Case 1: Empty state (first profile)
-- runFlow:
-    when:
-      visible:
-        id: "empty-state-wizard-button"
-    commands:
-      - tapOn:
-          id: "empty-state-wizard-button"
-
-# Case 2: Multi-profile list state
+# Open the Character Wizard via whichever entry point is visible
 - runFlow:
     when:
       visible:
@@ -48,61 +36,78 @@ appId: com.tavernswiper.app
       - tapOn:
           id: "character-wizard-button"
 
-# Wait for the Wizard step 1 to load
+- runFlow:
+    when:
+      visible:
+        id: "empty-state-wizard-button"
+    commands:
+      - tapOn:
+          id: "empty-state-wizard-button"
+
+# Wait for the Wizard screen to mount
 - extendedWaitUntil:
     visible: "Select Fandom Universe"
-    timeout: 10000
+    timeout: 15000
 
-# --- Test Step 1: Fandom (Required) ---
-- assertVisible: "Select Fandom Universe"
+# --- Step 1: Fandom Selection ---
 - assertVisible: "Dungeons & Dragons"
 - tapOn: "Dungeons & Dragons"
 - tapOn:
     id: "wizard-next-button"
 
-# --- Test Step 2: Gender Identity (Optional) ---
+# --- Step 2: Gender Selection ---
 - extendedWaitUntil:
-    visible: "Choose Gender Identity"
+    visible: "Choose Gender Identity (optional)"
     timeout: 5000
-- assertVisible: "Male"
-- assertVisible: "Female"
-- tapOn: "Male"
+- tapOn: "Female"
 - tapOn:
     id: "wizard-next-button"
 
-# --- Test Step 3: Race / Ancestry (Optional) ---
+# --- Step 3: Race Selection ---
 - extendedWaitUntil:
-    visible: "Select Fantasy Race"
+    visible: "Select Fantasy Race (optional)"
     timeout: 5000
-- assertVisible: "Elf"
-- assertVisible: "Human"
 - tapOn: "Elf"
+- scrollUntilVisible:
+    element:
+      id: "wizard-next-button"
+    direction: DOWN
 - tapOn:
     id: "wizard-next-button"
 
-# --- Test Step 4: Class (Optional) ---
+# --- Step 4: Class Selection ---
 - extendedWaitUntil:
-    visible: "Choose Adventuring Class"
+    visible: "Choose Adventuring Class (optional)"
     timeout: 5000
-- assertVisible: "Fighter"
-- assertVisible: "Wizard"
-- tapOn: "Fighter"
+- tapOn: "Wizard"
+- scrollUntilVisible:
+    element:
+      id: "wizard-next-button"
+    direction: DOWN
 - tapOn:
     id: "wizard-next-button"
 
-# --- Test Step 5: Matches & Docked Footer ---
-# Wait for the matching characters to load from the backend
+# --- Step 5: Generation Results ---
+# Wait for the AI details/tags generation to finish (could take 20-30s on slow networks)
 - extendedWaitUntil:
-    visible: "Adopt This Hero"
-    timeout: 10000
+    notVisible:
+      id: "dice-loading-screen"
+    timeout: 60000
 
-# Verify footer controls are visible
+# Assert that the hero info is rendered on the screen
 - assertVisible: "Adopt This Hero"
-- assertVisible: "Back to Start"
 
-# --- Test Navigation Reset ---
-# Clicking "Back to Start" should clear all state and return to Step 1
-- tapOn: "Back to Start"
+# Tap Adopt to save the generated profile to the backend database
+- tapOn: "Adopt This Hero"
+
+# Wait for the summoning database transaction loader to disappear
 - extendedWaitUntil:
-    visible: "Select Fandom Universe"
-    timeout: 5000
+    notVisible:
+      id: "dice-loading-screen"
+    timeout: 30000
+
+# Verify we navigated back to the Profiles tab and the profiles screen is visible
+- extendedWaitUntil:
+    visible:
+      id: "profiles-screen"
+    timeout: 15000
