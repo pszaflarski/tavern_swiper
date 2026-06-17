@@ -16,11 +16,14 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
+	_ = godotenv.Load()
+	initServiceURLs()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8012"
@@ -44,11 +47,11 @@ func main() {
 	// Swagger UI (before auth middleware)
 	r.GET("/characters/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Health check (before auth middleware)
+	r.GET("/characters/health", handleHealth)
+
 	// Global Middleware
 	r.Use(AuthMiddleware())
-
-	// Health check (bypassed in auth middleware)
-	r.GET("/characters/health", handleHealth)
 	
 	// Characters Group
 	cGroup := r.Group("/characters")
@@ -56,7 +59,13 @@ func main() {
 		// Public Character routes
 		cGroup.GET("/", handleListAllCharacters)
 		cGroup.GET("/random", handleGetRandomCharacter)
+		cGroup.POST("/validate", handleValidateProfile)
 		cGroup.GET("/:id", handleGetCharacter)
+
+		// Dynamic character generation and adoption routes
+		cGroup.POST("/generate", handleGenerateCharacterDetails)
+		cGroup.POST("/:id/generate-image", handleGenerateCharacterImage)
+		cGroup.POST("/:id/adopt", handleAdoptCharacter)
 
 		// Admin Character mutation routes
 		cGroup.POST("/", handleCreateCharacter)

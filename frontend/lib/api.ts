@@ -13,6 +13,7 @@ let BASE_URLS: Record<string, string> = {
   messages: '',
   users: '',
   quests: '',
+  characters: '',
 };
 
 let hydrationPromise: Promise<void> | null = null;
@@ -396,6 +397,8 @@ export const swipesApi = createClient('discovery', true);
 export const messagesApi = createClient('messages', true);
 export const usersApi = createClient('users', true);
 export const questsApi = createClient('quests', true);
+export const charactersApi = createClient('characters', true);
+
 
 /**
  * Internal state check for development and reset for tests.
@@ -440,6 +443,7 @@ export async function __resetInternalState() {
     messages: 'http://localhost:8005',
     users: 'http://localhost:8006',
     quests: 'http://localhost:8013',
+    characters: 'http://localhost:8012',
   };
   try {
     await AsyncStorage.clear();

@@ -1,8 +1,7 @@
 import { Sparkles, Terminal } from 'lucide-react';
-import CharacterWizard from './components/CharacterWizard.tsx';
+import CharacterWizard from './components/CharacterWizard';
 
 export default function App() {
-
   // Generate some sparks for the ambient background
   const sparks = Array.from({ length: 8 }, (_, i) => ({
     id: i,
@@ -40,7 +39,7 @@ export default function App() {
             </h1>
           </div>
           <p className="text-sm text-secondary tracking-wider">
-            CHARACTER CREATOR & RPG SHEET WIZARD
+            AI CHARACTER FORGE & RPG SHEET WIZARD
           </p>
         </div>
       </header>
@@ -55,7 +54,7 @@ export default function App() {
         <span>Tavern Swiper Project &copy; {new Date().getFullYear()}</span>
         <div className="flex items-center gap-1">
           <Terminal className="w-3.5 h-3.5" />
-          <span>Character Creator Module v1.0.0</span>
+          <span>Character Creator Module v2.0.0 (AI Generation Edition)</span>
         </div>
       </footer>
     </div>

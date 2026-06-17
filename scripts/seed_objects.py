@@ -18,8 +18,22 @@ Usage:
 
 import sys
 import datetime
+import subprocess
 
 from google.cloud import firestore
+from google.oauth2.credentials import Credentials
+
+
+def get_gcloud_credentials():
+    """Fetch credentials from gcloud (same pattern as clear_system.py)."""
+    try:
+        token = subprocess.check_output(
+            ["gcloud", "auth", "print-access-token"]
+        ).decode("utf-8").strip()
+        return Credentials(token)
+    except Exception as e:
+        print(f"⚠️  Could not fetch gcloud token: {e}")
+        sys.exit(1)
 
 # ─── Item Definitions ─────────────────────────────────────────────────────────
 
@@ -201,7 +215,8 @@ def seed_objects(env: str):
 
     print(f"🎯 Seeding item definitions into {db_id} (project: {project_id})")
 
-    db = firestore.Client(project=project_id, database=db_id)
+    g_creds = get_gcloud_credentials()
+    db = firestore.Client(project=project_id, database=db_id, credentials=g_creds)
 
     for item in ITEMS:
         item_id = item["item_id"]

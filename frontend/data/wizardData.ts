@@ -1,3 +1,12 @@
+/**
+ * Character Creation Wizard — Preset Data & Option Definitions
+ *
+ * Ported from examples/character_creator/src/data/characters.ts
+ * and the step component option maps.
+ */
+
+// ─── Interfaces ──────────────────────────────────────────────────────────────
+
 export interface CharacterPreset {
   name: string;
   tagline: string;
@@ -6,8 +15,77 @@ export interface CharacterPreset {
   gender: string;
   fandom: string;
   image: string;
-  class: string; // D&D Class (Fighter, Rogue, Wizard, Cleric, Druid, Ranger, Paladin)
+  class: string;
 }
+
+export interface WizardOption {
+  id: string;
+  name: string;
+  desc?: string;
+  active?: boolean;
+}
+
+export interface WizardSelections {
+  fandom: string;
+  gender: string;
+  race: string;
+  characterClass: string;
+}
+
+// ─── Fandom Options ──────────────────────────────────────────────────────────
+
+export const FANDOM_OPTIONS: WizardOption[] = [
+  { id: 'D&D', name: 'Dungeons & Dragons', active: true },
+  { id: 'Genshin', name: 'Genshin Impact', active: false },
+  { id: 'LOTR', name: 'Lord of the Rings', active: false },
+  { id: 'Witcher', name: 'The Witcher', active: false },
+];
+
+// ─── Gender Options ──────────────────────────────────────────────────────────
+
+export const GENDER_OPTIONS: WizardOption[] = [
+  { id: 'Male', name: 'Male', desc: 'Representing masculine traits and warrior archetypes.' },
+  { id: 'Female', name: 'Female', desc: 'Representing feminine traits and heroine archetypes.' },
+  { id: 'Other', name: 'Other', desc: 'Representing custom, fluid, or other-worldly identities.' },
+];
+
+// ─── Race Options by Fandom ─────────────────────────────────────────────────
+
+export const RACE_OPTIONS_BY_FANDOM: Record<string, WizardOption[]> = {
+  'D&D': [
+    { id: 'Elf', name: 'Elf', desc: 'Long-lived, elegant mystics with sharp senses and deep magical affinity.' },
+    { id: 'Human', name: 'Human', desc: 'Versatile, ambitious, and adaptable defenders with an unmatched drive.' },
+    { id: 'Orc', name: 'Orc', desc: 'Powerful, fierce, and proud commandos commanding immense physical might.' },
+    { id: 'Undead', name: 'Undead', desc: 'Reanimated knights or spirits bound by runes, holding eternal oaths.' },
+  ],
+  'Genshin': [
+    { id: 'Human', name: 'Human', desc: 'Adaptable mortals inhabiting the lands of Teyvat.' },
+    { id: 'Adeptus', name: 'Adeptus', desc: 'Ancient illuminated protectors of contract and heritage.' },
+  ],
+};
+
+// ─── Class Options by Fandom ─────────────────────────────────────────────────
+
+export const CLASS_OPTIONS_BY_FANDOM: Record<string, WizardOption[]> = {
+  'D&D': [
+    { id: 'Fighter', name: 'Fighter', desc: 'Masters of martial combat, skilled with shields, broadswords, and gladiator tactics.' },
+    { id: 'Rogue', name: 'Rogue', desc: 'Sleek spellblades and pickpockets relying on quick reflexes, stealth, and charm.' },
+    { id: 'Wizard', name: 'Wizard', desc: 'Arcane scholars wielding forbidden shadow magic, meteor spells, or technomancy.' },
+    { id: 'Cleric', name: 'Cleric', desc: 'Devout priestess-knights commanding radiant healing energy and moon spells.' },
+    { id: 'Druid', name: 'Druid', desc: 'Groves protectors who speak to plants and spirits, brewing herbal potions.' },
+    { id: 'Ranger', name: 'Ranger', desc: 'Swift ocean scouts and lake rangers patrolling the wilderness with bows.' },
+    { id: 'Paladin', name: 'Paladin', desc: 'Vanguard commanders sworn to holy oaths, wielding warhammers and golden plate.' },
+  ],
+  'Genshin': [
+    { id: 'Sword', name: 'Sword', desc: 'Swift close-range light blades.' },
+    { id: 'Claymore', name: 'Claymore', desc: 'Heavy, high-impact greatswords.' },
+    { id: 'Bow', name: 'Bow', desc: 'Ranged precision archery.' },
+    { id: 'Catalyst', name: 'Catalyst', desc: 'Elemental magic channelers.' },
+    { id: 'Polearm', name: 'Polearm', desc: 'Rapid thrusting spears.' },
+  ],
+};
+
+// ─── Character Presets ───────────────────────────────────────────────────────
 
 export const CHARACTER_PRESETS: CharacterPreset[] = [
   {
@@ -239,5 +317,49 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     fandom: "D&D",
     image: "fa1d86b2-8d5f-40df-86d0-c00052d5e3e1_1080x1350.jpg",
     class: "Paladin"
-  }
+  },
 ];
+
+// ─── Scoring Helpers ─────────────────────────────────────────────────────────
+
+export interface ScoredPreset {
+  preset: CharacterPreset;
+  score: number;
+}
+
+/**
+ * Score-based matching engine — finds presets that best match the user's selections.
+ * Weights: race (4), gender (2), class (1). Must match at least one attribute.
+ * Falls back to all presets if no selections were made.
+ */
+export function scorePresets(selections: WizardSelections): ScoredPreset[] {
+  const { gender, race, characterClass } = selections;
+
+  const scored = CHARACTER_PRESETS.map(preset => {
+    let score = 0;
+
+    // Race match (highest weight)
+    if (race && preset.race.toLowerCase() === race.toLowerCase()) {
+      score += 4;
+    }
+
+    // Gender match (medium weight)
+    if (gender && preset.gender.toLowerCase() === gender.toLowerCase()) {
+      score += 2;
+    }
+
+    // Class match (lower weight)
+    if (characterClass && preset.class.toLowerCase() === characterClass.toLowerCase()) {
+      score += 1;
+    }
+
+    return { preset, score };
+  })
+    .filter(item => item.score > 0) // must match at least one selected attribute
+    .sort((a, b) => b.score - a.score); // highest matches first
+
+  // Fallback to all presets if no matching attributes were selected
+  return scored.length > 0
+    ? scored
+    : CHARACTER_PRESETS.map(preset => ({ preset, score: 0 }));
+}

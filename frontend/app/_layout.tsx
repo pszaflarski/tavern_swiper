@@ -109,22 +109,28 @@ function RootLayoutNav() {
     if (isLoading || isLoadingProfiles) return;
 
     const inAuthGroup = segments[0] === 'auth';
+    const inWizard = segments[0] === 'character-wizard';
+    const hasGeneratedProfile = profiles?.some(p => p.generated);
 
-    console.log('[RootLayoutNav] Auth state changed:', { isAuthenticated, isLoading, segment: segments[0], profileCount: profiles?.length });
+    console.log('[RootLayoutNav] Auth state changed:', { isAuthenticated, isLoading, segment: segments[0], profileCount: profiles?.length, hasGeneratedProfile });
 
     if (!isAuthenticated && !inAuthGroup) {
       console.log('[RootLayoutNav] Redirecting to /auth');
       router.replace('/auth');
-    } else if (isAuthenticated && inAuthGroup) {
-      // If user has no profiles, land them on the Profiles tab
-      // so they can forge their first identity immediately.
-      const hasProfiles = profiles && profiles.length > 0;
-      if (hasProfiles) {
-        console.log('[RootLayoutNav] Redirecting to /(tabs)');
-        router.replace('/(tabs)');
-      } else {
-        console.log('[RootLayoutNav] No profiles — redirecting to /(tabs)/profiles');
-        router.replace('/(tabs)/profiles');
+    } else if (isAuthenticated) {
+      if (inAuthGroup) {
+        // Just authenticated — send to wizard if no generated profile
+        if (hasGeneratedProfile) {
+          console.log('[RootLayoutNav] Redirecting to /(tabs)');
+          router.replace('/(tabs)');
+        } else {
+          console.log('[RootLayoutNav] No generated profile — redirecting to /character-wizard');
+          router.replace('/character-wizard');
+        }
+      } else if (!hasGeneratedProfile && !inWizard) {
+        // Guard: force wizard if user navigates away without a generated profile
+        console.log('[RootLayoutNav] Guard: no generated profile — forcing /character-wizard');
+        router.replace('/character-wizard');
       }
     }
   }, [isAuthenticated, isLoading, isLoadingProfiles, profiles, segments]);
@@ -140,6 +146,7 @@ function RootLayoutNav() {
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         <Stack.Screen name="profiles" options={{ headerShown: false }} />
         <Stack.Screen name="inventory" options={{ headerShown: false }} />
+        <Stack.Screen name="character-wizard" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       </Stack>
       <SilentErrorBoundary label="MatchSplash">
         <MatchSplash />

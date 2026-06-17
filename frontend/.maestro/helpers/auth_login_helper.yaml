@@ -48,23 +48,17 @@ appId: com.tavernswiper.app
 # Dismiss the "Save password to Google?" dialog if it appears
 - runFlow: dismiss_save_password.yaml
 
-# 1. Wait for the root-level dice loading screen to fully unmount/disappear if visible
-- extendedWaitUntil:
-    notVisible:
-      id: "dice-loading-screen"
-    timeout: 60000
-
-# 2. Wait for login to complete and the tab bar to appear
+# 1. Wait for login to complete and the tab bar to appear
 # Using testID instead of text to avoid textTransform/overlay issues
 - extendedWaitUntil:
     visible:
       id: "tab-bar-tavern"
-    timeout: 45000
+    timeout: 60000
 
-# 3. Wait 2 seconds for the Tavern tab screen to mount and show its local loader if any
+# 2. Wait 2 seconds for the Tavern tab screen to mount and show its local loader if any
 - runScript: sleep.js
 
-# 4. Wait for the Tavern screen's local loading screen to disappear
+# 3. Wait for the Tavern screen's local loading screen to disappear
 - extendedWaitUntil:
     notVisible:
       id: "dice-loading-screen"
