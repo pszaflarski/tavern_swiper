@@ -241,7 +241,6 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
         <View style={[StyleSheet.absoluteFillObject, styles.characterImageArea]}>
           {loadingState === 'generating_image' ? (
             <DiceLoadingScreen
-              message="Forging AI Portrait..."
               containerStyle={{ backgroundColor: 'transparent' }}
               canvasSize={180}
             />
