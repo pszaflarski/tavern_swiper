@@ -240,12 +240,11 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
       ) : (
         <View style={[StyleSheet.absoluteFillObject, styles.characterImageArea]}>
           {loadingState === 'generating_image' ? (
-            <View style={{ alignItems: 'center', gap: 12 }}>
-              <ActivityIndicator size="large" color={Colors.tertiary} />
-              <Text style={{ fontFamily: Fonts.heroic, color: Colors.tertiary, fontSize: 16, letterSpacing: 1 }}>
-                Forging AI Portrait...
-              </Text>
-            </View>
+            <DiceLoadingScreen
+              message="Forging AI Portrait..."
+              containerStyle={{ backgroundColor: 'transparent' }}
+              canvasSize={180}
+            />
           ) : loadingState === 'image_failed' ? (
             <View style={{ alignItems: 'center', gap: 12, paddingHorizontal: 32 }}>
               <Ionicons name="image-outline" size={48} color={Colors.outline} />
