@@ -199,6 +199,25 @@ services:
     ports:
       - "8008:8008"
 
+  discovery-worker:
+    build:
+      context: ./services/discovery/discovery_worker
+    environment:
+      - FIRESTORE_DATABASE_ID=discovery-dev
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PORT=8014
+      - CLEANUP_TTL_HOURS=24
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    ports:
+      - "8014:8014"
 
   firebase-emulator:
     build:

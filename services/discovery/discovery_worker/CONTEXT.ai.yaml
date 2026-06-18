@@ -1,0 +1,37 @@
+# CONTEXT.ai.yaml — Machine-readable service manifest for AI assistants
+service: discovery_worker
+boundary: discovery
+port: 8014
+database: discovery-{env}
+type: background_worker
+
+collections:
+  owned: []
+  reads:
+    - swipes
+  writes:
+    - swipes
+
+pubsub:
+  publishes: []
+  consumes: []
+
+endpoints:
+  public:
+    - GET /               # health check
+    - POST /cleanup       # Trigger endpoint for deleting left swipes older than TTL
+
+dependencies:
+  env_vars:
+    - FIRESTORE_DATABASE_ID
+    - GOOGLE_CLOUD_PROJECT
+    - PORT
+    - CLEANUP_TTL_HOURS
+  services: []
+
+testing:
+  unit: "go test -v ./..."
+
+notes:
+  - Deletes left swipes that are older than CLEANUP_TTL_HOURS (default 24)
+  - Designed as an HTTP endpoint to run on Cloud Run, scheduled via Cloud Scheduler

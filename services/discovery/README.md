@@ -63,6 +63,18 @@ Listens for profile events published by the **Profiles boundary** via Pub/Sub an
 - **Protocol**: Protobuf (`proto/profile_events.proto`)
 - **In Docker**: Uses `cmd/local/main.go` with pull-based subscription against Pub/Sub emulator
 
+### `discovery_worker` — TTL Swipe Cleanup Worker
+
+Periodically deletes "left" swipes from the `swipes` collection in Firestore after they exceed 24 hours (or the configured `CLEANUP_TTL_HOURS` duration). This service is deployed to Cloud Run and is triggered on a schedule (e.g. hourly) by Cloud Scheduler.
+
+- **Port**: `8014`
+- **Key endpoints**:
+  - `GET /` — Health check
+  - `POST /cleanup` — Triggers the cleanup query and deletion process
+- **Configurable Env Vars**:
+  - `CLEANUP_TTL_HOURS` — Hours after which a left swipe is considered expired (default: `24`)
+- **Security**: In production, Cloud Run IAM policy enforces restricted access, requiring service-to-service IAM authentication from Cloud Scheduler.
+
 ## Cross-Service Dependencies
 
 ### This boundary receives from:
