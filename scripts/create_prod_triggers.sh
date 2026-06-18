@@ -89,6 +89,11 @@ create_backend_trigger "discovery-subscriber-prod-deploy" \
     "services/discovery/discovery_subscriber/cloudbuild.yaml" "services/discovery/discovery_subscriber" "discovery_subscriber" "discovery-subscriber" \
     "_DB_ID=discovery-prod"
 
+# 6b. Discovery Worker
+create_backend_trigger "discovery-worker-prod-deploy" \
+    "services/discovery/discovery_worker/cloudbuild.yaml" "services/discovery/discovery_worker" "discovery_worker" "discovery-worker" \
+    "_DB_ID=discovery-prod"
+
 # 7. Messages Subscriber
 create_backend_trigger "messages-subscriber-prod-deploy" \
     "services/messages/messages_subscriber/cloudbuild.yaml" "services/messages/messages_subscriber" "messages_subscriber" "messages-subscriber" \
