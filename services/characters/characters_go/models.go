@@ -18,6 +18,7 @@ type CharacterCreate struct {
 	Fandom      []CharTag `json:"fandom"`
 	Race        []CharTag `json:"race"`
 	Gender      []CharTag `json:"gender"`
+	Class       []CharTag `json:"class"`
 	ImageIDs    []string  `json:"image_ids"`
 }
 
@@ -29,6 +30,7 @@ type CharacterUpdate struct {
 	Fandom      *[]CharTag `json:"fandom"`
 	Race        *[]CharTag `json:"race"`
 	Gender      *[]CharTag `json:"gender"`
+	Class       *[]CharTag `json:"class"`
 	ImageIDs    *[]string  `json:"image_ids"`
 }
 
