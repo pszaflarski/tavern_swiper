@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Platform,
   useWindowDimensions,
-  Image,
 } from 'react-native';
 import { Colors, Fonts, Radius, Spacing, Shadow } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +26,9 @@ import {
 interface ImageCropperModalProps {
   isVisible: boolean;
   imageUri: string | null;
+  /** Actual pixel dimensions of the image — must come from manipulateAsync,
+   *  NOT from Image.getSize (which can return downsampled values on Android). */
+  imageDimensions: { width: number; height: number } | null;
   onClose: () => void;
   onCropComplete: (processedUri: string) => void;
 }
@@ -36,6 +38,7 @@ const ASPECT_RATIO = 4 / 5;
 export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   isVisible,
   imageUri,
+  imageDimensions,
   onClose,
   onCropComplete,
 }) => {
@@ -65,25 +68,23 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
-  // Load natural dimensions & initialize scale
+  // Initialize scale from the known image dimensions (from manipulateAsync)
   useEffect(() => {
-    if (imageUri) {
-      Image.getSize(imageUri, (w, h) => {
-        setImgLayout({ naturalWidth: w, naturalHeight: h });
-        
-        // Initial fitting logic: scale to fill frame (Cover)
-        const minScale = Math.max(apertureWidth / w, apertureHeight / h);
-        scale.value = minScale;
-        savedScale.value = minScale;
-        translateX.value = 0;
-        translateY.value = 0;
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
-      }, (err) => {
-        console.error('Failed to get image size:', err);
-      });
+    if (imageUri && imageDimensions && imageDimensions.width > 0) {
+      const w = imageDimensions.width;
+      const h = imageDimensions.height;
+      setImgLayout({ naturalWidth: w, naturalHeight: h });
+      
+      // Initial fitting logic: scale to fill frame (Cover)
+      const minScale = Math.max(apertureWidth / w, apertureHeight / h);
+      scale.value = minScale;
+      savedScale.value = minScale;
+      translateX.value = 0;
+      translateY.value = 0;
+      savedTranslateX.value = 0;
+      savedTranslateY.value = 0;
     }
-  }, [imageUri, apertureWidth, apertureHeight]);
+  }, [imageUri, imageDimensions, apertureWidth, apertureHeight]);
 
   const getBounds = useCallback((currentScale: number) => {
     'worklet';
@@ -164,7 +165,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
         { width: apertureWidth, height: apertureHeight },
         scale.value,
         translateX.value,
-        translateY.value
+        translateY.value,
       );
 
       const processedUri = await processProfileAsset(imageUri, cropData);
@@ -229,16 +230,19 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
                   </View>
                 </View>
               ) : (
-                <ActivityIndicator color={Colors.primary} />
+                <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                  <ActivityIndicator color={Colors.primary} size="large" />
+                  <Text style={[styles.hint, { marginTop: 16 }]}>Preparing your vision…</Text>
+                </View>
               )}
             </View>
 
             <View style={styles.footer}>
               <Text style={styles.hint}>Drag to align • Use ± buttons to zoom</Text>
               <TouchableOpacity
-                style={[styles.confirmButton, isProcessing && styles.disabledButton]}
+                style={[styles.confirmButton, (isProcessing || imgLayout.naturalWidth === 0) && styles.disabledButton]}
                 onPress={handleConfirm}
-                disabled={isProcessing}
+                disabled={isProcessing || imgLayout.naturalWidth === 0}
                 testID="finalize-ritual-button"
               >
                 {isProcessing ? (

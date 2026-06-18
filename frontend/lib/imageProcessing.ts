@@ -1,6 +1,62 @@
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
+/** Target profile image dimensions */
+const TARGET_WIDTH = 1080;
+const TARGET_HEIGHT = 1350;
+
+/**
+ * Preprocess a raw camera/gallery image before it enters the cropper.
+ *
+ * Resizes the image so it exactly matches the target profile dimensions
+ * on at least one axis (1080 wide or 1350 tall). The cropper then only
+ * needs to trim the overflow on the other axis.
+ *
+ * - Landscape/wide images → height = 1350, width > 1080 (crop sides)
+ * - Portrait/tall images  → width = 1080, height > 1350 (crop top/bottom)
+ * - Bakes in EXIF orientation (manipulateAsync auto-applies it).
+ * - Does NOT crop — that's the cropper's job.
+ */
+export interface PreprocessResult {
+  uri: string;
+  width: number;
+  height: number;
+}
+
+export async function preprocessForCropper(uri: string): Promise<PreprocessResult> {
+  // Use manipulateAsync to get original dimensions — Image.getSize can return
+  // downsampled values on Android (Fresco pipeline), while manipulateAsync uses
+  // Glide which loads full-resolution bitmaps.
+  const probe = await manipulateAsync(uri, [], {
+    compress: 1,
+    format: SaveFormat.JPEG,
+  });
+  const width = probe.width;
+  const height = probe.height;
+
+
+  const imageRatio = width / height;
+  const targetRatio = TARGET_WIDTH / TARGET_HEIGHT; // 0.8
+
+  const actions: any[] = [];
+
+  if (imageRatio > targetRatio) {
+    // Wider than 4:5 — fit height to 1350, width will exceed 1080
+    actions.push({ resize: { height: TARGET_HEIGHT } });
+  } else {
+    // Taller than 4:5 — fit width to 1080, height will exceed 1350
+    actions.push({ resize: { width: TARGET_WIDTH } });
+  }
+
+  const result = await manipulateAsync(uri, actions, {
+    compress: 1, // lossless at this stage; the cropper pipeline compresses later
+    format: SaveFormat.JPEG,
+  });
+
+
+  return { uri: result.uri, width: result.width, height: result.height };
+}
+
 export interface CropData {
   x: number;
   y: number;
@@ -11,24 +67,29 @@ export interface CropData {
 /**
  * Map visual transformation (pan/zoom) back to the natural image pixel space.
  * 
- * @param imageDim Natural dimensions of the source image
- * @param apertureDim Dimensions of the 4:5 viewing portal (UI space)
- * @param scale Total zoom applied by user (where 1.0 is the center-fit-cover scale)
- * @param translateX Horizontal offset in UI space
- * @param translateY Vertical offset in UI space
+ * imageDim and apertureDim must be in the SAME coordinate space used by the
+ * cropper's gesture system. Since the cropper sets the Animated.Image style
+ * dimensions to `imageDim` and the aperture to `apertureDim` (both in dp),
+ * all values here are in dp and no pixel-ratio conversion is needed.
+ *
+ * @param imageDim Natural dimensions of the source image (must match what the cropper uses)
+ * @param apertureDim Dimensions of the 4:5 viewing portal (dp / UI space)
+ * @param scale Total zoom applied by user (unitless ratio: aperture / imageDim)
+ * @param translateX Horizontal offset in dp / UI space
+ * @param translateY Vertical offset in dp / UI space
  */
 export function calculateTransformCrop(
   imageDim: { width: number; height: number },
   apertureDim: { width: number; height: number },
   scale: number,
   translateX: number,
-  translateY: number
+  translateY: number,
 ): CropData {
-  // 1. Calculate the 'natural' size of the viewing portal in image pixels
+  // 1. Calculate the 'natural' size of the viewing portal in image-dim units
   const awNatural = apertureDim.width / scale;
   const ahNatural = apertureDim.height / scale;
 
-  // 2. Calculate offsets in natural pixel space
+  // 2. Calculate offsets in image-dim units
   const offsetX = -translateX / scale;
   const offsetY = -translateY / scale;
 
@@ -36,11 +97,17 @@ export function calculateTransformCrop(
   const x = (imageDim.width - awNatural) / 2 + offsetX;
   const y = (imageDim.height - ahNatural) / 2 + offsetY;
 
+  // 4. Clamp crop rectangle within image bounds
+  const clampedW = Math.min(Math.round(awNatural), imageDim.width);
+  const clampedH = Math.min(Math.round(ahNatural), imageDim.height);
+  const clampedX = Math.max(0, Math.min(Math.round(x), imageDim.width - clampedW));
+  const clampedY = Math.max(0, Math.min(Math.round(y), imageDim.height - clampedH));
+
   return {
-    x: Math.max(0, Math.round(x)),
-    y: Math.max(0, Math.round(y)),
-    width: Math.round(awNatural),
-    height: Math.round(ahNatural),
+    x: clampedX,
+    y: clampedY,
+    width: clampedW,
+    height: clampedH,
   };
 }
 

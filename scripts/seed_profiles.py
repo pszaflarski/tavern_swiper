@@ -254,6 +254,7 @@ def seed_system():
             "display_name": row["name"],
             "bio": row["bio"],
             "gender": gender_tags,
+            "generated": row.get("generated", "false").strip().lower() == "true",
             "user_id": target_uid, # Administrative override!
             "is_active": True
         }

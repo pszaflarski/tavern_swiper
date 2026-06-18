@@ -56,6 +56,7 @@ jest.mock('../../components/ImageCropperModal', () => ({
 
 jest.mock('../../lib/imageProcessing', () => ({
   prepareImageUpload: jest.fn().mockResolvedValue(new Blob(['test'], { type: 'image/jpeg' })),
+  preprocessForCropper: jest.fn().mockImplementation((uri: string) => Promise.resolve({ uri, width: 1000, height: 1000 })),
 }));
 
 // Mock global fetch and File for image uploading logic

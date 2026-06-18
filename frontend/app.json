@@ -54,7 +54,7 @@
           }
         }
       ],
-      "./plugins/withLowMemoryGradle"
+      "./plugins/withOptimizedGradle"
     ],
     "experiments": {
       "typedRoutes": true

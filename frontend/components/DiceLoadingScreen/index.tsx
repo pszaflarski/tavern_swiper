@@ -229,7 +229,15 @@ function LiveDiceScene({ dieType, onSettled }: LiveDiceSceneProps) {
  * sequential dice rolling animation. A random die rolls, settles,
  * holds for 0.5s, then a new random die rolls. Repeats until unmounted.
  */
-export default function DiceLoadingScreen({ message: fixedMessage }: { message?: string } = {}) {
+export default function DiceLoadingScreen({ 
+  message: fixedMessage, 
+  containerStyle,
+  canvasSize = 280
+}: { 
+  message?: string;
+  containerStyle?: any;
+  canvasSize?: number;
+} = {}) {
   const [dieType, setDieType] = useState<DieType>(getRandomDie);
   const [rollKey, setRollKey] = useState(0);
   const [displayMessage, setDisplayMessage] = useState(fixedMessage ?? getRandomMessage);
@@ -275,9 +283,9 @@ export default function DiceLoadingScreen({ message: fixedMessage }: { message?:
   }, [fixedMessage]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]} testID="dice-loading-screen">
       {/* Dice Canvas */}
-      <View style={styles.canvasContainer}>
+      <View style={[styles.canvasContainer, { width: canvasSize, height: canvasSize }]}>
         <Canvas
           key={`loading-${dieType}-${rollKey}`}
           orthographic

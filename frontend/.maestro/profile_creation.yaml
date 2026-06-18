@@ -1,11 +1,10 @@
 # Profile Creation Form Tests
-# Analogous to: __tests__/ProfileCreation.test.tsx
 #
 # Verifies:
-# - Create profile form renders with "Forge Your Hero" header
-# - Photo upload slots are present
+# - Navigate to create profile screen
+# - Photo upload section is present
 # - Name and tagline inputs are visible and interactive
-# - Save button is present
+# - Forge/Save button is present
 
 appId: com.tavernswiper.app
 
@@ -17,36 +16,45 @@ appId: com.tavernswiper.app
 - runFlow: helpers/auth_login_helper.yaml
 
 # Navigate to Profiles tab
-- tapOn: "PROFILES"
+- tapOn:
+    id: "tab-bar-profiles"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "profiles-screen"
     timeout: 10000
 
 # Navigate to the create profile screen via whichever button is showing
+# Case 1: No profiles — use the empty state CTA
 - runFlow:
     when:
-      visible: "Forge New Identity"
+      visible:
+        id: "empty-state-add-profile-button"
     commands:
-      - tapOn: "Forge New Identity"
+      - tapOn:
+          id: "empty-state-add-profile-button"
 
+# Case 2: Has profiles — use the add-profile (+) button
 - runFlow:
     when:
-      visible: "Forge Your First Hero"
+      visible:
+        id: "add-profile-button"
     commands:
-      - tapOn: "Forge Your First Hero"
+      - tapOn:
+          id: "add-profile-button"
 
-# Wait for the create/edit screen to load — header says "Forge Your Hero"
+# Wait for the profile form to load — wait for the name input testID
 - extendedWaitUntil:
-    visible: "Forge Your Hero"
+    visible:
+      id: "profile-name-input"
     timeout: 10000
-
-# --- Test: Create profile form renders ---
-- assertVisible: "Forge Your Hero"
-- assertVisible: "Save"
 
 # --- Test: Photo section is present ---
 - assertVisible: "Visions of the Self"
+
+# --- Test: Save button in header is present ---
+- assertVisible:
+    id: "profile-header-save-button"
 
 # --- Test: Identity section is visible ---
 - scrollUntilVisible:
@@ -56,15 +64,29 @@ appId: com.tavernswiper.app
 
 # --- Test: Name input is present and interactive ---
 - assertVisible: "True Name"
-- tapOn: "e.g. Elara Brightsoul"
+- tapOn:
+    id: "profile-name-input"
 - inputText: "Maestro TestHero"
 
 # --- Test: Tagline input is present ---
 - hideKeyboard
 - scrollUntilVisible:
-    element: "Title / Tagline"
+    element:
+      id: "profile-tagline-input"
     direction: DOWN
 - assertVisible: "Title / Tagline"
+- tapOn:
+    id: "profile-tagline-input"
+- inputText: "Champion of Automated Testing"
+- hideKeyboard
 
-# Note: We intentionally do NOT press Save to avoid creating
+# --- Test: Forge button is present at the bottom ---
+- scrollUntilVisible:
+    element:
+      id: "profile-forge-button"
+    direction: DOWN
+- assertVisible:
+    id: "profile-forge-button"
+
+# Note: We intentionally do NOT press Forge to avoid creating
 # test data in the backend. The form rendering is tested above.

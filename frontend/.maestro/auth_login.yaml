@@ -1,12 +1,12 @@
 # Auth Login Screen Tests
-# Analogous to: __tests__/Login.test.tsx
 #
 # Verifies:
-# - Auth screen renders with Sign In title
+# - Auth screen renders with Sign In title and subtitle
 # - Email and password inputs are present and interactive
 # - Google sign-in button is visible
 # - Submit button is present
 # - Toggle between login/signup works
+# - Invalid credentials show an error message
 
 appId: com.tavernswiper.app
 
@@ -21,40 +21,62 @@ appId: com.tavernswiper.app
     visible: "Sign In"
     timeout: 30000
 
+# Dismiss any lingering "Save password" system dialogs from previous runs
+- runFlow:
+    when:
+      visible: "Save password"
+    commands:
+      - tapOn: "Not now"
+
+- runFlow:
+    when:
+      visible: "Save your password"
+    commands:
+      - tapOn: "No thanks"
+
 # --- Test: Auth screen renders with correct title and subtitle ---
 - assertVisible: "Sign In"
 - assertVisible: "Enter the tavern to continue your journey."
 
 # --- Test: Google sign-in button is visible ---
-- assertVisible: "Continue with Google"
+- assertVisible:
+    id: "auth-google-button"
 
 # --- Test: Submit button is present ---
-- assertVisible: "Enter Tavern"
+- assertVisible:
+    id: "auth-submit-button"
 
 # --- Test: Toggle link is present ---
-- assertVisible: "New to the realm? Sign up instead"
+- assertVisible:
+    id: "auth-toggle-link"
 
 # --- Test: Toggle between login and signup ---
-- tapOn: "New to the realm? Sign up instead"
+- tapOn:
+    id: "auth-toggle-link"
 - assertVisible: "Begin Your Quest"
 - assertVisible: "Claim Your Title"
 - assertVisible: "Already have a title? Log in here"
 
 # Toggle back to login
-- tapOn: "Already have a title? Log in here"
+- tapOn:
+    id: "auth-toggle-link"
 - assertVisible: "Sign In"
-- assertVisible: "Enter Tavern"
+- assertVisible:
+    id: "auth-submit-button"
 
-# --- Test: Email and password input are interactive ---
-- tapOn: "hero@realm.com"
+# --- Test: Email and password inputs are interactive ---
+- tapOn:
+    id: "auth-email-input"
 - inputText: "test@example.com"
 
-- tapOn: "••••••••"
+- tapOn:
+    id: "auth-password-input"
 - inputText: "TestPassword123"
 
 # --- Test: Submit with bad credentials shows an error ---
 - hideKeyboard
-- tapOn: "Enter Tavern"
+- tapOn:
+    id: "auth-submit-button"
 
 # Wait for error to appear (invalid credentials against real Firebase)
 - extendedWaitUntil:

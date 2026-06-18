@@ -22,4 +22,5 @@ export interface Profile {
   age?: number;
   is_oc?: boolean;
   is_active: boolean;
+  generated?: boolean;
 }

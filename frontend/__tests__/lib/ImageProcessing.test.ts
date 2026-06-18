@@ -80,6 +80,82 @@ describe('ImageProcessing Service', () => {
     });
   });
 
+  describe('calculateTransformCrop with Android pixelRatio', () => {
+    // Simulate a typical Android camera photo (4032x3024) on a 3x device
+    // The aperture is ~324dp wide, ~405dp tall (4:5 ratio)
+    const imageDim = { width: 4032, height: 3024 }; // physical pixels
+    const apertureDim = { width: 324, height: 405 }; // dp
+    const pixelRatio = 3;
+
+    it('produces correct centered crop on 3x Android device', () => {
+      // Initial minScale = max(324/4032, 405/3024) = max(0.0804, 0.1339) = 0.1339
+      const scale = Math.max(apertureDim.width / imageDim.width, apertureDim.height / imageDim.height);
+      const tx = 0;
+      const ty = 0;
+
+      const result = calculateTransformCrop(imageDim, apertureDim, scale, tx, ty, pixelRatio);
+
+      // effectiveScale = 0.1339 * 3 = 0.4018
+      // apertureW_px = 324 * 3 = 972
+      // apertureH_px = 405 * 3 = 1215
+      // awNatural = 972 / 0.4018 = ~2419
+      // ahNatural = 1215 / 0.4018 = ~3024 (should fill height)
+      // x = (4032 - 2419) / 2 = ~807
+      // y = (3024 - 3024) / 2 = 0
+      expect(result.y).toBe(0); // Image height matches — no vertical offset
+      expect(result.x).toBeGreaterThan(0); // Centered horizontally
+      expect(result.height).toBe(imageDim.height); // Full image height used
+      expect(result.width).toBeLessThan(imageDim.width); // Cropped horizontally
+    });
+
+    it('produces same results as pixelRatio=1 when inputs are already in pixels', () => {
+      // If we manually pre-multiply aperture into pixels and pass pixelRatio=1,
+      // we should get the same result as passing dp values with pixelRatio=3
+      const scale = 0.1339;
+      const tx = 10; // dp
+      const ty = 5;
+
+      const resultWithRatio = calculateTransformCrop(
+        imageDim, apertureDim, scale, tx, ty, pixelRatio
+      );
+      const resultManual = calculateTransformCrop(
+        imageDim,
+        { width: apertureDim.width * pixelRatio, height: apertureDim.height * pixelRatio },
+        scale * pixelRatio,
+        tx * pixelRatio,
+        ty * pixelRatio,
+        1
+      );
+
+      expect(resultWithRatio).toEqual(resultManual);
+    });
+
+    it('handles panning on high-DPI Android correctly', () => {
+      const scale = 0.1339;
+      const tx = -30; // panned 30dp left (user gesture in dp)
+      const ty = 0;
+
+      const result = calculateTransformCrop(imageDim, apertureDim, scale, tx, ty, pixelRatio);
+
+      // offsetX = -(-30 * 3) / (0.1339 * 3) = 90 / 0.4018 = ~224px to the right
+      // Crop should shift right compared to centered
+      const centeredResult = calculateTransformCrop(imageDim, apertureDim, scale, 0, 0, pixelRatio);
+      expect(result.x).toBeGreaterThan(centeredResult.x);
+      expect(result.width).toBe(centeredResult.width); // Width unchanged by pan
+    });
+
+    it('clamps crop within image bounds', () => {
+      // Very low scale → crop region larger than image
+      const scale = 0.01;
+      const result = calculateTransformCrop(imageDim, apertureDim, scale, 0, 0, pixelRatio);
+
+      expect(result.width).toBeLessThanOrEqual(imageDim.width);
+      expect(result.height).toBeLessThanOrEqual(imageDim.height);
+      expect(result.x).toBeGreaterThanOrEqual(0);
+      expect(result.y).toBeGreaterThanOrEqual(0);
+    });
+  });
+
   it('processProfileAsset should call manipulateAsync with correct parameters', async () => {
     const mockUri = 'file://test-image.jpg';
     const mockCrop = { x: 10, y: 20, width: 100, height: 100 };
