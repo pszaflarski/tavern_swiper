@@ -166,9 +166,13 @@ func TestHandleListConversations(t *testing.T) {
 		
 		mock.Collection(COLLECTION_CONVERSATIONS).Doc(c1).Set(context.Background(), map[string]interface{}{
 			"id": c1, "updated_at": now.Add(-1 * time.Hour), "participant_ids": []interface{}{"p1", "p2"},
+			"last_message_id": "msg1", "last_message_text": "Hello",
+			"last_message_sent_at": now.Add(-1 * time.Hour), "last_message_type": "user",
 		})
 		mock.Collection(COLLECTION_CONVERSATIONS).Doc(c2).Set(context.Background(), map[string]interface{}{
 			"id": c2, "updated_at": now, "participant_ids": []interface{}{"p1", "p3"},
+			"last_message_id": "msg2", "last_message_text": "Hey there",
+			"last_message_sent_at": now, "last_message_type": "user",
 		})
 		
 		mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_"+c1).Set(context.Background(), ProfileConversation{ProfileID: "p1", ConversationID: c1})
@@ -595,9 +599,13 @@ func TestHandleListConversations_SurfacesUnread(t *testing.T) {
 	
 	mock.Collection(COLLECTION_CONVERSATIONS).Doc(c1).Set(context.Background(), map[string]interface{}{
 		"id": c1, "participant_ids": []interface{}{"p1", "p2"},
+		"last_message_id": "msg1", "last_message_text": "Hello",
+		"last_message_sent_at": time.Now(), "last_message_type": "user",
 	})
 	mock.Collection(COLLECTION_CONVERSATIONS).Doc(c2).Set(context.Background(), map[string]interface{}{
 		"id": c2, "participant_ids": []interface{}{"p1", "p3"},
+		"last_message_id": "msg2", "last_message_text": "Hi",
+		"last_message_sent_at": time.Now(), "last_message_type": "user",
 	})
 	
 	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_"+c1).Set(context.Background(), ProfileConversation{
@@ -636,5 +644,116 @@ func TestHandleListConversations_SurfacesUnread(t *testing.T) {
 	}
 	if unreadC2 {
 		t.Errorf("Expected c2 to default to false for unread")
+	}
+}
+
+func TestHandleListConversations_EmptyConversationsFiltered(t *testing.T) {
+	skipIfRealDB(t)
+	gin.SetMode(gin.TestMode)
+
+	mock := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mock, nil
+	}
+
+	profileID := "p1"
+	now := time.Now()
+
+	// Conversation WITH a message (should appear)
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc("conv_with_msg").Set(context.Background(), map[string]interface{}{
+		"id": "conv_with_msg", "participant_ids": []interface{}{"p1", "p2"},
+		"updated_at": now, "last_message_id": "msg1", "last_message_text": "Hello",
+		"last_message_sent_at": now, "last_message_type": "user",
+	})
+	// Conversation WITHOUT a message (should be filtered out)
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc("conv_empty").Set(context.Background(), map[string]interface{}{
+		"id": "conv_empty", "participant_ids": []interface{}{"p1", "p3"},
+		"updated_at": now,
+	})
+	// Another conversation WITH a message (should appear)
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc("conv_with_msg2").Set(context.Background(), map[string]interface{}{
+		"id": "conv_with_msg2", "participant_ids": []interface{}{"p1", "p4"},
+		"updated_at": now.Add(-1 * time.Hour), "last_message_id": "msg2", "last_message_text": "Hey",
+		"last_message_sent_at": now.Add(-1 * time.Hour), "last_message_type": "user",
+	})
+
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_conv_with_msg").Set(context.Background(), ProfileConversation{
+		ProfileID: "p1", ConversationID: "conv_with_msg",
+	})
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_conv_empty").Set(context.Background(), ProfileConversation{
+		ProfileID: "p1", ConversationID: "conv_empty",
+	})
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_conv_with_msg2").Set(context.Background(), ProfileConversation{
+		ProfileID: "p1", ConversationID: "conv_with_msg2",
+	})
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("auth", AuthData{Role: "admin"})
+	c.Params = []gin.Param{{Key: "profile_id", Value: profileID}}
+
+	handleListConversations(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	var resp []ConversationOut
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	if len(resp) != 2 {
+		t.Fatalf("Expected 2 conversations (empty one filtered), got %d", len(resp))
+	}
+
+	// Verify the empty one is not in results
+	for _, conv := range resp {
+		if conv.ID == "conv_empty" {
+			t.Error("Empty conversation should have been filtered from listing")
+		}
+	}
+}
+
+func TestHandleListConversations_AllEmptyReturnsEmptyArray(t *testing.T) {
+	skipIfRealDB(t)
+	gin.SetMode(gin.TestMode)
+
+	mock := &mockClient{}
+	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
+		return mock, nil
+	}
+
+	profileID := "p1"
+
+	// Two conversations, both empty (no messages)
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc("empty1").Set(context.Background(), map[string]interface{}{
+		"id": "empty1", "participant_ids": []interface{}{"p1", "p2"},
+	})
+	mock.Collection(COLLECTION_CONVERSATIONS).Doc("empty2").Set(context.Background(), map[string]interface{}{
+		"id": "empty2", "participant_ids": []interface{}{"p1", "p3"},
+	})
+
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_empty1").Set(context.Background(), ProfileConversation{
+		ProfileID: "p1", ConversationID: "empty1",
+	})
+	mock.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc("p1_empty2").Set(context.Background(), ProfileConversation{
+		ProfileID: "p1", ConversationID: "empty2",
+	})
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("auth", AuthData{Role: "admin"})
+	c.Params = []gin.Param{{Key: "profile_id", Value: profileID}}
+
+	handleListConversations(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	var resp []ConversationOut
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	if len(resp) != 0 {
+		t.Errorf("Expected 0 conversations when all are empty, got %d", len(resp))
 	}
 }
