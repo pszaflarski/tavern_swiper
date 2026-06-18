@@ -721,6 +721,9 @@ func handleListConversations(c *gin.Context) {
 				SenderProfileID: senderID,
 				Type:            lastMsgType,
 			}
+		} else {
+			// Skip empty conversations (created but no messages sent yet)
+			continue
 		}
 
 		createdAtT, _ := d["created_at"].(time.Time)
