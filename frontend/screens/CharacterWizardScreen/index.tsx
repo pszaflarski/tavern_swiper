@@ -70,7 +70,7 @@ export default function CharacterWizardScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {step < 5 ? (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -175,6 +175,7 @@ export default function CharacterWizardScreen() {
             race={race}
             characterClass={characterClass}
             onReset={handleReset}
+            bottomInset={insets.bottom}
           />
         </Animated.View>
       )}

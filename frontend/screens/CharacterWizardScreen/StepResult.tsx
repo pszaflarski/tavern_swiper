@@ -44,6 +44,7 @@ interface StepResultProps {
   race: string;
   characterClass: string;
   onReset: () => void;
+  bottomInset?: number;
 }
 
 function toCharTag(tag: any): CharTag {
@@ -55,7 +56,7 @@ function toCharTag(tag: any): CharTag {
   };
 }
 
-export default function StepResult({ fandom, gender, race, characterClass, onReset }: StepResultProps) {
+export default function StepResult({ fandom, gender, race, characterClass, onReset, bottomInset = 0 }: StepResultProps) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [loadingState, setLoadingState] = useState<'resolving_tags' | 'generating_details' | 'generating_image' | 'ready' | 'error' | 'image_failed'>('resolving_tags');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -372,7 +373,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
       )}
 
       {/* Action buttons — fixed at bottom */}
-      <View style={styles.actionsRow}>
+      <View style={[styles.actionsRow, { paddingBottom: Math.max(bottomInset, 20) }]}>
         <Pressable
           style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.7 }]}
           onPress={onReset}
