@@ -30,6 +30,7 @@ func handleHealth(c *gin.Context) {
 // @Param        fandom  query  string  false  "Fandom tag slug or ID"
 // @Param        race    query  string  false  "Race tag slug or ID"
 // @Param        gender  query  string  false  "Gender tag slug or ID"
+// @Param        class   query  string  false  "Class tag slug or ID"
 // @Success      200  {array}  CharacterOut
 // @Router       /characters/ [get]
 func handleListAllCharacters(c *gin.Context) {
@@ -41,60 +42,42 @@ func handleListAllCharacters(c *gin.Context) {
 
 	auth := GetAuth(c)
 
-	// Helper to resolve tag slug/ID to CharTag
-	resolveCharTag := func(category, filterVal string) (*CharTag, error) {
-		// Try by ID first
-		doc, err := client.Collection(TAGS_COLLECTION).Doc(filterVal).Get(c.Request.Context())
-		if err == nil && doc.Exists() {
-			t, err := docToTag(doc)
-			if err == nil && t.Category == category {
-				return &CharTag{ID: t.ID, Category: t.Category, Name: t.Name, Slug: t.Slug}, nil
-			}
-		}
-		// Try by slug
-		docs, err := client.Collection(TAGS_COLLECTION).Where("slug", "==", filterVal).Limit(1).Documents(c.Request.Context()).GetAll()
-		if err == nil && len(docs) > 0 {
-			t, err := docToTag(docs[0])
-			if err == nil && t.Category == category {
-				return &CharTag{ID: t.ID, Category: t.Category, Name: t.Name, Slug: t.Slug}, nil
-			}
-		}
-		return nil, fmt.Errorf("Tag not found")
-	}
+	// Resolve tag filters — collect slugs to filter on (hierarchical format)
+	var fandomFilterSlug string
+	var childFilterSlugs []string
 
-	var fandomTag, raceTag, genderTag *CharTag
-	var tagFilterCount int
-
-	if f := c.Query("fandom"); f != "" {
-		tagFilterCount++
-		var err error
-		fandomTag, err = resolveCharTag("fandom", f)
+	if val := c.Query("fandom"); val != "" {
+		tag, err := resolveTagFilter(c.Request.Context(), client, "fandom", val)
 		if err != nil {
 			send400(c, "Invalid fandom tag filter: "+err.Error())
 			return
 		}
+		fandomFilterSlug = tag.Slug
 	}
-	if r := c.Query("race"); r != "" {
-		tagFilterCount++
-		var err error
-		raceTag, err = resolveCharTag("race", r)
-		if err != nil {
-			send400(c, "Invalid race tag filter: "+err.Error())
-			return
+
+	childCategories := []string{"race", "gender", "class"}
+	for _, cat := range childCategories {
+		if val := c.Query(cat); val != "" {
+			tag, err := resolveTagFilter(c.Request.Context(), client, cat, val)
+			if err != nil {
+				send400(c, "Invalid "+cat+" tag filter: "+err.Error())
+				return
+			}
+			childFilterSlugs = append(childFilterSlugs, tag.Slug)
 		}
 	}
-	if g := c.Query("gender"); g != "" {
-		tagFilterCount++
-		var err error
-		genderTag, err = resolveCharTag("gender", g)
-		if err != nil {
-			send400(c, "Invalid gender tag filter: "+err.Error())
-			return
+
+	// Build hierarchical filter slugs
+	var filterSlugs []string
+	if fandomFilterSlug != "" {
+		filterSlugs = append(filterSlugs, fandomFilterSlug)
+		// Prefix child slugs with fandom
+		for _, cs := range childFilterSlugs {
+			filterSlugs = append(filterSlugs, fandomFilterSlug+"."+cs)
 		}
-	}
-	if tagFilterCount > 1 {
-		send400(c, "Only one tag filter (fandom, race, or gender) may be used per query")
-		return
+	} else {
+		// No fandom filter — use child slugs as-is
+		filterSlugs = append(filterSlugs, childFilterSlugs...)
 	}
 
 	var docs []DocumentSnapshot
@@ -111,14 +94,10 @@ func handleListAllCharacters(c *gin.Context) {
 			return
 		}
 	} else {
-		// Admins can query everything or apply one tag filter at Firestore level
+		// Admins: use array-contains for a single tag filter at Firestore level
 		var q Query = client.Collection(CHARACTERS_COLLECTION)
-		if fandomTag != nil {
-			q = q.Where("fandom", "array-contains", *fandomTag)
-		} else if raceTag != nil {
-			q = q.Where("race", "array-contains", *raceTag)
-		} else if genderTag != nil {
-			q = q.Where("gender", "array-contains", *genderTag)
+		if len(filterSlugs) == 1 {
+			q = q.Where("character_tags", "array-contains", filterSlugs[0])
 		}
 		var err error
 		docs, err = q.Documents(c.Request.Context()).GetAll()
@@ -128,28 +107,62 @@ func handleListAllCharacters(c *gin.Context) {
 		}
 	}
 
-	// Resolve and filter in-memory if needed
-	results := make([]CharacterOut, 0)
+	// Collect all unique slugs across all characters for batch resolution
+	allSlugs := make(map[string]bool)
+	type docWithSlugs struct {
+		doc   DocumentSnapshot
+		slugs []string
+	}
+	var docSlugs []docWithSlugs
 	for _, doc := range docs {
-		charOut, err := resolveCharacterOut(c.Request.Context(), client, doc)
+		slugs := extractCharacterTagSlugs(doc.Data())
+		for _, s := range slugs {
+			allSlugs[s] = true
+		}
+		docSlugs = append(docSlugs, docWithSlugs{doc: doc, slugs: slugs})
+	}
+
+	// Batch resolve all slugs → CharTag
+	var slugList []string
+	for s := range allSlugs {
+		slugList = append(slugList, s)
+	}
+	tagCache, err := resolveSlugsToCharTags(c.Request.Context(), client, slugList)
+	if err != nil {
+		log.Printf("[WARN] Failed to batch resolve tag slugs: %v", err)
+		tagCache = make(map[string]CharTag)
+	}
+
+	// Resolve and filter
+	results := make([]CharacterOut, 0)
+	for _, ds := range docSlugs {
+		charOut, err := resolveCharacterOutWithCache(c.Request.Context(), client, ds.doc, ds.slugs, tagCache)
 		if err != nil {
-			log.Printf("[WARN] Failed to resolve character %s: %v", doc.ID(), err)
+			log.Printf("[WARN] Failed to resolve character %s: %v", ds.doc.ID(), err)
 			continue
 		}
 
-		// Non-admins in-memory validation and tag filtering
+		// Non-admins: filter adopted only + in-memory tag checks
 		if !IsAdmin(auth.Role) {
 			if charOut.Status != "adopted" {
 				continue
 			}
-			// In-memory tag filter checks
-			if fandomTag != nil && !hasTag(charOut.Fandom, fandomTag.ID) {
-				continue
+		}
+
+		// In-memory multi-tag filter: character must contain ALL filter slugs
+		if len(filterSlugs) > 0 {
+			slugSet := make(map[string]bool, len(ds.slugs))
+			for _, s := range ds.slugs {
+				slugSet[s] = true
 			}
-			if raceTag != nil && !hasTag(charOut.Race, raceTag.ID) {
-				continue
+			match := true
+			for _, fs := range filterSlugs {
+				if !slugSet[fs] {
+					match = false
+					break
+				}
 			}
-			if genderTag != nil && !hasTag(charOut.Gender, genderTag.ID) {
+			if !match {
 				continue
 			}
 		}
@@ -158,6 +171,27 @@ func handleListAllCharacters(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, results)
+}
+
+// resolveTagFilter resolves a tag slug or ID to a CharTag for filtering.
+func resolveTagFilter(ctx context.Context, client FirestoreClient, category, filterVal string) (*CharTag, error) {
+	// Try by ID first
+	doc, err := client.Collection(TAGS_COLLECTION).Doc(filterVal).Get(ctx)
+	if err == nil && doc.Exists() {
+		t, err := docToTag(doc)
+		if err == nil && t.Category == category {
+			return &CharTag{ID: t.ID, Category: t.Category, Name: t.Name, Slug: t.Slug}, nil
+		}
+	}
+	// Try by slug
+	docs, err := client.Collection(TAGS_COLLECTION).Where("slug", "==", filterVal).Limit(1).Documents(ctx).GetAll()
+	if err == nil && len(docs) > 0 {
+		t, err := docToTag(docs[0])
+		if err == nil && t.Category == category {
+			return &CharTag{ID: t.ID, Category: t.Category, Name: t.Name, Slug: t.Slug}, nil
+		}
+	}
+	return nil, fmt.Errorf("Tag not found")
 }
 
 func hasTag(tags []CharTag, tagID string) bool {
@@ -260,6 +294,7 @@ func handleCreateCharacter(c *gin.Context) {
 	// Validate tags
 	allTags := append(body.Fandom, body.Race...)
 	allTags = append(allTags, body.Gender...)
+	allTags = append(allTags, body.Class...)
 	if err := validateCharacterTags(c.Request.Context(), client, allTags); err != nil {
 		send400(c, "Tag validation failed: "+err.Error())
 		return
@@ -267,13 +302,11 @@ func handleCreateCharacter(c *gin.Context) {
 
 	id := uuid.New().String()
 	data := map[string]interface{}{
-		"display_name": body.DisplayName,
-		"fandom":       charTagsToInterface(body.Fandom),
-		"race":         charTagsToInterface(body.Race),
-		"gender":       charTagsToInterface(body.Gender),
-		"image_ids":    body.ImageIDs,
-		"created_at":   firestore.ServerTimestamp,
-		"updated_at":   firestore.ServerTimestamp,
+		"display_name":   body.DisplayName,
+		"character_tags": tagsToSlugs(body.Fandom, body.Race, body.Gender, body.Class),
+		"image_ids":      body.ImageIDs,
+		"created_at":     firestore.ServerTimestamp,
+		"updated_at":     firestore.ServerTimestamp,
 	}
 	if body.Tagline != nil {
 		data["tagline"] = *body.Tagline
@@ -354,46 +387,41 @@ func handleUpdateCharacter(c *gin.Context) {
 		updates = append(updates, firestore.Update{Path: "image_ids", Value: *body.ImageIDs})
 	}
 
-	// Validate and update tags if provided
-	var newTags []CharTag
-	if body.Fandom != nil {
-		newTags = append(newTags, *body.Fandom...)
-		updates = append(updates, firestore.Update{Path: "fandom", Value: charTagsToInterface(*body.Fandom)})
-	} else {
-		// load existing
-		var existingFandom []CharTag
-		if raw, ok := doc.Data()["fandom"]; ok {
-			existingFandom = convertToCharTags(raw)
+	// Rebuild character_tags: load existing slugs, override with any provided categories
+	existingSlugs := extractCharacterTagSlugs(doc.Data())
+	existingTagMap, _ := resolveSlugsToCharTags(c.Request.Context(), client, existingSlugs)
+
+	// Group existing tags by category
+	existingByCategory := make(map[string][]CharTag)
+	for _, slug := range existingSlugs {
+		if ct, ok := existingTagMap[slug]; ok {
+			existingByCategory[ct.Category] = append(existingByCategory[ct.Category], ct)
 		}
-		newTags = append(newTags, existingFandom...)
-	}
-	if body.Race != nil {
-		newTags = append(newTags, *body.Race...)
-		updates = append(updates, firestore.Update{Path: "race", Value: charTagsToInterface(*body.Race)})
-	} else {
-		var existingRace []CharTag
-		if raw, ok := doc.Data()["race"]; ok {
-			existingRace = convertToCharTags(raw)
-		}
-		newTags = append(newTags, existingRace...)
-	}
-	if body.Gender != nil {
-		newTags = append(newTags, *body.Gender...)
-		updates = append(updates, firestore.Update{Path: "gender", Value: charTagsToInterface(*body.Gender)})
-	} else {
-		var existingGender []CharTag
-		if raw, ok := doc.Data()["gender"]; ok {
-			existingGender = convertToCharTags(raw)
-		}
-		newTags = append(newTags, existingGender...)
 	}
 
-	if len(newTags) > 0 {
-		if err := validateCharacterTags(c.Request.Context(), client, newTags); err != nil {
+	// Resolve final tags per category: override if provided, else keep existing
+	resolveCat := func(provided *[]CharTag, cat string) []CharTag {
+		if provided != nil {
+			return *provided
+		}
+		return existingByCategory[cat]
+	}
+	finalFandom := resolveCat(body.Fandom, "fandom")
+	finalRace := resolveCat(body.Race, "race")
+	finalGender := resolveCat(body.Gender, "gender")
+	finalClass := resolveCat(body.Class, "class")
+
+	allFinalTags := append(finalFandom, finalRace...)
+	allFinalTags = append(allFinalTags, finalGender...)
+	allFinalTags = append(allFinalTags, finalClass...)
+
+	if len(allFinalTags) > 0 {
+		if err := validateCharacterTags(c.Request.Context(), client, allFinalTags); err != nil {
 			send400(c, "Tag validation failed: "+err.Error())
 			return
 		}
 	}
+	updates = append(updates, firestore.Update{Path: "character_tags", Value: tagsToSlugs(finalFandom, finalRace, finalGender, finalClass)})
 
 	if len(updates) > 1 {
 		if _, err := ref.Update(c.Request.Context(), updates); err != nil {
@@ -470,18 +498,24 @@ func handleDeleteCharacter(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Helper: resolveCharacterOut matches models.go
+// resolveCharacterOut resolves a character document into CharacterOut.
+// It reads the character_tags slug array and resolves slugs to full CharTag objects.
 func resolveCharacterOut(ctx context.Context, client FirestoreClient, doc DocumentSnapshot) (CharacterOut, error) {
+	slugs := extractCharacterTagSlugs(doc.Data())
+	tagCache, err := resolveSlugsToCharTags(ctx, client, slugs)
+	if err != nil {
+		log.Printf("[WARN] Failed to resolve tag slugs for character %s: %v", doc.ID(), err)
+		tagCache = make(map[string]CharTag)
+	}
+	return resolveCharacterOutWithCache(ctx, client, doc, slugs, tagCache)
+}
+
+// resolveCharacterOutWithCache resolves a character using a pre-built tag cache.
+// Used by list endpoints to avoid N+1 tag resolution queries.
+func resolveCharacterOutWithCache(ctx context.Context, client FirestoreClient, doc DocumentSnapshot, slugs []string, tagCache map[string]CharTag) (CharacterOut, error) {
 	d := doc.Data()
 	if d == nil {
-		return CharacterOut{}, fmt.Errorf("Character document %s empty", doc.ID())
-	}
-
-	getStr := func(key string) *string {
-		if val, ok := d[key].(string); ok {
-			return &val
-		}
-		return nil
+		return CharacterOut{}, fmt.Errorf("nil data")
 	}
 
 	reqStr := func(key string) string {
@@ -491,6 +525,13 @@ func resolveCharacterOut(ctx context.Context, client FirestoreClient, doc Docume
 		return ""
 	}
 
+	getStr := func(key string) *string {
+		if val, ok := d[key].(string); ok {
+			return &val
+		}
+		return nil
+	}
+
 	getTimestamp := func(key string) *time.Time {
 		if val, ok := d[key].(time.Time); ok {
 			return &val
@@ -498,11 +539,8 @@ func resolveCharacterOut(ctx context.Context, client FirestoreClient, doc Docume
 		return nil
 	}
 
-	// Parse denormalized tags
-	fandom := convertToCharTags(d["fandom"])
-	race := convertToCharTags(d["race"])
-	gender := convertToCharTags(d["gender"])
-	class := convertToCharTags(d["class"])
+	// Split resolved tags by category
+	fandom, race, gender, class := splitTagsByCategory(slugs, tagCache)
 
 	// Parse image_ids
 	var imageIDs []string
@@ -559,46 +597,155 @@ func resolveCharacterOut(ctx context.Context, client FirestoreClient, doc Docume
 	}, nil
 }
 
-// Helper: safe cast array of interface/maps to CharTag
-func convertToCharTags(raw interface{}) []CharTag {
-	res := make([]CharTag, 0)
-	if raw == nil {
-		return res
-	}
-	if typedList, ok := raw.([]CharTag); ok {
-		return typedList
-	}
-	if list, ok := raw.([]interface{}); ok {
-		for _, item := range list {
-			if m, ok := item.(map[string]interface{}); ok {
-				res = append(res, CharTag{
-					ID:       safeStr(m["id"]),
-					Category: safeStr(m["category"]),
-					Name:     safeStr(m["name"]),
-					Slug:     safeStr(m["slug"]),
-				})
-			} else if ct, ok := item.(CharTag); ok {
-				res = append(res, ct)
+// tagsToSlugs builds a flat array of hierarchical slug strings for storage.
+// Fandom tags are stored as-is (e.g. "fandom__d_d").
+// Child tags (race, gender, class) are prefixed with the fandom slug
+// (e.g. "fandom__d_d.race__elf") so tags are scoped to their fandom.
+func tagsToSlugs(fandom, race, gender, class []CharTag) []string {
+	var slugs []string
+
+	// Determine fandom prefix (use first fandom tag if available)
+	var fandomPrefix string
+	for _, t := range fandom {
+		if t.Slug != "" {
+			slugs = append(slugs, t.Slug)
+			if fandomPrefix == "" {
+				fandomPrefix = t.Slug
 			}
 		}
 	}
-	return res
-}
 
-func charTagsToInterface(tags []CharTag) []interface{} {
-	if tags == nil {
-		return []interface{}{}
-	}
-	res := make([]interface{}, len(tags))
-	for i, t := range tags {
-		res[i] = map[string]interface{}{
-			"id":       t.ID,
-			"category": t.Category,
-			"name":     t.Name,
-			"slug":     t.Slug,
+	// Child categories get prefixed with fandom
+	childSets := [][]CharTag{race, gender, class}
+	for _, tags := range childSets {
+		for _, t := range tags {
+			if t.Slug == "" {
+				continue
+			}
+			if fandomPrefix != "" {
+				slugs = append(slugs, fandomPrefix+"."+t.Slug)
+			} else {
+				slugs = append(slugs, t.Slug)
+			}
 		}
 	}
-	return res
+
+	if slugs == nil {
+		return []string{}
+	}
+	return slugs
+}
+
+// extractCharacterTagSlugs reads the character_tags string array from a Firestore document.
+func extractCharacterTagSlugs(d map[string]interface{}) []string {
+	var slugs []string
+	if raw, ok := d["character_tags"].([]interface{}); ok {
+		for _, v := range raw {
+			if s, ok := v.(string); ok {
+				slugs = append(slugs, s)
+			}
+		}
+	} else if raw, ok := d["character_tags"].([]string); ok {
+		slugs = raw
+	}
+	return slugs
+}
+
+// leafSlug extracts the leaf (last segment) from a hierarchical slug.
+// e.g. "fandom__d_d.race__elf" → "race__elf", "fandom__d_d" → "fandom__d_d"
+func leafSlug(hierarchicalSlug string) string {
+	if idx := strings.LastIndex(hierarchicalSlug, "."); idx != -1 {
+		return hierarchicalSlug[idx+1:]
+	}
+	return hierarchicalSlug
+}
+
+// resolveSlugsToCharTags batch-resolves hierarchical slug strings to full CharTag objects.
+// It extracts the leaf slug from each hierarchical path (e.g. "fandom__d_d.race__elf" → "race__elf"),
+// queries the character_tags collection by those leaf slugs, and returns a map keyed by the
+// FULL hierarchical slug → CharTag.
+func resolveSlugsToCharTags(ctx context.Context, client FirestoreClient, slugs []string) (map[string]CharTag, error) {
+	result := make(map[string]CharTag)
+	if len(slugs) == 0 {
+		return result, nil
+	}
+
+	// Build leaf → [full hierarchical slugs] mapping
+	leafToFull := make(map[string][]string)
+	var uniqueLeaves []string
+	seen := make(map[string]bool)
+	for _, fullSlug := range slugs {
+		leaf := leafSlug(fullSlug)
+		leafToFull[leaf] = append(leafToFull[leaf], fullSlug)
+		if !seen[leaf] {
+			uniqueLeaves = append(uniqueLeaves, leaf)
+			seen[leaf] = true
+		}
+	}
+
+	// Firestore "in" supports up to 30 values — batch if needed
+	for i := 0; i < len(uniqueLeaves); i += 30 {
+		end := i + 30
+		if end > len(uniqueLeaves) {
+			end = len(uniqueLeaves)
+		}
+		batch := uniqueLeaves[i:end]
+
+		docs, err := client.Collection(TAGS_COLLECTION).Where("slug", "in", batch).Documents(ctx).GetAll()
+		if err != nil {
+			return result, fmt.Errorf("failed to resolve tag slugs: %w", err)
+		}
+		for _, doc := range docs {
+			t, err := docToTag(doc)
+			if err == nil {
+				ct := CharTag{
+					ID:       t.ID,
+					Category: t.Category,
+					Name:     t.Name,
+					Slug:     t.Slug,
+				}
+				// Map the resolved tag back to ALL full hierarchical slugs that share this leaf
+				for _, fullSlug := range leafToFull[t.Slug] {
+					result[fullSlug] = ct
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+// splitTagsByCategory groups resolved CharTags by their category.
+// For hierarchical slugs like "fandom__d_d.race__elf", the category comes from
+// the resolved leaf tag (race). Fandom slugs have no dot separator.
+func splitTagsByCategory(slugs []string, tagCache map[string]CharTag) (fandom, race, gender, class []CharTag) {
+	fandom = make([]CharTag, 0)
+	race = make([]CharTag, 0)
+	gender = make([]CharTag, 0)
+	class = make([]CharTag, 0)
+	for _, slug := range slugs {
+		ct, ok := tagCache[slug]
+		if !ok {
+			// Derive category from leaf slug prefix as fallback
+			leaf := leafSlug(slug)
+			parts := strings.SplitN(leaf, "__", 2)
+			if len(parts) == 2 {
+				ct = CharTag{Slug: parts[0] + "__" + parts[1], Category: parts[0], Name: parts[1]}
+			} else {
+				continue
+			}
+		}
+		switch ct.Category {
+		case "fandom":
+			fandom = append(fandom, ct)
+		case "race":
+			race = append(race, ct)
+		case "gender":
+			gender = append(gender, ct)
+		case "class":
+			class = append(class, ct)
+		}
+	}
+	return
 }
 
 func safeStr(val interface{}) string {
@@ -832,10 +979,7 @@ func handleGenerateCharacterDetails(c *gin.Context) {
 		"tagline":      generated.Tagline,
 		"bio":          generated.Bio,
 		"image_prompt": generated.ImagePrompt,
-		"fandom":       charTagsToInterface(body.Fandom),
-		"race":         charTagsToInterface(body.Race),
-		"gender":       charTagsToInterface(body.Gender),
-		"class":        charTagsToInterface(body.Class),
+		"character_tags": tagsToSlugs(body.Fandom, body.Race, body.Gender, body.Class),
 		"image_ids":    []interface{}{},
 		"status":       "pending",
 		"created_at":   firestore.ServerTimestamp,
