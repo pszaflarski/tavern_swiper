@@ -243,7 +243,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
 
   return (
     <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-      {/* Full-screen background image / loader */}
+      {/* Full-screen background image / placeholder */}
       {imageUrl ? (
         <Image
           source={{ uri: imageUrl }}
@@ -252,12 +252,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
         />
       ) : (
         <View style={[StyleSheet.absoluteFillObject, styles.characterImageArea]}>
-          {loadingState === 'generating_image' ? (
-            <DiceLoadingScreen
-              containerStyle={{ backgroundColor: 'transparent' }}
-              canvasSize={180}
-            />
-          ) : loadingState === 'image_failed' ? (
+          {loadingState === 'image_failed' ? (
             <View style={{ alignItems: 'center', gap: 12, paddingHorizontal: 32 }}>
               <Ionicons name="image-outline" size={48} color={Colors.outline} />
               <Text style={{ fontFamily: Fonts.heroic, color: Colors.outline, fontSize: 16, textAlign: 'center' }}>
@@ -279,10 +274,18 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
                 </Text>
               </Pressable>
             </View>
-          ) : (
+          ) : loadingState !== 'generating_image' ? (
             <Text style={styles.characterImagePlaceholder}>⚔️</Text>
-          )}
+          ) : null}
         </View>
+      )}
+
+      {/* If generating image, show loader in the remaining space above details card */}
+      {loadingState === 'generating_image' && (
+        <DiceLoadingScreen
+          containerStyle={{ backgroundColor: 'transparent', flex: 1 }}
+          canvasSize={180}
+        />
       )}
 
       {/* Details overlay — scrollable full bio */}
