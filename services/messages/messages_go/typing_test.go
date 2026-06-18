@@ -448,6 +448,8 @@ func TestListConversations_IncludesTyping(t *testing.T) {
 		"id":              convID,
 		"participant_ids": []interface{}{"p1", "p2"},
 		"updated_at":      fixedNow,
+		"last_message_id": "msg1", "last_message_text": "Hello",
+		"last_message_sent_at": fixedNow, "last_message_type": "user",
 		"typing": map[string]interface{}{
 			"p2": recentTyping,
 		},
