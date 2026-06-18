@@ -100,6 +100,7 @@ for svc in "${!SERVICES[@]}"; do
       create_index "$DB_ID" "profiles_profiles_cache" "is_active:ASCENDING"
       create_index "$DB_ID" "matches" "profiles:CONTAINS"
       create_index "$DB_ID" "swipes" "swiper_profile_id:ASCENDING,swiped_profile_id:ASCENDING,direction:ASCENDING"
+      create_index "$DB_ID" "swipes" "direction:ASCENDING,created_at:ASCENDING"
       ;;
     "messages_go")
       create_index "$DB_ID" "conversations" "participants_key:ASCENDING"
