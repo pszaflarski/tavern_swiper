@@ -150,6 +150,22 @@ func TestCreateAndGetCharacter(t *testing.T) {
 		"status":        "active",
 		"display_order": 0,
 	})
+	// Set queryRes so slug "in" queries used by resolveSlugsToCharTags return this tag
+	mockDB.Collection(TAGS_COLLECTION).(*mockCollection).queryRes = []*mockSnap{
+		{
+			id:     tagOut.ID,
+			exists: true,
+			data: map[string]interface{}{
+				"category":      tagOut.Category,
+				"name":          tagOut.Name,
+				"name_lower":    "the witcher",
+				"slug":          tagOut.Slug,
+				"multi_select":  true,
+				"status":        "active",
+				"display_order": 0,
+			},
+		},
+	}
 
 	// 2. Create Character
 	charData := CharacterCreate{
@@ -180,22 +196,15 @@ func TestCreateAndGetCharacter(t *testing.T) {
 	assert.Equal(t, 1, len(charOut.Fandom))
 	assert.Equal(t, "The Witcher", charOut.Fandom[0].Name)
 
-	// Manually set character in mockDB
+	// Manually set character in mockDB with new character_tags format
 	mockDB.Collection(CHARACTERS_COLLECTION).Doc(charOut.CharacterID).Set(context.Background(), map[string]interface{}{
-		"display_name": charOut.DisplayName,
-		"tagline":      *charOut.Tagline,
-		"bio":          *charOut.Bio,
-		"fandom": []interface{}{
-			map[string]interface{}{
-				"id":       charOut.Fandom[0].ID,
-				"category": charOut.Fandom[0].Category,
-				"name":     charOut.Fandom[0].Name,
-				"slug":     charOut.Fandom[0].Slug,
-			},
-		},
-		"image_ids":  []interface{}{},
-		"created_at": time.Now(),
-		"updated_at": time.Now(),
+		"display_name":   charOut.DisplayName,
+		"tagline":        *charOut.Tagline,
+		"bio":            *charOut.Bio,
+		"character_tags": []interface{}{"fandom__the_witcher"},
+		"image_ids":      []interface{}{},
+		"created_at":     time.Now(),
+		"updated_at":     time.Now(),
 	})
 
 	// 3. Get Character
@@ -780,6 +789,25 @@ func TestCharacterGenerationAndAdoption(t *testing.T) {
 		"status":        "active",
 		"display_order": 0,
 	})
+	// Set queryRes so slug "in" queries used by resolveSlugsToCharTags return all tags
+	mockDB.Collection(TAGS_COLLECTION).(*mockCollection).queryRes = []*mockSnap{
+		{id: "tag-witcher", exists: true, data: map[string]interface{}{
+			"category": "fandom", "name": "The Witcher", "slug": "fandom__the_witcher",
+			"multi_select": true, "status": "active", "display_order": 0,
+		}},
+		{id: "tag-elf", exists: true, data: map[string]interface{}{
+			"category": "race", "name": "Elf", "slug": "race__elf",
+			"multi_select": true, "status": "active", "display_order": 0,
+		}},
+		{id: "tag-female", exists: true, data: map[string]interface{}{
+			"category": "gender", "name": "Female", "slug": "gender__female",
+			"multi_select": true, "status": "active", "display_order": 0,
+		}},
+		{id: "tag-mage", exists: true, data: map[string]interface{}{
+			"category": "class", "name": "Mage", "slug": "class__mage",
+			"multi_select": true, "status": "active", "display_order": 0,
+		}},
+	}
 
 	// 2. Setup mock agent router
 	mockAgentRouter := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

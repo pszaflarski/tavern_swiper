@@ -28,21 +28,7 @@
   "fieldOverrides": [
     {
       "collectionGroup": "characters",
-      "fieldPath": "fandom",
-      "indexes": [
-        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" }
-      ]
-    },
-    {
-      "collectionGroup": "characters",
-      "fieldPath": "race",
-      "indexes": [
-        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" }
-      ]
-    },
-    {
-      "collectionGroup": "characters",
-      "fieldPath": "gender",
+      "fieldPath": "character_tags",
       "indexes": [
         { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" }
       ]
