@@ -33,10 +33,14 @@ chmod +x ~/.xsession
 # Configure system-wide xrdp settings
 sudo sed -i 's/allowed_users=console/allowed_users=anybody/g' /etc/xrdp/Xwrapper.config || true
 
+# Ensure session allocation policy is set to Default to allow session reconnection
+sudo sed -i 's/^Policy=.*/Policy=Default/g' /etc/xrdp/sesman.ini || true
+
 # Restart and enable xrdp
 log_info "Enabling and starting xrdp service..."
 sudo systemctl enable xrdp
 sudo systemctl restart xrdp
+sudo systemctl restart xrdp-sesman || true
 
 # 3. Setup a password for RDP authentication
 CURRENT_USER=$(whoami)

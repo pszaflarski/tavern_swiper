@@ -22,9 +22,23 @@ set -euo pipefail
 # --- Configuration ---
 EMULATOR_AVD="MaestroTest"
 DOCKER_IMAGE="tavern-maestro-runner"
-MEMORY_LIMIT="2g"
-SWAP_LIMIT="2g"
 EMULATOR_BOOT_TIMEOUT=120
+
+# Detect total system RAM (in GB) and adjust limits dynamically
+TOTAL_RAM_GB=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo 2>/dev/null || echo 16)
+if [ "$TOTAL_RAM_GB" -ge 32 ]; then
+    # High-spec environments (e.g. 64GB VM)
+    MEMORY_LIMIT="8g"
+    SWAP_LIMIT="8g"
+    EMULATOR_MEM=4096
+    MAX_HEAP_SIZE="4g"
+else
+    # Low-spec environments (e.g. standard developer machine)
+    MEMORY_LIMIT="2g"
+    SWAP_LIMIT="2g"
+    EMULATOR_MEM=1536
+    MAX_HEAP_SIZE="1g"
+fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MAESTRO_FLOWS_DIR="$PROJECT_ROOT/frontend/.maestro"
@@ -114,7 +128,7 @@ start_emulator() {
         -no-snapshot-save \
         -no-audio \
         -gpu auto \
-        -memory 1536 \
+        -memory "$EMULATOR_MEM" \
         &>/dev/null &
 
     EMULATOR_PID=$!
@@ -254,7 +268,7 @@ run_tests_docker() {
 
 run_tests_direct() {
     # Apply JVM memory limits in direct mode
-    export JAVA_OPTS="${JAVA_OPTS:-} -Xmx1g -Xms256m"
+    export JAVA_OPTS="${JAVA_OPTS:-} -Xmx${MAX_HEAP_SIZE} -Xms256m"
     export MAESTRO_CLI_NO_ANALYTICS=1
     export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 
