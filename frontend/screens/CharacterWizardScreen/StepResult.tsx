@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, Pressable, ActivityIndicator, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Image, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -60,6 +60,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
   const [loadingState, setLoadingState] = useState<'resolving_tags' | 'generating_details' | 'generating_image' | 'ready' | 'error' | 'image_failed'>('resolving_tags');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isAdopting, setIsAdopting] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -214,10 +215,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
 
   // Tag resolving & details generation loaders
   if (loadingState === 'resolving_tags' || loadingState === 'generating_details') {
-    const statusTitle = loadingState === 'resolving_tags' 
-      ? 'Resolving Tavern Tags...' 
-      : 'Brewing Character Details...';
-    return <DiceLoadingScreen message={statusTitle} />;
+    return <DiceLoadingScreen />;
   }
 
   // Error / no character details generated
@@ -287,38 +285,88 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
         </View>
       )}
 
+      {/* Details overlay — scrollable full bio */}
+      {showDetails && (
+        <View style={detailStyles.overlay}>
+          <Pressable
+            style={({ pressed }) => [detailStyles.closeButton, pressed && { opacity: 0.7 }]}
+            onPress={() => setShowDetails(false)}
+          >
+            <Ionicons name="close-circle-outline" size={32} color={Colors.onSurface} />
+          </Pressable>
+          <ScrollView
+            style={detailStyles.scroll}
+            contentContainerStyle={detailStyles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={detailStyles.name}>{character.display_name}</Text>
+            {character.tagline ? (
+              <Text style={detailStyles.tagline}>"{character.tagline}"</Text>
+            ) : null}
+            <View style={detailStyles.divider} />
+            <Text style={detailStyles.bio}>
+              {character.bio || 'This hero\'s story is yet to be written in the annals of the realm.'}
+            </Text>
+            <View style={detailStyles.divider} />
+            <Text style={detailStyles.label}>Attributes</Text>
+            {fandomName ? <Text style={detailStyles.attr}>Fandom: {fandomName}</Text> : null}
+            {raceName ? <Text style={detailStyles.attr}>Race: {raceName}</Text> : null}
+            {genderName ? <Text style={detailStyles.attr}>Gender: {genderName}</Text> : null}
+            {className ? <Text style={detailStyles.attr}>Class: {className}</Text> : null}
+            {/* Spacer so text isn't hidden behind buttons */}
+            <View style={{ height: 160 }} />
+          </ScrollView>
+        </View>
+      )}
+
       {/* Dark gradient overlay at bottom for text readability */}
-      <View style={[styles.characterGradient, { backgroundColor: 'transparent' }]}>
-        <View style={{ flex: 1, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' } as any} />
-      </View>
+      {!showDetails && (
+        <View style={[styles.characterGradient, { backgroundColor: 'transparent' }]}>
+          <View style={{ flex: 1, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' } as any} />
+        </View>
+      )}
+
 
       {/* Hero info overlaid at bottom of image, above buttons */}
-      <View style={styles.characterCardBody}>
-        <View style={styles.badgeRow}>
-          <View style={[styles.badge, styles.badgeFandom]}>
-            <Text style={styles.badgeText}>{fandomName}</Text>
+      {!showDetails && (
+        <View style={styles.characterCardBody}>
+          <View style={[styles.badgeRow, { alignItems: 'center' }]}>
+            <View style={[styles.badge, styles.badgeFandom]}>
+              <Text style={styles.badgeText}>{fandomName}</Text>
+            </View>
+            {raceName ? (
+              <View style={[styles.badge, styles.badgeRace]}>
+                <Text style={styles.badgeText}>{raceName}</Text>
+              </View>
+            ) : null}
+            {genderName ? (
+              <View style={[styles.badge, styles.badgeGender]}>
+                <Text style={styles.badgeText}>{genderName}</Text>
+              </View>
+            ) : null}
+            {className ? (
+              <View style={[styles.badge]}>
+                <Text style={styles.badgeText}>{className}</Text>
+              </View>
+            ) : null}
+            <View style={{ flex: 1 }} />
+            <Pressable
+              style={({ pressed }) => [detailStyles.infoButton, pressed && { opacity: 0.7 }]}
+              onPress={() => setShowDetails(!showDetails)}
+              testID="wizard-info-button"
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={28}
+                color={Colors.onSurface}
+              />
+            </Pressable>
           </View>
-          {raceName ? (
-            <View style={[styles.badge, styles.badgeRace]}>
-              <Text style={styles.badgeText}>{raceName}</Text>
-            </View>
-          ) : null}
-          {genderName ? (
-            <View style={[styles.badge, styles.badgeGender]}>
-              <Text style={styles.badgeText}>{genderName}</Text>
-            </View>
-          ) : null}
-          {className ? (
-            <View style={[styles.badge]}>
-              <Text style={styles.badgeText}>{className}</Text>
-            </View>
-          ) : null}
-        </View>
 
-        <Text style={styles.characterName}>{character.display_name}</Text>
-        {character.tagline ? <Text style={styles.characterTagline}>"{character.tagline}"</Text> : null}
-        {character.bio ? <Text style={styles.characterBio} numberOfLines={4}>{character.bio}</Text> : null}
-      </View>
+          <Text style={styles.characterName}>{character.display_name}</Text>
+          {character.tagline ? <Text style={styles.characterTagline}>"{character.tagline}"</Text> : null}
+        </View>
+      )}
 
       {/* Action buttons — fixed at bottom */}
       <View style={styles.actionsRow}>
@@ -384,3 +432,74 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
   );
 }
 
+const detailStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13, 17, 15, 0.92)',
+    zIndex: 5,
+    paddingTop: 40,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  name: {
+    fontFamily: Fonts.heroic,
+    fontSize: 32,
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  tagline: {
+    fontFamily: Fonts.scribe,
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: Colors.tertiary,
+    marginBottom: 24,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.outlineVariant,
+    width: '100%',
+    marginVertical: 24,
+    opacity: 0.3,
+  },
+  label: {
+    fontFamily: Fonts.scribe,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    color: Colors.outline,
+    marginBottom: 8,
+  },
+  bio: {
+    fontFamily: Fonts.scribe,
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.onSurface,
+  },
+  attr: {
+    fontFamily: Fonts.scribe,
+    fontSize: 15,
+    lineHeight: 22,
+    color: Colors.onSurface,
+    marginBottom: 4,
+  },
+  infoButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
+    marginRight: 16,
+    marginBottom: 8,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+});

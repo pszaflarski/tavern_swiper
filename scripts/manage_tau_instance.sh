@@ -18,7 +18,7 @@ INSTANCE_NAME="${INSTANCE_NAME:-tau-ephemeral-instance}"
 GCS_BUCKET_PATH="${GCS_BUCKET_PATH:-gs://tavern-swiper-vm-backups}"
 MACHINE_TYPE="${MACHINE_TYPE:-n2-standard-2}"
 BOOT_DISK_SIZE="${BOOT_DISK_SIZE:-50GB}"
-EXPORT_ZONE="${EXPORT_ZONE:-us-central1-a}"
+EXPORT_ZONE="${EXPORT_ZONE:-northamerica-northeast2-b}"
 
 # ------------------------------------------------------------------------------
 # 2. Logging Helpers
