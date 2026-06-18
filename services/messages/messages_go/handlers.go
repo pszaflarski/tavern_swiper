@@ -193,13 +193,31 @@ func handleCreateConversation(c *gin.Context) {
 	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
 	batch := client.Batch()
 
+	// Initial system message — ensures the conversation is never truly empty
+	// so it always appears in listing responses (which filter empty conversations).
+	welcomeMessageID := uuid.New().String()
+	welcomeContent := "A fateful bond has been forged."
+
 	batch.Set(convRef, map[string]interface{}{
-		"id":               convID,
-		"participants_key": participantsKey,
-		"participant_ids":  pids,
-		"created_by":       body.ParticipantProfileIDs[0],
-		"created_at":       firestore.ServerTimestamp,
-		"updated_at":       firestore.ServerTimestamp,
+		"id":                    convID,
+		"participants_key":      participantsKey,
+		"participant_ids":       pids,
+		"created_by":            body.ParticipantProfileIDs[0],
+		"created_at":            firestore.ServerTimestamp,
+		"updated_at":            firestore.ServerTimestamp,
+		"last_message_id":       welcomeMessageID,
+		"last_message_text":     welcomeContent,
+		"last_message_sent_at":  firestore.ServerTimestamp,
+		"last_message_sender_id": "",
+		"last_message_type":     MessageTypeSystem,
+	})
+
+	// Write the initial system message into the messages sub-collection
+	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(welcomeMessageID), map[string]interface{}{
+		"content":    welcomeContent,
+		"type":       MessageTypeSystem,
+		"created_at": firestore.ServerTimestamp,
+		"updated_at": firestore.ServerTimestamp,
 	})
 
 	// Write the dedup doc — keyed by participants_key so it's deterministic.

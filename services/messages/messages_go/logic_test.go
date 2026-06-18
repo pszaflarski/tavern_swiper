@@ -71,6 +71,29 @@ func TestHandleCreateConversation(t *testing.T) {
 		if !m1.Exists() || !m2.Exists() {
 			t.Error("Mappings were not created correctly")
 		}
+
+		// Verify welcome system message was created
+		convData := convSnap.Data()
+		if convData["last_message_id"] == nil || convData["last_message_id"] == "" {
+			t.Error("Expected last_message_id to be set on new conversation (welcome message)")
+		}
+		if convData["last_message_type"] != MessageTypeSystem {
+			t.Errorf("Expected last_message_type '%s', got '%v'", MessageTypeSystem, convData["last_message_type"])
+		}
+		if convData["last_message_text"] != "A fateful bond has been forged." {
+			t.Errorf("Expected welcome message text, got '%v'", convData["last_message_text"])
+		}
+
+		// Verify the message exists in the sub-collection
+		msgIter := mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES).Documents(context.Background())
+		msgs, _ := msgIter.GetAll()
+		if len(msgs) != 1 {
+			t.Fatalf("Expected 1 welcome message in sub-collection, got %d", len(msgs))
+		}
+		msgData := msgs[0].Data()
+		if msgData["type"] != MessageTypeSystem {
+			t.Errorf("Welcome message type should be '%s', got '%v'", MessageTypeSystem, msgData["type"])
+		}
 	})
 
 	t.Run("ForbiddenWithoutMatch", func(t *testing.T) {
