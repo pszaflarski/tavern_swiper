@@ -47,7 +47,7 @@ func normalizeImageRitual(data []byte, isAdmin bool) ([]byte, error) {
 	// 4. Perfect Geometry Ritual: 1080x1350 (4:5 ratio)
 	width := 1080
 	height := 1350
-	
+
 	// Check if already perfect
 	bounds := img.Bounds()
 	if !isAdmin && (bounds.Dx() != width || bounds.Dy() != height) {

@@ -19,7 +19,7 @@ func TestProfileOperations(t *testing.T) {
 
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
-	
+
 	oldGetDB := getDBFunc
 	defer func() { getDBFunc = oldGetDB }()
 
@@ -77,7 +77,7 @@ func TestProfileOperations(t *testing.T) {
 	t.Run("DeleteAllProfiles_AdminOnly", func(t *testing.T) {
 		mock := &mockClient{collections: make(map[string]*mockCollection)}
 		getDBFunc = func(ctx context.Context) (FirestoreClient, error) { return mock, nil }
-		
+
 		// 1. Non-admin fails
 		userToken := signGoTestToken("u1", "user")
 		req1, _ := http.NewRequest("DELETE", "/profiles/", nil)

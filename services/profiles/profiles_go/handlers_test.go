@@ -15,7 +15,7 @@ func setupTest(publisher Publisher) *gin.Engine {
 
 	// Routes matching main.go
 	r.GET("/profiles/health", handleHealth)
-	
+
 	p := r.Group("/profiles")
 	{
 		p.GET("/all", handleListAllProfiles)

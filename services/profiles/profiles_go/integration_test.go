@@ -202,7 +202,7 @@ func TestIntegration_CategorizedTags(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 		var res ProfileOut
 		json.Unmarshal(w.Body.Bytes(), &res)
-		
+
 		assert.Len(t, res.Gender, 1)
 		assert.Equal(t, "Male", res.Gender[0].Name)
 		assert.Len(t, res.Fandom, 1)
@@ -210,15 +210,15 @@ func TestIntegration_CategorizedTags(t *testing.T) {
 		// 2. Verify Firestore raw data
 		profDoc, _ := client.Collection(COLLECTION).Doc(res.ProfileID).Get(ctx)
 		data := profDoc.Data()
-		
+
 		genderTags := data["gender"].([]interface{})
 		assert.Len(t, genderTags, 1)
 		assert.Equal(t, "Male", genderTags[0].(map[string]interface{})["name"])
-		
+
 		fandomTags := data["fandom"].([]interface{})
 		assert.Len(t, fandomTags, 1)
 		assert.Equal(t, "Star Wars", fandomTags[0].(map[string]interface{})["name"])
-		
+
 		assert.Equal(t, int64(25), data["age"]) // Firestore ints come back as int64
 	})
 

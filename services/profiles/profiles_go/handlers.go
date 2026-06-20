@@ -137,15 +137,22 @@ func handleCreateProfile(c *gin.Context, publisher Publisher) {
 		}
 	}
 
+	copiedURLs, err := copyExternalImages(c.Request.Context(), profileID, body.ImageURLs)
+	if err != nil {
+		log.Printf("[ERROR] Failed to copy external image URLs for profile %s: %v", profileID, err)
+		send400(c, "Failed to copy profile images: "+err.Error())
+		return
+	}
+
 	data := map[string]interface{}{
 		"user_id":      targetUID,
 		"display_name": body.DisplayName,
 		"tagline":      body.Tagline,
 		"bio":          body.Bio,
-		"image_urls":   body.ImageURLs,
+		"image_urls":   copiedURLs,
 		"is_active":    true,
 		"age":          body.Age,
-		"is_oc":         body.IsOC,
+		"is_oc":        body.IsOC,
 		"generated":    ptrBoolOrFalse(body.Generated),
 		"gender":       tagsToInterface(body.Gender),
 		"race":         tagsToInterface(body.Race),
@@ -519,7 +526,7 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 	if g, ok := profileData["generated"].(bool); ok {
 		isGenerated = g
 	}
-	if isGenerated {
+	if isGenerated && !IsAdmin(auth.Role) {
 		hasOtherUpdates := body.DisplayName != nil ||
 			body.Tagline != nil ||
 			body.Bio != nil ||
@@ -543,27 +550,41 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 
 	// Collect all current and updated tags for validation
 	existingProfile, _ := docToProfile(doc)
-	
+
 	newGender := existingProfile.Gender
-	if body.Gender != nil { newGender = *body.Gender }
+	if body.Gender != nil {
+		newGender = *body.Gender
+	}
 	newRace := existingProfile.Race
-	if body.Race != nil { newRace = *body.Race }
+	if body.Race != nil {
+		newRace = *body.Race
+	}
 	newFandom := existingProfile.Fandom
-	if body.Fandom != nil { newFandom = *body.Fandom }
+	if body.Fandom != nil {
+		newFandom = *body.Fandom
+	}
 	newInterests := existingProfile.Interests
-	if body.Interests != nil { newInterests = *body.Interests }
+	if body.Interests != nil {
+		newInterests = *body.Interests
+	}
 	newEvents := existingProfile.Events
-	if body.Events != nil { newEvents = *body.Events }
+	if body.Events != nil {
+		newEvents = *body.Events
+	}
 	newLookingFor := existingProfile.LookingFor
-	if body.LookingFor != nil { newLookingFor = *body.LookingFor }
-	
+	if body.LookingFor != nil {
+		newLookingFor = *body.LookingFor
+	}
+
 	// TODO: Handle OtherTags merge if needed
-	
+
 	allTags := collectAllTags(newGender, newRace, newFandom, newInterests, newEvents, newLookingFor, existingProfile.OtherTags)
 
-	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
-		send400(c, err.Error())
-		return
+	if !isGenerated {
+		if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
+			send400(c, err.Error())
+			return
+		}
 	}
 
 	updates := []firestore.Update{
@@ -579,7 +600,13 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 		updates = append(updates, firestore.Update{Path: "bio", Value: *body.Bio})
 	}
 	if body.ImageURLs != nil {
-		updates = append(updates, firestore.Update{Path: "image_urls", Value: *body.ImageURLs})
+		copiedURLs, err := copyExternalImages(c.Request.Context(), id, *body.ImageURLs)
+		if err != nil {
+			log.Printf("[ERROR] Failed to copy external image URLs for profile update %s: %v", id, err)
+			send400(c, "Failed to copy profile images: "+err.Error())
+			return
+		}
+		updates = append(updates, firestore.Update{Path: "image_urls", Value: copiedURLs})
 	}
 	if body.IsActive != nil {
 		updates = append(updates, firestore.Update{Path: "is_active", Value: *body.IsActive})
@@ -806,9 +833,6 @@ func handleGetProfilesBatch(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-
-
-
 // handleGetMyActiveProfile godoc
 // @Summary      Get my active profile
 // @Description  Returns the authenticated user's active profile. Auto-activates one if none is active.
@@ -910,7 +934,7 @@ func handleDeleteAllProfiles(c *gin.Context, publisher Publisher) {
 	} else {
 		log.Printf("[WARN] Failed to list profiles for GCS cleanup during purge: %v", listErr)
 	}
-	
+
 	err = client.DeleteCollection(c.Request.Context(), client.Collection(COLLECTION), 500)
 	if err != nil {
 		sendGenericError(c, http.StatusInternalServerError, "Purge failed")
