@@ -49,7 +49,7 @@ func NewPublisher(ctx context.Context) (Publisher, error) {
 
 func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent) error {
 	topic := r.client.Topic(r.topicID)
-	
+
 	payload, err := proto.Marshal(event)
 	if err != nil {
 		log.Printf("[ERROR] Protobuf marshal error: %v", err)
@@ -98,7 +98,9 @@ func (r *RealPublisher) PublishUpserted(ctx context.Context, p ProfileOut) error
 }
 
 func toProtoAge(age *int) *int32 {
-	if age == nil { return nil }
+	if age == nil {
+		return nil
+	}
 	val := int32(*age)
 	return &val
 }
@@ -108,7 +110,9 @@ func toProtoIsOc(isOC *bool) *bool {
 }
 
 func toProtoTags(tags []ProfileTag) []*pb.ProfileTag {
-	if tags == nil { return nil }
+	if tags == nil {
+		return nil
+	}
 	res := make([]*pb.ProfileTag, len(tags))
 	for i, t := range tags {
 		res[i] = &pb.ProfileTag{

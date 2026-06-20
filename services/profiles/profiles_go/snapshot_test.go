@@ -87,10 +87,12 @@ func TestSnapshotsParity(t *testing.T) {
 
 		// test_create_profile_validation_error_string_length
 		bio := ""
-		for i := 0; i < 16000; i++ { bio += "a" }
+		for i := 0; i < 16000; i++ {
+			bio += "a"
+		}
 		body, _ := json.Marshal(map[string]interface{}{
 			"display_name": "Test",
-			"bio": bio,
+			"bio":          bio,
 		})
 		req, _ = http.NewRequest("POST", "/profiles/", bytes.NewBuffer(body))
 		req.Header.Set("Authorization", "Bearer "+signGoTestToken("uid", "user"))
@@ -108,16 +110,16 @@ func TestSnapshotsParity(t *testing.T) {
 					COLLECTION: {
 						docs: map[string]*mockDoc{
 							"test-id": {
-								id: "test-id",
+								id:     "test-id",
 								exists: true,
 								data: map[string]interface{}{
-									"user_id": "user-123",
+									"user_id":      "user-123",
 									"display_name": "Gimli",
-									"tagline": "A dwarf of the mountain",
-									"bio": "I like axes.",
-									"gender": nil,
-									"image_urls": []interface{}{},
-									"is_active": false,
+									"tagline":      "A dwarf of the mountain",
+									"bio":          "I like axes.",
+									"gender":       nil,
+									"image_urls":   []interface{}{},
+									"is_active":    false,
 								},
 							},
 						},

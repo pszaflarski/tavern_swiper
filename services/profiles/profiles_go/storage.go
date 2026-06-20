@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
 )
 
@@ -20,9 +24,9 @@ func getStorageClient(ctx context.Context) (*storage.Client, error) {
 	if storageClient != nil {
 		return storageClient, nil
 	}
-	
+
 	var err error
-	// If in local dev without credentials file, you might use 
+	// If in local dev without credentials file, you might use
 	// storage.NewClient(ctx, option.WithoutAuthentication()) for emulators
 	storageClient, err = storage.NewClient(ctx)
 	if err != nil {
@@ -48,7 +52,7 @@ func uploadToGCSInternal(ctx context.Context, profileID string, filename string,
 	objectName := fmt.Sprintf("profiles/%s/%s", profileID, filename)
 	bh := client.Bucket(bucketName)
 	obj := bh.Object(objectName)
-	
+
 	// Ensure writer uses the context (with timeout)
 	w := obj.NewWriter(ctx)
 	w.ContentType = contentType
@@ -106,4 +110,71 @@ func deleteProfileImagesInternal(ctx context.Context, profileID string) error {
 		}
 	}
 	return nil
+}
+
+var copyExternalImages = func(ctx context.Context, profileID string, urls []string) ([]string, error) {
+	return copyExternalImagesInternal(ctx, profileID, urls)
+}
+
+func copyExternalImagesInternal(ctx context.Context, profileID string, urls []string) ([]string, error) {
+	if len(urls) == 0 {
+		return urls, nil
+	}
+
+	if bucketName == "" {
+		return nil, fmt.Errorf("GCS_BUCKET_NAME environment variable not set")
+	}
+
+	expectedPrefix := fmt.Sprintf("https://storage.googleapis.com/%s/profiles/%s/", bucketName, profileID)
+
+	var newURLs []string
+	for _, url := range urls {
+		// If the URL already points to this profile's folder in the profiles bucket, keep it.
+		if strings.HasPrefix(url, expectedPrefix) {
+			newURLs = append(newURLs, url)
+			continue
+		}
+
+		// Otherwise, it is external (e.g. from the characters bucket). We must copy it.
+		log.Printf("[INFO] Copying external image to profile bucket: %s", url)
+
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for external image %s: %w", url, err)
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch external image %s: %w", url, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to fetch external image %s, status code: %d", url, resp.StatusCode)
+		}
+
+		imgBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read external image body %s: %w", url, err)
+		}
+
+		// Normalize image to ensure it meets dimensions and is a valid JPEG
+		normalizedData, err := normalizeImageRitual(imgBytes, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to normalize copied image: %w", err)
+		}
+
+		filename := fmt.Sprintf("%s.jpg", uuid.New().String())
+
+		// Upload the normalized content to GCS
+		publicURL, err := uploadToGCS(ctx, profileID, filename, "image/jpeg", bytes.NewReader(normalizedData))
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload copied image to GCS: %w", err)
+		}
+
+		log.Printf("[INFO] Successfully copied external image to: %s", publicURL)
+		newURLs = append(newURLs, publicURL)
+	}
+
+	return newURLs, nil
 }

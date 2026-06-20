@@ -57,7 +57,7 @@ func main() {
 
 	// Routes
 	r.GET("/profiles/health", handleHealth)
-	
+
 	// Profiles Group
 	p := r.Group("/profiles")
 	{
@@ -97,4 +97,3 @@ func main() {
 		log.Fatalf("[CRITICAL] Failed to run server: %v", err)
 	}
 }
-
