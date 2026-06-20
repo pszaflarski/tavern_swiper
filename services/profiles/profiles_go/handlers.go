@@ -580,9 +580,11 @@ func handleUpdateProfile(c *gin.Context, publisher Publisher) {
 
 	allTags := collectAllTags(newGender, newRace, newFandom, newInterests, newEvents, newLookingFor, existingProfile.OtherTags)
 
-	if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
-		send400(c, err.Error())
-		return
+	if !isGenerated {
+		if err := validateProfileTags(c.Request.Context(), client, allTags); err != nil {
+			send400(c, err.Error())
+			return
+		}
 	}
 
 	updates := []firestore.Update{
