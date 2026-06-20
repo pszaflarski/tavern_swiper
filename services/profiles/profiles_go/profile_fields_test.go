@@ -21,7 +21,7 @@ func TestProfileNewFields(t *testing.T) {
 
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
-	
+
 	oldGetDB := getDBFunc
 	defer func() { getDBFunc = oldGetDB }()
 
@@ -69,10 +69,10 @@ func TestProfileNewFields(t *testing.T) {
 			COLLECTION: {
 				docs: map[string]*mockDoc{
 					"p1": {
-						id: "p1",
+						id:     "p1",
 						exists: true,
 						data: map[string]interface{}{
-							"user_id": "user-123",
+							"user_id":      "user-123",
 							"display_name": "Hero",
 						},
 					},
@@ -133,7 +133,7 @@ func TestProfileNewFields(t *testing.T) {
 		json.Unmarshal(w.Body.Bytes(), &res)
 		assert.Len(t, res.Gender, 1)
 		assert.Equal(t, "Male", res.Gender[0].Name)
-		
+
 		// Verify Firestore data sync
 		profDoc, _ := mock.Collection(COLLECTION).Doc(res.ProfileID).Get(context.Background())
 		genderVal := profDoc.Data()["gender"]
@@ -255,7 +255,7 @@ func TestProfileNewFields(t *testing.T) {
 			COLLECTION: {
 				docs: map[string]*mockDoc{
 					"p-lf": {
-						id: "p-lf",
+						id:     "p-lf",
 						exists: true,
 						data: map[string]interface{}{
 							"user_id":      "user-123",
@@ -322,7 +322,7 @@ func TestProfileNewFields(t *testing.T) {
 			COLLECTION: {
 				docs: map[string]*mockDoc{
 					"p-gen": {
-						id: "p-gen",
+						id:     "p-gen",
 						exists: true,
 						data: map[string]interface{}{
 							"user_id":      "user-123",

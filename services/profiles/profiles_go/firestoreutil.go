@@ -313,9 +313,9 @@ func (ps *realPipelineSource) CollectionGroup(id string) Pipeline {
 	return &realPipeline{ps.PipelineSource.CollectionGroup(id)}
 }
 
-func (ps *realPipelineSource) Select(fields []any) Pipeline { return nil }
-func (ps *realPipelineSource) Where(filter any) Pipeline    { return nil }
-func (ps *realPipelineSource) Limit(n int) Pipeline         { return nil }
+func (ps *realPipelineSource) Select(fields []any) Pipeline                 { return nil }
+func (ps *realPipelineSource) Where(filter any) Pipeline                    { return nil }
+func (ps *realPipelineSource) Limit(n int) Pipeline                         { return nil }
 func (ps *realPipelineSource) Execute(ctx context.Context) PipelineSnapshot { return nil }
 
 // realPipeline wraps *firestore.Pipeline

@@ -50,10 +50,10 @@ func (c *mockClient) GetAll(ctx context.Context, refs []DocumentRef) ([]Document
 
 type mockCollection struct {
 	CollectionRef
-	path      string
-	docs      map[string]*mockDoc
-	queryRes  []*mockSnap
-	Filters   []filter // Recorded filters for verification
+	path     string
+	docs     map[string]*mockDoc
+	queryRes []*mockSnap
+	Filters  []filter // Recorded filters for verification
 }
 
 type filter struct {
@@ -147,10 +147,10 @@ type mockSnap struct {
 	ref    DocumentRef
 }
 
-func (s *mockSnap) Exists() bool                          { return s.exists }
-func (s *mockSnap) Data() map[string]interface{}          { return s.data }
-func (s *mockSnap) ID() string                            { return s.id }
-func (s *mockSnap) Ref() DocumentRef        { return s.ref }
+func (s *mockSnap) Exists() bool                 { return s.exists }
+func (s *mockSnap) Data() map[string]interface{} { return s.data }
+func (s *mockSnap) ID() string                   { return s.id }
+func (s *mockSnap) Ref() DocumentRef             { return s.ref }
 
 type mockIter struct {
 	DocumentIterator
@@ -205,11 +205,11 @@ type mockPipeline struct {
 	Pipeline
 }
 
-func (p *mockPipeline) Collection(path string) Pipeline { return p }
+func (p *mockPipeline) Collection(path string) Pipeline    { return p }
 func (p *mockPipeline) CollectionGroup(id string) Pipeline { return p }
-func (p *mockPipeline) Select(fields []any) Pipeline { return p }
-func (p *mockPipeline) Where(filter any) Pipeline { return p }
-func (p *mockPipeline) Limit(n int) Pipeline { return p }
+func (p *mockPipeline) Select(fields []any) Pipeline       { return p }
+func (p *mockPipeline) Where(filter any) Pipeline          { return p }
+func (p *mockPipeline) Limit(n int) Pipeline               { return p }
 func (p *mockPipeline) Execute(ctx context.Context) PipelineSnapshot {
 	return &mockPipelineSnapshot{}
 }

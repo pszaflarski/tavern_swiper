@@ -21,7 +21,7 @@ func TestTagHandlers(t *testing.T) {
 
 	mockPub := &mockPublisher{}
 	r := setupTest(mockPub)
-	
+
 	// Override getDBFunc for tests
 	oldGetDB := getDBFunc
 	defer func() { getDBFunc = oldGetDB }()

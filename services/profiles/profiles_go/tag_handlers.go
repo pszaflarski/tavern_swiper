@@ -38,9 +38,9 @@ func generateSlugWithUniqueness(ctx context.Context, client FirestoreClient, cat
 	// Remove non-alphanumeric
 	reg, _ := regexp.Compile("[^a-z0-9_]+")
 	base = reg.ReplaceAllString(base, "")
-	
+
 	baseSlug := fmt.Sprintf("%s__%s", category, base)
-	
+
 	// Check if exists, using a short random suffix on collision to avoid
 	// race conditions from the non-transactional check-then-set pattern.
 	slug := baseSlug
@@ -601,7 +601,7 @@ func validateProfileTags(ctx context.Context, client FirestoreClient, tags []Pro
 	// Firestore client doesn't have a direct BatchGet for interfaces in this project,
 	// but we can look them up. For simplicity and since tags are few, we'll do individual Gets or a query.
 	// Implementation plan suggested batch-fetch.
-	
+
 	validTags := make(map[string]Tag)
 	for _, id := range tagIDs {
 		doc, err := client.Collection(TAGS_COLLECTION).Doc(id).Get(ctx)
