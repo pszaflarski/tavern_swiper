@@ -217,6 +217,25 @@ describe('Conversation Screen', () => {
     expect(router.replace).toHaveBeenCalledWith('/(tabs)/messages');
   });
 
+  it('navigates to profile preview when profile header is pressed', () => {
+    const { router } = require('expo-router');
+    render(<ConversationScreen />);
+    
+    expect(Stack.Screen).toHaveBeenCalled();
+    const props = (Stack.Screen as jest.Mock).mock.calls[0][0];
+    const HeaderLeft = props.options.headerLeft;
+    
+    const { getByTestId } = render(<HeaderLeft />);
+    
+    const profileHeaderBtn = getByTestId('header-profile-button');
+    fireEvent.press(profileHeaderBtn);
+    
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/profiles/preview',
+      params: { id: 'p2' }
+    });
+  });
+
   it('uses an inverted FlatList so newest messages appear at the bottom without scrollToEnd', () => {
     const { UNSAFE_getByType } = render(<ConversationScreen />);
     const { FlatList } = require('react-native');
