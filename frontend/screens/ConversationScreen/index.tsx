@@ -426,13 +426,30 @@ function ConversationScreenInner() {
           headerShown: true,
           headerTitle: '',
           headerLeft: () => (
-            <Pressable 
-              onPress={() => router.replace('/(tabs)/messages')} 
-              style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]} 
-              testID="back-button"
-            >
-              <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
-              <View style={styles.headerProfile}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Pressable 
+                onPress={() => router.replace('/(tabs)/messages')} 
+                style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]} 
+                testID="back-button"
+              >
+                <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
+              </Pressable>
+              
+              <Pressable
+                onPress={() => {
+                  if (otherProfile?.profile_id) {
+                    router.push({
+                      pathname: '/profiles/preview',
+                      params: { id: otherProfile.profile_id }
+                    } as any);
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.headerProfile,
+                  pressed && { opacity: 0.7 }
+                ]}
+                testID="header-profile-button"
+              >
                 {otherProfile?.image_urls?.[0] ? (
                   <Image source={{ uri: otherProfile.image_urls[0] }} style={styles.headerAvatar} />
                 ) : (
@@ -444,8 +461,8 @@ function ConversationScreenInner() {
                   <Text style={styles.headerName}>{otherProfile?.display_name || 'Traveler'}</Text>
                   <Text style={styles.headerStatus}>Online in the tavern</Text>
                 </View>
-              </View>
-            </Pressable>
+              </Pressable>
+            </View>
           ),
           headerStyle: { backgroundColor: Colors.surface },
           headerShadowVisible: false,

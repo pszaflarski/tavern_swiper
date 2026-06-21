@@ -281,19 +281,20 @@ function ProfilesScreenInner() {
         <Text style={styles.wizardButtonText}>Character Wizard</Text>
         <Ionicons name="chevron-forward" size={16} color={Colors.outline} />
       </Pressable>
-      <Link href="/profiles/form" asChild>
-        <Pressable 
-          style={({ pressed }) => [
-            styles.addProfileButton,
-            pressed && { opacity: 0.7 }
-          ]}
-          testID="add-profile-button"
-          accessibilityLabel="Forge new identity"
-          accessibilityRole="button"
-        >
-          <Ionicons name="add" size={36} color={Colors.primary} />
-        </Pressable>
-      </Link>
+      <Pressable 
+        style={({ pressed }) => [
+          styles.addProfileButton,
+          pressed && { opacity: 0.7 }
+        ]}
+        onPress={handleCreate}
+        testID="add-profile-button"
+        accessibilityLabel="Forge new identity"
+        accessibilityRole="button"
+      >
+        <Ionicons name="add" size={18} color={Colors.tertiary} />
+        <Text style={styles.wizardButtonText}>Custom Character</Text>
+        <Ionicons name="chevron-forward" size={16} color={Colors.outline} />
+      </Pressable>
     </View>
   );
 
