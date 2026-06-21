@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Fonts } from '../../theme';
 import { useProfile } from '../../hooks/useProfiles';
@@ -25,6 +25,7 @@ export default function ProfilePreviewScreen() {
   const profile: SwipeProfile | null = parsedPreviewData || (fetchedProfile as SwipeProfile | null);
   
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleDismiss = () => {
     if (router.canGoBack()) {
@@ -102,6 +103,57 @@ export default function ProfilePreviewScreen() {
           </View>
         )}
       </View>
+
+      {showDetails && (
+        <View style={styles.detailsOverlay}>
+          <ScrollView 
+            style={styles.detailsScroll}
+            contentContainerStyle={styles.detailsContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.detailsName}>{profile.display_name}</Text>
+            {profile.tagline && (
+              <Text style={styles.detailsTagline}>"{profile.tagline}"</Text>
+            )}
+            <View style={styles.divider} />
+            <Text style={styles.detailsBio}>
+              {profile.bio || "This hero's story is yet to be written in the annals of the realm."}
+            </Text>
+            {((profile as any).gender?.length > 0 || (profile as any).race?.length > 0 || (profile as any).fandom?.length > 0) && (
+               <>
+                <View style={styles.divider} />
+                <Text style={styles.detailsLabel}>Attributes</Text>
+                {(profile as any).gender && (profile as any).gender.length > 0 && (
+                  <Text style={styles.detailsBio}>Gender: {(profile as any).gender.map((t: any) => t.name).join(', ')}</Text>
+                )}
+                {(profile as any).race && (profile as any).race.length > 0 && (
+                  <Text style={styles.detailsBio}>Race: {(profile as any).race.map((t: any) => t.name).join(', ')}</Text>
+                )}
+                {(profile as any).fandom && (profile as any).fandom.length > 0 && (
+                  <Text style={styles.detailsBio}>Fandom: {(profile as any).fandom.map((t: any) => t.name).join(', ')}</Text>
+                )}
+               </>
+            )}
+            {/* Spacer for the footer area to ensure text isn't cut off by buttons */}
+            <View style={{ height: 160 }} />
+          </ScrollView>
+        </View>
+      )}
+
+      <Pressable 
+        style={({ pressed }) => [
+          styles.infoButton,
+          pressed && { opacity: 0.7 }
+        ]}
+        onPress={() => setShowDetails(!showDetails)} 
+        testID="profile-info-button"
+      >
+        <Ionicons 
+          name={showDetails ? "close-circle-outline" : "information-circle-outline"} 
+          size={28} 
+          color={Colors.onSurface} 
+        />
+      </Pressable>
 
       <View style={styles.instructionsContainer} pointerEvents="none">
         <Text style={styles.instructionsText}>Swipe left or right to dismiss</Text>
