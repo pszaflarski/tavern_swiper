@@ -47,7 +47,7 @@
 8. **BROWSER ISOLATION**: Always use an isolated Chromium binary and dedicated profile path for `browser_subagent` tasks to prevent profile leakage and session conflicts.
 9. **DEPLOYMENT SOURCE OF TRUTH**: For local testing or debugging, you may temporarily run `gcloud run deploy` or `gcloud functions deploy`. However, for final and persistent deployments, you MUST merge/push to the deploy branches (`dev`, `test`, `prod`) to trigger Cloud Build CI/CD. This ensures environment consistency and infrastructure-as-code parity.
 10. **PRODUCTION SAFETY & CONSENT**: Never perform production changes in the same logical job or command sequence as dev/test changes. Any modification to `tavern-swiper-prod` requires explicit, isolated user consent (e.g., "Yes, proceed with Prod"). Every production-modifying action must be preceded by: "⚠️ WARNING: This command will modify the PRODUCTION environment."
-11. **TEST BEFORE MERGE**: Before merging to any deploy branch (`dev`, `test`, `prod`), you MUST run unit tests for all affected services and confirm they pass. For Go services: `go test -v ./...` in the service directory. For frontend: `cd frontend && npm test`. Never push code that has not been locally validated by its test suite.
+11. **TEST BEFORE MERGE**: Before merging to the `dev` branch, you MUST run unit tests for all affected services and confirm they pass. For Go services: `go test -v ./...` in the service directory. For frontend: `cd frontend && npm test`. Never push code to `dev` that has not been locally validated by its test suite. Running unit tests locally is not required before merging to `test` or `prod`, as all code flows through `dev` first and the build pipeline automatically executes tests.
 
 ## JWT Architecture
 
