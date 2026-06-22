@@ -43,6 +43,7 @@ export interface Message {
   type: string;
   sent_at: string;
   metadata?: EventMetadata;
+  isOptimistic?: boolean;
 }
 
 export interface PaginatedMessagesResponse {
@@ -279,11 +280,84 @@ export function useSendMessage() {
       });
       return res.data as Message;
     },
-    onSuccess: (_, variables) => {
-      // Invalidate messages for this conversation to trigger a refetch
-      queryClient.invalidateQueries({ queryKey: ['messages', variables.conversationId] });
-      // Also invalidate conversations list to update last message
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['messages', variables.conversationId] });
+
+      // Snapshot the previous values
+      const queryKeyPrefix = ['messages', variables.conversationId];
+      const previousQueries = queryClient.getQueriesData<any>({ queryKey: queryKeyPrefix });
+
+      // Create a temporary message
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const optimisticMessage: Message = {
+        message_id: tempId,
+        conversation_id: variables.conversationId,
+        sender_profile_id: variables.senderProfileId,
+        content: variables.content,
+        type: variables.type || 'text',
+        sent_at: new Date().toISOString(),
+        metadata: variables.metadata,
+        isOptimistic: true,
+      };
+
+      // Optimistically update all matching queries
+      previousQueries.forEach(([queryKey]) => {
+        queryClient.setQueryData(queryKey, (old: any) => {
+          if (!old) return old;
+          if (!old.pages || old.pages.length === 0) return old;
+
+          const newPages = [...old.pages];
+          newPages[0] = {
+            ...newPages[0],
+            messages: [...newPages[0].messages, optimisticMessage],
+          };
+
+          return {
+            ...old,
+            pages: newPages,
+          };
+        });
+      });
+
+      return { previousQueries, tempId };
+    },
+    onSuccess: (data, variables, context) => {
+      // Replace the optimistic message with the actual message in the query cache
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey]) => {
+          queryClient.setQueryData(queryKey, (old: any) => {
+            if (!old || !old.pages || old.pages.length === 0) return old;
+
+            const newPages = old.pages.map((page: any) => ({
+              ...page,
+              messages: page.messages.map((msg: any) =>
+                msg.message_id === context.tempId ? data : msg
+              ),
+            }));
+
+            return {
+              ...old,
+              pages: newPages,
+            };
+          });
+        });
+      }
+
+      // Invalidate conversations list to update last message
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: (err, variables, context) => {
+      // Rollback to snapshot
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, previousValue]) => {
+          queryClient.setQueryData(queryKey, previousValue);
+        });
+      }
+    },
+    onSettled: (data, error, variables) => {
+      // Always refetch to ensure we are in sync with the server
+      queryClient.invalidateQueries({ queryKey: ['messages', variables.conversationId] });
     },
   });
 }

@@ -614,4 +614,32 @@ describe('Conversation Screen', () => {
       expect(queryAllByText(formattedTimeFar).length).toBe(1);
     }
   });
+
+  it('renders optimistic messages with a sending status', () => {
+    const optimisticMessages = [
+      {
+        message_id: 'm-opt',
+        conversation_id: 'c1',
+        sender_profile_id: 'p1',
+        content: 'Sending this optimistically!',
+        type: 'user',
+        sent_at: new Date().toISOString(),
+        isOptimistic: true,
+      },
+    ];
+
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: optimisticMessages,
+      isLoading: false,
+      isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+
+    render(<ConversationScreen />);
+
+    expect(screen.getByText('Sending this optimistically!')).toBeTruthy();
+    expect(screen.getByText('sending...')).toBeTruthy();
+  });
 });
