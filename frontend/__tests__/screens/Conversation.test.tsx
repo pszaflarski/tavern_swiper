@@ -454,4 +454,90 @@ describe('Conversation Screen', () => {
       });
     }
   });
+
+  it('hides timestamps for messages sent within 1 minute of each other, but shows them if they are 1+ minutes apart', () => {
+    const now = Date.now();
+    const time1 = new Date(now).toISOString();
+    const time2 = new Date(now + 10000).toISOString(); // 10s later
+    
+    const messagesClose = [
+      {
+        message_id: 'm1',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2',
+        content: 'Close Message 1',
+        type: 'user',
+        sent_at: time1,
+      },
+      {
+        message_id: 'm2',
+        conversation_id: 'c1',
+        sender_profile_id: 'p1',
+        content: 'Close Message 2',
+        type: 'user',
+        sent_at: time2,
+      },
+    ];
+
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: messagesClose,
+      isLoading: false,
+      isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+
+    const { rerender, queryAllByText } = render(<ConversationScreen />);
+    
+    const formattedTime1 = new Date(time1).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedTime2 = new Date(time2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    if (formattedTime1 === formattedTime2) {
+      expect(queryAllByText(formattedTime1).length).toBe(1);
+    } else {
+      expect(queryAllByText(formattedTime1).length).toBe(1);
+      expect(queryAllByText(formattedTime2).length).toBe(0);
+    }
+
+    // 2. Far apart (2 minutes):
+    const time3 = new Date(now + 120000).toISOString(); // 2 mins later
+    const messagesFar = [
+      {
+        message_id: 'm1',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2',
+        content: 'Far Message 1',
+        type: 'user',
+        sent_at: time1,
+      },
+      {
+        message_id: 'm3',
+        conversation_id: 'c1',
+        sender_profile_id: 'p1',
+        content: 'Far Message 2',
+        type: 'user',
+        sent_at: time3,
+      },
+    ];
+
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: messagesFar,
+      isLoading: false,
+      isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+
+    rerender(<ConversationScreen />);
+    
+    const formattedTime3 = new Date(time3).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (formattedTime1 === formattedTime3) {
+      expect(queryAllByText(formattedTime1).length).toBe(2);
+    } else {
+      expect(queryAllByText(formattedTime1).length).toBe(1);
+      expect(queryAllByText(formattedTime3).length).toBe(1);
+    }
+  });
 });

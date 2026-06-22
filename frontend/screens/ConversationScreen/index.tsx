@@ -493,7 +493,11 @@ function ConversationScreenInner() {
           contentContainerStyle={[styles.messageList, { flexGrow: 1 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
+            const prevItem = invertedMessages[index + 1];
+            const showTimestamp = !prevItem || 
+              Math.abs(new Date(item.sent_at).getTime() - new Date(prevItem.sent_at).getTime()) >= 60000;
+
             // Event messages — centered gold pill (dice rolls, etc.)
             if (item.type === 'event') {
               // Parse dice roll pattern: "{name} rolled a {number} on a {diceType}"
@@ -514,9 +518,11 @@ function ConversationScreenInner() {
                       <Text style={styles.eventText}>{item.content}</Text>
                     )}
                   </View>
-                  <Text style={styles.timestamp}>
-                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+                  {showTimestamp && (
+                    <Text style={styles.timestamp}>
+                      {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  )}
                 </View>
               );
             }
@@ -528,9 +534,11 @@ function ConversationScreenInner() {
                   <View style={styles.systemBubble}>
                     <Text style={styles.systemText}>{item.content}</Text>
                   </View>
-                  <Text style={styles.timestamp}>
-                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+                  {showTimestamp && (
+                    <Text style={styles.timestamp}>
+                      {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  )}
                 </View>
               );
             }
@@ -547,9 +555,11 @@ function ConversationScreenInner() {
                     {item.content}
                   </Text>
                 </View>
-                <Text style={styles.timestamp}>
-                  {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+                {showTimestamp && (
+                  <Text style={styles.timestamp}>
+                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                )}
               </View>
             );
           }}
