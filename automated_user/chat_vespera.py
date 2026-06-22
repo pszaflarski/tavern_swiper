@@ -7,13 +7,13 @@ import requests
 
 API_URL = "http://127.0.0.1:8000/invoke"
 
-def chat():
+def chat(thread_id=None):
     print("====================================================")
     print("    Chatting with Vespera Nightwhisper")
     print("====================================================")
+    if thread_id:
+        print(f"Resuming Thread: {thread_id}")
     print("Type your message and press Enter. Type 'exit' to quit.\n")
-
-    thread_id = None
 
     while True:
         try:
@@ -70,4 +70,5 @@ def chat():
             print(f"\nConnection Error: {e}")
 
 if __name__ == "__main__":
-    chat()
+    initial_thread = sys.argv[1] if len(sys.argv) > 1 else None
+    chat(initial_thread)

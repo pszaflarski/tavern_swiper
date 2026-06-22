@@ -258,10 +258,24 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ conversationId, senderProfileId, content }: { conversationId: string, senderProfileId: string, content: string }) => {
+    mutationFn: async ({
+      conversationId,
+      senderProfileId,
+      content,
+      type,
+      metadata,
+    }: {
+      conversationId: string;
+      senderProfileId: string;
+      content: string;
+      type?: string;
+      metadata?: EventMetadata;
+    }) => {
       const res = await messagesApi.post(`/messages/conversations/${conversationId}/messages`, {
         sender_profile_id: senderProfileId,
         content,
+        type,
+        metadata,
       });
       return res.data as Message;
     },

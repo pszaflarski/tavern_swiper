@@ -184,6 +184,8 @@ The profiles service publishes events to Pub/Sub when profiles are created, upda
 |---|---|---|
 | `$ENV-discovery-subscriber-push-sub` | `$ENV-profiles-profile-events-v1` | `discovery-subscriber-$ENV` Cloud Run URL |
 | `$ENV-messages-subscriber-push-sub` | `$ENV-discovery-match-events-v1` | `messages-subscriber-$ENV` Cloud Run URL |
+| `$ENV-notifications-matches-push-sub` | `$ENV-discovery-match-events-v1` | `notifications-go-$ENV` Cloud Run URL + `/notifications/subscribers/matches` |
+| `$ENV-notifications-messages-push-sub` | `$ENV-messages-message-events-v1` | `notifications-go-$ENV` Cloud Run URL + `/notifications/subscribers/messages` |
 
 ### Setup Commands
 ```bash
@@ -202,7 +204,24 @@ gcloud pubsub subscriptions create $ENV-messages-subscriber-push-sub \
   --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
   --ack-deadline=10 \
   --project=$PROJECT_ID
+
+# Notifications subscriber (receives match events)
+gcloud pubsub subscriptions create $ENV-notifications-matches-push-sub \
+  --topic=$ENV-discovery-match-events-v1 \
+  --push-endpoint=$(gcloud run services describe notifications-go-$ENV --region=us-central1 --format='value(status.url)')/notifications/subscribers/matches \
+  --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --ack-deadline=10 \
+  --project=$PROJECT_ID
+
+# Notifications subscriber (receives message events)
+gcloud pubsub subscriptions create $ENV-notifications-messages-push-sub \
+  --topic=$ENV-messages-message-events-v1 \
+  --push-endpoint=$(gcloud run services describe notifications-go-$ENV --region=us-central1 --format='value(status.url)')/notifications/subscribers/messages \
+  --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --ack-deadline=10 \
+  --project=$PROJECT_ID
 ```
 
 > [!WARNING]
-> Without push subscriptions, published events go nowhere. The discovery feed will be empty and matches won't propagate to the messages service.
+> Without push subscriptions, published events go nowhere. The discovery feed will be empty, matches won't propagate to the messages service, and push notifications will not be dispatched.
+

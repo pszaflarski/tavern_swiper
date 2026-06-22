@@ -67,6 +67,7 @@ func main() {
 		// Conversations
 		m.POST("/conversations", handleCreateConversation)
 		m.GET("/conversations/profile/:profile_id", handleListConversations)
+		m.GET("/conversations/:id", handleGetConversation)
 
 		// Messages for a specific conversation
 		m.POST("/conversations/:id/messages", handleSendMessage)

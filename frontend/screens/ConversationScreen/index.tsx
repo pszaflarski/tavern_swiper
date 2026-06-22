@@ -180,6 +180,7 @@ function ConversationScreenInner() {
   // true while the 3D animation is actively playing; false once it settles.
   // The die stays visible (rollingDie !== null) even after the animation ends.
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isNarrationMode, setIsNarrationMode] = useState(false);
 
   // --- Dice animation queue ---
   // Tracks dice_roll event message_ids we've already enqueued so we never
@@ -345,9 +346,16 @@ function ConversationScreenInner() {
       conversationId,
       senderProfileId: activeProfileId,
       content: messageText.trim(),
+      ...(isNarrationMode && {
+        type: 'event',
+        metadata: {
+          event_type: 'narration',
+          initiated_by: activeProfileId,
+        },
+      }),
     });
     setMessageText('');
-  }, [messageText, activeProfileId, conversationId, sendMessage]);
+  }, [messageText, activeProfileId, conversationId, sendMessage, isNarrationMode]);
 
   // Hide messages at or after the currently-animating dice_roll's sent_at.
   // This hides the roll event AND any follow-up messages (e.g. Lira's
@@ -485,7 +493,13 @@ function ConversationScreenInner() {
           contentContainerStyle={[styles.messageList, { flexGrow: 1 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
+            const nextItem = index > 0 ? invertedMessages[index - 1] : undefined;
+            const showTimestamp = !nextItem || 
+              nextItem.sender_profile_id !== item.sender_profile_id || 
+              nextItem.type !== item.type ||
+              Math.abs(new Date(nextItem.sent_at).getTime() - new Date(item.sent_at).getTime()) >= 60000;
+
             // Event messages — centered gold pill (dice rolls, etc.)
             if (item.type === 'event') {
               // Parse dice roll pattern: "{name} rolled a {number} on a {diceType}"
@@ -506,9 +520,11 @@ function ConversationScreenInner() {
                       <Text style={styles.eventText}>{item.content}</Text>
                     )}
                   </View>
-                  <Text style={styles.timestamp}>
-                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+                  {showTimestamp && (
+                    <Text style={styles.timestamp}>
+                      {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  )}
                 </View>
               );
             }
@@ -520,9 +536,11 @@ function ConversationScreenInner() {
                   <View style={styles.systemBubble}>
                     <Text style={styles.systemText}>{item.content}</Text>
                   </View>
-                  <Text style={styles.timestamp}>
-                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+                  {showTimestamp && (
+                    <Text style={styles.timestamp}>
+                      {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  )}
                 </View>
               );
             }
@@ -539,9 +557,11 @@ function ConversationScreenInner() {
                     {item.content}
                   </Text>
                 </View>
-                <Text style={styles.timestamp}>
-                  {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+                {showTimestamp && (
+                  <Text style={styles.timestamp}>
+                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                )}
               </View>
             );
           }}
@@ -568,12 +588,25 @@ function ConversationScreenInner() {
         />
       )}
 
-      <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle]}>
+      <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle, isNarrationMode && { backgroundColor: '#3a3520' }]}>
 
         <View style={styles.inputContainer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.narrationToggle,
+              isNarrationMode && styles.narrationToggleActive,
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={() => setIsNarrationMode(prev => !prev)}
+            testID="narration-toggle-button"
+          >
+            <Text style={[styles.narrationText, isNarrationMode && styles.narrationTextActive]}>
+              {isNarrationMode ? 'A' : '*'}
+            </Text>
+          </Pressable>
           <TextInput
             style={styles.input}
-            placeholder="Compose a missive..."
+            placeholder={isNarrationMode ? "Narrate the scene..." : "Compose a missive..."}
             placeholderTextColor={Colors.outline}
             value={messageText}
             onChangeText={(text) => {
@@ -583,6 +616,14 @@ function ConversationScreenInner() {
             multiline
             maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
             testID="message-input"
+            onKeyPress={(e: any) => {
+              if (Platform.OS === 'web') {
+                if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }
+            }}
           />
           <Pressable
             style={({ pressed }) => [

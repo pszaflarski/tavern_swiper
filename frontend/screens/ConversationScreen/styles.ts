@@ -149,7 +149,8 @@ export const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing[4],
+    paddingLeft: Spacing[2],
+    paddingRight: Spacing[4],
     paddingTop: Spacing[3], // Symmetrical vertical padding
     paddingBottom: 0, // Bottom padding is handled by the animated wrapper
   },
@@ -275,5 +276,22 @@ export const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.outline,
+  },
+  narrationToggle: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingRight: 2,
+  },
+  narrationToggleActive: {
+  },
+  narrationText: {
+    fontFamily: Fonts.scribe,
+    fontSize: 26,
+    fontWeight: '700',
+    color: Colors.outline,
+  },
+  narrationTextActive: {
+    color: Colors.outline,
   },
 });

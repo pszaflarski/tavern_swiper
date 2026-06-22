@@ -14,6 +14,7 @@ let BASE_URLS: Record<string, string> = {
   users: '',
   quests: '',
   characters: '',
+  notifications: '',
 };
 
 let hydrationPromise: Promise<void> | null = null;
@@ -398,6 +399,7 @@ export const messagesApi = createClient('messages', true);
 export const usersApi = createClient('users', true);
 export const questsApi = createClient('quests', true);
 export const charactersApi = createClient('characters', true);
+export const notificationsApi = createClient('notifications', true);
 
 
 /**
@@ -444,6 +446,7 @@ export async function __resetInternalState() {
     users: 'http://localhost:8006',
     quests: 'http://localhost:8013',
     characters: 'http://localhost:8012',
+    notifications: 'http://localhost:8014',
   };
   try {
     await AsyncStorage.clear();

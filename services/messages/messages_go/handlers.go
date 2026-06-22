@@ -694,6 +694,86 @@ func handleGetMessages(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// handleGetConversation godoc
+// @Summary      Get conversation details
+// @Description  Returns conversation metadata including participants. The caller must own at least one participant profile or be admin.
+// @Tags         conversations
+// @Produce      json
+// @Param        id    path      string  true  "Conversation ID"
+// @Success      200   {object}  ConversationOut
+// @Failure      403   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /conversations/{id} [get]
+func handleGetConversation(c *gin.Context) {
+	auth := GetAuth(c)
+	convID := c.Param("id")
+	ctx := context.Background()
+
+	client, err := getDBFunc(ctx)
+	if err != nil {
+		send500(c, "Database error")
+		return
+	}
+
+	convDoc, err := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Get(ctx)
+	if err != nil || !convDoc.Exists() {
+		send404(c, "Conversation not found")
+		return
+	}
+
+	d := convDoc.Data()
+	pids := parseStringSlice(d["participant_ids"])
+
+	// Authorization check: participant profile owner or admin
+	if !IsAdmin(auth.Role) {
+		ownsOne := false
+		for _, pid := range pids {
+			if verifyProfileOwnership(auth, pid, profilesClient) {
+				ownsOne = true
+				break
+			}
+		}
+		if !ownsOne {
+			send403(c, "Not authorized to view this conversation")
+			return
+		}
+	}
+
+	createdAtT, _ := d["created_at"].(time.Time)
+	createdAt := createdAtT.Format(time.RFC3339)
+	updatedAtT, _ := d["updated_at"].(time.Time)
+	updatedAt := updatedAtT.Format(time.RFC3339)
+
+	var lastMsg *LastMessageInfo
+	if mid, ok := d["last_message_id"].(string); ok && mid != "" {
+		sentAtT, _ := d["last_message_sent_at"].(time.Time)
+		senderID, _ := d["last_message_sender_id"].(string)
+		lastMsgType, _ := d["last_message_type"].(string)
+		if lastMsgType == "" {
+			lastMsgType = MessageTypeUser
+		}
+		lastMsgText, _ := d["last_message_text"].(string)
+		lastMsg = &LastMessageInfo{
+			Content:         lastMsgText,
+			SentAt:          sentAtT.Format(time.RFC3339),
+			SenderProfileID: senderID,
+			Type:            lastMsgType,
+		}
+	}
+
+	c.JSON(http.StatusOK, ConversationOut{
+		ID:             convID,
+		ParticipantIDs: pids,
+		LastMessage:    lastMsg,
+		CreatedAt:      &createdAt,
+		UpdatedAt:      &updatedAt,
+		Typing:         filterTypingMap(d),
+	})
+}
+
+
 // handleListConversations godoc
 // @Summary      List conversations for a profile
 // @Description  Returns all conversations that include the given profile, sorted by most recent activity.

@@ -31,6 +31,8 @@
 | `agent_router` | ai | 8000 | MongoDB (via Secret Manager) | `services/agent_router/` |
 | `characters_go` | characters | 8012 | `characters-{env}` | `services/characters/characters_go/` |
 | `quests_go` | quests | 8013 | `quests-{env}` | `services/quests/quests_go/` |
+| `notifications_go` | notifications | 8014 | `notifications-{env}` | `services/notifications/notifications_go/` |
+| `notifications_subscriber` | notifications | 8015 | `notifications-{env}` | `services/notifications/notifications_subscriber/` |
 
 > **Note:** `agent_router` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`.
 
@@ -39,6 +41,20 @@
 1. **SHARED NOTHING**: No cross-service code sharing. Code duplication is preferred over coupling. Each container has its own `go.mod`, `Dockerfile`, `cloudbuild.yaml`, `.env`.
 2. **DATABASE ISOLATION**: Each boundary has its own Firestore database instance. Never query another boundary's database.
    - **CRITICAL ENTERPRISE BEHAVIOR**: We use Firestore Enterprise Native. Unlike Standard, Enterprise has **NO DEFAULT INDEXES**. Even simple single-field queries (e.g., `user_id == x`) will fail unless an index is explicitly defined and created via `scripts/apply-indexes.sh`. Do not assume single-field queries work out of the box.
+   - **DATABASE CREATION**: When creating new Firestore databases, you **MUST** use `--edition=enterprise` and `--enable-firestore-data-access`. The default edition is `standard` which is WRONG for this project. Getting this wrong means a **5-minute wait** before the database ID can be reused. Use these exact commands:
+     ```bash
+     # Dev/Test (us-central1, project: tavern-swiper-dev)
+     gcloud firestore databases create --database=<name>-<env> \
+       --location=us-central1 --type=firestore-native \
+       --edition=enterprise --enable-firestore-data-access \
+       --project=tavern-swiper-dev
+     
+     # Prod (nam5, project: tavern-swiper-prod)
+     gcloud firestore databases create --database=<name>-prod \
+       --location=nam5 --type=firestore-native \
+       --edition=enterprise --enable-firestore-data-access \
+       --project=tavern-swiper-prod
+     ```
 3. **NO SERVICE ACCOUNT KEYS**: ADC + IAM impersonation only. Never create or reference `service-account.json`.
 4. **NO SYSTEM PYTHON**: Always use `.venv/bin/python3`.
 5. **NO AUTO-DOCKER**: Never run `docker compose up/build` or `tests/run_integration_tests.sh --local` without explicit user permission. Risk of OOM.
@@ -65,7 +81,9 @@ All backend services share the same `JWT_SECRET` for local HMAC-based token veri
 | `profiles_go` | `{env}-profiles-profile-events-v1` | `discovery_subscriber` | `profiles_profiles_cache` in discovery DB |
 | `profiles_go` | `{env}-profiles-profile-events-v1` | `bots_subscriber` | Bot welcome swipes on new profiles |
 | `discovery_go` | `{env}-discovery-match-events-v1` | `messages_subscriber` | `discovery_matches_cache` in messages DB |
+| `discovery_go` | `{env}-discovery-match-events-v1` | `notifications_subscriber` | — |
 | `messages_go` | `{env}-messages-message-events-v1` | `bots_subscriber` | Bot AI reply generation |
+| `messages_go` | `{env}-messages-message-events-v1` | `notifications_subscriber` | — |
 
 Events use **Protobuf** serialization. Subscribers are push-based (Cloud Run endpoints or local pull in Docker).
 
