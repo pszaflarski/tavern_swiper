@@ -384,11 +384,13 @@ func sendExpoNotifications(tokens []string, title, body string, data map[string]
 	messages := make([]ExpoPushMessage, len(tokens))
 	for i, t := range tokens {
 		messages[i] = ExpoPushMessage{
-			To:    t,
-			Title: title,
-			Body:  body,
-			Data:  data,
-			Sound: "default",
+			To:        t,
+			Title:     title,
+			Body:      body,
+			Data:      data,
+			Sound:     "default",
+			ChannelID: "default",
+			Priority:  "high",
 		}
 	}
 

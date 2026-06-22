@@ -6,11 +6,11 @@ import { notificationsApi } from '../lib/api';
 import { useRouter } from 'expo-router';
 import { useUser } from './useUser';
 
-// Set how notifications should behave when the app is in the foreground
+// Suppress notification banners when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
+    shouldShowAlert: false,
+    shouldPlaySound: false,
     shouldSetBadge: false,
   }),
 });
@@ -28,7 +28,7 @@ export function useNotifications() {
         tokenRef.current = null;
         notificationsApi.delete(`/notifications/tokens/${encodeURIComponent(tokenToUnregister)}`)
           .then(() => console.log('[useNotifications] Token unregistered successfully on logout'))
-          .catch((err) => console.error('[useNotifications] Failed to unregister token on logout:', err));
+          .catch(() => console.log('[useNotifications] Token unregister skipped (session ended)'));
       }
       return;
     }

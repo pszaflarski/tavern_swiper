@@ -114,6 +114,8 @@ export default function AuthScreen() {
         errorMessage = 'Sign-in already in progress.';
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         errorMessage = 'Google Play Services not available.';
+      } else if (error.message?.includes('INTERNAL_ERROR')) {
+        errorMessage = 'Google Sign-In requires a Google account on this device. Please add one in Settings > Accounts first.';
       } else if (error.message?.includes('auth/account-exists-with-different-credential')) {
         errorMessage = 'An account already exists with this email. Please sign in with your password first.';
       }
