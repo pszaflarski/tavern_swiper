@@ -41,6 +41,20 @@
 1. **SHARED NOTHING**: No cross-service code sharing. Code duplication is preferred over coupling. Each container has its own `go.mod`, `Dockerfile`, `cloudbuild.yaml`, `.env`.
 2. **DATABASE ISOLATION**: Each boundary has its own Firestore database instance. Never query another boundary's database.
    - **CRITICAL ENTERPRISE BEHAVIOR**: We use Firestore Enterprise Native. Unlike Standard, Enterprise has **NO DEFAULT INDEXES**. Even simple single-field queries (e.g., `user_id == x`) will fail unless an index is explicitly defined and created via `scripts/apply-indexes.sh`. Do not assume single-field queries work out of the box.
+   - **DATABASE CREATION**: When creating new Firestore databases, you **MUST** use `--edition=enterprise` and `--enable-firestore-data-access`. The default edition is `standard` which is WRONG for this project. Getting this wrong means a **5-minute wait** before the database ID can be reused. Use these exact commands:
+     ```bash
+     # Dev/Test (us-central1, project: tavern-swiper-dev)
+     gcloud firestore databases create --database=<name>-<env> \
+       --location=us-central1 --type=firestore-native \
+       --edition=enterprise --enable-firestore-data-access \
+       --project=tavern-swiper-dev
+     
+     # Prod (nam5, project: tavern-swiper-prod)
+     gcloud firestore databases create --database=<name>-prod \
+       --location=nam5 --type=firestore-native \
+       --edition=enterprise --enable-firestore-data-access \
+       --project=tavern-swiper-prod
+     ```
 3. **NO SERVICE ACCOUNT KEYS**: ADC + IAM impersonation only. Never create or reference `service-account.json`.
 4. **NO SYSTEM PYTHON**: Always use `.venv/bin/python3`.
 5. **NO AUTO-DOCKER**: Never run `docker compose up/build` or `tests/run_integration_tests.sh --local` without explicit user permission. Risk of OOM.
