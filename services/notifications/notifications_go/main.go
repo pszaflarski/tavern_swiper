@@ -16,9 +16,6 @@ func main() {
 		port = "8014"
 	}
 
-	// Resolve service URLs from the router (hard fail if unavailable)
-	initServiceURLs()
-
 	r := gin.Default()
 
 	origins := os.Getenv("ALLOWED_ORIGINS")
@@ -40,10 +37,6 @@ func main() {
 		// Device Push Tokens
 		n.POST("/tokens", handleRegisterToken)
 		n.DELETE("/tokens/:token", handleUnregisterToken)
-
-		// Pub/Sub Subscriber Endpoints (auth bypassed inside middleware)
-		n.POST("/subscribers/matches", handlePubSubMatchEvent)
-		n.POST("/subscribers/messages", handlePubSubMessageEvent)
 	}
 
 	log.Printf("[INFO] Notifications Go Service listening on port %s", port)

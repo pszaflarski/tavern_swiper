@@ -1,13 +1,12 @@
-module notifications_go
+module tavern-swiper.app/notifications_subscriber
 
 go 1.25.0
 
 require (
 	cloud.google.com/go/firestore v1.22.0
-	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.12.0
-	github.com/golang-jwt/jwt/v5 v5.2.1
 	google.golang.org/api v0.274.0
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -64,5 +63,4 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/grpc v1.80.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 )

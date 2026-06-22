@@ -18,24 +18,18 @@ type ServiceURLs struct {
 	urls map[string]string
 }
 
-// Get returns the URL for a service. Panics if the service is not found,
-// since a missing service URL is a fatal misconfiguration.
+// Get returns the URL for a service, or empty string if not found.
 func (s *ServiceURLs) Get(service string) string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	url, ok := s.urls[service]
-	if !ok || url == "" {
-		panic(fmt.Sprintf("CRITICAL: Service URL for '%s' not resolved from router. Cannot proceed.", service))
-	}
-	return url
+	return s.urls[service]
 }
 
 // serviceURLs is the singleton holding resolved service URLs.
 var serviceURLs = &ServiceURLs{urls: make(map[string]string)}
 
 // initServiceURLs fetches service URLs from the router at boot.
-// It retries with backoff to handle startup ordering in Docker.
-// If it cannot reach the router after all retries, it panics.
+// It retries with backoff to handle startup ordering.
 func initServiceURLs() {
 	routerURL := os.Getenv("ROUTER_SERVICE_URL")
 	if routerURL == "" {
@@ -44,7 +38,8 @@ func initServiceURLs() {
 			log.Println("[INFO] Test mode detected, skipping router URL initialization")
 			return
 		}
-		panic("CRITICAL: ROUTER_SERVICE_URL is not set. Cannot discover services.")
+		log.Println("[WARN] ROUTER_SERVICE_URL is not set, service discovery disabled")
+		return
 	}
 
 	tag := os.Getenv("ROUTER_TAG")
@@ -96,5 +91,5 @@ func initServiceURLs() {
 		return
 	}
 
-	panic(fmt.Sprintf("CRITICAL: Failed to fetch service URLs from router after %d attempts. Last error: %v", maxRetries, lastErr))
+	log.Printf("[ERROR] Failed to fetch service URLs from router after %d attempts. Last error: %v", maxRetries, lastErr)
 }

@@ -39,14 +39,14 @@ type AuthData struct {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Health check bypasses auth
+		if c.Request.URL.Path == "/notifications/health" {
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			// Health check and subscriber endpoints bypass auth
-			path := c.Request.URL.Path
-			if path == "/notifications/health" || strings.HasPrefix(path, "/notifications/subscribers/") {
-				c.Next()
-				return
-			}
 			c.JSON(http.StatusUnauthorized, gin.H{"detail": "Authorization header required"})
 			c.Abort()
 			return
