@@ -59,6 +59,11 @@ definitions:
       type:
         type: string
     type: object
+  main.ErrorResponse:
+    properties:
+      detail:
+        type: string
+    type: object
   main.EventMetadata:
     properties:
       event_type:
@@ -215,6 +220,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Create a conversation
+      tags:
+      - conversations
+  /conversations/{id}:
+    get:
+      description: Returns conversation metadata including participants. The caller
+        must own at least one participant profile or be admin.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ConversationOut'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get conversation details
       tags:
       - conversations
   /conversations/{id}/messages:

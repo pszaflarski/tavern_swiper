@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, act, screen } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import ConversationScreen from '../../screens/ConversationScreen';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useProfileContext } from '../../context/ProfileContext';
@@ -168,6 +169,57 @@ describe('Conversation Screen', () => {
       conversationId: mockConversationId,
       senderProfileId: mockActiveProfileId,
       content: 'I seek adventure!',
+    });
+  });
+
+  it('toggles narration mode and changes placeholder accordingly', () => {
+    render(<ConversationScreen />);
+    
+    const input = screen.getByTestId('message-input');
+    const toggleBtn = screen.getByTestId('narration-toggle-button');
+    
+    // Check initial (inactive) state
+    expect(screen.getByText('*')).toBeTruthy();
+    expect(input.props.placeholder).toBe('Compose a missive...');
+    
+    // Press to activate narration mode
+    fireEvent.press(toggleBtn);
+    expect(screen.getByText('A')).toBeTruthy();
+    expect(input.props.placeholder).toBe('Narrate the scene...');
+    
+    // Press to deactivate
+    fireEvent.press(toggleBtn);
+    expect(screen.getByText('*')).toBeTruthy();
+    expect(input.props.placeholder).toBe('Compose a missive...');
+  });
+
+  it('allows sending a narration event message when narration mode is active', () => {
+    const mockMutate = jest.fn();
+    (useSendMessage as jest.Mock).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    });
+
+    render(<ConversationScreen />);
+    
+    const toggleBtn = screen.getByTestId('narration-toggle-button');
+    fireEvent.press(toggleBtn); // activate narration mode
+    
+    const input = screen.getByTestId('message-input');
+    fireEvent.changeText(input, 'A mysterious figure emerges.');
+    
+    const sendButton = screen.getByTestId('send-button');
+    fireEvent.press(sendButton);
+    
+    expect(mockMutate).toHaveBeenCalledWith({
+      conversationId: mockConversationId,
+      senderProfileId: mockActiveProfileId,
+      content: 'A mysterious figure emerges.',
+      type: 'event',
+      metadata: {
+        event_type: 'narration',
+        initiated_by: mockActiveProfileId,
+      },
     });
   });
 
@@ -376,5 +428,190 @@ describe('Conversation Screen', () => {
     fireEvent.press(screen.getByTestId('equipped-die-dismiss'));
 
     expect(screen.queryByTestId('equipped-die-roll-button')).toBeNull();
+  });
+
+  it('sends the message on Web when Enter is pressed without Shift', () => {
+    const originalOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', {
+      value: 'web',
+      configurable: true,
+    });
+    try {
+      const mockMutate = jest.fn();
+      (useSendMessage as jest.Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: false,
+      });
+
+      render(<ConversationScreen />);
+      const input = screen.getByTestId('message-input');
+      fireEvent.changeText(input, 'Web adventure!');
+
+      const preventDefault = jest.fn();
+      fireEvent(input, 'keyPress', {
+        nativeEvent: {
+          key: 'Enter',
+          shiftKey: false,
+        },
+        preventDefault,
+      });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(mockMutate).toHaveBeenCalledWith({
+        conversationId: mockConversationId,
+        senderProfileId: mockActiveProfileId,
+        content: 'Web adventure!',
+      });
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        value: originalOS,
+        configurable: true,
+      });
+    }
+  });
+
+  it('does not send the message on Web when Shift+Enter is pressed', () => {
+    const originalOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', {
+      value: 'web',
+      configurable: true,
+    });
+    try {
+      const mockMutate = jest.fn();
+      (useSendMessage as jest.Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: false,
+      });
+
+      render(<ConversationScreen />);
+      const input = screen.getByTestId('message-input');
+      fireEvent.changeText(input, 'Web newline!');
+
+      const preventDefault = jest.fn();
+      fireEvent(input, 'keyPress', {
+        nativeEvent: {
+          key: 'Enter',
+          shiftKey: true,
+        },
+        preventDefault,
+      });
+
+      expect(preventDefault).not.toHaveBeenCalled();
+      expect(mockMutate).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        value: originalOS,
+        configurable: true,
+      });
+    }
+  });
+
+  it('hides timestamps for messages sent within 1 minute of each other, but shows them for the first and the absolute last message, or if they are 1+ minutes apart', () => {
+    const base = new Date(2026, 5, 20, 10, 30, 0).getTime();
+    const time1 = new Date(base + 5000).toISOString(); // 10:30:05
+    const time2 = new Date(base + 15000).toISOString(); // 10:30:15
+    const time3 = new Date(base + 25000).toISOString(); // 10:30:25
+    
+    const messagesClose = [
+      {
+        message_id: 'm1',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2',
+        content: 'Close Message 1',
+        type: 'user',
+        sent_at: time1,
+      },
+      {
+        message_id: 'm2',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2', // same sender as m1 to test grouping
+        content: 'Close Message 2',
+        type: 'user',
+        sent_at: time2,
+      },
+      {
+        message_id: 'm3',
+        conversation_id: 'c1',
+        sender_profile_id: 'p1', // different sender
+        content: 'Close Message 3',
+        type: 'user',
+        sent_at: time3,
+      },
+    ];
+
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: messagesClose,
+      isLoading: false,
+      isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+
+    const { rerender, queryAllByText } = render(<ConversationScreen />);
+    
+    const formattedTime1 = new Date(time1).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedTime2 = new Date(time2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedTime3 = new Date(time3).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // m1 (index 2) -> hides (nextItem m2 is same sender within 1 min)
+    // m2 (index 1) -> shows (nextItem m3 is different sender)
+    // m3 (index 0) -> shows (last message in chat list)
+    //
+    // If all three fall in the same minute format (e.g. 10:35):
+    if (formattedTime1 === formattedTime2 && formattedTime2 === formattedTime3) {
+      // Expect 2 rendered timestamps (for m2 and m3, m1 is hidden)
+      expect(queryAllByText(formattedTime1).length).toBe(2);
+    } else {
+      // In the rare event they cross minute boundaries:
+      // m1 (time1) must hide
+      if (formattedTime1 !== formattedTime2 && formattedTime1 !== formattedTime3) {
+        expect(queryAllByText(formattedTime1).length).toBe(0);
+      }
+      // m2 (time2) must show
+      expect(queryAllByText(formattedTime2).length).toBe(1);
+      // m3 (time3) must show
+      expect(queryAllByText(formattedTime3).length).toBe(1);
+    }
+
+    // 2. Far apart (2 minutes):
+    const timeFar = new Date(base + 120000).toISOString(); // 2 mins later
+    const messagesFar = [
+      {
+        message_id: 'm1',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2',
+        content: 'Far Message 1',
+        type: 'user',
+        sent_at: time1,
+      },
+      {
+        message_id: 'm4',
+        conversation_id: 'c1',
+        sender_profile_id: 'p1',
+        content: 'Far Message 2',
+        type: 'user',
+        sent_at: timeFar,
+      },
+    ];
+
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: messagesFar,
+      isLoading: false,
+      isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+
+    rerender(<ConversationScreen />);
+    
+    const formattedTimeFar = new Date(timeFar).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (formattedTime1 === formattedTimeFar) {
+      expect(queryAllByText(formattedTime1).length).toBe(2);
+    } else {
+      expect(queryAllByText(formattedTime1).length).toBe(1);
+      expect(queryAllByText(formattedTimeFar).length).toBe(1);
+    }
   });
 });

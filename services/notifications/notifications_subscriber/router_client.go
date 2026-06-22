@@ -1,0 +1,95 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"sync"
+	"time"
+)
+
+// ServiceURLs holds the resolved service URLs from the router.
+// Thread-safe for concurrent access after initialization.
+type ServiceURLs struct {
+	mu   sync.RWMutex
+	urls map[string]string
+}
+
+// Get returns the URL for a service, or empty string if not found.
+func (s *ServiceURLs) Get(service string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.urls[service]
+}
+
+// serviceURLs is the singleton holding resolved service URLs.
+var serviceURLs = &ServiceURLs{urls: make(map[string]string)}
+
+// initServiceURLs fetches service URLs from the router at boot.
+// It retries with backoff to handle startup ordering.
+func initServiceURLs() {
+	routerURL := os.Getenv("ROUTER_SERVICE_URL")
+	if routerURL == "" {
+		// In test mode, skip router initialization
+		if strings.HasSuffix(os.Args[0], ".test") {
+			log.Println("[INFO] Test mode detected, skipping router URL initialization")
+			return
+		}
+		log.Println("[WARN] ROUTER_SERVICE_URL is not set, service discovery disabled")
+		return
+	}
+
+	tag := os.Getenv("ROUTER_TAG")
+	if tag == "" {
+		tag = "default"
+	}
+
+	endpoint := fmt.Sprintf("%s/router/services?tag=%s", routerURL, tag)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	var lastErr error
+	maxRetries := 5
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		resp, err := client.Get(endpoint)
+		if err != nil {
+			lastErr = err
+			log.Printf("[WARN] Router fetch attempt %d/%d failed: %v", attempt, maxRetries, err)
+			time.Sleep(time.Duration(attempt) * time.Second)
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("router returned status %d", resp.StatusCode)
+			log.Printf("[WARN] Router fetch attempt %d/%d: %v", attempt, maxRetries, lastErr)
+			time.Sleep(time.Duration(attempt) * time.Second)
+			continue
+		}
+
+		var result struct {
+			Tag      string            `json:"tag"`
+			Services map[string]string `json:"services"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			lastErr = err
+			log.Printf("[WARN] Router response decode attempt %d/%d failed: %v", attempt, maxRetries, err)
+			time.Sleep(time.Duration(attempt) * time.Second)
+			continue
+		}
+
+		serviceURLs.mu.Lock()
+		for k, v := range result.Services {
+			serviceURLs.urls[k] = v
+		}
+		serviceURLs.mu.Unlock()
+
+		log.Printf("[INFO] Service URLs resolved from router (tag=%s): %v", tag, result.Services)
+		return
+	}
+
+	log.Printf("[ERROR] Failed to fetch service URLs from router after %d attempts. Last error: %v", maxRetries, lastErr)
+}

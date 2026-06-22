@@ -23,6 +23,7 @@ SERVICES=(
   ["bots_go"]="bots"
   ["quests_go"]="quests"
   ["characters_go"]="characters"
+  ["notifications_go"]="notifications"
 )
 
 # Track results
@@ -145,6 +146,9 @@ for svc in "${!SERVICES[@]}"; do
       create_index "$DB_ID" "character_tags" "name_lower:ASCENDING"
       create_index "$DB_ID" "character_tags" "category:ASCENDING,name_lower:ASCENDING"
       create_index "$DB_ID" "character_tags" "category:ASCENDING,name:ASCENDING"
+      ;;
+    "notifications_go")
+      create_index "$DB_ID" "notifications_tokens" "user_id:ASCENDING"
       ;;
   esac
 done

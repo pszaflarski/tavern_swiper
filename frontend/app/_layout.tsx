@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useUser } from '../hooks/useUser';
+import { useNotifications } from '../hooks/useNotifications';
 import { Colors } from '../theme';
 import { View } from 'react-native';
 import DiceLoadingScreen from '../components/DiceLoadingScreen';
@@ -102,6 +103,9 @@ function RootLayoutNav() {
   const { profiles, isLoadingProfiles } = useProfileContext();
   const segments = useSegments();
   const router = useRouter();
+
+  // Initialize push notification settings, listeners, and token registration
+  useNotifications();
 
   useEffect(() => {
     // Wait for auth and the profile list (but NOT the active-profile query,

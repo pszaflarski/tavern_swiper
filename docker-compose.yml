@@ -199,6 +199,34 @@ services:
     ports:
       - "8008:8008"
 
+  notifications-subscriber:
+    build:
+      context: ./services/notifications/notifications_subscriber
+    environment:
+      - FIRESTORE_DATABASE_ID=notifications-dev
+      - GOOGLE_CLOUD_PROJECT=tavern-swiper-dev
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PORT=8015
+      - ROUTER_SERVICE_URL=http://router:8010
+      - ROUTER_TAG=default
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file: ./services/notifications/notifications_subscriber/.env
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+      router:
+        condition: service_healthy
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    ports:
+      - "8015:8015"
+
   discovery-worker:
     build:
       context: ./services/discovery/discovery_worker
@@ -251,6 +279,9 @@ services:
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-discovery-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-profiles-profile-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://discovery-subscriber:8007/\"}}' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-messages-subscriber-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://messages-subscriber:8008/\"}}' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-messages-message-events-v1' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-notifications-match-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://notifications-subscriber:8015/\"}}' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-notifications-message-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-messages-message-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://notifications-subscriber:8015/\"}}' && \
              echo '✅ Pub/Sub Initialized'"
     networks:
       - default
