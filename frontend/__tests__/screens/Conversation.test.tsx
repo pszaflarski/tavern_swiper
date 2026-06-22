@@ -172,6 +172,57 @@ describe('Conversation Screen', () => {
     });
   });
 
+  it('toggles narration mode and changes placeholder accordingly', () => {
+    render(<ConversationScreen />);
+    
+    const input = screen.getByTestId('message-input');
+    const toggleBtn = screen.getByTestId('narration-toggle-button');
+    
+    // Check initial (inactive) state
+    expect(screen.getByText('*')).toBeTruthy();
+    expect(input.props.placeholder).toBe('Compose a missive...');
+    
+    // Press to activate narration mode
+    fireEvent.press(toggleBtn);
+    expect(screen.getByText('A')).toBeTruthy();
+    expect(input.props.placeholder).toBe('Narrate the scene...');
+    
+    // Press to deactivate
+    fireEvent.press(toggleBtn);
+    expect(screen.getByText('*')).toBeTruthy();
+    expect(input.props.placeholder).toBe('Compose a missive...');
+  });
+
+  it('allows sending a narration event message when narration mode is active', () => {
+    const mockMutate = jest.fn();
+    (useSendMessage as jest.Mock).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    });
+
+    render(<ConversationScreen />);
+    
+    const toggleBtn = screen.getByTestId('narration-toggle-button');
+    fireEvent.press(toggleBtn); // activate narration mode
+    
+    const input = screen.getByTestId('message-input');
+    fireEvent.changeText(input, 'A mysterious figure emerges.');
+    
+    const sendButton = screen.getByTestId('send-button');
+    fireEvent.press(sendButton);
+    
+    expect(mockMutate).toHaveBeenCalledWith({
+      conversationId: mockConversationId,
+      senderProfileId: mockActiveProfileId,
+      content: 'A mysterious figure emerges.',
+      type: 'event',
+      metadata: {
+        event_type: 'narration',
+        initiated_by: mockActiveProfileId,
+      },
+    });
+  });
+
   it('shows empty state when no messages exist', () => {
     (useConversationMessages as jest.Mock).mockReturnValue({
       data: [],
