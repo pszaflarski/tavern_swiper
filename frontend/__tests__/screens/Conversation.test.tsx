@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, act, screen } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import ConversationScreen from '../../screens/ConversationScreen';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useProfileContext } from '../../context/ProfileContext';
@@ -376,5 +377,81 @@ describe('Conversation Screen', () => {
     fireEvent.press(screen.getByTestId('equipped-die-dismiss'));
 
     expect(screen.queryByTestId('equipped-die-roll-button')).toBeNull();
+  });
+
+  it('sends the message on Web when Enter is pressed without Shift', () => {
+    const originalOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', {
+      value: 'web',
+      configurable: true,
+    });
+    try {
+      const mockMutate = jest.fn();
+      (useSendMessage as jest.Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: false,
+      });
+
+      render(<ConversationScreen />);
+      const input = screen.getByTestId('message-input');
+      fireEvent.changeText(input, 'Web adventure!');
+
+      const preventDefault = jest.fn();
+      fireEvent(input, 'keyPress', {
+        nativeEvent: {
+          key: 'Enter',
+          shiftKey: false,
+        },
+        preventDefault,
+      });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(mockMutate).toHaveBeenCalledWith({
+        conversationId: mockConversationId,
+        senderProfileId: mockActiveProfileId,
+        content: 'Web adventure!',
+      });
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        value: originalOS,
+        configurable: true,
+      });
+    }
+  });
+
+  it('does not send the message on Web when Shift+Enter is pressed', () => {
+    const originalOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', {
+      value: 'web',
+      configurable: true,
+    });
+    try {
+      const mockMutate = jest.fn();
+      (useSendMessage as jest.Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: false,
+      });
+
+      render(<ConversationScreen />);
+      const input = screen.getByTestId('message-input');
+      fireEvent.changeText(input, 'Web newline!');
+
+      const preventDefault = jest.fn();
+      fireEvent(input, 'keyPress', {
+        nativeEvent: {
+          key: 'Enter',
+          shiftKey: true,
+        },
+        preventDefault,
+      });
+
+      expect(preventDefault).not.toHaveBeenCalled();
+      expect(mockMutate).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        value: originalOS,
+        configurable: true,
+      });
+    }
   });
 });
