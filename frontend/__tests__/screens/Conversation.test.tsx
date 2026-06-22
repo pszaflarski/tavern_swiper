@@ -455,10 +455,11 @@ describe('Conversation Screen', () => {
     }
   });
 
-  it('hides timestamps for messages sent within 1 minute of each other, but shows them if they are 1+ minutes apart', () => {
+  it('hides timestamps for messages sent within 1 minute of each other, but shows them for the first and the absolute last message, or if they are 1+ minutes apart', () => {
     const now = Date.now();
     const time1 = new Date(now).toISOString();
     const time2 = new Date(now + 10000).toISOString(); // 10s later
+    const time3 = new Date(now + 20000).toISOString(); // 20s later
     
     const messagesClose = [
       {
@@ -477,6 +478,14 @@ describe('Conversation Screen', () => {
         type: 'user',
         sent_at: time2,
       },
+      {
+        message_id: 'm3',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2',
+        content: 'Close Message 3',
+        type: 'user',
+        sent_at: time3,
+      },
     ];
 
     (useConversationMessages as jest.Mock).mockReturnValue({
@@ -492,16 +501,30 @@ describe('Conversation Screen', () => {
     
     const formattedTime1 = new Date(time1).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const formattedTime2 = new Date(time2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedTime3 = new Date(time3).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    if (formattedTime1 === formattedTime2) {
-      expect(queryAllByText(formattedTime1).length).toBe(1);
+    // m1 (index 2) -> shows (first message)
+    // m2 (index 1) -> hides (within 1 min of m1)
+    // m3 (index 0) -> shows (last message in chat list)
+    //
+    // If all three fall in the same minute format (e.g. 10:35):
+    if (formattedTime1 === formattedTime2 && formattedTime2 === formattedTime3) {
+      // Expect 2 rendered timestamps (for m1 and m3)
+      expect(queryAllByText(formattedTime1).length).toBe(2);
     } else {
+      // In the rare event they cross minute boundaries:
+      // m1 (time1) must show
       expect(queryAllByText(formattedTime1).length).toBe(1);
-      expect(queryAllByText(formattedTime2).length).toBe(0);
+      // m3 (time3) must show
+      expect(queryAllByText(formattedTime3).length).toBe(1);
+      // m2 (time2) must hide (and its timestamp is not rendered, so query for time2 should be 0)
+      if (formattedTime2 !== formattedTime1 && formattedTime2 !== formattedTime3) {
+        expect(queryAllByText(formattedTime2).length).toBe(0);
+      }
     }
 
     // 2. Far apart (2 minutes):
-    const time3 = new Date(now + 120000).toISOString(); // 2 mins later
+    const timeFar = new Date(now + 120000).toISOString(); // 2 mins later
     const messagesFar = [
       {
         message_id: 'm1',
@@ -512,12 +535,12 @@ describe('Conversation Screen', () => {
         sent_at: time1,
       },
       {
-        message_id: 'm3',
+        message_id: 'm4',
         conversation_id: 'c1',
         sender_profile_id: 'p1',
         content: 'Far Message 2',
         type: 'user',
-        sent_at: time3,
+        sent_at: timeFar,
       },
     ];
 
@@ -532,12 +555,12 @@ describe('Conversation Screen', () => {
 
     rerender(<ConversationScreen />);
     
-    const formattedTime3 = new Date(time3).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (formattedTime1 === formattedTime3) {
+    const formattedTimeFar = new Date(timeFar).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (formattedTime1 === formattedTimeFar) {
       expect(queryAllByText(formattedTime1).length).toBe(2);
     } else {
       expect(queryAllByText(formattedTime1).length).toBe(1);
-      expect(queryAllByText(formattedTime3).length).toBe(1);
+      expect(queryAllByText(formattedTimeFar).length).toBe(1);
     }
   });
 });
