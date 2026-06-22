@@ -494,10 +494,11 @@ function ConversationScreenInner() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           renderItem={({ item, index }) => {
-            const isLastMessage = index === 0;
-            const prevItem = invertedMessages[index + 1];
-            const showTimestamp = isLastMessage || !prevItem || 
-              Math.abs(new Date(item.sent_at).getTime() - new Date(prevItem.sent_at).getTime()) >= 60000;
+            const nextItem = index > 0 ? invertedMessages[index - 1] : undefined;
+            const showTimestamp = !nextItem || 
+              nextItem.sender_profile_id !== item.sender_profile_id || 
+              nextItem.type !== item.type ||
+              Math.abs(new Date(nextItem.sent_at).getTime() - new Date(item.sent_at).getTime()) >= 60000;
 
             // Event messages — centered gold pill (dice rolls, etc.)
             if (item.type === 'event') {
