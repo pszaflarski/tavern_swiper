@@ -89,48 +89,6 @@ func handleHealth(c *gin.Context) {
 // @Failure      500   {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /conversations [post]
-// backfillWelcomeMessageIfEmpty checks if a conversation has no messages and,
-// if so, atomically adds a welcome system message. This handles conversations
-// created before the welcome-message feature was deployed.
-func backfillWelcomeMessageIfEmpty(ctx context.Context, client FirestoreClient, convID string) {
-	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
-	convSnap, err := convRef.Get(ctx)
-	if err != nil || !convSnap.Exists() {
-		return
-	}
-
-	data := convSnap.Data()
-	if mid, ok := data["last_message_id"].(string); ok && mid != "" {
-		return // Already has messages, nothing to do
-	}
-
-	// Conversation is empty — add a welcome message
-	welcomeID := uuid.New().String()
-	welcomeContent := "A fateful bond has been forged."
-	batch := client.Batch()
-
-	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(welcomeID), map[string]interface{}{
-		"content":    welcomeContent,
-		"type":       MessageTypeSystem,
-		"created_at": firestore.ServerTimestamp,
-		"updated_at": firestore.ServerTimestamp,
-	})
-
-	batch.Set(convRef, map[string]interface{}{
-		"last_message_id":       welcomeID,
-		"last_message_text":     welcomeContent,
-		"last_message_sent_at":  firestore.ServerTimestamp,
-		"last_message_sender_id": "",
-		"last_message_type":     MessageTypeSystem,
-		"updated_at":            firestore.ServerTimestamp,
-	}, firestore.MergeAll)
-
-	if _, err := batch.Commit(ctx); err != nil {
-		log.Printf("[WARN] Failed to backfill welcome message for conversation %s: %v", convID, err)
-	} else {
-		log.Printf("[INFO] Backfilled welcome message for empty conversation %s", convID)
-	}
-}
 
 func handleCreateConversation(c *gin.Context) {
 	auth := GetAuth(c)
@@ -193,7 +151,6 @@ func handleCreateConversation(c *gin.Context) {
 	if err == nil && dedupSnap.Exists() {
 		data := dedupSnap.Data()
 		if existingID, ok := data["conversation_id"].(string); ok {
-			backfillWelcomeMessageIfEmpty(ctx, client, existingID)
 			c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
 			return
 		}
@@ -213,7 +170,6 @@ func handleCreateConversation(c *gin.Context) {
 				"created_at":       firestore.ServerTimestamp,
 			})
 			log.Printf("[INFO] Backfilled dedup entry for legacy conversation %s", existingID)
-			backfillWelcomeMessageIfEmpty(ctx, client, existingID)
 			c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
 			return
 		}
@@ -238,31 +194,18 @@ func handleCreateConversation(c *gin.Context) {
 	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
 	batch := client.Batch()
 
-	// Initial system message — ensures the conversation is never truly empty
-	// so it always appears in listing responses (which filter empty conversations).
-	welcomeMessageID := uuid.New().String()
-	welcomeContent := "A fateful bond has been forged."
-
 	batch.Set(convRef, map[string]interface{}{
-		"id":                    convID,
-		"participants_key":      participantsKey,
-		"participant_ids":       pids,
-		"created_by":            body.ParticipantProfileIDs[0],
-		"created_at":            firestore.ServerTimestamp,
-		"updated_at":            firestore.ServerTimestamp,
-		"last_message_id":       welcomeMessageID,
-		"last_message_text":     welcomeContent,
-		"last_message_sent_at":  firestore.ServerTimestamp,
+		"id":                     convID,
+		"participants_key":       participantsKey,
+		"participant_ids":        pids,
+		"created_by":             body.ParticipantProfileIDs[0],
+		"created_at":             firestore.ServerTimestamp,
+		"updated_at":             firestore.ServerTimestamp,
+		"last_message_id":        "",
+		"last_message_text":      "",
+		"last_message_sent_at":   nil,
 		"last_message_sender_id": "",
-		"last_message_type":     MessageTypeSystem,
-	})
-
-	// Write the initial system message into the messages sub-collection
-	batch.Set(convRef.Collection(COLLECTION_MESSAGES).Doc(welcomeMessageID), map[string]interface{}{
-		"content":    welcomeContent,
-		"type":       MessageTypeSystem,
-		"created_at": firestore.ServerTimestamp,
-		"updated_at": firestore.ServerTimestamp,
+		"last_message_type":      "",
 	})
 
 	// Write the dedup doc — keyed by participants_key so it's deterministic.
@@ -293,7 +236,6 @@ func handleCreateConversation(c *gin.Context) {
 			data := dedupSnap.Data()
 			if existingID, ok := data["conversation_id"].(string); ok {
 				log.Printf("[INFO] Conversation creation race resolved — returning existing %s", existingID)
-				backfillWelcomeMessageIfEmpty(ctx, client, existingID)
 				c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
 				return
 			}
