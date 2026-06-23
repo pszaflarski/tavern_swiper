@@ -5,6 +5,7 @@ import ConversationScreen from '../../screens/ConversationScreen';
 import { useLocalSearchParams } from 'expo-router';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice } from '../../hooks/useMessages';
+import { useProfile } from '../../hooks/useProfiles';
 
 // Silence VirtualizedList act() warnings internal to FlatList
 const originalError = console.error;
@@ -56,6 +57,10 @@ jest.mock('../../hooks/useMessages', () => ({
   useCreateConversation: jest.fn(() => ({
     mutateAsync: jest.fn(),
   })),
+}));
+
+jest.mock('../../hooks/useProfiles', () => ({
+  useProfile: jest.fn(),
 }));
 
 // DiceOverlay mock — captures props so we can invoke onResult/onDismiss
@@ -131,6 +136,10 @@ const mockConvoMessages = jest.fn();
 function setupMocks(messages: any[]) {
   (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'c1' });
   (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: 'p1' });
+  (useProfile as jest.Mock).mockReturnValue({
+    data: { profile_id: 'p2', display_name: 'Lira', image_urls: [] },
+    isLoading: false,
+  });
   (useInvolvedMatches as jest.Mock).mockReturnValue({
     inbox: [{ id: 'c1', otherProfile: { profile_id: 'p2', display_name: 'Lira', image_urls: [] } }],
     isLoading: false,

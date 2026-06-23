@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation } from '../../hooks/useMessages';
+import { useProfile } from '../../hooks/useProfiles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -224,10 +225,19 @@ function ConversationScreenInner() {
   // Get conversation info (other profile details etc.)
   const { inbox, newMatches, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
   const conversation = conversationId ? inbox.find(c => c.id === conversationId) : undefined;
+  
+  // Find other profile ID
+  const otherProfileId = isNewConversation 
+    ? pendingOtherProfileId 
+    : conversation?.other_profile_id;
+
+  // Query the profile directly using our useProfile hook (safest fallback!)
+  const { data: fetchedProfile, isLoading: isLoadingFetchedProfile } = useProfile(otherProfileId);
+
   // For pending conversations, resolve the other profile from the matches list
-  const otherProfile = isNewConversation
+  const otherProfile = (isNewConversation
     ? newMatches.find(m => m.otherProfile?.profile_id === pendingOtherProfileId)?.otherProfile ?? null
-    : conversation?.otherProfile;
+    : conversation?.otherProfile) || fetchedProfile || null;
 
   // Get messages
   const {
@@ -482,7 +492,11 @@ function ConversationScreenInner() {
     height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
   }));
 
-  if (isLoadingInbox && !conversation) {
+  const isLoadingProfileInfo = isNewConversation
+    ? (!otherProfile && (isLoadingInbox || isLoadingFetchedProfile))
+    : (isLoadingInbox && !conversation);
+
+  if (isLoadingProfileInfo) {
     return <DiceLoadingScreen />;
   }
 
