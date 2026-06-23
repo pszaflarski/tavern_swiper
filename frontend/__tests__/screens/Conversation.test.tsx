@@ -5,6 +5,7 @@ import ConversationScreen from '../../screens/ConversationScreen';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice } from '../../hooks/useMessages';
+import { useProfile } from '../../hooks/useProfiles';
 
 // Silence the VirtualizedList act() warning which is internal to React Native's FlatList
 const originalError = console.error;
@@ -65,6 +66,10 @@ jest.mock('../../hooks/useMessages', () => ({
   })),
 }));
 
+jest.mock('../../hooks/useProfiles', () => ({
+  useProfile: jest.fn(),
+}));
+
 // DiceOverlay uses @react-three/fiber, three.js, cannon-es — none of which
 // work in the Jest jsdom environment. Mock the entire component tree.
 jest.mock('../../components/DiceOverlay', () => {
@@ -118,6 +123,10 @@ describe('Conversation Screen', () => {
     jest.clearAllMocks();
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: mockConversationId });
     (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: mockActiveProfileId });
+    (useProfile as jest.Mock).mockReturnValue({
+      data: mockOtherProfile,
+      isLoading: false,
+    });
     (useInvolvedMatches as jest.Mock).mockReturnValue({
       inbox: mockInbox,
       isLoading: false,
