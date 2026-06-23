@@ -16,7 +16,7 @@ import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
-import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator } from '../../hooks/useMessages';
+import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation } from '../../hooks/useMessages';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -170,8 +170,18 @@ function EquippedDieCircle({ dieType, onRoll, onDismiss, screenHeight }: {
 }
 
 function ConversationScreenInner() {
-  const { id: conversationId, equippedDie: equippedDieParam } = useLocalSearchParams<{ id: string; equippedDie?: string }>();
+  const { id: rawId, equippedDie: equippedDieParam } = useLocalSearchParams<{ id: string; equippedDie?: string }>();
   const { activeProfileId } = useProfileContext();
+
+  // Detect pending (not-yet-created) conversations from the new_ route prefix
+  const isNewConversation = rawId?.startsWith('new_') ?? false;
+  const pendingOtherProfileId = isNewConversation ? rawId.slice(4) : undefined;
+  // Track the real conversation ID — starts as the route param for existing
+  // conversations, or undefined for new ones until the first message is sent.
+  const [resolvedConversationId, setResolvedConversationId] = useState<string | undefined>(
+    isNewConversation ? undefined : rawId
+  );
+  const conversationId = resolvedConversationId;
   const sessionStartTimestampRef = useRef<string>(new Date().toISOString());
   const [messageText, setMessageText] = useState('');
   const [equippedDie, setEquippedDie] = useState<string | null>(null);
@@ -212,9 +222,12 @@ function ConversationScreenInner() {
   const { height: screenHeight } = useWindowDimensions();
 
   // Get conversation info (other profile details etc.)
-  const { inbox, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
-  const conversation = inbox.find(c => c.id === conversationId);
-  const otherProfile = conversation?.otherProfile;
+  const { inbox, newMatches, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
+  const conversation = conversationId ? inbox.find(c => c.id === conversationId) : undefined;
+  // For pending conversations, resolve the other profile from the matches list
+  const otherProfile = isNewConversation
+    ? newMatches.find(m => m.otherProfile?.profile_id === pendingOtherProfileId)?.otherProfile ?? null
+    : conversation?.otherProfile;
 
   // Get messages
   const {
@@ -236,8 +249,43 @@ function ConversationScreenInner() {
     typing,
     messages,
   );
-  const { mutate: sendMessage, isPending: isSending } = useSendMessage();
+  const { mutateAsync: sendMessageAsync } = useSendMessage();
   const { mutateAsync: rollDice } = useRollDice();
+  const { mutateAsync: createConversation } = useCreateConversation();
+
+  // Ref to guard against double-creation during concurrent sends
+  const creatingConversationRef = useRef<Promise<string> | null>(null);
+
+  /**
+   * Lazily create the conversation on the backend. Returns the real
+   * conversation_id. Safe to call multiple times — only the first call
+   * actually hits the API; subsequent calls await the same promise.
+   */
+  const ensureConversation = useCallback(async (): Promise<string> => {
+    // Already resolved
+    if (resolvedConversationId) return resolvedConversationId;
+
+    // Already in-flight — await the same promise
+    if (creatingConversationRef.current) return creatingConversationRef.current;
+
+    if (!activeProfileId || !pendingOtherProfileId) {
+      throw new Error('Cannot create conversation: missing profile IDs');
+    }
+
+    const promise = (async () => {
+      const data = await createConversation({
+        participants: [activeProfileId, pendingOtherProfileId],
+      });
+      const newId = data.conversation_id;
+      setResolvedConversationId(newId);
+      // Replace the temporary route with the real conversation ID
+      router.replace(`/messages/${newId}`);
+      return newId;
+    })();
+
+    creatingConversationRef.current = promise;
+    return promise;
+  }, [resolvedConversationId, activeProfileId, pendingOtherProfileId, createConversation]);
 
   // Handle equipped die coming back from the inventory screen
   useEffect(() => {
@@ -250,16 +298,17 @@ function ConversationScreenInner() {
 
   // Roll the equipped die — API only, no animation
   const handleRollEquipped = async () => {
-    if (!equippedDie || !activeProfileId || !conversationId) return;
+    if (!equippedDie || !activeProfileId) return;
     try {
+      const realConvId = await ensureConversation();
       const result = await rollDice({
         dieType: equippedDie,
-        conversationId,
+        conversationId: realConvId,
         profileId: activeProfileId,
       });
       console.log(`🎲 Dice roll posted: ${equippedDie} → ${result.result}`);
       // Invalidate messages so the event message appears in chat
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['messages', realConvId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     } catch (err) {
       console.error('🎲 Dice roll failed:', err);
@@ -340,23 +389,32 @@ function ConversationScreenInner() {
     };
   }, [queryClient]);
 
-  const handleSend = useCallback(() => {
-    if (!messageText.trim() || !activeProfileId || !conversationId) return;
-    
-    sendMessage({
-      conversationId,
-      senderProfileId: activeProfileId,
-      content: messageText.trim(),
-      ...(isNarrationMode && {
-        type: 'event',
-        metadata: {
-          event_type: 'narration',
-          initiated_by: activeProfileId,
-        },
-      }),
-    });
+  const handleSend = useCallback(async () => {
+    if (!messageText.trim() || !activeProfileId) return;
+
+    const content = messageText.trim();
     setMessageText('');
-  }, [messageText, activeProfileId, conversationId, sendMessage, isNarrationMode]);
+
+    try {
+      const realConvId = await ensureConversation();
+      await sendMessageAsync({
+        conversationId: realConvId,
+        senderProfileId: activeProfileId,
+        content,
+        ...(isNarrationMode && {
+          type: 'event',
+          metadata: {
+            event_type: 'narration',
+            initiated_by: activeProfileId,
+          },
+        }),
+      });
+    } catch (err) {
+      // Restore the message text so the user can retry
+      setMessageText(content);
+      console.error('Failed to send message:', err);
+    }
+  }, [messageText, activeProfileId, ensureConversation, sendMessageAsync, isNarrationMode]);
 
   // Hide messages at or after the currently-animating dice_roll's sent_at.
   // This hides the roll event AND any follow-up messages (e.g. Lira's

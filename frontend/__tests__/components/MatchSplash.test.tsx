@@ -113,22 +113,19 @@ describe('MatchSplash Component', () => {
 
   // --- Button interactions ---
 
-  it('dismisses splash, navigates to messages, and creates conversation on "INITIATE CONVERSATION"', async () => {
+  it('dismisses splash and navigates to new conversation route on "INITIATE CONVERSATION"', () => {
     const { router } = require('expo-router');
     mockMatchState();
     const { getByText } = render(<MatchSplash />);
 
     fireEvent.press(getByText('INITIATE CONVERSATION'));
     
-    // Optimistic: splash dismissed and navigated to messages tab immediately
+    // Splash dismissed and navigated to the deferred conversation route
     expect(mockHideMatch).toHaveBeenCalledTimes(1);
-    expect(router.push).toHaveBeenCalledWith('/(tabs)/messages');
-    
-    // Background: conversation creation is attempted with correct participants
-    await new Promise(resolve => setTimeout(resolve, 0)); // flush microtasks
-    expect(mockCreateConversation).toHaveBeenCalledWith({
-      participants: ['ap1', 'mp1'],
-    });
+    expect(router.push).toHaveBeenCalledWith('/messages/new_mp1');
+
+    // Conversation is NOT created yet — that happens on first message send
+    expect(mockCreateConversation).not.toHaveBeenCalled();
   });
 
   it('calls hideMatch when "Return to the Tavern" is pressed', () => {

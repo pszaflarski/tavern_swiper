@@ -125,26 +125,14 @@ describe('Messages Screen', () => {
     expect(setActiveProfileId).toHaveBeenCalledWith('p2');
   });
 
-  it('handles pressing a new match by creating a conversation and navigating', () => {
-    const { useCreateConversation } = require('../../hooks/useMessages');
+  it('handles pressing a new match by navigating to new conversation screen', () => {
     const { router } = require('expo-router');
-    const mockMutate = jest.fn();
-    
-    (useCreateConversation as jest.Mock).mockReturnValue({
-      mutate: mockMutate,
-    });
-
     const { getByTestId } = render(<MessagesScreen />);
     const newMatch = getByTestId('new-match-m1');
     
     fireEvent.press(newMatch);
     
-    expect(mockMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ 
-        participants: ['p1', 'p2'] 
-      }),
-      expect.any(Object)
-    );
+    expect(router.push).toHaveBeenCalledWith('/messages/new_p2');
   });
 
   it('handles pressing an inbox item by navigating to the conversation', () => {

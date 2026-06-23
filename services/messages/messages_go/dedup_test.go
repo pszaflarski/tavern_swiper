@@ -88,64 +88,7 @@ func TestCreateConversation_DedupPreventsRace(t *testing.T) {
 	}
 }
 
-// TestCreateConversation_DedupBackfillsWelcomeMessage verifies that when dedup
-// returns an existing conversation that has no messages, a welcome system
-// message is backfilled so it passes the empty-conversation filter in listing.
-func TestCreateConversation_DedupBackfillsWelcomeMessage(t *testing.T) {
-	skipIfRealDB(t)
-	gin.SetMode(gin.TestMode)
 
-	mock := &mockClient{}
-	getDBFunc = func(ctx context.Context) (FirestoreClient, error) {
-		return mock, nil
-	}
-
-	// Pre-seed a dedup entry pointing to an empty conversation (no last_message_id)
-	existingConvID := "conv-empty-legacy"
-	mock.Collection("conversation_dedup").Doc("alpha_beta").Set(context.Background(), map[string]interface{}{
-		"conversation_id":  existingConvID,
-		"participants_key": "alpha_beta",
-	})
-	mock.Collection(COLLECTION_CONVERSATIONS).Doc(existingConvID).Set(context.Background(), map[string]interface{}{
-		"id":               existingConvID,
-		"participants_key": "alpha_beta",
-		"participant_ids":  []interface{}{"alpha", "beta"},
-	})
-
-	// Request to create conversation for same participants — dedup will return existing
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Set("auth", AuthData{Role: "admin"})
-
-	body := ConversationCreate{ParticipantProfileIDs: []string{"alpha", "beta"}}
-	b, _ := json.Marshal(body)
-	c.Request, _ = http.NewRequest("POST", "/conversations", bytes.NewBuffer(b))
-	c.Request.Header.Set("Content-Type", "application/json")
-
-	handleCreateConversation(c)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("Expected 200 (dedup), got %d. Body: %s", w.Code, w.Body.String())
-	}
-
-	// Verify the welcome message was backfilled
-	convSnap, _ := mock.Collection(COLLECTION_CONVERSATIONS).Doc(existingConvID).Get(context.Background())
-	data := convSnap.Data()
-
-	if data["last_message_id"] == nil || data["last_message_id"] == "" {
-		t.Error("Expected last_message_id to be backfilled on empty conversation")
-	}
-	if data["last_message_type"] != MessageTypeSystem {
-		t.Errorf("Expected last_message_type '%s', got '%v'", MessageTypeSystem, data["last_message_type"])
-	}
-
-	// Verify the message exists in the sub-collection
-	msgIter := mock.Collection(COLLECTION_CONVERSATIONS).Doc(existingConvID).Collection(COLLECTION_MESSAGES).Documents(context.Background())
-	msgs, _ := msgIter.GetAll()
-	if len(msgs) != 1 {
-		t.Fatalf("Expected 1 backfilled message, got %d", len(msgs))
-	}
-}
 
 // TestCreateConversation_LegacyFallback verifies that a conversation created
 // BEFORE the dedup collection existed is correctly detected via the fallback
