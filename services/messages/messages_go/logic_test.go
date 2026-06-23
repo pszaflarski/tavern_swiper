@@ -72,27 +72,23 @@ func TestHandleCreateConversation(t *testing.T) {
 			t.Error("Mappings were not created correctly")
 		}
 
-		// Verify welcome system message was created
+		// Verify no welcome message is created
 		convData := convSnap.Data()
-		if convData["last_message_id"] == nil || convData["last_message_id"] == "" {
-			t.Error("Expected last_message_id to be set on new conversation (welcome message)")
+		if convData["last_message_id"] != "" {
+			t.Errorf("Expected last_message_id to be empty, got '%v'", convData["last_message_id"])
 		}
-		if convData["last_message_type"] != MessageTypeSystem {
-			t.Errorf("Expected last_message_type '%s', got '%v'", MessageTypeSystem, convData["last_message_type"])
+		if convData["last_message_type"] != "" {
+			t.Errorf("Expected last_message_type to be empty, got '%v'", convData["last_message_type"])
 		}
-		if convData["last_message_text"] != "A fateful bond has been forged." {
-			t.Errorf("Expected welcome message text, got '%v'", convData["last_message_text"])
+		if convData["last_message_text"] != "" {
+			t.Errorf("Expected last_message_text to be empty, got '%v'", convData["last_message_text"])
 		}
 
-		// Verify the message exists in the sub-collection
+		// Verify no message exists in the sub-collection
 		msgIter := mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Collection(COLLECTION_MESSAGES).Documents(context.Background())
 		msgs, _ := msgIter.GetAll()
-		if len(msgs) != 1 {
-			t.Fatalf("Expected 1 welcome message in sub-collection, got %d", len(msgs))
-		}
-		msgData := msgs[0].Data()
-		if msgData["type"] != MessageTypeSystem {
-			t.Errorf("Welcome message type should be '%s', got '%v'", MessageTypeSystem, msgData["type"])
+		if len(msgs) != 0 {
+			t.Fatalf("Expected 0 messages in sub-collection, got %d", len(msgs))
 		}
 	})
 

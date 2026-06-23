@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Spacing, Shadow } from '../theme';
 import { useMatch } from '../context/MatchContext';
 import { useProfileContext } from '../context/ProfileContext';
-import { useCreateConversation } from '../hooks/useMessages';
+
 import { router } from 'expo-router';
 import { styles } from './MatchSplash.styles';
 
@@ -30,41 +30,15 @@ export default function MatchSplash() {
   const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
 
   const activeProfile = profiles.find((p) => p.profile_id === activeProfileId);
-  const { mutateAsync: createConversation } = useCreateConversation();
+
 
   const handleInitiateConversation = () => {
     if (!activeProfileId || !matchedProfile) return;
     const matchedProfileId = matchedProfile.profile_id;
     
-    // Optimistic UX: dismiss splash and navigate to messages tab immediately
+    // Dismiss splash and navigate straight to the new conversation screen
     hideMatch();
-    router.push('/(tabs)/messages');
-
-    // Retry conversation creation in the background with exponential backoff.
-    // The match is created via an event-driven pipeline, so the messages service
-    // may not have the match record yet when we first call.
-    const MAX_RETRIES = 5;
-    const BASE_DELAY_MS = 500;
-
-    (async () => {
-      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        try {
-          const data = await createConversation({
-            participants: [activeProfileId, matchedProfileId],
-          });
-          // Success — navigate to the conversation
-          router.push(`/messages/${data.conversation_id}`);
-          return;
-        } catch (error) {
-          if (attempt < MAX_RETRIES - 1) {
-            const delay = attempt === 0 ? BASE_DELAY_MS : BASE_DELAY_MS * Math.pow(2, attempt);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          } else {
-            console.warn('Failed to create conversation after retries:', error);
-          }
-        }
-      }
-    })();
+    router.push(`/messages/new_${matchedProfileId}`);
   };
 
   // Card sizing — height-driven for taller cards on mobile

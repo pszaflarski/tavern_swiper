@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tavern Swiper - Adventurer's Guild Chat</title>
+    <!-- Google Fonts: Outfit for body, Cinzel for headings -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Palette: Dark Fantasy Tavern Theme */
+            --bg-darker: #0c0c10;
+            --bg-dark: #14141e;
+            --bg-panel: #1b1b28;
+            --bg-input: #232336;
+            
+            --border-amber: rgba(217, 119, 6, 0.2);
+            --border-amber-active: rgba(245, 158, 11, 0.6);
+            --border-purple: rgba(139, 92, 246, 0.2);
+            --border-purple-active: rgba(167, 139, 250, 0.6);
+            --border-charcoal: #2a2a3e;
+
+            --text-gold: #f59e0b;
+            --text-amber: #d97706;
+            --text-light: #e2e8f0;
+            --text-muted: #8e92b2;
+            --text-dark: #475569;
+
+            /* Agent Theme Accent Colors */
+            --color-user: #8b5cf6;
+            --color-bard: #f59e0b;       /* example_chat */
+            --color-peter: #60a5fa;      /* peter - blue */
+            --color-paul: #f97316;       /* paul - orange */
+            --color-mary: #ec4899;       /* mary - pink */
+
+            --font-display: 'Cinzel', serif;
+            --font-sans: 'Outfit', sans-serif;
+            
+            --shadow-glow: 0 0 15px rgba(217, 119, 6, 0.1);
+            --shadow-glow-purple: 0 0 15px rgba(139, 92, 246, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-darker);
+            color: var(--text-light);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Full App Wrapper */
+        .app-wrapper {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-charcoal);
+            position: relative;
+        }
+
+        /* Sidebar - Guild Directory */
+        aside.sidebar {
+            width: 320px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-charcoal);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-charcoal);
+            background: linear-gradient(180deg, rgba(217,119,6,0.05) 0%, rgba(0,0,0,0) 100%);
+        }
+
+        .sidebar-header h1 {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--text-gold);
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header h1 span.icon {
+            font-size: 1.6rem;
+        }
+
+        .sidebar-header p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .party-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .party-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            padding-left: 8px;
+            font-weight: 700;
+        }
+
+        .party-member {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .party-member:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .party-member.active {
+            background-color: rgba(217, 119, 6, 0.08);
+            border-color: var(--border-amber-active);
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* Avatar Container */
+        .avatar-wrap {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 2px solid var(--text-muted);
+            background-color: var(--bg-darker);
+            flex-shrink: 0;
+            transition: border-color 0.25s ease;
+        }
+
+        .party-member.active .avatar-wrap {
+            border-color: var(--text-gold);
+        }
+
+        .party-member[data-agent="example_chat"] .avatar-wrap { border-color: var(--color-bard); }
+        .party-member[data-mode="group"] .avatar-wrap { border-color: var(--color-user); }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #10b981;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            border: 2px solid var(--bg-panel);
+        }
+
+        .member-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .member-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .member-role {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Main Chat Container */
+        main.chat-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-darker);
+            position: relative;
+        }
+
+        /* Top Bar of Chat */
+        .chat-header {
+            height: 70px;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border-charcoal);
+            background-color: var(--bg-panel);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .current-recipient {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .current-recipient-name {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-gold);
+        }
+
+        .current-recipient-role {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-left: 8px;
+            font-style: italic;
+            border-left: 1px solid var(--border-charcoal);
+            padding-left: 8px;
+        }
+
+        /* Server Connection Status */
+        .conn-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            background-color: rgba(0,0,0,0.25);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-charcoal);
+        }
+
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .conn-status.online .conn-dot {
+            background-color: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Messages Window */
+        .messages-window {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: radial-gradient(circle at center, rgba(23, 23, 33, 0.4) 0%, rgba(12, 12, 16, 0.8) 100%);
+        }
+
+        /* Message Elements */
+        .msg-bubble {
+            display: flex;
+            flex-direction: column;
+            max-width: 75%;
+            animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes popIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-bubble.user {
+            align-self: flex-end;
+        }
+
+        .msg-bubble.agent {
+            align-self: flex-start;
+        }
+
+        .msg-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .user .msg-meta {
+            justify-content: flex-end;
+        }
+
+        .msg-sender {
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+
+        .user .msg-sender {
+            color: #c084fc;
+        }
+
+        .msg-card {
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-charcoal);
+            position: relative;
+        }
+
+        .user .msg-card {
+            background: linear-gradient(135deg, rgba(109, 92, 246, 0.15) 0%, rgba(79, 70, 229, 0.15) 100%);
+            border-color: var(--border-purple);
+            border-bottom-right-radius: 2px;
+            color: #f1f5f9;
+            box-shadow: var(--shadow-glow-purple);
+        }
+
+        .agent .msg-card {
+            background-color: var(--bg-panel);
+            border-bottom-left-radius: 2px;
+        }
+
+        /* Accent bubble classes for different agents */
+        .msg-bubble[data-agent="example_chat"] .msg-sender { color: var(--color-bard); }
+        .msg-bubble[data-agent="example_chat"] .msg-card { border-color: rgba(245, 158, 11, 0.35); }
+
+        .msg-bubble[data-agent="peter"] .msg-sender { color: var(--color-peter); }
+        .msg-bubble[data-agent="peter"] .msg-card { border-color: rgba(96, 165, 250, 0.35); }
+
+        .msg-bubble[data-agent="paul"] .msg-sender { color: var(--color-paul); }
+        .msg-bubble[data-agent="paul"] .msg-card { border-color: rgba(249, 115, 22, 0.35); }
+
+        .msg-bubble[data-agent="mary"] .msg-sender { color: var(--color-mary); }
+        .msg-bubble[data-agent="mary"] .msg-card { border-color: rgba(236, 72, 153, 0.35); }
+
+        /* Thinking & SSE log Blocks */
+        .thinking-block {
+            align-self: flex-start;
+            width: 100%;
+            max-width: 60%;
+            background-color: rgba(0, 0, 0, 0.15);
+            border: 1px dashed var(--border-charcoal);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 4px 0;
+        }
+
+        .thinking-block summary {
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            outline: none;
+            user-select: none;
+        }
+
+        .thinking-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(245, 158, 11, 0.2);
+            border-top-color: var(--text-gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .thinking-steps {
+            list-style: none;
+            margin-top: 8px;
+            padding-left: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-top: 1px solid var(--border-charcoal);
+            padding-top: 8px;
+        }
+
+        .thinking-steps li {
+            position: relative;
+            padding-left: 14px;
+        }
+
+        .thinking-steps li::before {
+            content: "•";
+            color: var(--text-gold);
+            position: absolute;
+            left: 2px;
+            font-weight: bold;
+        }
+
+        .thinking-block.settled {
+            border-style: solid;
+        }
+
+        .thinking-block.settled .thinking-spinner {
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Streaming Character Indicator */
+        .stream-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background-color: var(--text-gold);
+            margin-left: 4px;
+            animation: cursorBlink 0.9s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes cursorBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Typing indicator */
+        .typing-indicator-bubble {
+            margin-bottom: 12px;
+            animation: popIn 0.2s ease-out forwards;
+        }
+
+        .typing-indicator-bubble .msg-card {
+            padding: 10px 16px;
+            background-color: var(--bg-panel);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Bottom Control Panel */
+        .bottom-panel {
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border-charcoal);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chat-input-wrapper {
+            flex-grow: 1;
+            position: relative;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-charcoal);
+            border-radius: 30px;
+            padding: 4px 18px;
+            display: flex;
+            align-items: center;
+            transition: border-color 0.25s;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: var(--border-amber-active);
+            box-shadow: var(--shadow-glow);
+        }
+
+        #chat-input {
+            width: 100%;
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text-light);
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            padding: 10px 0;
+            resize: none;
+            height: 44px;
+            line-height: 24px;
+            overflow-y: hidden;
+        }
+
+        .send-btn {
+            background-color: var(--text-amber);
+            border: none;
+            color: white;
+            font-family: var(--font-display);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            height: 44px;
+            padding: 0 24px;
+            border-radius: 22px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background-color: var(--text-gold);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(245, 158, 11, 0.2);
+        }
+
+        .send-btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .send-btn:disabled {
+            background-color: var(--text-dark);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .kill-btn {
+            background-color: #dc2626;
+            border: 1px solid #b91c1c;
+        }
+
+        .kill-btn:hover:not(:disabled) {
+            background-color: #ef4444;
+            box-shadow: 0 6px 14px rgba(239, 68, 68, 0.25);
+        }
+
+        .kill-btn.halted {
+            background-color: #10b981;
+            border-color: #059669;
+        }
+
+        .kill-btn.halted:hover:not(:disabled) {
+            background-color: #34d399;
+            box-shadow: 0 6px 14px rgba(52, 211, 153, 0.25);
+        }
+
+        /* Settings bar */
+        .settings-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.85rem;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .settings-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s;
+        }
+
+        .settings-toggle-btn:hover {
+            color: var(--text-gold);
+        }
+
+        .settings-checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .settings-checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .settings-checkbox-group label:hover {
+            color: var(--text-light);
+        }
+
+        /* Config Drawer content */
+        .config-drawer {
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            background-color: rgba(0,0,0,0.15);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-charcoal);
+            margin-top: 10px;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .config-drawer.open {
+            display: grid;
+        }
+
+        .config-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .config-group label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .config-group input,
+        .config-group select {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-charcoal);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-light);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .config-group input:focus,
+        .config-group select:focus {
+            border-color: var(--text-gold);
+        }
+
+        .config-action-buttons {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-charcoal);
+            color: var(--text-light);
+            font-family: var(--font-sans);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: var(--text-muted);
+        }
+
+        /* Markdown styling */
+        .msg-card p { margin-bottom: 8px; }
+        .msg-card p:last-child { margin-bottom: 0; }
+        .msg-card ul, .msg-card ol { margin-left: 20px; margin-bottom: 8px; }
+        .msg-card code {
+            background-color: rgba(0,0,0,0.3);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #f472b6;
+        }
+        .msg-card pre {
+            background-color: #0c0c10;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-charcoal);
+            margin: 8px 0;
+        }
+        .msg-card pre code { background-color: transparent; padding: 0; color: #e2e8f0; }
+
+        /* JSON Narration & Speech styling */
+        .narration-block {
+            font-style: italic;
+            color: var(--text-muted);
+            border-left: 2px solid rgba(245, 158, 11, 0.4);
+            padding-left: 10px;
+            margin: 8px 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .speech-block {
+            margin: 6px 0;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        /* Make sure agent bubbles look great with them */
+        .user .narration-block {
+            border-left-color: rgba(167, 139, 250, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-charcoal); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-amber); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        
+        <!-- Sidebar: Character Directory -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1><span class="icon">🍻</span>Tavern Guild</h1>
+                <p>Select your chat room</p>
+            </div>
+            
+            <div class="party-list">
+                <div class="party-title">Guild Rooms</div>
+                
+                <!-- Example Chat -->
+                <div class="party-member active" data-mode="single" data-agent="example_chat" data-role="Sarcastic Bard" data-avatar="🎭">
+                    <div class="avatar-wrap">
+                        🎭
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <span class="member-name">Example Chat</span>
+                        <span class="member-role">Sarcastic Bard</span>
+                    </div>
+                </div>
+
+                <!-- Trio Room (Peter, Paul, Mary) -->
+                <div class="party-member" data-mode="group" data-agent="peter,paul,mary" data-role="Orchestrated Trio" data-avatar="👥">
+                    <div class="avatar-wrap">
+                        👥
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <span class="member-name">The Trio Room</span>
+                        <span class="member-role">Orchestrated Guild</span>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-area">
+            
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="current-recipient">
+                    <span class="current-recipient-name" id="current-name">Example Chat</span>
+                    <span class="current-recipient-role" id="current-role">Sarcastic Bard</span>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <!-- Orchestrator Console Badge -->
+                    <div id="orch-status-panel" style="display: none; align-items: center; gap: 8px; font-size: 0.8rem; background-color: rgba(139, 92, 246, 0.1); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(139, 92, 246, 0.35); color: #c084fc;">
+                        <span style="display: inline-block; animation: pulse 1.5s infinite;">🧠</span>
+                        <span id="orch-status-text">Orchestrator: Idle</span>
+                    </div>
+
+                    <!-- New Thread Button -->
+                    <button class="btn-secondary" id="btn-new-thread" style="padding: 6px 14px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 6px; border-color: var(--border-amber-active); color: var(--text-gold);">
+                        <span>🧹 New Thread</span>
+                    </button>
+                    
+                    <!-- Server Connection Status -->
+                    <div class="conn-status" id="conn-status-indicator">
+                        <div class="conn-dot"></div>
+                        <span id="conn-status-text">Router Offline</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Window -->
+            <div class="messages-window" id="messages-box">
+                <!-- Welcome greeting -->
+                <div class="msg-bubble agent" data-agent="example_chat">
+                    <div class="msg-meta">
+                        <span class="msg-sender">Example Chat</span>
+                        <span class="msg-time">Just now</span>
+                    </div>
+                    <div class="msg-card">
+                        Welcome to the Guild Hall, traveler! I'm the resident bard. Pull up a chair, buy me an ale, or ask me something... if you dare.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Controller & Input -->
+            <div class="bottom-panel">
+                
+                <!-- Chat Input Input Row -->
+                <div class="input-row">
+                    <div class="chat-input-wrapper">
+                        <textarea id="chat-input" placeholder="Type a message to Example Chat..." rows="1" autocomplete="off"></textarea>
+                    </div>
+                    
+                    <!-- Loop Control Button (glowing red / green) -->
+                    <button class="send-btn kill-btn" id="btn-kill-loop" style="display:none;">
+                        <span>🛑 Halt Loop</span>
+                    </button>
+
+                    <button class="send-btn" id="btn-send">
+                        <span>Send</span>
+                        <span class="icon">➔</span>
+                    </button>
+                </div>
+
+                <!-- Settings bar (Toggle & checkboxes) -->
+                <div class="settings-bar">
+                    <button class="settings-toggle-btn" id="btn-toggle-config">
+                        <span class="icon">⚙</span> Settings Panel <span id="config-arrow">▼</span>
+                    </button>
+                    
+                    <div class="settings-checkbox-group">
+                        <label id="lbl-chk-stream">
+                            <input type="checkbox" id="chk-stream" checked> Stream Replies
+                        </label>
+                        <label>
+                            <input type="checkbox" id="chk-sound"> Tavern SFX
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Collapsible Settings Panel -->
+                <div class="config-drawer" id="config-panel">
+                    <div class="config-group">
+                        <label for="cfg-router-url">Router API Base</label>
+                        <input type="text" id="cfg-router-url" value="http://127.0.0.1:8000">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="cfg-agent-select">Active Agent / Room</label>
+                        <select id="cfg-agent-select" disabled>
+                            <option value="example_chat" selected>example_chat</option>
+                            <option value="group">The Trio (Peter, Paul, Mary)</option>
+                        </select>
+                    </div>
+
+                    <div class="config-group">
+                        <label for="cfg-model-select">LLM Model</label>
+                        <select id="cfg-model-select">
+                            <option value="gemini-flash-lite" selected>gemini-flash-lite</option>
+                        </select>
+                    </div>
+
+                    <div class="config-group">
+                        <label for="cfg-thread-id">Session Thread ID</label>
+                        <input type="text" id="cfg-thread-id" placeholder="Auto-generated if blank">
+                    </div>
+
+                    <div class="config-action-buttons">
+                        <button class="btn-secondary" id="btn-reset-thread">Reset Conversation</button>
+                        <button class="btn-secondary" id="btn-reconnect">Test Router Connection</button>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- Script imports: Markdown parser (marked.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Client Logic -->
+    <script>
+        // DOM Elements
+        const messagesBox = document.getElementById('messages-box');
+        const chatInput = document.getElementById('chat-input');
+        const btnSend = document.getElementById('btn-send');
+        const btnKillLoop = document.getElementById('btn-kill-loop');
+        const partyMembers = document.querySelectorAll('.party-member');
+        const currentName = document.getElementById('current-name');
+        const currentRole = document.getElementById('current-role');
+        const connIndicator = document.getElementById('conn-status-indicator');
+        const connText = document.getElementById('conn-status-text');
+        
+        const orchStatusPanel = document.getElementById('orch-status-panel');
+        const orchStatusText = document.getElementById('orch-status-text');
+        
+        const btnToggleConfig = document.getElementById('btn-toggle-config');
+        const configPanel = document.getElementById('config-panel');
+        const configArrow = document.getElementById('config-arrow');
+        
+        const cfgRouterUrl = document.getElementById('cfg-router-url');
+        const cfgAgentSelect = document.getElementById('cfg-agent-select');
+        const cfgModelSelect = document.getElementById('cfg-model-select');
+        const cfgThreadId = document.getElementById('cfg-thread-id');
+        
+        const btnResetThread = document.getElementById('btn-reset-thread');
+        const btnReconnect = document.getElementById('btn-reconnect');
+        const btnNewThread = document.getElementById('btn-new-thread');
+        const chkStream = document.getElementById('chk-stream');
+        const lblChkStream = document.getElementById('lbl-chk-stream');
+        const chkSound = document.getElementById('chk-sound');
+
+        // State variables
+        let chatMode = 'single'; // 'single' or 'group'
+        let selectedAgent = 'example_chat';
+        
+        // Client-side thread ID generators
+        const generateTrioThreadId = () => {
+            const rand = Math.floor(100000 + Math.random() * 900000);
+            return `trio_thread_${rand}`;
+        };
+
+        const generateUUID = () => {
+            try {
+                if (self.crypto && typeof self.crypto.randomUUID === 'function') {
+                    return self.crypto.randomUUID();
+                }
+            } catch (e) {}
+            return 'thread_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now().toString(36);
+        };
+
+        let currentThreadId = generateTrioThreadId();
+        cfgThreadId.value = currentThreadId;
+        let isConnecting = false;
+        
+        // Loop controls
+        let isLoopRunning = true;
+        let activeTimers = [];
+        let activeRequests = [];
+        const groupAgents = ['peter', 'paul', 'mary'];
+
+        // Simple synth audio engine for "Tavern SFX" (mechanical/wooden taps)
+        const synthSound = (type) => {
+            if (!chkSound.checked) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                if (type === 'type') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.08);
+                } else if (type === 'receive') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(329.63, ctx.currentTime);
+                    osc.frequency.setValueAtTime(440.00, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.35);
+                } else if (type === 'system') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.04);
+                }
+            } catch (e) {}
+        };
+
+        // Render Markdown safely
+        const renderMarkdown = (text) => {
+            try {
+                if (typeof marked !== 'undefined') {
+                    return marked.parse(text);
+                }
+                return text.replace(/\n/g, '<br>');
+            } catch (err) {
+                return text;
+            }
+        };
+
+        // Parse and render JSON response with narration and speech blocks, or fallback to markdown
+        const renderJSONResponse = (text) => {
+            let cleanText = text.trim();
+            // Strip markdown code fences if LLM wrapped JSON in it
+            if (cleanText.startsWith('```')) {
+                cleanText = cleanText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
+            }
+            try {
+                const arr = JSON.parse(cleanText);
+                if (Array.isArray(arr)) {
+                    return arr.map(item => {
+                        const contentEscaped = renderMarkdown(item.content);
+                        if (item.type === 'narration') {
+                            return `<div class="narration-block">${contentEscaped}</div>`;
+                        } else {
+                            // default to speech/message
+                            return `<div class="speech-block">${contentEscaped}</div>`;
+                        }
+                    }).join('');
+                }
+            } catch (e) {
+                // Not JSON, fallback to standard markdown rendering
+            }
+            return renderMarkdown(text);
+        };
+
+        // Clean up JSON structures to plain text for state broadcasts and orchestrator prompts
+        const getPlainTextFromResponse = (text) => {
+            let cleanText = text.trim();
+            if (cleanText.startsWith('```')) {
+                cleanText = cleanText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
+            }
+            try {
+                const arr = JSON.parse(cleanText);
+                if (Array.isArray(arr)) {
+                    return arr.map(item => {
+                        if (item.type === 'narration') {
+                            return `*${item.content}*`;
+                        } else {
+                            return `"${item.content}"`;
+                        }
+                    }).join(' ');
+                }
+            } catch (e) {
+                // Not JSON
+            }
+            return text;
+        };
+
+        // Auto-resize input textarea to handle wrapping smoothly
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 140) + 'px';
+            synthSound('type');
+        });
+
+        // Toggle Config Drawer
+        btnToggleConfig.addEventListener('click', () => {
+            const isOpen = configPanel.classList.toggle('open');
+            configArrow.textContent = isOpen ? '▲' : '▼';
+            synthSound('system');
+        });
+
+        // Halt / Kill conversation loop
+        const haltConversationLoop = () => {
+            isLoopRunning = false;
+            btnKillLoop.className = 'send-btn kill-btn halted';
+            btnKillLoop.querySelector('span').textContent = '▶ Resume Loop';
+            
+            // Cancel all pending timers
+            activeTimers.forEach(id => clearTimeout(id));
+            activeTimers = [];
+            
+            // Abort active HTTP fetch operations
+            activeRequests.forEach(controller => controller.abort());
+            activeRequests = [];
+            
+            // Remove typing indicators
+            groupAgents.forEach(agent => removeTypingIndicator(agent));
+            synthSound('system');
+        };
+
+        const resumeConversationLoop = () => {
+            isLoopRunning = true;
+            btnKillLoop.className = 'send-btn kill-btn';
+            btnKillLoop.querySelector('span').textContent = '🛑 Halt Loop';
+            synthSound('system');
+        };
+
+        btnKillLoop.addEventListener('click', () => {
+            if (isLoopRunning) {
+                haltConversationLoop();
+            } else {
+                resumeConversationLoop();
+            }
+        });
+
+        // Sidebar click handler -> select Single or Group Mode
+        partyMembers.forEach(member => {
+            member.addEventListener('click', () => {
+                const mode = member.getAttribute('data-mode');
+                const role = member.getAttribute('data-role');
+                const name = member.querySelector('.member-name').textContent;
+                
+                partyMembers.forEach(m => m.classList.remove('active'));
+                member.classList.add('active');
+
+                chatMode = mode;
+                currentName.textContent = name;
+                currentRole.textContent = role;
+
+                // Stop loop on switch
+                haltConversationLoop();
+                
+                if (mode === 'single') {
+                    btnKillLoop.style.display = 'none';
+                    lblChkStream.style.display = 'flex';
+                    orchStatusPanel.style.display = 'none';
+                    
+                    selectedAgent = 'example_chat';
+                    cfgAgentSelect.value = 'example_chat';
+                    chatInput.placeholder = `Type a message to Example Chat...`;
+                    
+                    messagesBox.innerHTML = '';
+                    appendMessage('example_chat', "Welcome back! How can I assist you today, traveler?", 'agent');
+                } else {
+                    btnKillLoop.style.display = 'flex';
+                    lblChkStream.style.display = 'none';
+                    orchStatusPanel.style.display = 'flex';
+                    orchStatusText.textContent = 'Orchestrator: Idle';
+                    
+                    resumeConversationLoop();
+                    
+                    selectedAgent = 'group';
+                    cfgAgentSelect.value = 'group';
+                    chatInput.placeholder = `Broadcasting to Peter, Paul, and Mary...`;
+                    
+                    messagesBox.innerHTML = '';
+                    appendSystemMessage("Joined room: 'The Trio Room'. Chatting with Peter, Paul, and Mary.");
+                    
+                    // Trigger custom introduction greetings
+                    appendMessage('peter', "Greetings. I am Peter. I look forward to our discussions.", 'agent');
+                    appendMessage('paul', "Hey there! Paul's the name! Ready to discuss some magic or whatever you need!", 'agent');
+                    appendMessage('mary', "Hello. I am Mary. Pleased to join you in this room.", 'agent');
+                }
+                
+                synthSound('system');
+            });
+        });
+
+        // Reset current thread/session (generates a new unique random thread ID)
+        btnResetThread.addEventListener('click', () => {
+            currentThreadId = generateTrioThreadId();
+            cfgThreadId.value = currentThreadId;
+            
+            haltConversationLoop();
+            messagesBox.innerHTML = '';
+            
+            if (chatMode === 'single') {
+                appendMessage('example_chat', "Welcome to the Guild Hall, traveler! I'm the resident bard. Ask me anything... if you dare.", 'agent');
+            } else {
+                resumeConversationLoop();
+                orchStatusText.textContent = 'Orchestrator: Idle';
+                appendSystemMessage("Room thread reset. Peter, Paul, and Mary are ready.");
+                appendMessage('peter', "Greetings. Let us begin anew.", 'agent');
+                appendMessage('paul', "Alright, clean slate! What's our next topic?", 'agent');
+                appendMessage('mary', "Hello again. Let us focus our thoughts.", 'agent');
+            }
+            synthSound('system');
+        });
+
+        // New Thread Action (creates new ID immediately, clears screen)
+        const startNewThread = () => {
+            currentThreadId = generateTrioThreadId();
+            cfgThreadId.value = currentThreadId;
+            
+            haltConversationLoop();
+            messagesBox.innerHTML = '';
+            
+            if (chatMode === 'single') {
+                appendMessage('example_chat', "Welcome to a new conversation thread, traveler! I'm the resident bard. Ask me anything... if you dare.", 'agent');
+            } else {
+                resumeConversationLoop();
+                orchStatusText.textContent = 'Orchestrator: Idle';
+                appendSystemMessage("Started a new thread conversation. Peter, Paul, and Mary are ready.");
+                appendMessage('peter', "Greetings. Let us begin a new discussion.", 'agent');
+                appendMessage('paul', "Awesome, a brand new thread! What are we chatting about?", 'agent');
+                appendMessage('mary', "Hello. A new path begins. Let us speak wisely.", 'agent');
+            }
+            synthSound('system');
+            chatInput.focus();
+        };
+
+        btnNewThread.addEventListener('click', startNewThread);
+
+        // Sync manual inputs to the state variable
+        cfgThreadId.addEventListener('input', () => {
+            currentThreadId = cfgThreadId.value.trim();
+        });
+
+        // Test Connection to Router
+        const testConnection = async () => {
+            const baseUrl = cfgRouterUrl.value.trim();
+            connIndicator.className = 'conn-status';
+            connText.textContent = 'Connecting...';
+            
+            try {
+                const res = await fetch(`${baseUrl}/health`, { method: 'GET' });
+                if (res.ok) {
+                    connIndicator.className = 'conn-status online';
+                    connText.textContent = 'Router Online';
+                    await fetchModels();
+                    return true;
+                }
+            } catch (err) {
+                console.error('Connection failed:', err);
+            }
+            connIndicator.className = 'conn-status';
+            connText.textContent = 'Router Offline';
+            return false;
+        };
+
+        btnReconnect.addEventListener('click', async () => {
+            await testConnection();
+            synthSound('system');
+        });
+
+        // Fetch models from API
+        const fetchModels = async () => {
+            const baseUrl = cfgRouterUrl.value.trim();
+            try {
+                const modelsRes = await fetch(`${baseUrl}/models`);
+                if (modelsRes.ok) {
+                    const models = await modelsRes.json();
+                    const activeModelVal = cfgModelSelect.value;
+                    cfgModelSelect.innerHTML = models.map(m => `<option value="${m.name}" ${m.name === activeModelVal ? 'selected' : ''}>${m.name}</option>`).join('');
+                }
+            } catch (err) {
+                console.warn('Could not dynamically fetch models from router:', err);
+            }
+        };
+
+        // Append message to chat screen
+        const appendMessage = (sender, content, role) => {
+            const bubble = document.createElement('div');
+            bubble.className = `msg-bubble ${role}`;
+            bubble.setAttribute('data-agent', sender);
+
+            const meta = document.createElement('div');
+            meta.className = 'msg-meta';
+            
+            const senderNameSpan = document.createElement('span');
+            senderNameSpan.className = 'msg-sender';
+            
+            let dispName = 'You';
+            if (role === 'agent') {
+                if (sender === 'example_chat') dispName = 'Example Chat';
+                else if (sender === 'peter') dispName = 'Peter';
+                else if (sender === 'paul') dispName = 'Paul';
+                else if (sender === 'mary') dispName = 'Mary';
+                else dispName = sender;
+            }
+            senderNameSpan.textContent = dispName;
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'msg-time';
+            const now = new Date();
+            timeSpan.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            meta.appendChild(senderNameSpan);
+            meta.appendChild(timeSpan);
+
+            const card = document.createElement('div');
+            card.className = 'msg-card';
+            if (sender === 'example_chat') {
+                card.innerHTML = renderMarkdown(content);
+            } else {
+                card.innerHTML = renderJSONResponse(content);
+            }
+
+            bubble.appendChild(meta);
+            bubble.appendChild(card);
+            messagesBox.appendChild(bubble);
+            
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+            return card;
+        };
+
+        const appendSystemMessage = (text) => {
+            const div = document.createElement('div');
+            div.style.alignSelf = 'center';
+            div.style.fontSize = '0.75rem';
+            div.style.color = 'var(--text-muted)';
+            div.style.margin = '4px 0';
+            div.style.fontStyle = 'italic';
+            div.textContent = `* ${text} *`;
+            messagesBox.appendChild(div);
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+            synthSound('system');
+        };
+
+        // Custom Typing Indicators for group chat agents
+        const showTypingIndicator = (agentName) => {
+            if (document.getElementById(`typing-${agentName}`)) return;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble agent typing-indicator-bubble';
+            bubble.id = `typing-${agentName}`;
+            bubble.setAttribute('data-agent', agentName);
+
+            const meta = document.createElement('div');
+            meta.className = 'msg-meta';
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'msg-sender';
+            senderSpan.textContent = agentName.charAt(0).toUpperCase() + agentName.slice(1);
+            meta.appendChild(senderSpan);
+
+            const card = document.createElement('div');
+            card.className = 'msg-card';
+            card.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            
+            bubble.appendChild(meta);
+            bubble.appendChild(card);
+            messagesBox.appendChild(bubble);
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+        };
+
+        const removeTypingIndicator = (agentName) => {
+            const el = document.getElementById(`typing-${agentName}`);
+            if (el) el.remove();
+        };
+
+        // Create or update thinking block (used in single streaming mode)
+        let pendingThinking = null;
+        let stepCount = 0;
+
+        const showThinkingStep = (description) => {
+            if (!pendingThinking) {
+                pendingThinking = document.createElement('details');
+                pendingThinking.className = 'thinking-block';
+                pendingThinking.open = true;
+                
+                pendingThinking.innerHTML = `
+                    <summary>
+                        <div class="thinking-spinner"></div>
+                        <span class="thinking-label">Thinking...</span>
+                    </summary>
+                    <ul class="thinking-steps"></ul>
+                `;
+                messagesBox.appendChild(pendingThinking);
+                messagesBox.scrollTop = messagesBox.scrollHeight;
+                stepCount = 0;
+            }
+            
+            stepCount++;
+            const stepsList = pendingThinking.querySelector('.thinking-steps');
+            const li = document.createElement('li');
+            li.textContent = description;
+            stepsList.appendChild(li);
+            
+            const label = pendingThinking.querySelector('.thinking-label');
+            label.textContent = `Thought for ${stepCount} step${stepCount > 1 ? 's' : ''}`;
+            
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+        };
+
+        const closeThinking = () => {
+            if (pendingThinking) {
+                pendingThinking.classList.add('settled');
+                pendingThinking.open = false;
+                pendingThinking = null;
+            }
+        };
+
+        // Write a message directly to an idle agent's thread checkpoint state
+        const writeMessageToAgentState = (targetAgent, senderName, messageText) => {
+            const baseUrl = cfgRouterUrl.value.trim();
+            const threadId = (currentThreadId || 'trio_thread') + '_' + targetAgent;
+            
+            return fetch(`${baseUrl}/threads/${threadId}/state`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    agent: targetAgent,
+                    messages: [{
+                        role: 'human',
+                        content: messageText,
+                        name: senderName.toLowerCase()
+                    }]
+                })
+            })
+            .catch(err => {
+                console.warn(`Failed to write state to ${targetAgent}:`, err);
+            });
+        };
+
+        // Route a message to idle agents and schedule the next speaker
+        const routeGroupMessage = (senderKey, senderName, messageText, nextSpeaker) => {
+            const cleanText = getPlainTextFromResponse(messageText);
+            const promises = [];
+            
+            // 1. Broadcast cleanText to all agents in groupAgents EXCEPT the sender and the next speaker
+            groupAgents.forEach(agent => {
+                if (agent !== senderKey && agent !== nextSpeaker) {
+                    promises.push(writeMessageToAgentState(agent, senderName, cleanText));
+                }
+            });
+
+            // 2. Handle next speaker trigger or status updates
+            if (nextSpeaker === 'user') {
+                orchStatusText.textContent = 'Orchestrator: Waiting for User';
+            } else if (groupAgents.includes(nextSpeaker)) {
+                const dispName = nextSpeaker.charAt(0).toUpperCase() + nextSpeaker.slice(1);
+                orchStatusText.textContent = `Orchestrator: Next -> ${dispName}`;
+                
+                // Trigger the determined agent by sending the preceding message text
+                const delay = 1500;
+                const timerId = setTimeout(() => {
+                    triggerAgentResponse(nextSpeaker, cleanText, senderKey);
+                }, delay);
+                activeTimers.push(timerId);
+            } else {
+                orchStatusText.textContent = 'Orchestrator: Waiting for User';
+            }
+
+            return Promise.all(promises);
+        };
+
+        // Send Message Handler
+        const sendMessage = async () => {
+            const messageText = chatInput.value.trim();
+            if (!messageText) return;
+
+            // Clear input field and lock UI
+            chatInput.value = '';
+            chatInput.style.height = '44px';
+
+            // Render user bubble
+            appendMessage('user', messageText, 'user');
+
+            if (chatMode === 'single') {
+                chatInput.disabled = true;
+                btnSend.disabled = true;
+                try {
+                    const baseUrl = cfgRouterUrl.value.trim();
+                    const modelVal = cfgModelSelect.value;
+                    const isStream = chkStream.checked;
+
+                    if (isStream) {
+                        await handleStreaming(baseUrl, messageText, modelVal);
+                    } else {
+                        await handleStandard(baseUrl, messageText, modelVal);
+                    }
+                    synthSound('receive');
+                } catch (err) {
+                    console.error(err);
+                    closeThinking();
+                    appendMessage(selectedAgent, `*Disruption in the tavern. Connection lost.* <br><small style="color: #ef4444">${err.message}</small>`, 'agent');
+                } finally {
+                    chatInput.disabled = false;
+                    btnSend.disabled = false;
+                    chatInput.focus();
+                }
+            } else {
+                // Trio Room group chat mode
+                if (!isLoopRunning) {
+                    resumeConversationLoop();
+                }
+                
+                // Let orchestrator decide who speaks next based on user message
+                triggerOrchestration('User', messageText);
+            }
+        };
+
+        // Parse Orchestrator JSON output
+        const parseOrchestratorDecision = (responseText) => {
+            let cleanText = responseText.trim();
+            // Remove markdown code blocks if present
+            if (cleanText.startsWith('```')) {
+                cleanText = cleanText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
+            }
+            try {
+                const obj = JSON.parse(cleanText);
+                return obj.next; 
+            } catch (e) {
+                // Fallback loose text parsing
+                const lower = cleanText.toLowerCase();
+                if (lower.includes('peter')) return 'peter';
+                if (lower.includes('paul')) return 'paul';
+                if (lower.includes('mary')) return 'mary';
+                return 'user';
+            }
+        };
+
+        // Orchestrator Decider Logic
+        const triggerOrchestration = (latestSender, latestMessage) => {
+            if (!isLoopRunning) return;
+
+            // Update UI status bar
+            orchStatusText.textContent = 'Orchestrator: Deciding...';
+
+            const baseUrl = cfgRouterUrl.value.trim();
+            const modelVal = cfgModelSelect.value;
+            const threadId = (currentThreadId || 'trio_thread') + '_orchestrator';
+
+            const controller = new AbortController();
+            activeRequests.push(controller);
+
+            // Format conversational event for orchestrator memory
+            const cleanMessage = getPlainTextFromResponse(latestMessage);
+
+            fetch(`${baseUrl}/invoke`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: cleanMessage,
+                    agent: 'orchestrator',
+                    model: modelVal,
+                    thread_id: threadId,
+                    name: latestSender.toLowerCase()
+                }),
+                signal: controller.signal
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('API Error');
+                return res.json();
+            })
+            .then(data => {
+                activeRequests = activeRequests.filter(c => c !== controller);
+                if (!isLoopRunning) return;
+
+                const nextSpeaker = parseOrchestratorDecision(data.response);
+                const latestSenderKey = latestSender.toLowerCase();
+                routeGroupMessage(latestSenderKey, latestSender, latestMessage, nextSpeaker);
+            })
+            .catch(err => {
+                activeRequests = activeRequests.filter(c => c !== controller);
+                if (err.name !== 'AbortError') {
+                    console.error('Orchestrator failed:', err);
+                    orchStatusText.textContent = 'Orchestrator: Error';
+                }
+            });
+        };
+
+        // Trigger response from a specific agent in Group Mode
+        const triggerAgentResponse = (agent, prompt, senderName = 'system') => {
+            if (!isLoopRunning) return;
+
+            showTypingIndicator(agent);
+
+            const baseUrl = cfgRouterUrl.value.trim();
+            const modelVal = cfgModelSelect.value;
+            const threadId = (currentThreadId || 'trio_thread') + '_' + agent;
+
+            const controller = new AbortController();
+            activeRequests.push(controller);
+
+            fetch(`${baseUrl}/invoke`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    agent: agent,
+                    model: modelVal,
+                    thread_id: threadId,
+                    name: senderName
+                }),
+                signal: controller.signal
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('API Error');
+                return res.json();
+            })
+            .then(async data => {
+                removeTypingIndicator(agent);
+                activeRequests = activeRequests.filter(c => c !== controller);
+                
+                if (!isLoopRunning) return;
+
+                if (data.thread_id && !currentThreadId) {
+                    currentThreadId = data.thread_id.replace(`_${agent}`, '');
+                    cfgThreadId.value = currentThreadId;
+                }
+
+                // Append response message
+                appendMessage(agent, data.response, 'agent');
+                synthSound('receive');
+
+                // Feed this message to the orchestrator to decide who responds next
+                const dispName = agent.charAt(0).toUpperCase() + agent.slice(1);
+                triggerOrchestration(dispName, data.response);
+            })
+            .catch(err => {
+                removeTypingIndicator(agent);
+                activeRequests = activeRequests.filter(c => c !== controller);
+                if (err.name !== 'AbortError') {
+                    console.error(err);
+                    appendSystemMessage(`System Error invoking ${agent}: ${err.message}`);
+                }
+            });
+        };
+
+        // Standard Single POST request
+        const handleStandard = async (baseUrl, prompt, model) => {
+            showThinkingStep('Consulting the scrolls...');
+            
+            const payload = {
+                prompt: prompt,
+                agent: selectedAgent,
+                model: model,
+                thread_id: currentThreadId || null
+            };
+
+            const res = await fetch(`${baseUrl}/invoke`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const errDetail = await res.json().catch(() => ({ detail: 'HTTP Error' }));
+                throw new Error(errDetail.detail || `Server returned ${res.status}`);
+            }
+
+            const data = await res.json();
+            closeThinking();
+            
+            if (data.thread_id && !currentThreadId) {
+                currentThreadId = data.thread_id;
+                cfgThreadId.value = currentThreadId;
+            }
+
+            appendMessage(selectedAgent, data.response, 'agent');
+        };
+
+        // SSE Streaming Single POST request
+        const handleStreaming = async (baseUrl, prompt, model) => {
+            const payload = {
+                prompt: prompt,
+                agent: selectedAgent,
+                model: model,
+                thread_id: currentThreadId || null
+            };
+
+            const response = await fetch(`${baseUrl}/stream`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errDetail = await response.json().catch(() => ({ detail: 'HTTP Error' }));
+                throw new Error(errDetail.detail || `Server returned ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            let fullText = '';
+            let lineBuffer = '';
+            let currentEvent = null;
+            let cardDiv = null;
+            let indicator = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                lineBuffer += decoder.decode(value, { stream: true });
+                const lines = lineBuffer.split('\n');
+                lineBuffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) continue;
+
+                    if (trimmedLine.startsWith('event: ')) {
+                        currentEvent = trimmedLine.slice(7).trim();
+                        continue;
+                    }
+
+                    if (trimmedLine.startsWith('data: ')) {
+                        const dataStr = trimmedLine.slice(6).trim();
+                        try {
+                            const dataObj = JSON.parse(dataStr);
+
+                            if (currentEvent === 'metadata') {
+                                if (dataObj.thread_id && !currentThreadId) {
+                                    currentThreadId = dataObj.thread_id;
+                                    cfgThreadId.value = currentThreadId;
+                                }
+                            } else if (currentEvent === 'thinking') {
+                                showThinkingStep(dataObj.description || 'Processing...');
+                            } else {
+                                if (dataObj.error) {
+                                    throw new Error(dataObj.error);
+                                }
+
+                                if (dataObj.content) {
+                                    closeThinking();
+
+                                    if (!cardDiv) {
+                                        cardDiv = appendMessage(selectedAgent, '', 'agent');
+                                        indicator = document.createElement('span');
+                                        indicator.className = 'stream-indicator';
+                                        cardDiv.appendChild(indicator);
+                                    }
+
+                                    fullText += dataObj.content;
+                                    cardDiv.innerHTML = renderMarkdown(fullText);
+                                    cardDiv.appendChild(indicator);
+                                    messagesBox.scrollTop = messagesBox.scrollHeight;
+                                }
+                            }
+                        } catch (e) {}
+                        currentEvent = null;
+                    }
+                }
+            }
+
+            closeThinking();
+            if (indicator && indicator.parentNode) {
+                indicator.remove();
+            }
+
+            if (cardDiv) {
+                cardDiv.innerHTML = renderMarkdown(fullText);
+            } else if (!fullText) {
+                appendMessage(selectedAgent, '*The bard looks at you blankly (no response).*', 'agent');
+            }
+        };
+
+        // Wire event listeners
+        btnSend.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Initialize and test connection on load
+        window.addEventListener('load', async () => {
+            const connected = await testConnection();
+            setInterval(async () => {
+                if (!isConnecting) {
+                    isConnecting = true;
+                    await testConnection();
+                    isConnecting = false;
+                }
+            }, 10000);
+        });
+
+    </script>
+</body>
+</html>
