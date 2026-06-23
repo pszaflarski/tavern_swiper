@@ -20,7 +20,7 @@ import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDic
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, interpolate, Extrapolate, FadeInDown } from 'react-native-reanimated';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import DiceOverlay from '../../components/DiceOverlay';
@@ -172,6 +172,7 @@ function EquippedDieCircle({ dieType, onRoll, onDismiss, screenHeight }: {
 function ConversationScreenInner() {
   const { id: conversationId, equippedDie: equippedDieParam } = useLocalSearchParams<{ id: string; equippedDie?: string }>();
   const { activeProfileId } = useProfileContext();
+  const sessionStartTimestampRef = useRef<string>(new Date().toISOString());
   const [messageText, setMessageText] = useState('');
   const [equippedDie, setEquippedDie] = useState<string | null>(null);
   const [rollingDie, setRollingDie] = useState<string | null>(null);
@@ -500,13 +501,33 @@ function ConversationScreenInner() {
               nextItem.type !== item.type ||
               Math.abs(new Date(nextItem.sent_at).getTime() - new Date(item.sent_at).getTime()) >= 60000;
 
+            // Calculate total new messages currently in view to stagger animations
+            let newMessagesCount = 0;
+            for (let i = 0; i < invertedMessages.length; i++) {
+              const msg = invertedMessages[i];
+              const isMsgNew = msg.isOptimistic || (msg.sender_profile_id !== activeProfileId && msg.sent_at && msg.sent_at > sessionStartTimestampRef.current);
+              if (isMsgNew) {
+                newMessagesCount++;
+              } else {
+                break;
+              }
+            }
+
+            const isMe = item.sender_profile_id === activeProfileId;
+            const isNew = item.isOptimistic || (item.sender_profile_id !== activeProfileId && item.sent_at && item.sent_at > sessionStartTimestampRef.current);
+            const ContainerView = isNew ? Animated.View : View;
+            
+            const batchIndex = newMessagesCount - 1 - index;
+            const delayMs = isNew ? Math.max(0, batchIndex) * 250 : 0;
+            const enteringProps = isNew ? { entering: FadeInDown.delay(delayMs).duration(300).springify().damping(15) } : {};
+
             // Event messages — centered gold pill (dice rolls, etc.)
             if (item.type === 'event') {
               // Parse dice roll pattern: "{name} rolled a {number} on a {diceType}"
               const diceMatch = item.content.match(/^(.+?) rolled a (\d+) on a (d\d+)$/);
 
               return (
-                <View style={styles.eventContainer}>
+                <ContainerView {...enteringProps} style={styles.eventContainer}>
                   <View style={styles.eventBubble}>
                     {diceMatch ? (
                       <Text style={styles.eventText}>
@@ -520,19 +541,26 @@ function ConversationScreenInner() {
                       <Text style={styles.eventText}>{item.content}</Text>
                     )}
                   </View>
-                  {showTimestamp && (
-                    <Text style={styles.timestamp}>
-                      {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
+                  {item.isOptimistic ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                      <ActivityIndicator size="small" color={Colors.outline} style={{ marginRight: 4 }} />
+                      <Text style={styles.timestamp}>sending...</Text>
+                    </View>
+                  ) : (
+                    showTimestamp && (
+                      <Text style={styles.timestamp}>
+                        {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    )
                   )}
-                </View>
+                </ContainerView>
               );
             }
 
             // System messages — centered muted pill
             if (item.type === 'system') {
               return (
-                <View style={styles.systemContainer}>
+                <ContainerView {...enteringProps} style={styles.systemContainer}>
                   <View style={styles.systemBubble}>
                     <Text style={styles.systemText}>{item.content}</Text>
                   </View>
@@ -541,14 +569,13 @@ function ConversationScreenInner() {
                       {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   )}
-                </View>
+                </ContainerView>
               );
             }
 
             // User messages — left/right aligned bubbles
-            const isMe = item.sender_profile_id === activeProfileId;
             return (
-              <View style={[styles.messageBubbleContainer, isMe ? styles.myMessageContainer : styles.theirMessageContainer]}>
+              <ContainerView {...enteringProps} style={[styles.messageBubbleContainer, isMe ? styles.myMessageContainer : styles.theirMessageContainer]}>
                 <View style={[
                   styles.messageBubble, 
                   isMe ? styles.myMessageBubble : styles.theirMessageBubble
@@ -557,12 +584,19 @@ function ConversationScreenInner() {
                     {item.content}
                   </Text>
                 </View>
-                {showTimestamp && (
-                  <Text style={styles.timestamp}>
-                    {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+                {item.isOptimistic ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                    <ActivityIndicator size="small" color={Colors.outline} style={{ marginRight: 4 }} />
+                    <Text style={styles.timestamp}>sending...</Text>
+                  </View>
+                ) : (
+                  showTimestamp && (
+                    <Text style={styles.timestamp}>
+                      {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  )
                 )}
-              </View>
+              </ContainerView>
             );
           }}
           onEndReached={() => {
@@ -651,17 +685,13 @@ function ConversationScreenInner() {
             style={({ pressed }) => [
               styles.sendButton, 
               !messageText.trim() && styles.sendButtonDisabled,
-              pressed && !isSending && { opacity: 0.7 }
+              pressed && { opacity: 0.7 }
             ]} 
             onPress={handleSend}
-            disabled={!messageText.trim() || isSending}
+            disabled={!messageText.trim()}
             testID="send-button"
           >
-            {isSending ? (
-              <ActivityIndicator size="small" color={Colors.onPrimary} />
-            ) : (
-              <Ionicons name="send" size={20} color={Colors.onPrimary} />
-            )}
+            <Ionicons name="send" size={20} color={Colors.onPrimary} />
           </Pressable>
         </View>
       </Animated.View>
