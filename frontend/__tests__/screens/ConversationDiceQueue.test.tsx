@@ -53,6 +53,9 @@ jest.mock('../../hooks/useMessages', () => ({
     mutateAsync: jest.fn(),
     invalidateAfterRoll: jest.fn(),
   })),
+  useCreateConversation: jest.fn(() => ({
+    mutateAsync: jest.fn(),
+  })),
 }));
 
 // DiceOverlay mock — captures props so we can invoke onResult/onDismiss

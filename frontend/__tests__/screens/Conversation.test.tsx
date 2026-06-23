@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, act, screen } from '@testing-library/react-native';
+import { render, fireEvent, act, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import ConversationScreen from '../../screens/ConversationScreen';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
@@ -59,6 +59,9 @@ jest.mock('../../hooks/useMessages', () => ({
   useRollDice: jest.fn(() => ({
     mutateAsync: jest.fn(),
     invalidateAfterRoll: jest.fn(),
+  })),
+  useCreateConversation: jest.fn(() => ({
+    mutateAsync: jest.fn(),
   })),
 }));
 
@@ -130,6 +133,7 @@ describe('Conversation Screen', () => {
     });
     (useSendMessage as jest.Mock).mockReturnValue({
       mutate: jest.fn(),
+      mutateAsync: jest.fn(),
       isPending: false,
     });
   });
@@ -148,10 +152,11 @@ describe('Conversation Screen', () => {
     expect(props.options.headerShadowVisible).toBe(false);
   });
 
-  it('allows sending a new message', () => {
+  it('allows sending a new message', async () => {
     const mockMutate = jest.fn();
     (useSendMessage as jest.Mock).mockReturnValue({
       mutate: mockMutate,
+      mutateAsync: mockMutate,
       isPending: false,
     });
 
@@ -165,10 +170,12 @@ describe('Conversation Screen', () => {
     const sendButton = screen.getByTestId('send-button');
     fireEvent.press(sendButton);
     
-    expect(mockMutate).toHaveBeenCalledWith({
-      conversationId: mockConversationId,
-      senderProfileId: mockActiveProfileId,
-      content: 'I seek adventure!',
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith({
+        conversationId: mockConversationId,
+        senderProfileId: mockActiveProfileId,
+        content: 'I seek adventure!',
+      });
     });
   });
 
@@ -193,10 +200,11 @@ describe('Conversation Screen', () => {
     expect(input.props.placeholder).toBe('Compose a missive...');
   });
 
-  it('allows sending a narration event message when narration mode is active', () => {
+  it('allows sending a narration event message when narration mode is active', async () => {
     const mockMutate = jest.fn();
     (useSendMessage as jest.Mock).mockReturnValue({
       mutate: mockMutate,
+      mutateAsync: mockMutate,
       isPending: false,
     });
 
@@ -211,15 +219,17 @@ describe('Conversation Screen', () => {
     const sendButton = screen.getByTestId('send-button');
     fireEvent.press(sendButton);
     
-    expect(mockMutate).toHaveBeenCalledWith({
-      conversationId: mockConversationId,
-      senderProfileId: mockActiveProfileId,
-      content: 'A mysterious figure emerges.',
-      type: 'event',
-      metadata: {
-        event_type: 'narration',
-        initiated_by: mockActiveProfileId,
-      },
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith({
+        conversationId: mockConversationId,
+        senderProfileId: mockActiveProfileId,
+        content: 'A mysterious figure emerges.',
+        type: 'event',
+        metadata: {
+          event_type: 'narration',
+          initiated_by: mockActiveProfileId,
+        },
+      });
     });
   });
 
@@ -430,7 +440,7 @@ describe('Conversation Screen', () => {
     expect(screen.queryByTestId('equipped-die-roll-button')).toBeNull();
   });
 
-  it('sends the message on Web when Enter is pressed without Shift', () => {
+  it('sends the message on Web when Enter is pressed without Shift', async () => {
     const originalOS = Platform.OS;
     Object.defineProperty(Platform, 'OS', {
       value: 'web',
@@ -440,6 +450,7 @@ describe('Conversation Screen', () => {
       const mockMutate = jest.fn();
       (useSendMessage as jest.Mock).mockReturnValue({
         mutate: mockMutate,
+        mutateAsync: mockMutate,
         isPending: false,
       });
 
@@ -457,10 +468,12 @@ describe('Conversation Screen', () => {
       });
 
       expect(preventDefault).toHaveBeenCalled();
-      expect(mockMutate).toHaveBeenCalledWith({
-        conversationId: mockConversationId,
-        senderProfileId: mockActiveProfileId,
-        content: 'Web adventure!',
+      await waitFor(() => {
+        expect(mockMutate).toHaveBeenCalledWith({
+          conversationId: mockConversationId,
+          senderProfileId: mockActiveProfileId,
+          content: 'Web adventure!',
+        });
       });
     } finally {
       Object.defineProperty(Platform, 'OS', {
@@ -480,6 +493,7 @@ describe('Conversation Screen', () => {
       const mockMutate = jest.fn();
       (useSendMessage as jest.Mock).mockReturnValue({
         mutate: mockMutate,
+        mutateAsync: mockMutate,
         isPending: false,
       });
 
