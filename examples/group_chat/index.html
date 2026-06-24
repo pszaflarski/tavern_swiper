@@ -370,6 +370,31 @@
         .msg-bubble[data-agent="mary"] .msg-sender { color: var(--color-mary); }
         .msg-bubble[data-agent="mary"] .msg-card { border-color: rgba(236, 72, 153, 0.35); }
 
+        /* Accent bubble classes for humans */
+        .msg-bubble[data-agent="matthew"] .msg-sender { color: #f59e0b; }
+        .msg-bubble[data-agent="matthew"] .msg-card {
+            border-color: rgba(245, 158, 11, 0.35);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.08) 100%);
+        }
+
+        .msg-bubble[data-agent="mark"] .msg-sender { color: #10b981; }
+        .msg-bubble[data-agent="mark"] .msg-card {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%);
+        }
+
+        .msg-bubble[data-agent="luke"] .msg-sender { color: #06b6d4; }
+        .msg-bubble[data-agent="luke"] .msg-card {
+            border-color: rgba(6, 182, 212, 0.35);
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(8, 145, 178, 0.08) 100%);
+        }
+
+        .msg-bubble[data-agent="john"] .msg-sender { color: #a855f7; }
+        .msg-bubble[data-agent="john"] .msg-card {
+            border-color: rgba(168, 85, 247, 0.35);
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(147, 51, 234, 0.08) 100%);
+        }
+
         /* Thinking & SSE log Blocks */
         .thinking-block {
             align-self: flex-start;
@@ -496,6 +521,112 @@
             gap: 15px;
         }
 
+        /* Human Switcher Styles */
+        .human-switcher-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 5px;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .switcher-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .human-chips {
+            display: flex;
+            gap: 8px;
+        }
+
+        .human-chip {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-charcoal);
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .human-chip:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-light);
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        .human-chip.active {
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+        }
+
+        /* Accent classes for human active states */
+        .human-chip[data-human="matthew"].active {
+            background-color: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.6);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+        }
+        .human-chip[data-human="mark"].active {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.6);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+        .human-chip[data-human="luke"].active {
+            background-color: rgba(6, 182, 212, 0.15);
+            border-color: rgba(6, 182, 212, 0.6);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+        .human-chip[data-human="john"].active {
+            background-color: rgba(168, 85, 247, 0.15);
+            border-color: rgba(168, 85, 247, 0.6);
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+        }
+
+        .human-chip.expected-turn {
+            animation: expectedPulse 1.8s infinite ease-in-out;
+            position: relative;
+        }
+
+        @keyframes expectedPulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 5px rgba(245, 158, 11, 0.1);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+                border-color: var(--text-gold);
+            }
+        }
+        
+        .human-chip.expected-turn::after {
+            content: "✍";
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background-color: var(--text-amber);
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--bg-panel);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
         .input-row {
             display: flex;
             gap: 12px;
@@ -579,6 +710,16 @@
         .kill-btn:hover:not(:disabled) {
             background-color: #ef4444;
             box-shadow: 0 6px 14px rgba(239, 68, 68, 0.25);
+        }
+
+        #btn-nudge {
+            background-color: #6366f1;
+            border: 1px solid #4f46e5;
+        }
+
+        #btn-nudge:hover:not(:disabled) {
+            background-color: #4f46e5;
+            box-shadow: 0 6px 14px rgba(99, 102, 241, 0.25);
         }
 
         .kill-btn.halted {
@@ -856,9 +997,27 @@
                 </div>
             </div>
 
-            <!-- Bottom Controller & Input -->
             <div class="bottom-panel">
                 
+                <!-- Human Switcher bar (Trio Room only) -->
+                <div class="human-switcher-bar" id="human-switcher" style="display:none;">
+                    <span class="switcher-label">Speak as:</span>
+                    <div class="human-chips">
+                        <button class="human-chip active" data-human="matthew" data-avatar="👤">
+                            <span class="chip-avatar">👤</span> Matthew
+                        </button>
+                        <button class="human-chip" data-human="mark" data-avatar="👤">
+                            <span class="chip-avatar">👤</span> Mark
+                        </button>
+                        <button class="human-chip" data-human="luke" data-avatar="👤">
+                            <span class="chip-avatar">👤</span> Luke
+                        </button>
+                        <button class="human-chip" data-human="john" data-avatar="👤">
+                            <span class="chip-avatar">👤</span> John
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Chat Input Input Row -->
                 <div class="input-row">
                     <div class="chat-input-wrapper">
@@ -873,6 +1032,10 @@
                     <button class="send-btn" id="btn-send">
                         <span>Send</span>
                         <span class="icon">➔</span>
+                    </button>
+
+                    <button class="send-btn" id="btn-nudge" style="display:none;">
+                        <span>🔔 Nudge Bot</span>
                     </button>
                 </div>
 
@@ -941,6 +1104,9 @@
         const chatInput = document.getElementById('chat-input');
         const btnSend = document.getElementById('btn-send');
         const btnKillLoop = document.getElementById('btn-kill-loop');
+        const btnNudge = document.getElementById('btn-nudge');
+        const humanSwitcher = document.getElementById('human-switcher');
+        const humanChips = document.querySelectorAll('.human-chip');
         const partyMembers = document.querySelectorAll('.party-member');
         const currentName = document.getElementById('current-name');
         const currentRole = document.getElementById('current-role');
@@ -994,6 +1160,9 @@
         let activeTimers = [];
         let activeRequests = [];
         const groupAgents = ['peter', 'paul', 'mary'];
+        const groupHumans = ['matthew', 'mark', 'luke', 'john'];
+        const groupParticipants = ['peter', 'paul', 'mary', 'matthew', 'mark', 'luke', 'john'];
+        let activeHuman = 'matthew';
 
         // Simple synth audio engine for "Tavern SFX" (mechanical/wooden taps)
         const synthSound = (type) => {
@@ -1142,6 +1311,81 @@
             }
         });
 
+        // Nudge Bot Action
+        const nudgeOrchestrator = () => {
+            if (!isLoopRunning) return;
+
+            // Clear any active human expected highlights
+            humanChips.forEach(chip => chip.classList.remove('expected-turn'));
+
+            orchStatusText.textContent = 'Orchestrator: Nudging...';
+
+            const baseUrl = cfgRouterUrl.value.trim();
+            const modelVal = cfgModelSelect.value;
+            const threadId = (currentThreadId || 'trio_thread') + '_orchestrator';
+
+            const controller = new AbortController();
+            activeRequests.push(controller);
+
+            // Find the last message and sender in the chat history
+            const msgBubbles = messagesBox.querySelectorAll('.msg-bubble:not(.typing-indicator-bubble):not(.thinking-block)');
+            let lastMsgText = "Hello";
+            let lastSenderKey = "user";
+            let lastSenderName = "User";
+            if (msgBubbles.length > 0) {
+                const lastBubble = msgBubbles[msgBubbles.length - 1];
+                lastSenderKey = lastBubble.getAttribute('data-agent');
+                
+                // Get display sender name
+                const senderEl = lastBubble.querySelector('.msg-sender');
+                if (senderEl) {
+                    lastSenderName = senderEl.textContent.trim();
+                }
+                
+                // Get clean text content
+                const card = lastBubble.querySelector('.msg-card');
+                if (card) {
+                    lastMsgText = card.textContent.trim();
+                }
+            }
+
+            fetch(`${baseUrl}/invoke`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: "A participant nudges the room. Select one of the bots (peter, paul, or mary) to speak next.",
+                    agent: 'orchestrator',
+                    model: modelVal,
+                    thread_id: threadId,
+                    name: 'system',
+                    message_type: 'system'
+                }),
+                signal: controller.signal
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('API Error');
+                return res.json();
+            })
+            .then(data => {
+                activeRequests = activeRequests.filter(c => c !== controller);
+                if (!isLoopRunning) return;
+
+                const nextSpeaker = parseOrchestratorDecision(data.response);
+                
+                // Route message and trigger the chosen bot (since it is forced to be a bot)
+                routeGroupMessage(lastSenderKey, lastSenderName, lastMsgText, nextSpeaker);
+            })
+            .catch(err => {
+                activeRequests = activeRequests.filter(c => c !== controller);
+                if (err.name !== 'AbortError') {
+                    console.error('Orchestrator nudge failed:', err);
+                    orchStatusText.textContent = 'Orchestrator: Error';
+                }
+            });
+        };
+
+        btnNudge.addEventListener('click', nudgeOrchestrator);
+
         // Sidebar click handler -> select Single or Group Mode
         partyMembers.forEach(member => {
             member.addEventListener('click', () => {
@@ -1161,29 +1405,44 @@
                 
                 if (mode === 'single') {
                     btnKillLoop.style.display = 'none';
+                    btnNudge.style.display = 'none';
                     lblChkStream.style.display = 'flex';
                     orchStatusPanel.style.display = 'none';
+                    humanSwitcher.style.display = 'none';
                     
                     selectedAgent = 'example_chat';
                     cfgAgentSelect.value = 'example_chat';
                     chatInput.placeholder = `Type a message to Example Chat...`;
+                    btnSend.querySelector('span').textContent = 'Send';
                     
                     messagesBox.innerHTML = '';
                     appendMessage('example_chat', "Welcome back! How can I assist you today, traveler?", 'agent');
                 } else {
                     btnKillLoop.style.display = 'flex';
+                    btnNudge.style.display = 'flex';
                     lblChkStream.style.display = 'none';
                     orchStatusPanel.style.display = 'flex';
+                    humanSwitcher.style.display = 'flex';
                     orchStatusText.textContent = 'Orchestrator: Idle';
                     
                     resumeConversationLoop();
                     
                     selectedAgent = 'group';
                     cfgAgentSelect.value = 'group';
-                    chatInput.placeholder = `Broadcasting to Peter, Paul, and Mary...`;
+                    
+                    activeHuman = 'matthew';
+                    humanChips.forEach(chip => {
+                        chip.classList.remove('active', 'expected-turn');
+                        if (chip.getAttribute('data-human') === 'matthew') {
+                            chip.classList.add('active');
+                        }
+                    });
+                    const humanName = activeHuman.charAt(0).toUpperCase() + activeHuman.slice(1);
+                    chatInput.placeholder = `Speak as ${humanName}...`;
+                    btnSend.querySelector('span').textContent = `Send as ${humanName}`;
                     
                     messagesBox.innerHTML = '';
-                    appendSystemMessage("Joined room: 'The Trio Room'. Chatting with Peter, Paul, and Mary.");
+                    appendSystemMessage("Joined room: 'The Trio Room'. Chatting with Peter, Paul, Mary, Matthew, Mark, Luke, and John.");
                     
                     // Trigger custom introduction greetings
                     appendMessage('peter', "Greetings. I am Peter. I look forward to our discussions.", 'agent');
@@ -1192,6 +1451,28 @@
                 }
                 
                 synthSound('system');
+            });
+        });
+
+        // Human chip switcher click handler
+        humanChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const human = chip.getAttribute('data-human');
+                if (human === activeHuman) return;
+                
+                activeHuman = human;
+                humanChips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                
+                // Clear the expected-turn animation on switch
+                chip.classList.remove('expected-turn');
+                
+                const humanName = human.charAt(0).toUpperCase() + human.slice(1);
+                chatInput.placeholder = `Speak as ${humanName}...`;
+                btnSend.querySelector('span').textContent = `Send as ${humanName}`;
+                
+                synthSound('system');
+                chatInput.focus();
             });
         });
 
@@ -1306,6 +1587,8 @@
                 else if (sender === 'paul') dispName = 'Paul';
                 else if (sender === 'mary') dispName = 'Mary';
                 else dispName = sender;
+            } else if (chatMode === 'group') {
+                dispName = sender.charAt(0).toUpperCase() + sender.slice(1);
             }
             senderNameSpan.textContent = dispName;
             
@@ -1457,6 +1740,9 @@
                 }
             });
 
+            // Clear any active expected-turn animations on human switcher chips
+            humanChips.forEach(chip => chip.classList.remove('expected-turn'));
+
             // 2. Handle next speaker trigger or status updates
             if (nextSpeaker === 'user') {
                 orchStatusText.textContent = 'Orchestrator: Waiting for User';
@@ -1470,6 +1756,15 @@
                     triggerAgentResponse(nextSpeaker, cleanText, senderKey);
                 }, delay);
                 activeTimers.push(timerId);
+            } else if (groupHumans.includes(nextSpeaker)) {
+                const dispName = nextSpeaker.charAt(0).toUpperCase() + nextSpeaker.slice(1);
+                orchStatusText.textContent = `Orchestrator: Next -> ${dispName} (Expected)`;
+                
+                // Visual indicator: highlight the human chip whose turn is expected
+                const targetChip = Array.from(humanChips).find(c => c.getAttribute('data-human') === nextSpeaker);
+                if (targetChip) {
+                    targetChip.classList.add('expected-turn');
+                }
             } else {
                 orchStatusText.textContent = 'Orchestrator: Waiting for User';
             }
@@ -1486,10 +1781,13 @@
             chatInput.value = '';
             chatInput.style.height = '44px';
 
-            // Render user bubble
-            appendMessage('user', messageText, 'user');
+            // Clear expected turn highlight on send
+            humanChips.forEach(chip => chip.classList.remove('expected-turn'));
 
             if (chatMode === 'single') {
+                // Render user bubble
+                appendMessage('user', messageText, 'user');
+                
                 chatInput.disabled = true;
                 btnSend.disabled = true;
                 try {
@@ -1513,13 +1811,17 @@
                     chatInput.focus();
                 }
             } else {
+                // Render human bubble
+                appendMessage(activeHuman, messageText, 'user');
+
                 // Trio Room group chat mode
                 if (!isLoopRunning) {
                     resumeConversationLoop();
                 }
                 
-                // Let orchestrator decide who speaks next based on user message
-                triggerOrchestration('User', messageText);
+                // Let orchestrator decide who speaks next based on human message
+                const dispName = activeHuman.charAt(0).toUpperCase() + activeHuman.slice(1);
+                triggerOrchestration(dispName, messageText);
             }
         };
 
@@ -1532,13 +1834,19 @@
             }
             try {
                 const obj = JSON.parse(cleanText);
-                return obj.next; 
+                if (obj && obj.next) {
+                    const nextVal = obj.next.toLowerCase().trim();
+                    if (groupParticipants.includes(nextVal)) {
+                        return nextVal;
+                    }
+                }
+                return 'user'; 
             } catch (e) {
                 // Fallback loose text parsing
                 const lower = cleanText.toLowerCase();
-                if (lower.includes('peter')) return 'peter';
-                if (lower.includes('paul')) return 'paul';
-                if (lower.includes('mary')) return 'mary';
+                for (const p of groupParticipants) {
+                    if (lower.includes(p)) return p;
+                }
                 return 'user';
             }
         };
