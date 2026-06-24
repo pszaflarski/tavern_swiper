@@ -1353,12 +1353,16 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    prompt: "A participant nudges the room. Select one of the bots (peter, paul, or mary) to speak next.",
+                    prompt: "A participant nudges the room. Select one of the bots to speak next.",
                     agent: 'orchestrator',
                     model: modelVal,
                     thread_id: threadId,
                     name: 'system',
-                    message_type: 'system'
+                    message_type: 'system',
+                    metadata: {
+                        bots: groupAgents,
+                        users: groupHumans
+                    }
                 }),
                 signal: controller.signal
             })
@@ -1876,7 +1880,11 @@
                     agent: 'orchestrator',
                     model: modelVal,
                     thread_id: threadId,
-                    name: latestSender.toLowerCase()
+                    name: latestSender.toLowerCase(),
+                    metadata: {
+                        bots: groupAgents,
+                        users: groupHumans
+                    }
                 }),
                 signal: controller.signal
             })
