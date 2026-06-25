@@ -1,31 +1,35 @@
 /**
  * RichTextInput — cross-platform rich text input for inline narration formatting.
  *
- * Web:    Uses a contentEditable div with document.execCommand('italic') for native
- *         cursor/selection/scroll behavior and inline italic formatting.
- * Native: Falls back to a plain TextInput (no inline formatting preview).
+ * Uses @10play/tentap-editor (TipTap/ProseMirror) inside a WebView for
+ * consistent italic/narration behavior across web, Android, and iOS.
+ * Only italic formatting is enabled — bold, lists, etc. are disabled.
  */
 import type { MessageBlock } from '../lib/messageParser';
+import { parseHTMLToBlocks } from '../lib/messageParser';
 import React, {
   forwardRef,
   useImperativeHandle,
   useRef,
-  useCallback,
   useEffect,
 } from 'react';
+import { StyleSheet, View } from 'react-native';
 import {
-  Platform,
-  TextInput,
-  StyleSheet,
-  View,
-} from 'react-native';
+  RichText,
+  useEditorBridge,
+  useBridgeState,
+  CoreBridge,
+  ItalicBridge,
+  PlaceholderBridge,
+  BridgeExtension,
+} from '@10play/tentap-editor';
 import { Colors, Fonts, Spacing, Radius } from '../theme';
 
 export interface RichTextInputRef {
-  /** Returns the plain text content (no HTML). */
-  getText: () => string;
-  /** Reads the DOM and returns structured message blocks directly from <i>/<em> tags. */
-  getBlocks: () => MessageBlock[];
+  /** Returns the plain text content (no HTML). Async — queries the editor bridge. */
+  getText: () => Promise<string>;
+  /** Returns structured message blocks with narration/message types. Async — queries the editor bridge. */
+  getBlocks: () => Promise<MessageBlock[]>;
   /** Clears all content and formatting. */
   clear: () => void;
   /** Focus the input. */
@@ -47,289 +51,152 @@ export interface RichTextInputProps {
   testID?: string;
 }
 
-// ─── Web implementation ─────────────────────────────────────────────────────
+// CSS injected into the TipTap WebView to match the app's dark theme
+const EDITOR_CSS = `
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: ${Colors.surfaceContainer};
+  }
+  .ProseMirror {
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 15px;
+    line-height: 20px;
+    color: ${Colors.onPrimary}; /* Same color as regular talking messages (pure white) */
+    padding: ${Spacing[2]}px ${Spacing[4]}px;
+    min-height: 100px;
+    max-height: 100px;
+    overflow-y: auto;
+    outline: none;
+    caret-color: ${Colors.primary};
+    word-break: break-word;
+    background-color: ${Colors.surfaceContainer};
+  }
+  .ProseMirror p {
+    margin: 0;
+  }
+  .ProseMirror em {
+    font-style: italic;
+    color: ${Colors.tertiaryFixed}; /* Gold color matching user narration messages */
+  }
+  .tiptap p.is-editor-empty:first-child::before,
+  .ProseMirror p.is-editor-empty:first-child::before {
+    color: ${Colors.outline};
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+  /* Hide the WebView's default scrollbar on web */
+  .ProseMirror::-webkit-scrollbar {
+    display: none;
+  }
+`;
 
-function RichTextInputWeb(
-  props: RichTextInputProps,
-  ref: React.Ref<RichTextInputRef>
-) {
-  const { placeholder, maxLength, onChangeText, onSubmit, onNarrationChange, testID } = props;
-  const divRef = useRef<HTMLDivElement>(null);
-  const inputClass = 'rich-text-input';
-
-  const getPlainText = useCallback((): string => {
-    return divRef.current?.innerText?.replace(/\n$/, '') || '';
-  }, []);
-
-  const isItalicTag = (el: HTMLElement): boolean => {
-    return el.tagName === 'I' || el.tagName === 'EM';
-  };
-
-  /** Walk the DOM and produce MessageBlock[] directly from <i>/<em> tags. */
-  const getBlocks = useCallback((): MessageBlock[] => {
-    const div = divRef.current;
-    if (!div) return [];
-
-    const blocks: MessageBlock[] = [];
-
-    const walk = (node: Node, insideItalic: boolean) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent || '';
-        if (!text) return;
-        blocks.push({ type: insideItalic ? 'narration' : 'message', content: text });
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as HTMLElement;
-        if (el.tagName === 'BR') return;
-        const nowItalic = insideItalic || isItalicTag(el);
-        for (const child of Array.from(node.childNodes)) {
-          walk(child, nowItalic);
-        }
-      }
-    };
-
-    for (const child of Array.from(div.childNodes)) {
-      walk(child, false);
-    }
-
-    // Merge adjacent blocks of the same type
-    const merged: MessageBlock[] = [];
-    for (const b of blocks) {
-      if (merged.length > 0 && merged[merged.length - 1].type === b.type) {
-        merged[merged.length - 1].content += b.content;
-      } else {
-        merged.push({ ...b });
-      }
-    }
-    return merged;
-  }, []);
-
-  const checkNarratingState = useCallback((): boolean => {
-    try {
-      return document.queryCommandState('italic');
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // Save the selection range so we can restore it if focus is lost (e.g. button click)
-  const savedRangeRef = useRef<Range | null>(null);
-
-  const toggleNarration = useCallback((): boolean => {
-    const div = divRef.current;
-    if (!div) return false;
-
-    const sel = window.getSelection();
-
-    // If focus was lost (selection outside div), restore the saved range
-    if (!sel || sel.rangeCount === 0 || !div.contains(sel.anchorNode)) {
-      div.focus();
-      if (savedRangeRef.current && sel) {
-        sel.removeAllRanges();
-        sel.addRange(savedRangeRef.current);
-      }
-    }
-
-    document.execCommand('italic', false);
-
-    const isNow = checkNarratingState();
-    onNarrationChange?.(isNow);
-    onChangeText?.(getPlainText());
-    return isNow;
-  }, [checkNarratingState, onNarrationChange, onChangeText, getPlainText]);
-
-  useImperativeHandle(ref, () => ({
-    getText: getPlainText,
-    getBlocks,
-    clear: () => {
-      if (divRef.current) {
-        divRef.current.innerHTML = '';
-        onNarrationChange?.(false);
-      }
-    },
-    focus: () => divRef.current?.focus(),
-    toggleNarration,
-    isNarrating: checkNarratingState,
-    restore: (text: string) => {
-      if (divRef.current) {
-        divRef.current.innerText = text;
-      }
-    },
-  }), [getPlainText, getBlocks, toggleNarration, checkNarratingState, onNarrationChange]);
-
-  const handleInput = useCallback(() => {
-    const text = getPlainText();
-    if (maxLength && text.length > maxLength) return;
-    onChangeText?.(text);
-    const isItalic = checkNarratingState();
-    onNarrationChange?.(isItalic);
-  }, [getPlainText, maxLength, onChangeText, checkNarratingState, onNarrationChange]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSubmit?.();
-    }
-    // Block Ctrl+B — only italic via Narrate button
-    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-      e.preventDefault();
-    }
-  }, [onSubmit]);
-
-  const handleSelectionChange = useCallback(() => {
-    const div = divRef.current;
-    if (!div) return;
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    if (!div.contains(sel.anchorNode)) return;
-
-    // Save the range so we can restore it if focus is lost
-    savedRangeRef.current = sel.getRangeAt(0).cloneRange();
-
-    const isItalic = checkNarratingState();
-    onNarrationChange?.(isItalic);
-  }, [checkNarratingState, onNarrationChange]);
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
-  }, [handleSelectionChange]);
-
-  return (
-    <View style={webStyles.container}>
-      <style dangerouslySetInnerHTML={{ __html: `
-        .${inputClass}[data-placeholder]:empty::before {
-          content: attr(data-placeholder);
-          color: ${Colors.outline};
-          pointer-events: none;
-        }
-        .${inputClass} i, .${inputClass} em {
-          font-style: italic;
-        }
-      `}} />
-      <div
-        ref={divRef}
-        className={inputClass}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput as any}
-        onKeyDown={handleKeyDown as any}
-        data-testid={testID}
-        data-placeholder={placeholder}
-        style={{
-          flex: 1,
-          fontFamily: Fonts.scribe,
-          fontSize: 15,
-          lineHeight: '20px',
-          color: Colors.onSurface,
-          padding: `${Spacing[2]}px ${Spacing[4]}px`,
-          minHeight: 40,
-          maxHeight: 100,
-          overflowY: 'auto',
-          outline: 'none',
-          caretColor: Colors.primary,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-        } as any}
-      />
-    </View>
-  );
-}
-
-const webStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.sm,
-    minHeight: 40,
-    maxHeight: 100,
-    overflow: 'hidden',
-  },
+const CustomStylesExtension = new BridgeExtension({
+  forceName: 'custom-styles-extension',
+  extendCSS: EDITOR_CSS,
 });
 
-// ─── Native implementation (plain TextInput fallback) ───────────────────────
-
-function RichTextInputNative(
+function RichTextInputInner(
   props: RichTextInputProps,
   ref: React.Ref<RichTextInputRef>
 ) {
   const { placeholder, maxLength, onChangeText, onSubmit, onNarrationChange, testID } = props;
-  const inputRef = useRef<TextInput>(null);
-  const textRef = useRef('');
-  const narratingRef = useRef(false);
+
+  const editor = useEditorBridge({
+    autofocus: false,
+    avoidIosKeyboard: true,
+    bridgeExtensions: [
+      CoreBridge,
+      ItalicBridge,
+      PlaceholderBridge.configureExtension({
+        placeholder: placeholder || 'Compose a missive...',
+      }),
+      CustomStylesExtension,
+    ],
+  });
+
+  const editorState = useBridgeState(editor);
+
+  // Use the push-based editorState.empty to notify parent of content changes.
+  // This is reliable because bridge state subscriptions work (proven by isItalicActive).
+  // We avoid async getText() queries on every keystroke — those fail silently on Web.
+  const prevEmptyRef = useRef(true);
+  useEffect(() => {
+    const isEmpty = (editorState as any).empty ?? true;
+    if (isEmpty !== prevEmptyRef.current) {
+      prevEmptyRef.current = isEmpty;
+      // Send a non-empty sentinel when the editor has content, empty string when empty.
+      // The parent uses this to enable/disable the send button.
+      onChangeText?.(isEmpty ? '' : ' ');
+    }
+  }, [(editorState as any).empty, onChangeText]);
+
+  // Notify parent when italic state changes
+  const prevItalicRef = useRef(false);
+  useEffect(() => {
+    const isItalic = editorState.isItalicActive;
+    if (isItalic !== prevItalicRef.current) {
+      prevItalicRef.current = isItalic;
+      onNarrationChange?.(isItalic);
+    }
+  }, [editorState.isItalicActive, onNarrationChange]);
 
   useImperativeHandle(ref, () => ({
-    getText: () => textRef.current,
-    getBlocks: () => textRef.current ? [{ type: 'message' as const, content: textRef.current }] : [],
+    getText: async () => {
+      try { return await editor.getText(); } catch { return ''; }
+    },
+    getBlocks: async () => {
+      try {
+        const html = await editor.getHTML();
+        return parseHTMLToBlocks(html);
+      } catch { return []; }
+    },
     clear: () => {
-      textRef.current = '';
-      inputRef.current?.clear();
-      narratingRef.current = false;
+      editor.setContent('');
+      onChangeText?.('');
       onNarrationChange?.(false);
     },
-    focus: () => inputRef.current?.focus(),
+    focus: () => editor.focus(),
     toggleNarration: () => {
-      narratingRef.current = !narratingRef.current;
-      onNarrationChange?.(narratingRef.current);
-      return narratingRef.current;
+      editor.toggleItalic();
+      const willBeItalic = !editorState.isItalicActive;
+      onNarrationChange?.(willBeItalic);
+      return willBeItalic;
     },
-    isNarrating: () => narratingRef.current,
+    isNarrating: () => editorState.isItalicActive,
     restore: (text: string) => {
-      textRef.current = text;
+      editor.setContent(`<p>${text}</p>`);
+      onChangeText?.(text);
     },
-  }), [onNarrationChange]);
-
-  const handleChangeText = useCallback((text: string) => {
-    textRef.current = text;
-    onChangeText?.(text);
-  }, [onChangeText]);
+  }), [editor, editorState.isItalicActive, onNarrationChange, onChangeText]);
 
   return (
-    <View style={nativeStyles.container}>
-      <TextInput
-        ref={inputRef}
-        style={[
-          nativeStyles.input,
-          narratingRef.current && { fontStyle: 'italic' as const },
-        ]}
-        placeholder={placeholder}
-        placeholderTextColor={Colors.outline}
-        onChangeText={handleChangeText}
-        selectionColor={Colors.primary}
-        multiline
-        maxLength={maxLength}
-        testID={testID}
+    <View style={styles.container} testID={testID}>
+      <RichText
+        editor={editor}
+        style={styles.richText}
       />
     </View>
   );
 }
 
-const nativeStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.surfaceContainer,
     borderRadius: Radius.sm,
-    minHeight: 40,
-    maxHeight: 100,
+    height: 100,
     overflow: 'hidden',
   },
-  input: {
+  richText: {
     flex: 1,
-    paddingHorizontal: Spacing[4],
-    paddingTop: Spacing[2],
-    paddingBottom: Spacing[2],
-    fontFamily: Fonts.scribe,
-    fontSize: 15,
-    lineHeight: 20,
-    color: Colors.onSurface,
-    minHeight: 40,
+    backgroundColor: Colors.surfaceContainer,
   },
 });
 
-// ─── Platform export ────────────────────────────────────────────────────────
-
-const RichTextInput = forwardRef<RichTextInputRef, RichTextInputProps>(
-  Platform.OS === 'web' ? RichTextInputWeb : RichTextInputNative
-);
+const RichTextInput = forwardRef<RichTextInputRef, RichTextInputProps>(RichTextInputInner);
 
 RichTextInput.displayName = 'RichTextInput';
 

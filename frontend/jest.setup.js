@@ -256,6 +256,48 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
 }));
 
+// Mock react-native-webview
+jest.mock('react-native-webview', () => {
+  const { View } = require('react-native');
+  return {
+    default: View,
+    WebView: View,
+  };
+});
+
+// Mock @10play/tentap-editor
+jest.mock('@10play/tentap-editor', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    RichText: (props) => React.createElement(View, props),
+    useEditorBridge: () => ({
+      focus: jest.fn(),
+      toggleItalic: jest.fn(),
+      setContent: jest.fn(),
+      injectCSS: jest.fn(),
+      getText: jest.fn().mockResolvedValue(''),
+      getHTML: jest.fn().mockResolvedValue(''),
+    }),
+    useBridgeState: () => ({
+      isReady: true,
+      isItalicActive: false,
+    }),
+    CoreBridge: {},
+    ItalicBridge: {},
+    PlaceholderBridge: {
+      configureExtension: () => ({}),
+    },
+    BridgeExtension: class {
+      constructor() {}
+      clone() { return this; }
+      configureExtension() { return this; }
+      configureCSS() { return this; }
+      extendExtension() { return this; }
+    },
+  };
+});
+
 // Silence the warning: Animated: `useNativeDriver` is not supported because the native animated module is missing
 // jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
 
