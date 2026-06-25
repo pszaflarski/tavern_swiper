@@ -160,6 +160,7 @@ function RichTextInputInner(
     },
     focus: () => editor.focus(),
     toggleNarration: () => {
+      editor.focus();
       editor.toggleItalic();
       const willBeItalic = !editorState.isItalicActive;
       onNarrationChange?.(willBeItalic);
