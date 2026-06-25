@@ -203,7 +203,6 @@ function RichTextInputWeb(
           pointer-events: none;
         }
         .${inputClass} i, .${inputClass} em {
-          color: ${Colors.tertiaryFixedDim};
           font-style: italic;
         }
       `}} />
@@ -290,7 +289,7 @@ function RichTextInputNative(
         ref={inputRef}
         style={[
           nativeStyles.input,
-          narratingRef.current && { fontStyle: 'italic' as const, color: Colors.tertiaryFixedDim },
+          narratingRef.current && { fontStyle: 'italic' as const },
         ]}
         placeholder={placeholder}
         placeholderTextColor={Colors.outline}
