@@ -13,6 +13,7 @@ import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 import { useUnreadStatus } from '../../hooks/useUnreadStatus';
+import { getMessagePreview } from '../../lib/messageParser';
 
 function MessagesScreenInner() {
   const router = useRouter();
@@ -153,7 +154,7 @@ function MessagesScreenInner() {
                     <View style={styles.inboxTextContainer}>
                       <Text style={styles.inboxName}>{convo.otherProfile?.display_name || 'Traveler'}</Text>
                       <Text style={styles.inboxLastMessage} numberOfLines={1}>
-                        {convo.last_message?.content}
+                        {convo.last_message?.content ? getMessagePreview(convo.last_message.content) : ''}
                       </Text>
                     </View>
                   </View>

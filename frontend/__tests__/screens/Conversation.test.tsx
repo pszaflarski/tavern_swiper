@@ -77,6 +77,58 @@ jest.mock('../../components/DiceOverlay', () => {
   return { __esModule: true, default: () => null };
 });
 
+// Mock RichTextInput — contentEditable doesn't work in JSDOM.
+// This mock renders a TextInput and simulates the ref API.
+let mockRichTextState = { text: '', blocks: [] as any[], narrating: false };
+jest.mock('../../components/RichTextInput', () => {
+  const React = require('react');
+  const { TextInput, View } = require('react-native');
+  const { forwardRef, useImperativeHandle, useRef } = React;
+
+  const MockRichTextInput = forwardRef((props: any, ref: any) => {
+    const inputRef = useRef(null);
+
+    useImperativeHandle(ref, () => ({
+      getText: () => mockRichTextState.text,
+      getBlocks: () => mockRichTextState.blocks,
+      clear: () => {
+        mockRichTextState = { text: '', blocks: [], narrating: false };
+        props.onNarrationChange?.(false);
+      },
+      focus: () => {},
+      toggleNarration: () => {
+        mockRichTextState.narrating = !mockRichTextState.narrating;
+        props.onNarrationChange?.(mockRichTextState.narrating);
+        return mockRichTextState.narrating;
+      },
+      isNarrating: () => mockRichTextState.narrating,
+      restore: (text: string) => { mockRichTextState.text = text; },
+    }));
+
+    return (
+      <TextInput
+        ref={inputRef}
+        testID={props.testID}
+        placeholder={props.placeholder}
+        value={mockRichTextState.text}
+        onChangeText={(text: string) => {
+          mockRichTextState.text = text;
+          props.onChangeText?.(text);
+        }}
+        onKeyPress={(e: any) => {
+          if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+            e.preventDefault?.();
+            props.onSubmit?.();
+          }
+        }}
+      />
+    );
+  });
+
+  MockRichTextInput.displayName = 'MockRichTextInput';
+  return { __esModule: true, default: MockRichTextInput };
+});
+
 // Mock useWindowDimensions for the draggable die
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -121,6 +173,7 @@ describe('Conversation Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRichTextState = { text: '', blocks: [], narrating: false };
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: mockConversationId });
     (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: mockActiveProfileId });
     (useProfile as jest.Mock).mockReturnValue({
@@ -184,32 +237,12 @@ describe('Conversation Screen', () => {
         conversationId: mockConversationId,
         senderProfileId: mockActiveProfileId,
         content: 'I seek adventure!',
+        type: 'user',
       });
     });
   });
 
-  it('toggles narration mode and changes placeholder accordingly', () => {
-    render(<ConversationScreen />);
-    
-    const input = screen.getByTestId('message-input');
-    const toggleBtn = screen.getByTestId('narration-toggle-button');
-    
-    // Check initial (inactive) state
-    expect(screen.getByText('*')).toBeTruthy();
-    expect(input.props.placeholder).toBe('Compose a missive...');
-    
-    // Press to activate narration mode
-    fireEvent.press(toggleBtn);
-    expect(screen.getByText('A')).toBeTruthy();
-    expect(input.props.placeholder).toBe('Narrate the scene...');
-    
-    // Press to deactivate
-    fireEvent.press(toggleBtn);
-    expect(screen.getByText('*')).toBeTruthy();
-    expect(input.props.placeholder).toBe('Compose a missive...');
-  });
-
-  it('allows sending a narration event message when narration mode is active', async () => {
+  it('applies narration formatting to selected text and sends structured JSON content', async () => {
     const mockMutate = jest.fn();
     (useSendMessage as jest.Mock).mockReturnValue({
       mutate: mockMutate,
@@ -217,27 +250,101 @@ describe('Conversation Screen', () => {
       isPending: false,
     });
 
+    // Pre-set mock state to simulate typed text with narration blocks
+    mockRichTextState = {
+      text: 'Hello world',
+      blocks: [
+        { type: 'message', content: 'Hello ' },
+        { type: 'narration', content: 'world' },
+      ],
+      narrating: false,
+    };
+
     render(<ConversationScreen />);
-    
-    const toggleBtn = screen.getByTestId('narration-toggle-button');
-    fireEvent.press(toggleBtn); // activate narration mode
-    
     const input = screen.getByTestId('message-input');
-    fireEvent.changeText(input, 'A mysterious figure emerges.');
-    
+
+    // Trigger onChangeText so ConversationScreen picks up the text
+    fireEvent.changeText(input, 'Hello world');
+
+    // Send message
     const sendButton = screen.getByTestId('send-button');
     fireEvent.press(sendButton);
-    
+
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith({
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+      expect(mockMutate).toHaveBeenNthCalledWith(1, {
         conversationId: mockConversationId,
         senderProfileId: mockActiveProfileId,
-        content: 'A mysterious figure emerges.',
-        type: 'event',
-        metadata: {
-          event_type: 'narration',
-          initiated_by: mockActiveProfileId,
-        },
+        content: JSON.stringify([
+          { type: 'message', content: 'Hello ' },
+          { type: 'narration', content: 'world' },
+        ]),
+        type: 'user',
+      });
+    });
+  });
+
+  it('renders narration parts wrapped in narrate tags as italicized text', () => {
+    const mockMixedMessages = [
+      {
+        message_id: 'm-mixed',
+        conversation_id: 'c1',
+        sender_profile_id: 'p2',
+        content: JSON.stringify([
+          { type: 'message', content: 'Hello! ' },
+          { type: 'narration', content: 'waves hand' },
+          { type: 'message', content: ' How are you?' }
+        ]),
+        type: 'user',
+        sent_at: new Date().toISOString(),
+      }
+    ];
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: mockMixedMessages,
+      isLoading: false,
+    });
+
+    render(<ConversationScreen />);
+    expect(screen.getByText('waves hand')).toBeTruthy();
+  });
+
+  it('parses mixed narration and dialogue and sends them as a single JSON array message', async () => {
+    const mockMutate = jest.fn();
+    (useSendMessage as jest.Mock).mockReturnValue({
+      mutate: mockMutate,
+      mutateAsync: mockMutate,
+      isPending: false,
+    });
+
+    // Pre-set mock state: mixed narration and dialogue blocks
+    mockRichTextState = {
+      text: 'Hello! waves hand How are you?',
+      blocks: [
+        { type: 'message', content: 'Hello! ' },
+        { type: 'narration', content: 'waves hand' },
+        { type: 'message', content: ' How are you?' },
+      ],
+      narrating: false,
+    };
+
+    render(<ConversationScreen />);
+    const input = screen.getByTestId('message-input');
+    fireEvent.changeText(input, 'Hello! waves hand How are you?');
+
+    const sendButton = screen.getByTestId('send-button');
+    fireEvent.press(sendButton);
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+      expect(mockMutate).toHaveBeenNthCalledWith(1, {
+        conversationId: mockConversationId,
+        senderProfileId: mockActiveProfileId,
+        content: JSON.stringify([
+          { type: 'message', content: 'Hello! ' },
+          { type: 'narration', content: 'waves hand' },
+          { type: 'message', content: ' How are you?' },
+        ]),
+        type: 'user',
       });
     });
   });
@@ -463,6 +570,9 @@ describe('Conversation Screen', () => {
         isPending: false,
       });
 
+      // Pre-set mock state
+      mockRichTextState = { text: 'Web adventure!', blocks: [{ type: 'message', content: 'Web adventure!' }], narrating: false };
+
       render(<ConversationScreen />);
       const input = screen.getByTestId('message-input');
       fireEvent.changeText(input, 'Web adventure!');
@@ -482,6 +592,7 @@ describe('Conversation Screen', () => {
           conversationId: mockConversationId,
           senderProfileId: mockActiveProfileId,
           content: 'Web adventure!',
+          type: 'user',
         });
       });
     } finally {
@@ -664,5 +775,70 @@ describe('Conversation Screen', () => {
 
     expect(screen.getByText('Sending this optimistically!')).toBeTruthy();
     expect(screen.getByText('sending...')).toBeTruthy();
+  });
+
+  it('highlights the Narrate button when toggled via the RichTextInput ref', () => {
+    render(<ConversationScreen />);
+    const narrateBtn = screen.getByTestId('mode-narrate-button');
+
+    // 1. Initial State: Button should not be active
+    expect(narrateBtn.props.style).not.toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
+
+    // 2. Press Narrate to toggle on (calls richInputRef.toggleNarration() -> onNarrationChange(true))
+    fireEvent.press(narrateBtn);
+
+    // Verify it is active/highlighted
+    expect(narrateBtn.props.style).toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
+
+    // 3. Press Narrate again to toggle off
+    fireEvent.press(narrateBtn);
+
+    // Verify button is inactive
+    expect(narrateBtn.props.style).not.toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
+  });
+
+  it('splits a range when clicking Narrate strictly inside a narration range', async () => {
+    const mockMutate = jest.fn();
+    (useSendMessage as jest.Mock).mockReturnValue({
+      mutate: mockMutate,
+      mutateAsync: mockMutate,
+      isPending: false,
+    });
+
+    render(<ConversationScreen />);
+    const input = screen.getByTestId('message-input');
+    const narrateBtn = screen.getByTestId('mode-narrate-button');
+
+    // Pre-set mock state: "abcxdef" with split narration blocks
+    mockRichTextState = {
+      text: 'abcxdef',
+      blocks: [
+        { type: 'narration', content: 'abc' },
+        { type: 'message', content: 'x' },
+        { type: 'narration', content: 'def' },
+      ],
+      narrating: false,
+    };
+
+    // Trigger onChangeText so ConversationScreen picks up the text
+    fireEvent.changeText(input, 'abcxdef');
+
+    // Send message to verify structured JSON content matches splitting
+    const sendButton = screen.getByTestId('send-button');
+    fireEvent.press(sendButton);
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+      expect(mockMutate).toHaveBeenNthCalledWith(1, {
+        conversationId: mockConversationId,
+        senderProfileId: mockActiveProfileId,
+        content: JSON.stringify([
+          { type: 'narration', content: 'abc' },
+          { type: 'message', content: 'x' },
+          { type: 'narration', content: 'def' },
+        ]),
+        type: 'user',
+      });
+    });
   });
 });

@@ -3,9 +3,7 @@ import {
   View, 
   Text, 
   FlatList, 
-  TextInput, 
   Pressable, 
-  Platform, 
   Image,
   ActivityIndicator,
   PanResponder,
@@ -14,7 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Fonts, Spacing } from '../../theme';
+import { Colors, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation } from '../../hooks/useMessages';
 import { useProfile } from '../../hooks/useProfiles';
@@ -27,8 +25,11 @@ import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import DiceOverlay from '../../components/DiceOverlay';
 import { MESSAGES } from '../../constants';
 import { styles } from './styles';
+import RichTextInput, { RichTextInputRef } from '../../components/RichTextInput';
+import { parseMessageContent } from '../../lib/messageParser';
 
 const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
+const MODE_TOOLBAR_HEIGHT = 46;
 
 /** Max sides per die type for local random rolls */
 const DICE_SIDES: Record<string, number> = {
@@ -192,7 +193,8 @@ function ConversationScreenInner() {
   // true while the 3D animation is actively playing; false once it settles.
   // The die stays visible (rollingDie !== null) even after the animation ends.
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isNarrationMode, setIsNarrationMode] = useState(false);
+  const richInputRef = useRef<RichTextInputRef>(null);
+  const [isNarratingActive, setIsNarratingActive] = useState(false);
 
   // --- Dice animation queue ---
   // Tracks dice_roll event message_ids we've already enqueued so we never
@@ -400,31 +402,94 @@ function ConversationScreenInner() {
   }, [queryClient]);
 
   const handleSend = useCallback(async () => {
-    if (!messageText.trim() || !activeProfileId) return;
+    const rawText = richInputRef.current?.getText()?.trim() || '';
+    if (!rawText || !activeProfileId) return;
 
-    const content = messageText.trim();
+    // Get structured blocks directly from the DOM's <i>/<em> tags
+    const blocks = richInputRef.current?.getBlocks() || [];
+
+    richInputRef.current?.clear();
     setMessageText('');
 
     try {
       const realConvId = await ensureConversation();
-      await sendMessageAsync({
-        conversationId: realConvId,
-        senderProfileId: activeProfileId,
-        content,
-        ...(isNarrationMode && {
+
+      const hasNarration = blocks.some(b => b.type === 'narration');
+      const hasMessage = blocks.some(b => b.type === 'message');
+
+      if (hasNarration && hasMessage) {
+        // Mixed content: send as a single user message with JSON array content
+        // so the bot sees one message and replies once
+        await sendMessageAsync({
+          conversationId: realConvId,
+          senderProfileId: activeProfileId,
+          content: JSON.stringify(blocks),
+          type: 'user',
+        });
+      } else if (hasNarration) {
+        // Pure narration: send as a single event (renders as centered pill)
+        const narrationText = blocks.map(b => b.content).join(' ');
+        await sendMessageAsync({
+          conversationId: realConvId,
+          senderProfileId: activeProfileId,
+          content: narrationText,
           type: 'event',
           metadata: {
             event_type: 'narration',
             initiated_by: activeProfileId,
-          },
-        }),
-      });
+          }
+        });
+      } else {
+        // Pure message: send as plain text
+        await sendMessageAsync({
+          conversationId: realConvId,
+          senderProfileId: activeProfileId,
+          content: rawText,
+          type: 'user',
+        });
+      }
     } catch (err) {
       // Restore the message text so the user can retry
-      setMessageText(content);
+      richInputRef.current?.restore(rawText);
+      setMessageText(rawText);
       console.error('Failed to send message:', err);
     }
-  }, [messageText, activeProfileId, ensureConversation, sendMessageAsync, isNarrationMode]);
+  }, [activeProfileId, ensureConversation, sendMessageAsync]);
+
+  const handleFormatText = useCallback(() => {
+    const result = richInputRef.current?.toggleNarration();
+    setIsNarratingActive(result ?? false);
+  }, []);
+
+  const handleTextChange = useCallback((text: string) => {
+    setMessageText(text);
+    onTextChange(text);
+  }, [onTextChange]);
+
+  const renderMessageContent = (content: string, isMe: boolean) => {
+    const blocks = parseMessageContent(content);
+    
+    return (
+      <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
+        {blocks.map((block, index) => {
+          if (block.type === 'narration') {
+            return (
+              <Text
+                key={index}
+                style={[
+                  styles.messageTextNarration,
+                  isMe ? styles.myMessageTextNarration : styles.theirMessageTextNarration
+                ]}
+              >
+                {block.content}
+              </Text>
+            );
+          }
+          return <Text key={index}>{block.content}</Text>;
+        })}
+      </Text>
+    );
+  };
 
   // Hide messages at or after the currently-animating dice_roll's sent_at.
   // This hides the roll event AND any follow-up messages (e.g. Lira's
@@ -440,7 +505,41 @@ function ConversationScreenInner() {
     const visible = hideMessagesCutoff
       ? messages.filter(m => m.sent_at < hideMessagesCutoff)
       : messages;
-    return visible.slice().reverse();
+
+    // Expand user messages with JSON array content into separate display items
+    // so narration blocks render as centered event pills and message blocks as chat bubbles
+    const expanded: typeof messages = [];
+    for (const msg of visible) {
+      if (msg.type === 'user' && msg.content.startsWith('[')) {
+        const blocks = parseMessageContent(msg.content);
+        if (blocks.length > 1) {
+          blocks.forEach((block, i) => {
+            if (block.type === 'narration') {
+              expanded.push({
+                ...msg,
+                message_id: `${msg.message_id}-block-${i}`,
+                content: block.content,
+                type: 'event',
+                metadata: {
+                  event_type: 'narration',
+                  initiated_by: msg.sender_profile_id,
+                },
+              });
+            } else {
+              expanded.push({
+                ...msg,
+                message_id: `${msg.message_id}-block-${i}`,
+                content: block.content,
+              });
+            }
+          });
+          continue;
+        }
+      }
+      expanded.push(msg);
+    }
+
+    return expanded.slice().reverse();
   }, [messages, hideMessagesCutoff]);
 
   const navigation = useNavigation();
@@ -489,7 +588,7 @@ function ConversationScreenInner() {
   // Animated style for the FlatList spacer.
   // Precisely mirrors the footer's height for smooth scrolling.
   const listBottomSpacerStyle = useAnimatedStyle(() => ({
-    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
+    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6] + MODE_TOOLBAR_HEIGHT,
   }));
 
   const isLoadingProfileInfo = isNewConversation
@@ -593,8 +692,34 @@ function ConversationScreenInner() {
             const delayMs = isNew ? Math.max(0, batchIndex) * 250 : 0;
             const enteringProps = isNew ? { entering: FadeInDown.delay(delayMs).duration(300).springify().damping(15) } : {};
 
-            // Event messages — centered gold pill (dice rolls, etc.)
+            // Event messages
             if (item.type === 'event') {
+              // Narration events — centered italic pill
+              if (item.metadata?.event_type === 'narration') {
+                return (
+                  <ContainerView {...enteringProps} style={styles.eventContainer}>
+                    <View style={styles.eventBubble}>
+                      <Text style={styles.eventText}>
+                        {item.content}
+                      </Text>
+                    </View>
+                    {item.isOptimistic ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                        <ActivityIndicator size="small" color={Colors.outline} style={{ marginRight: 4 }} />
+                        <Text style={styles.timestamp}>sending...</Text>
+                      </View>
+                    ) : (
+                      showTimestamp && (
+                        <Text style={styles.timestamp}>
+                          {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      )
+                    )}
+                  </ContainerView>
+                );
+              }
+
+              // Other events — centered gold pill (dice rolls, etc.)
               // Parse dice roll pattern: "{name} rolled a {number} on a {diceType}"
               const diceMatch = item.content.match(/^(.+?) rolled a (\d+) on a (d\d+)$/);
 
@@ -629,6 +754,7 @@ function ConversationScreenInner() {
               );
             }
 
+
             // System messages — centered muted pill
             if (item.type === 'system') {
               return (
@@ -652,9 +778,7 @@ function ConversationScreenInner() {
                   styles.messageBubble, 
                   isMe ? styles.myMessageBubble : styles.theirMessageBubble
                 ]}>
-                  <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
-                    {item.content}
-                  </Text>
+                  {renderMessageContent(item.content, isMe)}
                 </View>
                 {item.isOptimistic ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -694,42 +818,42 @@ function ConversationScreenInner() {
         />
       )}
 
-      <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle, isNarrationMode && { backgroundColor: '#3a3520' }]}>
-
-        <View style={styles.inputContainer}>
+      <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle]}>
+        <View style={styles.modeToolbar} testID="mode-toolbar">
           <Pressable
+            onPress={handleFormatText}
+            onMouseDown={(e: any) => e.preventDefault()}
             style={({ pressed }) => [
-              styles.narrationToggle,
-              isNarrationMode && styles.narrationToggleActive,
-              pressed && { opacity: 0.7 },
+              styles.modeTab,
+              isNarratingActive && styles.modeTabActive,
+              pressed && { opacity: 0.8 },
             ]}
-            onPress={() => setIsNarrationMode(prev => !prev)}
-            testID="narration-toggle-button"
+            testID="mode-narrate-button"
           >
-            <Text style={[styles.narrationText, isNarrationMode && styles.narrationTextActive]}>
-              {isNarrationMode ? 'A' : '*'}
+            <Ionicons
+              name="book"
+              size={14}
+              color={isNarratingActive ? Colors.tertiaryFixedDim : Colors.outline}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[
+              styles.modeTabText,
+              isNarratingActive && styles.modeTabTextActive
+            ]}>
+              Narrate
             </Text>
           </Pressable>
-          <TextInput
-            style={styles.input}
-            placeholder={isNarrationMode ? "Narrate the scene..." : "Compose a missive..."}
-            placeholderTextColor={Colors.outline}
-            value={messageText}
-            onChangeText={(text) => {
-              setMessageText(text);
-              onTextChange(text);
-            }}
-            multiline
+        </View>
+
+        <View style={styles.inputContainer}>
+          <RichTextInput
+            ref={richInputRef}
+            placeholder="Compose a missive..."
             maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
+            onChangeText={handleTextChange}
+            onSubmit={handleSend}
+            onNarrationChange={setIsNarratingActive}
             testID="message-input"
-            onKeyPress={(e: any) => {
-              if (Platform.OS === 'web') {
-                if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }
-            }}
           />
           <Pressable
             style={({ pressed }) => [

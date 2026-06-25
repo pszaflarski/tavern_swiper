@@ -295,7 +295,7 @@ export function useSendMessage() {
         conversation_id: variables.conversationId,
         sender_profile_id: variables.senderProfileId,
         content: variables.content,
-        type: variables.type || 'text',
+        type: variables.type || 'user',
         sent_at: new Date().toISOString(),
         metadata: variables.metadata,
         isOptimistic: true,
