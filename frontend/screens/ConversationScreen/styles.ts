@@ -163,46 +163,7 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing[3], // Symmetrical vertical padding
     paddingBottom: 0, // Bottom padding is handled by the animated wrapper
   },
-  inputWrapperContainer: {
-    flex: 1,
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.sm,
-    position: 'relative',
-    minHeight: 40,
-    maxHeight: 100,
-    overflow: 'hidden',
-  },
-  inputOverlayContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: Spacing[4],
-    paddingTop: Spacing[2],
-    paddingBottom: Spacing[2],
-    overflow: 'hidden',
-  },
-  inputOverlayInner: {
-    // Transform translateY is applied dynamically to sync with TextInput scroll
-  },
-  inputReal: {
-    flex: 1,
-    paddingHorizontal: Spacing[4],
-    paddingTop: Spacing[2],
-    paddingBottom: Spacing[2],
-    fontFamily: Fonts.scribe,
-    fontSize: 15,
-    lineHeight: 20,
-    color: 'transparent',
-    backgroundColor: 'transparent',
-    minHeight: 40,
-  },
-  inputOverlayText: {
-    fontFamily: Fonts.scribe,
-    fontSize: 15,
-    lineHeight: 20,
-  },
+
 
   sendButton: {
     width: 44,

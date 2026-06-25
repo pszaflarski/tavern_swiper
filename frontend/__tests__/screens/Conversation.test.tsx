@@ -77,6 +77,58 @@ jest.mock('../../components/DiceOverlay', () => {
   return { __esModule: true, default: () => null };
 });
 
+// Mock RichTextInput — contentEditable doesn't work in JSDOM.
+// This mock renders a TextInput and simulates the ref API.
+let mockRichTextState = { text: '', ranges: [] as any[], narrating: false };
+jest.mock('../../components/RichTextInput', () => {
+  const React = require('react');
+  const { TextInput, View } = require('react-native');
+  const { forwardRef, useImperativeHandle, useRef } = React;
+
+  const MockRichTextInput = forwardRef((props: any, ref: any) => {
+    const inputRef = useRef(null);
+
+    useImperativeHandle(ref, () => ({
+      getText: () => mockRichTextState.text,
+      getFormattingRanges: () => mockRichTextState.ranges,
+      clear: () => {
+        mockRichTextState = { text: '', ranges: [], narrating: false };
+        props.onNarrationChange?.(false);
+      },
+      focus: () => {},
+      toggleNarration: () => {
+        mockRichTextState.narrating = !mockRichTextState.narrating;
+        props.onNarrationChange?.(mockRichTextState.narrating);
+        return mockRichTextState.narrating;
+      },
+      isNarrating: () => mockRichTextState.narrating,
+      restore: (text: string) => { mockRichTextState.text = text; },
+    }));
+
+    return (
+      <TextInput
+        ref={inputRef}
+        testID={props.testID}
+        placeholder={props.placeholder}
+        value={mockRichTextState.text}
+        onChangeText={(text: string) => {
+          mockRichTextState.text = text;
+          props.onChangeText?.(text);
+        }}
+        onKeyPress={(e: any) => {
+          if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+            e.preventDefault?.();
+            props.onSubmit?.();
+          }
+        }}
+      />
+    );
+  });
+
+  MockRichTextInput.displayName = 'MockRichTextInput';
+  return { __esModule: true, default: MockRichTextInput };
+});
+
 // Mock useWindowDimensions for the draggable die
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -121,6 +173,7 @@ describe('Conversation Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRichTextState = { text: '', ranges: [], narrating: false };
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: mockConversationId });
     (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: mockActiveProfileId });
     (useProfile as jest.Mock).mockReturnValue({
@@ -197,23 +250,18 @@ describe('Conversation Screen', () => {
       isPending: false,
     });
 
+    // Pre-set mock state to simulate typed text with narration range applied
+    mockRichTextState = {
+      text: 'Hello world',
+      ranges: [{ start: 6, end: 11, type: 'narration' }],
+      narrating: false,
+    };
+
     render(<ConversationScreen />);
     const input = screen.getByTestId('message-input');
-    const narrateBtn = screen.getByTestId('mode-narrate-button');
 
-    // Type "Hello world"
+    // Trigger onChangeText so ConversationScreen picks up the text
     fireEvent.changeText(input, 'Hello world');
-
-    // Select "world" (start: 6, end: 11)
-    fireEvent(input, 'selectionChange', {
-      nativeEvent: { selection: { start: 6, end: 11 } }
-    });
-
-    // Press Narrate format button
-    fireEvent.press(narrateBtn);
-
-    // The input box value should remain "Hello world" (clean, no visible tags!)
-    expect(input.props.value).toBe('Hello world');
 
     // Send message
     const sendButton = screen.getByTestId('send-button');
@@ -508,6 +556,9 @@ describe('Conversation Screen', () => {
         isPending: false,
       });
 
+      // Pre-set mock state
+      mockRichTextState = { text: 'Web adventure!', ranges: [], narrating: false };
+
       render(<ConversationScreen />);
       const input = screen.getByTestId('message-input');
       fireEvent.changeText(input, 'Web adventure!');
@@ -712,49 +763,23 @@ describe('Conversation Screen', () => {
     expect(screen.getByText('sending...')).toBeTruthy();
   });
 
-  it('highlights the Narrate button and tilts the cursor when cursor is in between/inside narration ranges', () => {
+  it('highlights the Narrate button when toggled via the RichTextInput ref', () => {
     render(<ConversationScreen />);
-    const input = screen.getByTestId('message-input');
     const narrateBtn = screen.getByTestId('mode-narrate-button');
 
-    // 1. Initial State: Button should not be active, text input should have normal fontStyle
+    // 1. Initial State: Button should not be active
     expect(narrateBtn.props.style).not.toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
-    expect(input.props.style).not.toContainEqual(expect.objectContaining({ fontStyle: 'italic' }));
 
-    // 2. Press Narrate to toggle on
+    // 2. Press Narrate to toggle on (calls richInputRef.toggleNarration() -> onNarrationChange(true))
     fireEvent.press(narrateBtn);
 
-    // Verify it is active/highlighted and input style has fontStyle: 'italic' (slanted cursor)
-    expect(narrateBtn.props.style).toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
-    expect(input.props.style).toContainEqual(expect.objectContaining({ fontStyle: 'italic' }));
-
-    // 3. Type text in narration mode
-    fireEvent.changeText(input, 'a');
-
-    // selectionChange to index 1 (end of 'a')
-    fireEvent(input, 'selectionChange', {
-      nativeEvent: { selection: { start: 1, end: 1 } }
-    });
-
-    // Button should still be active/highlighted at boundary of narration range
+    // Verify it is active/highlighted
     expect(narrateBtn.props.style).toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
 
-    // 4. Toggle narration mode off at boundary
+    // 3. Press Narrate again to toggle off
     fireEvent.press(narrateBtn);
 
     // Verify button is inactive
-    expect(narrateBtn.props.style).not.toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
-    expect(input.props.style).not.toContainEqual(expect.objectContaining({ fontStyle: 'italic' }));
-
-    // Type a normal character
-    fireEvent.changeText(input, 'ab');
-
-    // selectionChange to index 2 (end of 'b')
-    fireEvent(input, 'selectionChange', {
-      nativeEvent: { selection: { start: 2, end: 2 } }
-    });
-
-    // Button should still be inactive
     expect(narrateBtn.props.style).not.toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
   });
 
@@ -770,34 +795,18 @@ describe('Conversation Screen', () => {
     const input = screen.getByTestId('message-input');
     const narrateBtn = screen.getByTestId('mode-narrate-button');
 
-    // Type "abcdef" in narration mode
-    fireEvent.press(narrateBtn);
-    fireEvent.changeText(input, 'abcdef');
+    // Pre-set mock state: "abcxdef" with split narration ranges
+    mockRichTextState = {
+      text: 'abcxdef',
+      ranges: [
+        { start: 0, end: 3, type: 'narration' },
+        { start: 4, end: 7, type: 'narration' },
+      ],
+      narrating: false,
+    };
 
-    // Move cursor strictly inside to index 3 (between "abc" and "def")
-    fireEvent(input, 'selectionChange', {
-      nativeEvent: { selection: { start: 3, end: 3 } }
-    });
-
-    // Verify button is highlighted/active since cursor is inside a narration range
-    expect(narrateBtn.props.style).toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
-
-    // Click Narrate button to split
-    fireEvent.press(narrateBtn);
-
-    // Now button should be inactive (since cursor is at index 3 which is split boundary and we toggled off)
-    expect(narrateBtn.props.style).not.toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
-
-    // Type normal character "x"
+    // Trigger onChangeText so ConversationScreen picks up the text
     fireEvent.changeText(input, 'abcxdef');
-
-    // Move cursor to index 4 (end of "x")
-    fireEvent(input, 'selectionChange', {
-      nativeEvent: { selection: { start: 4, end: 4 } }
-    });
-
-    // Verify it is not active at 4 (it is boundary of next narration, but since we typed normal text, the mode stays normal)
-    expect(narrateBtn.props.style).not.toContainEqual(expect.objectContaining({ backgroundColor: '#544d2d' }));
 
     // Send message to verify structured JSON content matches splitting
     const sendButton = screen.getByTestId('send-button');

@@ -3,9 +3,7 @@ import {
   View, 
   Text, 
   FlatList, 
-  TextInput, 
   Pressable, 
-  Platform, 
   Image,
   ActivityIndicator,
   PanResponder,
@@ -27,7 +25,8 @@ import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import DiceOverlay from '../../components/DiceOverlay';
 import { MESSAGES } from '../../constants';
 import { styles } from './styles';
-import { parseMessageContent, shiftRanges, buildJSONFromRanges, parseTextToJSON, FormattingRange } from '../../lib/messageParser';
+import RichTextInput, { RichTextInputRef } from '../../components/RichTextInput';
+import { parseMessageContent, buildJSONFromRanges, parseTextToJSON } from '../../lib/messageParser';
 
 const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
 const MODE_TOOLBAR_HEIGHT = 46;
@@ -194,52 +193,8 @@ function ConversationScreenInner() {
   // true while the 3D animation is actively playing; false once it settles.
   // The die stays visible (rollingDie !== null) even after the animation ends.
   const [isAnimating, setIsAnimating] = useState(false);
-  const inputRef = useRef<TextInput>(null);
-  const [inputScrollY, setInputScrollY] = useState(0);
-
-  const [selection, setSelection] = useState({ start: 0, end: 0 });
-  const [formattingRanges, setFormattingRanges] = useState<FormattingRange[]>([]);
-  const isTypingRef = useRef(false);
-  const [isNarratingAtCursor, setIsNarratingAtCursor] = useState(false);
-
-  // Compute active highlight state for Narrate formatting (word processor behavior)
-  const isNarratingActive = useMemo(() => {
-    const { start, end } = selection;
-    if (start !== end) {
-      // For selection range, active if selection is completely inside a narration range
-      return formattingRanges.some(r => r.start <= start && end <= r.end);
-    }
-    // For cursor point, active if strictly inside any narration range
-    if (formattingRanges.some(r => r.start < start && start < r.end)) {
-      return true;
-    }
-    // Otherwise, matches the toggled state at cursor
-    return isNarratingAtCursor;
-  }, [selection, formattingRanges, isNarratingAtCursor]);
-
-  const handleSelectionChange = (start: number, end: number) => {
-    // If the coordinates didn't change, do nothing (prevents focus events from resetting states)
-    if (start === selection.start && end === selection.end) {
-      return;
-    }
-
-    setSelection({ start, end });
-
-    // If selection changed due to typing, preserve the active typing mode state
-    if (isTypingRef.current) {
-      isTypingRef.current = false;
-      return;
-    }
-
-    // If selection changed due to tap/cursor move:
-    if (start === end) {
-      // Default to active if cursor is inside or at the boundary of a narration range
-      const isAtOrInside = formattingRanges.some(r => r.start <= start && start <= r.end);
-      setIsNarratingAtCursor(isAtOrInside);
-    } else {
-      setIsNarratingAtCursor(false);
-    }
-  };
+  const richInputRef = useRef<RichTextInputRef>(null);
+  const [isNarratingActive, setIsNarratingActive] = useState(false);
 
   // --- Dice animation queue ---
   // Tracks dice_roll event message_ids we've already enqueued so we never
@@ -447,18 +402,18 @@ function ConversationScreenInner() {
   }, [queryClient]);
 
   const handleSend = useCallback(async () => {
-    if (!messageText.trim() || !activeProfileId) return;
+    const rawText = richInputRef.current?.getText()?.trim() || '';
+    if (!rawText || !activeProfileId) return;
 
-    const rawText = messageText.trim();
-    // Parse the input into separate blocks
+    const ranges = richInputRef.current?.getFormattingRanges() || [];
+    // Parse the input into blocks
     const jsonStr = rawText.includes('<narrate>') 
       ? parseTextToJSON(rawText) 
-      : buildJSONFromRanges(rawText, formattingRanges);
+      : buildJSONFromRanges(rawText, ranges);
     const blocks = parseMessageContent(jsonStr);
 
+    richInputRef.current?.clear();
     setMessageText('');
-    setFormattingRanges([]);
-    setIsNarratingAtCursor(false);
 
     try {
       const realConvId = await ensureConversation();
@@ -499,161 +454,21 @@ function ConversationScreenInner() {
       }
     } catch (err) {
       // Restore the message text so the user can retry
+      richInputRef.current?.restore(rawText, ranges);
       setMessageText(rawText);
       console.error('Failed to send message:', err);
     }
-  }, [messageText, formattingRanges, activeProfileId, ensureConversation, sendMessageAsync]);
+  }, [activeProfileId, ensureConversation, sendMessageAsync]);
 
-  const addNarrationRange = (ranges: FormattingRange[], start: number, end: number): FormattingRange[] => {
-    const newRange = { start, end, type: 'narration' as const };
-    const all = [...ranges, newRange];
-    all.sort((a, b) => a.start - b.start);
-    
-    const merged: FormattingRange[] = [];
-    for (const r of all) {
-      if (merged.length === 0) {
-        merged.push(r);
-      } else {
-        const prev = merged[merged.length - 1];
-        if (r.start <= prev.end) {
-          prev.end = Math.max(prev.end, r.end);
-        } else {
-          merged.push(r);
-        }
-      }
-    }
-    return merged;
-  };
+  const handleFormatText = useCallback(() => {
+    const result = richInputRef.current?.toggleNarration();
+    setIsNarratingActive(result ?? false);
+  }, []);
 
-  const handleFormatText = () => {
-    const { start, end } = selection;
-    if (start !== end) {
-      // Selection range: toggle narration for selection
-      setFormattingRanges((prev) => {
-        // Is selection entirely narration?
-        const isEntirelyNarration = prev.some(r => r.start <= start && end <= r.end);
-        if (isEntirelyNarration) {
-          // Remove narration from [start, end]
-          const nextRanges: FormattingRange[] = [];
-          for (const r of prev) {
-            if (r.end <= start || r.start >= end) {
-              nextRanges.push(r);
-            } else {
-              if (r.start < start) {
-                nextRanges.push({ start: r.start, end: start, type: 'narration' });
-              }
-              if (r.end > end) {
-                nextRanges.push({ start: end, end: r.end, type: 'narration' });
-              }
-            }
-          }
-          return nextRanges;
-        } else {
-          // Add narration for [start, end] and merge
-          const all = [...prev, { start, end, type: 'narration' as const }];
-          all.sort((a, b) => a.start - b.start);
-          const merged: FormattingRange[] = [];
-          for (const r of all) {
-            if (merged.length === 0) {
-              merged.push(r);
-            } else {
-              const last = merged[merged.length - 1];
-              if (r.start <= last.end) {
-                last.end = Math.max(last.end, r.end);
-              } else {
-                merged.push(r);
-              }
-            }
-          }
-          return merged;
-        }
-      });
-    } else {
-      // Cursor point:
-      const i = start;
-      const insideRange = formattingRanges.find(r => r.start < i && i < r.end);
-      if (insideRange) {
-        // Split the range
-        setFormattingRanges((prev) => {
-          const nextRanges: FormattingRange[] = [];
-          for (const r of prev) {
-            if (r.start < i && i < r.end) {
-              nextRanges.push({ start: r.start, end: i, type: 'narration' });
-              nextRanges.push({ start: i, end: r.end, type: 'narration' });
-            } else {
-              nextRanges.push(r);
-            }
-          }
-          return nextRanges;
-        });
-        setIsNarratingAtCursor(false);
-      } else {
-        // Toggle the override state
-        setIsNarratingAtCursor(!isNarratingActive);
-      }
-    }
-
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 50);
-  };
-
-  const handleTextChange = (text: string) => {
-    isTypingRef.current = true;
-    const diff = text.length - messageText.length;
-    const currentIsNarrating = isNarratingActive;
-
-    let nextRanges = shiftRanges(formattingRanges, messageText, text, selection.start, selection.end, currentIsNarrating);
-
-    if (diff > 0 && currentIsNarrating) {
-      nextRanges = addNarrationRange(nextRanges, selection.start, selection.start + diff);
-    }
-
-    setFormattingRanges(nextRanges);
+  const handleTextChange = useCallback((text: string) => {
     setMessageText(text);
     onTextChange(text);
-    setIsNarratingAtCursor(currentIsNarrating);
-  };
-
-  const renderInputWithFormatting = (text: string, ranges: FormattingRange[]) => {
-    if (!text) return null;
-    if (ranges.length === 0) {
-      return <Text style={[styles.inputOverlayText, { color: Colors.onSurface }]}>{text}</Text>;
-    }
-
-    const sorted = [...ranges].sort((a, b) => a.start - b.start);
-    const elements: React.ReactNode[] = [];
-    let lastIndex = 0;
-
-    sorted.forEach((range, idx) => {
-      if (range.start > lastIndex) {
-        elements.push(
-          <Text key={`msg-${idx}`} style={[styles.inputOverlayText, { color: Colors.onSurface }]}>
-            {text.substring(lastIndex, range.start)}
-          </Text>
-        );
-      }
-      elements.push(
-        <Text
-          key={`narr-${idx}`}
-          style={[styles.inputOverlayText, { fontStyle: 'italic', color: Colors.tertiaryFixedDim }]}
-        >
-          {text.substring(range.start, range.end)}
-        </Text>
-      );
-      lastIndex = range.end;
-    });
-
-    if (lastIndex < text.length) {
-      elements.push(
-        <Text key="msg-end" style={[styles.inputOverlayText, { color: Colors.onSurface }]}>
-          {text.substring(lastIndex)}
-        </Text>
-      );
-    }
-
-    return <Text>{elements}</Text>;
-  };
+  }, [onTextChange]);
 
   const renderMessageContent = (content: string, isMe: boolean) => {
     const blocks = parseMessageContent(content);
@@ -1034,47 +849,15 @@ function ConversationScreenInner() {
         </View>
 
         <View style={styles.inputContainer}>
-          <View style={styles.inputWrapperContainer}>
-            {/* Formatted overlay — shows the styled text, moves with TextInput scroll */}
-            <View style={styles.inputOverlayContainer} pointerEvents="none">
-              <View style={[styles.inputOverlayInner, { transform: [{ translateY: -inputScrollY }] }]}>  
-                {renderInputWithFormatting(messageText, formattingRanges)}
-              </View>
-            </View>
-
-            {/* Real TextInput — text is transparent, only the caret is visible */}
-            <TextInput
-              ref={inputRef}
-              style={[
-                styles.inputReal,
-                isNarratingActive && { fontStyle: 'italic' as const },
-                Platform.OS === 'web' && { caretColor: isNarratingActive ? Colors.tertiaryFixedDim : Colors.primary } as any,
-              ]}
-              placeholder={messageText ? '' : 'Compose a missive...'}
-              placeholderTextColor={Colors.outline}
-              value={messageText}
-              onChangeText={handleTextChange}
-              onSelectionChange={(e) => {
-                handleSelectionChange(e.nativeEvent.selection.start, e.nativeEvent.selection.end);
-              }}
-              onScroll={(e: any) => {
-                const y = e.nativeEvent?.contentOffset?.y ?? e.target?.scrollTop ?? 0;
-                setInputScrollY(y);
-              }}
-              selectionColor={Colors.primary}
-              multiline
-              maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
-              testID="message-input"
-              onKeyPress={(e: any) => {
-                if (Platform.OS === 'web') {
-                  if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }
-              }}
-            />
-          </View>
+          <RichTextInput
+            ref={richInputRef}
+            placeholder="Compose a missive..."
+            maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
+            onChangeText={handleTextChange}
+            onSubmit={handleSend}
+            onNarrationChange={setIsNarratingActive}
+            testID="message-input"
+          />
           <Pressable
             style={({ pressed }) => [
               styles.diceToggle,
