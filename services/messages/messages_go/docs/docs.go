@@ -367,7 +367,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 10 seconds.",
+                "description": "Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 120 seconds.",
                 "consumes": [
                     "application/json"
                 ],

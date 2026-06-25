@@ -57,7 +57,7 @@ func TestFilterTypingMap(t *testing.T) {
 	})
 
 	t.Run("FiltersExpiredTypers", func(t *testing.T) {
-		stale := fixedNow.Add(-15 * time.Second).Format(time.RFC3339)
+		stale := fixedNow.Add(-typingTTL - 5*time.Second).Format(time.RFC3339)
 		data := map[string]interface{}{
 			"typing": map[string]interface{}{
 				"profile_stale": stale,
@@ -71,7 +71,7 @@ func TestFilterTypingMap(t *testing.T) {
 
 	t.Run("MixedActiveAndExpired", func(t *testing.T) {
 		recent := fixedNow.Add(-2 * time.Second).Format(time.RFC3339)
-		stale := fixedNow.Add(-20 * time.Second).Format(time.RFC3339)
+		stale := fixedNow.Add(-typingTTL - 10*time.Second).Format(time.RFC3339)
 		data := map[string]interface{}{
 			"typing": map[string]interface{}{
 				"active_user": recent,
@@ -386,7 +386,7 @@ func TestGetMessages_ExcludesExpiredTyping(t *testing.T) {
 
 	convID := "conv_typing_expired"
 
-	staleTyping := fixedNow.Add(-30 * time.Second).Format(time.RFC3339)
+	staleTyping := fixedNow.Add(-typingTTL - 10*time.Second).Format(time.RFC3339)
 	mock.Collection(COLLECTION_CONVERSATIONS).Doc(convID).Set(context.Background(), map[string]interface{}{
 		"id":              convID,
 		"participant_ids": []interface{}{"p1", "p2"},
