@@ -130,6 +130,15 @@ export const styles = StyleSheet.create({
   theirMessageText: {
     color: Colors.onSurface,
   },
+  messageTextNarration: {
+    fontStyle: 'italic',
+  },
+  myMessageTextNarration: {
+    color: Colors.tertiaryFixed,
+  },
+  theirMessageTextNarration: {
+    color: Colors.tertiaryFixedDim,
+  },
   timestamp: {
     fontFamily: Fonts.scribe,
     fontSize: 10,
@@ -154,18 +163,8 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing[3], // Symmetrical vertical padding
     paddingBottom: 0, // Bottom padding is handled by the animated wrapper
   },
-  input: {
-    flex: 1,
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.xl,
-    paddingHorizontal: Spacing[4],
-    paddingTop: Spacing[2],
-    paddingBottom: Spacing[2],
-    fontFamily: Fonts.scribe,
-    fontSize: 15,
-    color: Colors.onSurface,
-    maxHeight: 100,
-  },
+
+
   sendButton: {
     width: 44,
     height: 44,
@@ -277,21 +276,36 @@ export const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: Colors.outline,
   },
-  narrationToggle: {
-    height: 40,
-    justifyContent: 'center',
+  modeToolbar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 2,
+    paddingHorizontal: Spacing[4],
+    paddingTop: Spacing[2],
+    paddingBottom: Spacing[2],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
   },
-  narrationToggleActive: {
+  modeTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing[1.5],
+    paddingHorizontal: Spacing[3],
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceContainer,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
   },
-  narrationText: {
+  modeTabActive: {
+    backgroundColor: '#544d2d',
+    borderColor: Colors.tertiary,
+  },
+  modeTabText: {
     fontFamily: Fonts.scribe,
-    fontSize: 26,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.outline,
   },
-  narrationTextActive: {
-    color: Colors.outline,
+  modeTabTextActive: {
+    color: Colors.tertiaryFixedDim,
   },
 });
