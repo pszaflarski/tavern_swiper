@@ -462,26 +462,40 @@ function ConversationScreenInner() {
 
     try {
       const realConvId = await ensureConversation();
-      for (const block of blocks) {
-        if (block.type === 'narration') {
-          await sendMessageAsync({
-            conversationId: realConvId,
-            senderProfileId: activeProfileId,
-            content: block.content,
-            type: 'event',
-            metadata: {
-              event_type: 'narration',
-              initiated_by: activeProfileId,
-            }
-          });
-        } else {
-          await sendMessageAsync({
-            conversationId: realConvId,
-            senderProfileId: activeProfileId,
-            content: block.content,
-            type: 'user',
-          });
-        }
+
+      const hasNarration = blocks.some(b => b.type === 'narration');
+      const hasMessage = blocks.some(b => b.type === 'message');
+
+      if (hasNarration && hasMessage) {
+        // Mixed content: send as a single user message with JSON array content
+        // so the bot sees one message and replies once
+        await sendMessageAsync({
+          conversationId: realConvId,
+          senderProfileId: activeProfileId,
+          content: jsonStr,
+          type: 'user',
+        });
+      } else if (hasNarration) {
+        // Pure narration: send as a single event (renders as centered pill)
+        const narrationText = blocks.map(b => b.content).join(' ');
+        await sendMessageAsync({
+          conversationId: realConvId,
+          senderProfileId: activeProfileId,
+          content: narrationText,
+          type: 'event',
+          metadata: {
+            event_type: 'narration',
+            initiated_by: activeProfileId,
+          }
+        });
+      } else {
+        // Pure message: send as plain text
+        await sendMessageAsync({
+          conversationId: realConvId,
+          senderProfileId: activeProfileId,
+          content: rawText,
+          type: 'user',
+        });
       }
     } catch (err) {
       // Restore the message text so the user can retry

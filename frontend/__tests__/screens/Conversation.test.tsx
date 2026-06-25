@@ -220,21 +220,15 @@ describe('Conversation Screen', () => {
     fireEvent.press(sendButton);
 
     await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledTimes(1);
       expect(mockMutate).toHaveBeenNthCalledWith(1, {
         conversationId: mockConversationId,
         senderProfileId: mockActiveProfileId,
-        content: 'Hello ',
+        content: JSON.stringify([
+          { type: 'message', content: 'Hello ' },
+          { type: 'narration', content: 'world' },
+        ]),
         type: 'user',
-      });
-      expect(mockMutate).toHaveBeenNthCalledWith(2, {
-        conversationId: mockConversationId,
-        senderProfileId: mockActiveProfileId,
-        content: 'world',
-        type: 'event',
-        metadata: {
-          event_type: 'narration',
-          initiated_by: mockActiveProfileId,
-        },
       });
     });
   });
@@ -263,7 +257,7 @@ describe('Conversation Screen', () => {
     expect(screen.getByText('waves hand')).toBeTruthy();
   });
 
-  it('parses mixed narration and dialogue and sends them as separate messages', async () => {
+  it('parses mixed narration and dialogue and sends them as a single JSON array message', async () => {
     const mockMutate = jest.fn();
     (useSendMessage as jest.Mock).mockReturnValue({
       mutate: mockMutate,
@@ -279,26 +273,15 @@ describe('Conversation Screen', () => {
     fireEvent.press(sendButton);
 
     await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledTimes(1);
       expect(mockMutate).toHaveBeenNthCalledWith(1, {
         conversationId: mockConversationId,
         senderProfileId: mockActiveProfileId,
-        content: 'Hello! ',
-        type: 'user',
-      });
-      expect(mockMutate).toHaveBeenNthCalledWith(2, {
-        conversationId: mockConversationId,
-        senderProfileId: mockActiveProfileId,
-        content: 'waves hand',
-        type: 'event',
-        metadata: {
-          event_type: 'narration',
-          initiated_by: mockActiveProfileId,
-        },
-      });
-      expect(mockMutate).toHaveBeenNthCalledWith(3, {
-        conversationId: mockConversationId,
-        senderProfileId: mockActiveProfileId,
-        content: ' How are you?',
+        content: JSON.stringify([
+          { type: 'message', content: 'Hello! ' },
+          { type: 'narration', content: 'waves hand' },
+          { type: 'message', content: ' How are you?' },
+        ]),
         type: 'user',
       });
     });
@@ -821,31 +804,16 @@ describe('Conversation Screen', () => {
     fireEvent.press(sendButton);
 
     await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledTimes(1);
       expect(mockMutate).toHaveBeenNthCalledWith(1, {
         conversationId: mockConversationId,
         senderProfileId: mockActiveProfileId,
-        content: 'abc',
-        type: 'event',
-        metadata: {
-          event_type: 'narration',
-          initiated_by: mockActiveProfileId,
-        },
-      });
-      expect(mockMutate).toHaveBeenNthCalledWith(2, {
-        conversationId: mockConversationId,
-        senderProfileId: mockActiveProfileId,
-        content: 'x',
+        content: JSON.stringify([
+          { type: 'narration', content: 'abc' },
+          { type: 'message', content: 'x' },
+          { type: 'narration', content: 'def' },
+        ]),
         type: 'user',
-      });
-      expect(mockMutate).toHaveBeenNthCalledWith(3, {
-        conversationId: mockConversationId,
-        senderProfileId: mockActiveProfileId,
-        content: 'def',
-        type: 'event',
-        metadata: {
-          event_type: 'narration',
-          initiated_by: mockActiveProfileId,
-        },
       });
     });
   });
