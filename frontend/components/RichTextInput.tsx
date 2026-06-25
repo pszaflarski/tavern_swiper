@@ -111,15 +111,24 @@ function RichTextInputWeb(
     }
   }, []);
 
+  // Save the selection range so we can restore it if focus is lost (e.g. button click)
+  const savedRangeRef = useRef<Range | null>(null);
+
   const toggleNarration = useCallback((): boolean => {
     const div = divRef.current;
     if (!div) return false;
 
-    // Ensure focus is on the contentEditable div
-    div.focus();
+    const sel = window.getSelection();
 
-    // The browser's native italic toggle — handles cursor position,
-    // selection wrapping, and "type italic from here" mode natively.
+    // If focus was lost (selection outside div), restore the saved range
+    if (!sel || sel.rangeCount === 0 || !div.contains(sel.anchorNode)) {
+      div.focus();
+      if (savedRangeRef.current && sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+
     document.execCommand('italic', false);
 
     const isNow = checkNarratingState();
@@ -172,6 +181,10 @@ function RichTextInputWeb(
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     if (!div.contains(sel.anchorNode)) return;
+
+    // Save the range so we can restore it if focus is lost
+    savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+
     const isItalic = checkNarratingState();
     onNarrationChange?.(isItalic);
   }, [checkNarratingState, onNarrationChange]);

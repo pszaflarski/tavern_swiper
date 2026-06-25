@@ -822,6 +822,7 @@ function ConversationScreenInner() {
         <View style={styles.modeToolbar} testID="mode-toolbar">
           <Pressable
             onPress={handleFormatText}
+            onMouseDown={(e: any) => e.preventDefault()}
             style={({ pressed }) => [
               styles.modeTab,
               isNarratingActive && styles.modeTabActive,
