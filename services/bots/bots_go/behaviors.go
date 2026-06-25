@@ -361,7 +361,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 			if os.Getenv("USE_ASYNC_AGENT") == "true" {
 				// Async: single typing signal (heartbeat goroutine can't survive
 				// across Cloud Run request boundaries — the callback will clear it
-				// when the message is posted, and the 10s TTL is the safety net).
+				// when the message is posted, and the 120s TTL is the safety net).
 				sendTypingSignal(token, conversationID, bp.profileID)
 
 				err := callAgentRouterAsync(token, bp.agentName, messagePreview, conversationID, messageType, enrichedMetadata, bp.profileID, bp.botUserID, bp.behaviorType, senderProfileID)

@@ -89,7 +89,6 @@ func handleHealth(c *gin.Context) {
 // @Failure      500   {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /conversations [post]
-
 func handleCreateConversation(c *gin.Context) {
 	auth := GetAuth(c)
 	var body ConversationCreate
@@ -1090,7 +1089,7 @@ func handleRollDice(c *gin.Context) {
 }
 
 // typingTTL is how long a typing indicator remains valid.
-const typingTTL = 10 * time.Second
+const typingTTL = 120 * time.Second
 
 // filterTypingMap extracts the "typing" map from a conversation document and
 // removes entries older than typingTTL. Returns nil if no active typers.
@@ -1130,7 +1129,7 @@ func filterTypingMap(data map[string]interface{}) map[string]string {
 
 // handleTyping godoc
 // @Summary      Signal typing activity
-// @Description  Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 10 seconds.
+// @Description  Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 120 seconds.
 // @Tags         conversations
 // @Accept       json
 // @Param        id    path      string  true  "Conversation ID"
