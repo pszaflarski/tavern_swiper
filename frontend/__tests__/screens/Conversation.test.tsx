@@ -79,7 +79,7 @@ jest.mock('../../components/DiceOverlay', () => {
 
 // Mock RichTextInput — contentEditable doesn't work in JSDOM.
 // This mock renders a TextInput and simulates the ref API.
-let mockRichTextState = { text: '', ranges: [] as any[], narrating: false };
+let mockRichTextState = { text: '', blocks: [] as any[], narrating: false };
 jest.mock('../../components/RichTextInput', () => {
   const React = require('react');
   const { TextInput, View } = require('react-native');
@@ -90,9 +90,9 @@ jest.mock('../../components/RichTextInput', () => {
 
     useImperativeHandle(ref, () => ({
       getText: () => mockRichTextState.text,
-      getFormattingRanges: () => mockRichTextState.ranges,
+      getBlocks: () => mockRichTextState.blocks,
       clear: () => {
-        mockRichTextState = { text: '', ranges: [], narrating: false };
+        mockRichTextState = { text: '', blocks: [], narrating: false };
         props.onNarrationChange?.(false);
       },
       focus: () => {},
@@ -173,7 +173,7 @@ describe('Conversation Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRichTextState = { text: '', ranges: [], narrating: false };
+    mockRichTextState = { text: '', blocks: [], narrating: false };
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: mockConversationId });
     (useProfileContext as jest.Mock).mockReturnValue({ activeProfileId: mockActiveProfileId });
     (useProfile as jest.Mock).mockReturnValue({
@@ -250,10 +250,13 @@ describe('Conversation Screen', () => {
       isPending: false,
     });
 
-    // Pre-set mock state to simulate typed text with narration range applied
+    // Pre-set mock state to simulate typed text with narration blocks
     mockRichTextState = {
       text: 'Hello world',
-      ranges: [{ start: 6, end: 11, type: 'narration' }],
+      blocks: [
+        { type: 'message', content: 'Hello ' },
+        { type: 'narration', content: 'world' },
+      ],
       narrating: false,
     };
 
@@ -313,9 +316,20 @@ describe('Conversation Screen', () => {
       isPending: false,
     });
 
+    // Pre-set mock state: mixed narration and dialogue blocks
+    mockRichTextState = {
+      text: 'Hello! waves hand How are you?',
+      blocks: [
+        { type: 'message', content: 'Hello! ' },
+        { type: 'narration', content: 'waves hand' },
+        { type: 'message', content: ' How are you?' },
+      ],
+      narrating: false,
+    };
+
     render(<ConversationScreen />);
     const input = screen.getByTestId('message-input');
-    fireEvent.changeText(input, 'Hello! <narrate>waves hand</narrate> How are you?');
+    fireEvent.changeText(input, 'Hello! waves hand How are you?');
 
     const sendButton = screen.getByTestId('send-button');
     fireEvent.press(sendButton);
@@ -557,7 +571,7 @@ describe('Conversation Screen', () => {
       });
 
       // Pre-set mock state
-      mockRichTextState = { text: 'Web adventure!', ranges: [], narrating: false };
+      mockRichTextState = { text: 'Web adventure!', blocks: [{ type: 'message', content: 'Web adventure!' }], narrating: false };
 
       render(<ConversationScreen />);
       const input = screen.getByTestId('message-input');
@@ -795,12 +809,13 @@ describe('Conversation Screen', () => {
     const input = screen.getByTestId('message-input');
     const narrateBtn = screen.getByTestId('mode-narrate-button');
 
-    // Pre-set mock state: "abcxdef" with split narration ranges
+    // Pre-set mock state: "abcxdef" with split narration blocks
     mockRichTextState = {
       text: 'abcxdef',
-      ranges: [
-        { start: 0, end: 3, type: 'narration' },
-        { start: 4, end: 7, type: 'narration' },
+      blocks: [
+        { type: 'narration', content: 'abc' },
+        { type: 'message', content: 'x' },
+        { type: 'narration', content: 'def' },
       ],
       narrating: false,
     };

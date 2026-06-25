@@ -5,6 +5,7 @@
  *         cursor/selection/scroll behavior and inline italic formatting.
  * Native: Falls back to a plain TextInput (no inline formatting preview).
  */
+import type { MessageBlock } from '../lib/messageParser';
 import React, {
   forwardRef,
   useImperativeHandle,
@@ -19,13 +20,12 @@ import {
   View,
 } from 'react-native';
 import { Colors, Fonts, Spacing, Radius } from '../theme';
-import type { FormattingRange } from '../lib/messageParser';
 
 export interface RichTextInputRef {
   /** Returns the plain text content (no HTML). */
   getText: () => string;
-  /** Returns the current formatting ranges (narration spans). */
-  getFormattingRanges: () => FormattingRange[];
+  /** Reads the DOM and returns structured message blocks directly from <i>/<em> tags. */
+  getBlocks: () => MessageBlock[];
   /** Clears all content and formatting. */
   clear: () => void;
   /** Focus the input. */
@@ -34,8 +34,8 @@ export interface RichTextInputRef {
   toggleNarration: () => boolean;
   /** Returns whether the cursor is currently inside a narration range. */
   isNarrating: () => boolean;
-  /** Set the text and ranges programmatically (for restoring on error). */
-  restore: (text: string, ranges: FormattingRange[]) => void;
+  /** Set the text programmatically (for restoring on error). */
+  restore: (text: string) => void;
 }
 
 export interface RichTextInputProps {
@@ -65,26 +65,21 @@ function RichTextInputWeb(
     return el.tagName === 'I' || el.tagName === 'EM';
   };
 
-  const getFormattingRanges = useCallback((): FormattingRange[] => {
+  /** Walk the DOM and produce MessageBlock[] directly from <i>/<em> tags. */
+  const getBlocks = useCallback((): MessageBlock[] => {
     const div = divRef.current;
     if (!div) return [];
 
-    const ranges: FormattingRange[] = [];
-    let offset = 0;
+    const blocks: MessageBlock[] = [];
 
     const walk = (node: Node, insideItalic: boolean) => {
       if (node.nodeType === Node.TEXT_NODE) {
-        const len = node.textContent?.length || 0;
-        if (insideItalic && len > 0) {
-          ranges.push({ start: offset, end: offset + len, type: 'narration' });
-        }
-        offset += len;
+        const text = node.textContent || '';
+        if (!text) return;
+        blocks.push({ type: insideItalic ? 'narration' : 'message', content: text });
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const el = node as HTMLElement;
-        if (el.tagName === 'BR') {
-          if (el.nextSibling) offset += 1;
-          return;
-        }
+        if (el.tagName === 'BR') return;
         const nowItalic = insideItalic || isItalicTag(el);
         for (const child of Array.from(node.childNodes)) {
           walk(child, nowItalic);
@@ -96,13 +91,13 @@ function RichTextInputWeb(
       walk(child, false);
     }
 
-    // Merge adjacent/overlapping ranges
-    const merged: FormattingRange[] = [];
-    for (const r of ranges) {
-      if (merged.length > 0 && r.start <= merged[merged.length - 1].end) {
-        merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, r.end);
+    // Merge adjacent blocks of the same type
+    const merged: MessageBlock[] = [];
+    for (const b of blocks) {
+      if (merged.length > 0 && merged[merged.length - 1].type === b.type) {
+        merged[merged.length - 1].content += b.content;
       } else {
-        merged.push({ ...r });
+        merged.push({ ...b });
       }
     }
     return merged;
@@ -135,7 +130,7 @@ function RichTextInputWeb(
 
   useImperativeHandle(ref, () => ({
     getText: getPlainText,
-    getFormattingRanges,
+    getBlocks,
     clear: () => {
       if (divRef.current) {
         divRef.current.innerHTML = '';
@@ -150,7 +145,7 @@ function RichTextInputWeb(
         divRef.current.innerText = text;
       }
     },
-  }), [getPlainText, getFormattingRanges, toggleNarration, checkNarratingState, onNarrationChange]);
+  }), [getPlainText, getBlocks, toggleNarration, checkNarratingState, onNarrationChange]);
 
   const handleInput = useCallback(() => {
     const text = getPlainText();
@@ -252,7 +247,7 @@ function RichTextInputNative(
 
   useImperativeHandle(ref, () => ({
     getText: () => textRef.current,
-    getFormattingRanges: () => [],
+    getBlocks: () => textRef.current ? [{ type: 'message' as const, content: textRef.current }] : [],
     clear: () => {
       textRef.current = '';
       inputRef.current?.clear();

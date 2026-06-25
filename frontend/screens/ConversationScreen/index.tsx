@@ -26,7 +26,7 @@ import DiceOverlay from '../../components/DiceOverlay';
 import { MESSAGES } from '../../constants';
 import { styles } from './styles';
 import RichTextInput, { RichTextInputRef } from '../../components/RichTextInput';
-import { parseMessageContent, buildJSONFromRanges, parseTextToJSON } from '../../lib/messageParser';
+import { parseMessageContent } from '../../lib/messageParser';
 
 const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
 const MODE_TOOLBAR_HEIGHT = 46;
@@ -405,12 +405,8 @@ function ConversationScreenInner() {
     const rawText = richInputRef.current?.getText()?.trim() || '';
     if (!rawText || !activeProfileId) return;
 
-    const ranges = richInputRef.current?.getFormattingRanges() || [];
-    // Parse the input into blocks
-    const jsonStr = rawText.includes('<narrate>') 
-      ? parseTextToJSON(rawText) 
-      : buildJSONFromRanges(rawText, ranges);
-    const blocks = parseMessageContent(jsonStr);
+    // Get structured blocks directly from the DOM's <i>/<em> tags
+    const blocks = richInputRef.current?.getBlocks() || [];
 
     richInputRef.current?.clear();
     setMessageText('');
@@ -427,7 +423,7 @@ function ConversationScreenInner() {
         await sendMessageAsync({
           conversationId: realConvId,
           senderProfileId: activeProfileId,
-          content: jsonStr,
+          content: JSON.stringify(blocks),
           type: 'user',
         });
       } else if (hasNarration) {
@@ -454,7 +450,7 @@ function ConversationScreenInner() {
       }
     } catch (err) {
       // Restore the message text so the user can retry
-      richInputRef.current?.restore(rawText, ranges);
+      richInputRef.current?.restore(rawText);
       setMessageText(rawText);
       console.error('Failed to send message:', err);
     }
