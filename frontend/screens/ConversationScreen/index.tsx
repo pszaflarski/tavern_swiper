@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Fonts, Spacing } from '../../theme';
+import { Colors, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation } from '../../hooks/useMessages';
 import { useProfile } from '../../hooks/useProfiles';
@@ -27,8 +27,10 @@ import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import DiceOverlay from '../../components/DiceOverlay';
 import { MESSAGES } from '../../constants';
 import { styles } from './styles';
+import { parseMessageContent, shiftRanges, buildJSONFromRanges, parseTextToJSON, FormattingRange } from '../../lib/messageParser';
 
 const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
+const MODE_TOOLBAR_HEIGHT = 46;
 
 /** Max sides per die type for local random rolls */
 const DICE_SIDES: Record<string, number> = {
@@ -192,7 +194,52 @@ function ConversationScreenInner() {
   // true while the 3D animation is actively playing; false once it settles.
   // The die stays visible (rollingDie !== null) even after the animation ends.
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isNarrationMode, setIsNarrationMode] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const [inputScrollY, setInputScrollY] = useState(0);
+
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [formattingRanges, setFormattingRanges] = useState<FormattingRange[]>([]);
+  const isTypingRef = useRef(false);
+  const [isNarratingAtCursor, setIsNarratingAtCursor] = useState(false);
+
+  // Compute active highlight state for Narrate formatting (word processor behavior)
+  const isNarratingActive = useMemo(() => {
+    const { start, end } = selection;
+    if (start !== end) {
+      // For selection range, active if selection is completely inside a narration range
+      return formattingRanges.some(r => r.start <= start && end <= r.end);
+    }
+    // For cursor point, active if strictly inside any narration range
+    if (formattingRanges.some(r => r.start < start && start < r.end)) {
+      return true;
+    }
+    // Otherwise, matches the toggled state at cursor
+    return isNarratingAtCursor;
+  }, [selection, formattingRanges, isNarratingAtCursor]);
+
+  const handleSelectionChange = (start: number, end: number) => {
+    // If the coordinates didn't change, do nothing (prevents focus events from resetting states)
+    if (start === selection.start && end === selection.end) {
+      return;
+    }
+
+    setSelection({ start, end });
+
+    // If selection changed due to typing, preserve the active typing mode state
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      return;
+    }
+
+    // If selection changed due to tap/cursor move:
+    if (start === end) {
+      // Default to active if cursor is inside or at the boundary of a narration range
+      const isAtOrInside = formattingRanges.some(r => r.start <= start && start <= r.end);
+      setIsNarratingAtCursor(isAtOrInside);
+    } else {
+      setIsNarratingAtCursor(false);
+    }
+  };
 
   // --- Dice animation queue ---
   // Tracks dice_roll event message_ids we've already enqueued so we never
@@ -402,29 +449,222 @@ function ConversationScreenInner() {
   const handleSend = useCallback(async () => {
     if (!messageText.trim() || !activeProfileId) return;
 
-    const content = messageText.trim();
+    const rawText = messageText.trim();
+    // Parse the input into separate blocks
+    const jsonStr = rawText.includes('<narrate>') 
+      ? parseTextToJSON(rawText) 
+      : buildJSONFromRanges(rawText, formattingRanges);
+    const blocks = parseMessageContent(jsonStr);
+
     setMessageText('');
+    setFormattingRanges([]);
+    setIsNarratingAtCursor(false);
 
     try {
       const realConvId = await ensureConversation();
-      await sendMessageAsync({
-        conversationId: realConvId,
-        senderProfileId: activeProfileId,
-        content,
-        ...(isNarrationMode && {
-          type: 'event',
-          metadata: {
-            event_type: 'narration',
-            initiated_by: activeProfileId,
-          },
-        }),
-      });
+      for (const block of blocks) {
+        if (block.type === 'narration') {
+          await sendMessageAsync({
+            conversationId: realConvId,
+            senderProfileId: activeProfileId,
+            content: block.content,
+            type: 'event',
+            metadata: {
+              event_type: 'narration',
+              initiated_by: activeProfileId,
+            }
+          });
+        } else {
+          await sendMessageAsync({
+            conversationId: realConvId,
+            senderProfileId: activeProfileId,
+            content: block.content,
+            type: 'user',
+          });
+        }
+      }
     } catch (err) {
       // Restore the message text so the user can retry
-      setMessageText(content);
+      setMessageText(rawText);
       console.error('Failed to send message:', err);
     }
-  }, [messageText, activeProfileId, ensureConversation, sendMessageAsync, isNarrationMode]);
+  }, [messageText, formattingRanges, activeProfileId, ensureConversation, sendMessageAsync]);
+
+  const addNarrationRange = (ranges: FormattingRange[], start: number, end: number): FormattingRange[] => {
+    const newRange = { start, end, type: 'narration' as const };
+    const all = [...ranges, newRange];
+    all.sort((a, b) => a.start - b.start);
+    
+    const merged: FormattingRange[] = [];
+    for (const r of all) {
+      if (merged.length === 0) {
+        merged.push(r);
+      } else {
+        const prev = merged[merged.length - 1];
+        if (r.start <= prev.end) {
+          prev.end = Math.max(prev.end, r.end);
+        } else {
+          merged.push(r);
+        }
+      }
+    }
+    return merged;
+  };
+
+  const handleFormatText = () => {
+    const { start, end } = selection;
+    if (start !== end) {
+      // Selection range: toggle narration for selection
+      setFormattingRanges((prev) => {
+        // Is selection entirely narration?
+        const isEntirelyNarration = prev.some(r => r.start <= start && end <= r.end);
+        if (isEntirelyNarration) {
+          // Remove narration from [start, end]
+          const nextRanges: FormattingRange[] = [];
+          for (const r of prev) {
+            if (r.end <= start || r.start >= end) {
+              nextRanges.push(r);
+            } else {
+              if (r.start < start) {
+                nextRanges.push({ start: r.start, end: start, type: 'narration' });
+              }
+              if (r.end > end) {
+                nextRanges.push({ start: end, end: r.end, type: 'narration' });
+              }
+            }
+          }
+          return nextRanges;
+        } else {
+          // Add narration for [start, end] and merge
+          const all = [...prev, { start, end, type: 'narration' as const }];
+          all.sort((a, b) => a.start - b.start);
+          const merged: FormattingRange[] = [];
+          for (const r of all) {
+            if (merged.length === 0) {
+              merged.push(r);
+            } else {
+              const last = merged[merged.length - 1];
+              if (r.start <= last.end) {
+                last.end = Math.max(last.end, r.end);
+              } else {
+                merged.push(r);
+              }
+            }
+          }
+          return merged;
+        }
+      });
+    } else {
+      // Cursor point:
+      const i = start;
+      const insideRange = formattingRanges.find(r => r.start < i && i < r.end);
+      if (insideRange) {
+        // Split the range
+        setFormattingRanges((prev) => {
+          const nextRanges: FormattingRange[] = [];
+          for (const r of prev) {
+            if (r.start < i && i < r.end) {
+              nextRanges.push({ start: r.start, end: i, type: 'narration' });
+              nextRanges.push({ start: i, end: r.end, type: 'narration' });
+            } else {
+              nextRanges.push(r);
+            }
+          }
+          return nextRanges;
+        });
+        setIsNarratingAtCursor(false);
+      } else {
+        // Toggle the override state
+        setIsNarratingAtCursor(!isNarratingActive);
+      }
+    }
+
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  };
+
+  const handleTextChange = (text: string) => {
+    isTypingRef.current = true;
+    const diff = text.length - messageText.length;
+    const currentIsNarrating = isNarratingActive;
+
+    let nextRanges = shiftRanges(formattingRanges, messageText, text, selection.start, selection.end, currentIsNarrating);
+
+    if (diff > 0 && currentIsNarrating) {
+      nextRanges = addNarrationRange(nextRanges, selection.start, selection.start + diff);
+    }
+
+    setFormattingRanges(nextRanges);
+    setMessageText(text);
+    onTextChange(text);
+    setIsNarratingAtCursor(currentIsNarrating);
+  };
+
+  const renderInputWithFormatting = (text: string, ranges: FormattingRange[]) => {
+    if (!text) return null;
+    if (ranges.length === 0) {
+      return <Text style={[styles.inputOverlayText, { color: Colors.onSurface }]}>{text}</Text>;
+    }
+
+    const sorted = [...ranges].sort((a, b) => a.start - b.start);
+    const elements: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    sorted.forEach((range, idx) => {
+      if (range.start > lastIndex) {
+        elements.push(
+          <Text key={`msg-${idx}`} style={[styles.inputOverlayText, { color: Colors.onSurface }]}>
+            {text.substring(lastIndex, range.start)}
+          </Text>
+        );
+      }
+      elements.push(
+        <Text
+          key={`narr-${idx}`}
+          style={[styles.inputOverlayText, { fontStyle: 'italic', color: Colors.tertiaryFixedDim }]}
+        >
+          {text.substring(range.start, range.end)}
+        </Text>
+      );
+      lastIndex = range.end;
+    });
+
+    if (lastIndex < text.length) {
+      elements.push(
+        <Text key="msg-end" style={[styles.inputOverlayText, { color: Colors.onSurface }]}>
+          {text.substring(lastIndex)}
+        </Text>
+      );
+    }
+
+    return <Text>{elements}</Text>;
+  };
+
+  const renderMessageContent = (content: string, isMe: boolean) => {
+    const blocks = parseMessageContent(content);
+    
+    return (
+      <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
+        {blocks.map((block, index) => {
+          if (block.type === 'narration') {
+            return (
+              <Text
+                key={index}
+                style={[
+                  styles.messageTextNarration,
+                  isMe ? styles.myMessageTextNarration : styles.theirMessageTextNarration
+                ]}
+              >
+                {block.content}
+              </Text>
+            );
+          }
+          return <Text key={index}>{block.content}</Text>;
+        })}
+      </Text>
+    );
+  };
 
   // Hide messages at or after the currently-animating dice_roll's sent_at.
   // This hides the roll event AND any follow-up messages (e.g. Lira's
@@ -489,7 +729,7 @@ function ConversationScreenInner() {
   // Animated style for the FlatList spacer.
   // Precisely mirrors the footer's height for smooth scrolling.
   const listBottomSpacerStyle = useAnimatedStyle(() => ({
-    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6],
+    height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6] + MODE_TOOLBAR_HEIGHT,
   }));
 
   const isLoadingProfileInfo = isNewConversation
@@ -593,8 +833,34 @@ function ConversationScreenInner() {
             const delayMs = isNew ? Math.max(0, batchIndex) * 250 : 0;
             const enteringProps = isNew ? { entering: FadeInDown.delay(delayMs).duration(300).springify().damping(15) } : {};
 
-            // Event messages — centered gold pill (dice rolls, etc.)
+            // Event messages
             if (item.type === 'event') {
+              // Narration events — centered italic pill
+              if (item.metadata?.event_type === 'narration') {
+                return (
+                  <ContainerView {...enteringProps} style={styles.eventContainer}>
+                    <View style={styles.eventBubble}>
+                      <Text style={styles.eventText}>
+                        {item.content}
+                      </Text>
+                    </View>
+                    {item.isOptimistic ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                        <ActivityIndicator size="small" color={Colors.outline} style={{ marginRight: 4 }} />
+                        <Text style={styles.timestamp}>sending...</Text>
+                      </View>
+                    ) : (
+                      showTimestamp && (
+                        <Text style={styles.timestamp}>
+                          {new Date(item.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      )
+                    )}
+                  </ContainerView>
+                );
+              }
+
+              // Other events — centered gold pill (dice rolls, etc.)
               // Parse dice roll pattern: "{name} rolled a {number} on a {diceType}"
               const diceMatch = item.content.match(/^(.+?) rolled a (\d+) on a (d\d+)$/);
 
@@ -629,6 +895,7 @@ function ConversationScreenInner() {
               );
             }
 
+
             // System messages — centered muted pill
             if (item.type === 'system') {
               return (
@@ -652,9 +919,7 @@ function ConversationScreenInner() {
                   styles.messageBubble, 
                   isMe ? styles.myMessageBubble : styles.theirMessageBubble
                 ]}>
-                  <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
-                    {item.content}
-                  </Text>
+                  {renderMessageContent(item.content, isMe)}
                 </View>
                 {item.isOptimistic ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -694,43 +959,74 @@ function ConversationScreenInner() {
         />
       )}
 
-      <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle, isNarrationMode && { backgroundColor: '#3a3520' }]}>
-
-        <View style={styles.inputContainer}>
+      <Animated.View style={[styles.inputWrapper, inputBarAnimatedStyle]}>
+        <View style={styles.modeToolbar} testID="mode-toolbar">
           <Pressable
+            onPress={handleFormatText}
             style={({ pressed }) => [
-              styles.narrationToggle,
-              isNarrationMode && styles.narrationToggleActive,
-              pressed && { opacity: 0.7 },
+              styles.modeTab,
+              isNarratingActive && styles.modeTabActive,
+              pressed && { opacity: 0.8 },
             ]}
-            onPress={() => setIsNarrationMode(prev => !prev)}
-            testID="narration-toggle-button"
+            testID="mode-narrate-button"
           >
-            <Text style={[styles.narrationText, isNarrationMode && styles.narrationTextActive]}>
-              {isNarrationMode ? 'A' : '*'}
+            <Ionicons
+              name="book"
+              size={14}
+              color={isNarratingActive ? Colors.tertiaryFixedDim : Colors.outline}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[
+              styles.modeTabText,
+              isNarratingActive && styles.modeTabTextActive
+            ]}>
+              Narrate
             </Text>
           </Pressable>
-          <TextInput
-            style={styles.input}
-            placeholder={isNarrationMode ? "Narrate the scene..." : "Compose a missive..."}
-            placeholderTextColor={Colors.outline}
-            value={messageText}
-            onChangeText={(text) => {
-              setMessageText(text);
-              onTextChange(text);
-            }}
-            multiline
-            maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
-            testID="message-input"
-            onKeyPress={(e: any) => {
-              if (Platform.OS === 'web') {
-                if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
+        </View>
+
+        <View style={styles.inputContainer}>
+          <View style={styles.inputWrapperContainer}>
+            {/* Formatted overlay — shows the styled text, moves with TextInput scroll */}
+            <View style={styles.inputOverlayContainer} pointerEvents="none">
+              <View style={[styles.inputOverlayInner, { transform: [{ translateY: -inputScrollY }] }]}>  
+                {renderInputWithFormatting(messageText, formattingRanges)}
+              </View>
+            </View>
+
+            {/* Real TextInput — text is transparent, only the caret is visible */}
+            <TextInput
+              ref={inputRef}
+              style={[
+                styles.inputReal,
+                isNarratingActive && { fontStyle: 'italic' as const },
+                Platform.OS === 'web' && { caretColor: isNarratingActive ? Colors.tertiaryFixedDim : Colors.primary } as any,
+              ]}
+              placeholder={messageText ? '' : 'Compose a missive...'}
+              placeholderTextColor={Colors.outline}
+              value={messageText}
+              onChangeText={handleTextChange}
+              onSelectionChange={(e) => {
+                handleSelectionChange(e.nativeEvent.selection.start, e.nativeEvent.selection.end);
+              }}
+              onScroll={(e: any) => {
+                const y = e.nativeEvent?.contentOffset?.y ?? e.target?.scrollTop ?? 0;
+                setInputScrollY(y);
+              }}
+              selectionColor={Colors.primary}
+              multiline
+              maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
+              testID="message-input"
+              onKeyPress={(e: any) => {
+                if (Platform.OS === 'web') {
+                  if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
                 }
-              }
-            }}
-          />
+              }}
+            />
+          </View>
           <Pressable
             style={({ pressed }) => [
               styles.diceToggle,
