@@ -353,6 +353,11 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 
 			// 4½. Signal typing before LLM generation
 			// 5. Call agent_router — async (fire-and-forget) or sync based on feature flag.
+			// ⚠️ ARCHITECTURAL WARNING: USE_ASYNC_AGENT must be configured to "true" in all deployed Cloud Run
+			// environments (dev, test, prod). The synchronous path (/invoke) enforces a 60-second timeout,
+			// which is routinely exceeded by the combination of agent-router cold starts, LangGraph workflow
+			// executions, and Gemini tool-calling loops. The asynchronous path (/invoke-async with callback)
+			// avoids these client-side timeouts by letting processing run up to Cloud Run's 5-minute limit.
 			if os.Getenv("USE_ASYNC_AGENT") == "true" {
 				// Async: single typing signal (heartbeat goroutine can't survive
 				// across Cloud Run request boundaries — the callback will clear it
