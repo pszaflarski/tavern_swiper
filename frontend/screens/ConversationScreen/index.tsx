@@ -28,7 +28,7 @@ import { styles } from './styles';
 import RichTextInput, { RichTextInputRef } from '../../components/RichTextInput';
 import { parseMessageContent } from '../../lib/messageParser';
 
-const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT;
+const INPUT_BAR_HEIGHT = MESSAGES.INPUT_BAR_HEIGHT + 60; // Adjust for 100px static editor height
 const MODE_TOOLBAR_HEIGHT = 46;
 
 /** Max sides per die type for local random rolls */
@@ -402,11 +402,11 @@ function ConversationScreenInner() {
   }, [queryClient]);
 
   const handleSend = useCallback(async () => {
-    const rawText = richInputRef.current?.getText()?.trim() || '';
+    const rawText = (await richInputRef.current?.getText())?.trim() || '';
     if (!rawText || !activeProfileId) return;
 
-    // Get structured blocks directly from the DOM's <i>/<em> tags
-    const blocks = richInputRef.current?.getBlocks() || [];
+    // Get structured blocks directly from the editor's HTML
+    const blocks = (await richInputRef.current?.getBlocks()) || [];
 
     richInputRef.current?.clear();
     setMessageText('');
@@ -880,11 +880,9 @@ function ConversationScreenInner() {
           <Pressable 
             style={({ pressed }) => [
               styles.sendButton, 
-              !messageText.trim() && styles.sendButtonDisabled,
               pressed && { opacity: 0.7 }
             ]} 
             onPress={handleSend}
-            disabled={!messageText.trim()}
             testID="send-button"
           >
             <Ionicons name="send" size={20} color={Colors.onPrimary} />

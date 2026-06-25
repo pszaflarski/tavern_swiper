@@ -186,3 +186,176 @@ export function getMessagePreview(content: string): string {
     .map((b) => (b.type === 'narration' ? `*${b.content}*` : b.content))
     .join('');
 }
+
+/**
+ * Builds MessageBlock[] from plain text and formatting ranges.
+ * Like buildJSONFromRanges but returns the array directly (for getBlocks()).
+ */
+export function buildBlocksFromRanges(text: string, ranges: FormattingRange[]): MessageBlock[] {
+  if (!text) return [];
+  if (ranges.length === 0) return [{ type: 'message', content: text }];
+
+  const result: MessageBlock[] = [];
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+
+  let lastIndex = 0;
+  for (const range of sorted) {
+    // Clamp to text bounds
+    const start = Math.max(range.start, 0);
+    const end = Math.min(range.end, text.length);
+    if (start >= end) continue;
+
+    if (start > lastIndex) {
+      result.push({ type: 'message', content: text.substring(lastIndex, start) });
+    }
+    result.push({ type: 'narration', content: text.substring(start, end) });
+    lastIndex = end;
+  }
+
+  if (lastIndex < text.length) {
+    result.push({ type: 'message', content: text.substring(lastIndex) });
+  }
+
+  return result;
+}
+
+/**
+ * Merges overlapping or adjacent narration ranges into a minimal set.
+ */
+export function mergeRanges(ranges: FormattingRange[]): FormattingRange[] {
+  if (ranges.length <= 1) return ranges;
+
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const merged: FormattingRange[] = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    const curr = sorted[i];
+    if (curr.start <= last.end) {
+      // Overlapping or adjacent — extend
+      last.end = Math.max(last.end, curr.end);
+    } else {
+      merged.push({ ...curr });
+    }
+  }
+
+  return merged;
+}
+
+/**
+ * Checks whether a cursor position is inside any narration range.
+ */
+export function isInsideRange(position: number, ranges: FormattingRange[]): boolean {
+  return ranges.some((r) => position > r.start && position <= r.end);
+}
+
+/**
+ * Toggles narration for a selection span [start, end).
+ * If the span is fully inside existing narration, removes it (punches a hole).
+ * Otherwise, adds it and merges.
+ */
+export function toggleRangeAt(
+  ranges: FormattingRange[],
+  start: number,
+  end: number
+): { ranges: FormattingRange[]; added: boolean } {
+  if (start === end) return { ranges, added: false };
+
+  // Check if the entire selection is already fully narrated
+  const fullyNarrated = isSelectionFullyNarrated(ranges, start, end);
+
+  if (fullyNarrated) {
+    // Remove narration from [start, end) — punch a hole in any covering ranges
+    const result: FormattingRange[] = [];
+    for (const r of ranges) {
+      if (r.end <= start || r.start >= end) {
+        // No overlap — keep as-is
+        result.push({ ...r });
+      } else {
+        // Overlaps — split around the removed region
+        if (r.start < start) {
+          result.push({ start: r.start, end: start, type: 'narration' });
+        }
+        if (r.end > end) {
+          result.push({ start: end, end: r.end, type: 'narration' });
+        }
+      }
+    }
+    return { ranges: result, added: false };
+  } else {
+    // Add narration for [start, end) and merge
+    const newRanges = [...ranges, { start, end, type: 'narration' as const }];
+    return { ranges: mergeRanges(newRanges), added: true };
+  }
+}
+
+/**
+ * Checks if a selection [start, end) is fully covered by narration ranges.
+ */
+function isSelectionFullyNarrated(ranges: FormattingRange[], start: number, end: number): boolean {
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  let covered = start;
+  for (const r of sorted) {
+    if (r.start > covered) return false; // gap
+    if (r.start <= covered && r.end > covered) {
+      covered = r.end;
+    }
+    if (covered >= end) return true;
+  }
+  return covered >= end;
+}
+
+/**
+ * Parses TipTap/tentap-editor HTML output into MessageBlock[].
+ *
+ * Converts <em> tags to narration blocks and everything else to message blocks.
+ * Handles nested paragraph tags by stripping them and treating content as inline.
+ *
+ * Example:
+ *   "<p>hello <em>narrated</em> world</p>" →
+ *   [{ type: 'message', content: 'hello ' },
+ *    { type: 'narration', content: 'narrated' },
+ *    { type: 'message', content: ' world' }]
+ */
+export function parseHTMLToBlocks(html: string): MessageBlock[] {
+  if (!html) return [];
+
+  // Strip paragraph wrapper tags — TipTap wraps everything in <p>
+  let content = html
+    .replace(/<p>/g, '')
+    .replace(/<\/p>/g, '')
+    .trim();
+
+  if (!content) return [];
+
+  const blocks: MessageBlock[] = [];
+  // Match <em>...</em> and <i>...</i> tags (TipTap uses <em> for italic)
+  const regex = /<(?:em|i)>([\s\S]*?)<\/(?:em|i)>/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    // Text before the italic tag
+    if (match.index > lastIndex) {
+      const text = stripHTMLTags(content.substring(lastIndex, match.index));
+      if (text) blocks.push({ type: 'message', content: text });
+    }
+    // The italic content
+    const italicText = stripHTMLTags(match[1]);
+    if (italicText) blocks.push({ type: 'narration', content: italicText });
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Remaining text after the last italic tag
+  if (lastIndex < content.length) {
+    const text = stripHTMLTags(content.substring(lastIndex));
+    if (text) blocks.push({ type: 'message', content: text });
+  }
+
+  return blocks;
+}
+
+/** Strip any remaining HTML tags from a string, keeping only text content. */
+function stripHTMLTags(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
+}
