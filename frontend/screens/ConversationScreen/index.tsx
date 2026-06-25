@@ -694,7 +694,41 @@ function ConversationScreenInner() {
     const visible = hideMessagesCutoff
       ? messages.filter(m => m.sent_at < hideMessagesCutoff)
       : messages;
-    return visible.slice().reverse();
+
+    // Expand user messages with JSON array content into separate display items
+    // so narration blocks render as centered event pills and message blocks as chat bubbles
+    const expanded: typeof messages = [];
+    for (const msg of visible) {
+      if (msg.type === 'user' && msg.content.startsWith('[')) {
+        const blocks = parseMessageContent(msg.content);
+        if (blocks.length > 1) {
+          blocks.forEach((block, i) => {
+            if (block.type === 'narration') {
+              expanded.push({
+                ...msg,
+                message_id: `${msg.message_id}-block-${i}`,
+                content: block.content,
+                type: 'event',
+                metadata: {
+                  event_type: 'narration',
+                  initiated_by: msg.sender_profile_id,
+                },
+              });
+            } else {
+              expanded.push({
+                ...msg,
+                message_id: `${msg.message_id}-block-${i}`,
+                content: block.content,
+              });
+            }
+          });
+          continue;
+        }
+      }
+      expanded.push(msg);
+    }
+
+    return expanded.slice().reverse();
   }, [messages, hideMessagesCutoff]);
 
   const navigation = useNavigation();
