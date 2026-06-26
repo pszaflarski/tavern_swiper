@@ -71,4 +71,18 @@ create_trigger "discovery-analytics-${ENV}-deploy" \
     "discovery_analytics" \
     "discovery-analytics"
 
+# 3. Messages Analytics
+create_trigger "messages-analytics-${ENV}-deploy" \
+    "services/messages/messages_analytics/cloudbuild.yaml" \
+    "services/messages/messages_analytics" \
+    "messages_analytics" \
+    "messages-analytics"
+
+# 4. Users Analytics
+create_trigger "users-analytics-${ENV}-deploy" \
+    "services/auth/users_analytics/cloudbuild.yaml" \
+    "services/auth/users_analytics" \
+    "users_analytics" \
+    "users-analytics"
+
 echo "🏁 All analytics triggers created for $ENV!"

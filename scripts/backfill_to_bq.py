@@ -108,6 +108,26 @@ def main():
         table_name="matches_cdc"
     )
 
+    # Backfill Messages (Matches Cache)
+    backfill_collection(
+        project_id=project_id,
+        env=env,
+        database_id=f"messages-{env}",
+        collection_name="discovery_matches_cache",
+        dataset_name=f"messages_analytics_{env}",
+        table_name="matches_cdc"
+    )
+
+    # Backfill Users
+    backfill_collection(
+        project_id=project_id,
+        env=env,
+        database_id=f"users-{env}",
+        collection_name="users",
+        dataset_name=f"users_analytics_{env}",
+        table_name="users_cdc"
+    )
+
     print("🏁 Backfill completed!")
 
 if __name__ == "__main__":
