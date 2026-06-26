@@ -13,7 +13,7 @@ import (
 // BQClient defines the interface for our BigQuery operations to allow easy mocking.
 type BQClient interface {
 	EnsureDatasetAndTables(ctx context.Context) error
-	InsertRow(ctx context.Context, row *ChangelogRow) error
+	InsertRow(ctx context.Context, tableName string, row *ChangelogRow) error
 	Close() error
 }
 
@@ -66,44 +66,56 @@ func (b *RealBQClient) EnsureDatasetAndTables(ctx context.Context) error {
 		}
 	}
 
-	// 2. Ensure matches_cdc Table exists
-	tableName := "matches_cdc"
-	table := dataset.Table(tableName)
-	_, err = table.Metadata(ctx)
-	if err != nil {
-		if hasErrorCode(err, http.StatusNotFound) {
-			log.Printf("🏗️ Creating BigQuery table: %s.%s", b.datasetID, tableName)
-			schema, err := bigquery.InferSchema(ChangelogRow{})
-			if err != nil {
-				return fmt.Errorf("failed to infer schema for %s: %w", tableName, err)
-			}
+	// Helper to ensure tables exist
+	ensureTable := func(tableName, description string) error {
+		table := dataset.Table(tableName)
+		_, err := table.Metadata(ctx)
+		if err != nil {
+			if hasErrorCode(err, http.StatusNotFound) {
+				log.Printf("🏗️ Creating BigQuery table: %s.%s", b.datasetID, tableName)
+				schema, err := bigquery.InferSchema(ChangelogRow{})
+				if err != nil {
+					return fmt.Errorf("failed to infer schema for %s: %w", tableName, err)
+				}
 
-			// Day-partition on timestamp field and cluster by document_id
-			err = table.Create(ctx, &bigquery.TableMetadata{
-				Schema:      schema,
-				Description: "CDC raw changelog for collection matches",
-				TimePartitioning: &bigquery.TimePartitioning{
-					Field: "timestamp",
-					Type:  bigquery.DayPartitioningType,
-				},
-				Clustering: &bigquery.Clustering{
-					Fields: []string{"document_id"},
-				},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to create table %s: %w", tableName, err)
+				// Day-partition on timestamp field and cluster by document_id
+				err = table.Create(ctx, &bigquery.TableMetadata{
+					Schema:      schema,
+					Description: description,
+					TimePartitioning: &bigquery.TimePartitioning{
+						Field: "timestamp",
+						Type:  bigquery.DayPartitioningType,
+					},
+					Clustering: &bigquery.Clustering{
+						Fields: []string{"document_id"},
+					},
+				})
+				if err != nil {
+					return fmt.Errorf("failed to create table %s: %w", tableName, err)
+				}
+				log.Printf("✅ Created BigQuery table: %s.%s", b.datasetID, tableName)
+			} else {
+				return fmt.Errorf("failed to check table %s metadata: %w", tableName, err)
 			}
-			log.Printf("✅ Created BigQuery table: %s.%s", b.datasetID, tableName)
-		} else {
-			return fmt.Errorf("failed to check table %s metadata: %w", tableName, err)
 		}
+		return nil
+	}
+
+	// 2. Ensure matches_cdc Table exists
+	if err := ensureTable("matches_cdc", "CDC raw changelog for collection matches"); err != nil {
+		return err
+	}
+
+	// 3. Ensure profiles_cache_cdc Table exists
+	if err := ensureTable("profiles_cache_cdc", "CDC raw changelog for collection profiles_profiles_cache"); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (b *RealBQClient) InsertRow(ctx context.Context, row *ChangelogRow) error {
-	table := b.client.Dataset(b.datasetID).Table("matches_cdc")
+func (b *RealBQClient) InsertRow(ctx context.Context, tableName string, row *ChangelogRow) error {
+	table := b.client.Dataset(b.datasetID).Table(tableName)
 	inserter := table.Inserter()
 	
 	err := inserter.Put(ctx, row)

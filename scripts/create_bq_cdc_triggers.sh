@@ -107,4 +107,23 @@ else
   echo "✅ Trigger $TRIGGER_USERS created."
 fi
 
+# Trigger 5: Profiles Cache (Discovery DB)
+TRIGGER_DISCOVERY_PROFILES="discovery-profiles-cache-bq-cdc-${ENV}"
+if gcloud eventarc triggers describe "$TRIGGER_DISCOVERY_PROFILES" --location="$LOCATION" &>/dev/null; then
+  echo "✅ Eventarc trigger $TRIGGER_DISCOVERY_PROFILES already exists."
+else
+  echo "🏗️ Creating Eventarc trigger $TRIGGER_DISCOVERY_PROFILES..."
+  gcloud eventarc triggers create "$TRIGGER_DISCOVERY_PROFILES" \
+    --location="$LOCATION" \
+    --destination-run-service="discovery-analytics-${ENV}" \
+    --destination-run-path="/" \
+    --event-filters="type=google.cloud.firestore.document.v1.written" \
+    --event-filters="database=discovery-${ENV}" \
+    --event-filters-path-pattern="document=profiles_profiles_cache/{profile_id}" \
+    --event-data-content-type="application/protobuf" \
+    --service-account="$SA_EMAIL" \
+    --quiet
+  echo "✅ Trigger $TRIGGER_DISCOVERY_PROFILES created."
+fi
+
 echo "🏁 Eventarc triggers setup complete for $ENV!"

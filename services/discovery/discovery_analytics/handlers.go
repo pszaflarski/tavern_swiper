@@ -106,10 +106,15 @@ func (h *Handlers) HandleFirestoreEvent(c *gin.Context) {
 		OldData:      oldDataJSON,
 	}
 
-	log.Printf("📥 Processing matches CDC event: doc_id=%s, op=%s", docID, operation)
+	tableName := "matches_cdc"
+	if strings.Contains(docName, "/profiles_profiles_cache/") {
+		tableName = "profiles_cache_cdc"
+	}
+
+	log.Printf("📥 Processing discovery CDC event: doc_id=%s, table=%s, op=%s", docID, tableName, operation)
 
 	// 4. Write to BigQuery
-	if err := h.bqClient.InsertRow(c.Request.Context(), row); err != nil {
+	if err := h.bqClient.InsertRow(c.Request.Context(), tableName, row); err != nil {
 		log.Printf("❌ BigQuery insertion error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to insert row into bigquery"})
 		return

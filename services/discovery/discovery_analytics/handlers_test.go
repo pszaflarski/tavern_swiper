@@ -26,8 +26,8 @@ func (m *MockBQClient) EnsureDatasetAndTables(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func (m *MockBQClient) InsertRow(ctx context.Context, row *ChangelogRow) error {
-	args := m.Called(ctx, row)
+func (m *MockBQClient) InsertRow(ctx context.Context, tableName string, row *ChangelogRow) error {
+	args := m.Called(ctx, tableName, row)
 	return args.Error(0)
 }
 
@@ -65,7 +65,7 @@ func TestHandleMatchesEvent_Insert(t *testing.T) {
 
 	// Mock BQ Client
 	mockBQ := new(MockBQClient)
-	mockBQ.On("InsertRow", mock.Anything, mock.MatchedBy(func(row *ChangelogRow) bool {
+	mockBQ.On("InsertRow", mock.Anything, "matches_cdc", mock.MatchedBy(func(row *ChangelogRow) bool {
 		assert.Equal(t, "match_123", row.DocumentID)
 		assert.Equal(t, "INSERT", row.Operation)
 		
@@ -128,7 +128,7 @@ func TestHandleMatchesEvent_Delete(t *testing.T) {
 
 	// Mock BQ Client
 	mockBQ := new(MockBQClient)
-	mockBQ.On("InsertRow", mock.Anything, mock.MatchedBy(func(row *ChangelogRow) bool {
+	mockBQ.On("InsertRow", mock.Anything, "matches_cdc", mock.MatchedBy(func(row *ChangelogRow) bool {
 		assert.Equal(t, "match_567", row.DocumentID)
 		assert.Equal(t, "DELETE", row.Operation)
 		assert.Equal(t, "{}", row.Data)
@@ -155,6 +155,63 @@ func TestHandleMatchesEvent_Delete(t *testing.T) {
 	req.Header.Set("ce-source", "//firestore.googleapis.com/projects/tavern-swiper-dev/databases/discovery-dev")
 	req.Header.Set("ce-specversion", "1.0")
 	req.Header.Set("ce-time", time.Now().Format(time.RFC3339))
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockBQ.AssertExpectations(t)
+}
+
+func TestHandleProfilesCacheEvent_Insert(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	// Create test event data for profiles_profiles_cache
+	docData := &firestoredata.DocumentEventData{
+		Value: &firestoredata.Document{
+			Name: "projects/tavern-swiper-dev/databases/discovery-dev/documents/profiles_profiles_cache/profile_123",
+			Fields: map[string]*firestoredata.Value{
+				"display_name": {
+					ValueType: &firestoredata.Value_StringValue{
+						StringValue: "Vesemir",
+					},
+				},
+			},
+			CreateTime: timestamppb.Now(),
+			UpdateTime: timestamppb.Now(),
+		},
+	}
+
+	bodyBytes, err := proto.Marshal(docData)
+	assert.NoError(t, err)
+
+	// Mock BQ Client asserting write goes to profiles_cache_cdc table
+	mockBQ := new(MockBQClient)
+	mockBQ.On("InsertRow", mock.Anything, "profiles_cache_cdc", mock.MatchedBy(func(row *ChangelogRow) bool {
+		assert.Equal(t, "profile_123", row.DocumentID)
+		assert.Equal(t, "INSERT", row.Operation)
+		
+		var dataMap map[string]interface{}
+		err := json.Unmarshal([]byte(row.Data), &dataMap)
+		assert.NoError(t, err)
+		assert.Equal(t, "Vesemir", dataMap["display_name"])
+
+		return true
+	})).Return(nil)
+
+	// Set up Gin Router
+	r := gin.Default()
+	handlers := NewHandlers(mockBQ)
+	r.POST("/", handlers.HandleFirestoreEvent)
+
+	// Perform Request
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/protobuf")
+	req.Header.Set("ce-id", "event-77777")
+	req.Header.Set("ce-type", "google.cloud.firestore.document.v1.written")
+	req.Header.Set("ce-source", "//firestore.googleapis.com/projects/tavern-swiper-dev/databases/discovery-dev")
+	req.Header.Set("ce-specversion", "1.0")
+	req.Header.Set("ce-time", "2026-06-26T12:00:00Z")
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

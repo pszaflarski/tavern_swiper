@@ -128,6 +128,16 @@ def main():
         table_name="users_cdc"
     )
 
+    # Backfill Discovery Profiles Cache
+    backfill_collection(
+        project_id=project_id,
+        env=env,
+        database_id=f"discovery-{env}",
+        collection_name="profiles_profiles_cache",
+        dataset_name=f"discovery_analytics_{env}",
+        table_name="profiles_cache_cdc"
+    )
+
     print("🏁 Backfill completed!")
 
 if __name__ == "__main__":
