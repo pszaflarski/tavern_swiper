@@ -144,6 +144,13 @@ func TestBehaviorBotReply_SkipsBotSender(t *testing.T) {
 
 func TestBehaviorBotReply_NoBotProfiles(t *testing.T) {
 	db := mockBotReplyDB(false, nil, nil)
+
+	origGetParticipants := getConversationParticipantsFunc
+	getConversationParticipantsFunc = func(token, conversationID string) ([]string, error) {
+		return []string{"human-sender"}, nil
+	}
+	defer func() { getConversationParticipantsFunc = origGetParticipants }()
+
 	count, details := behaviorBotReply(context.Background(), db, "conv-1", "human-sender", "hello", "user", nil)
 
 	if count != 0 {
@@ -160,6 +167,13 @@ func TestBehaviorBotReply_AuthFailure(t *testing.T) {
 	}
 	// No credentials → auth will fail
 	db := mockBotReplyDB(false, profiles, map[string]map[string]interface{}{})
+
+	origGetParticipants := getConversationParticipantsFunc
+	getConversationParticipantsFunc = func(token, conversationID string) ([]string, error) {
+		return []string{"bp-1", "human-sender"}, nil
+	}
+	defer func() { getConversationParticipantsFunc = origGetParticipants }()
+
 	count, details := behaviorBotReply(context.Background(), db, "conv-1", "human-sender", "hello", "user", nil)
 
 	if count != 0 {
@@ -514,6 +528,9 @@ func TestHandleBehaviorTrigger_MessageReceived_FullPipeline(t *testing.T) {
 	originalDBFunc := getDBFunc
 	defer func() { getDBFunc = originalDBFunc }()
 
+	origGetParticipants := getConversationParticipantsFunc
+	defer func() { getConversationParticipantsFunc = origGetParticipants }()
+
 	// Track what the mock servers received
 	var agentRouterCalled bool
 	var messagePosted bool
@@ -537,6 +554,15 @@ func TestHandleBehaviorTrigger_MessageReceived_FullPipeline(t *testing.T) {
 		if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/messages/conversations/profile/") {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode([]map[string]string{{"id": "conv-42"}})
+			return
+		}
+		// Get conversation details (returns participants)
+		if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/messages/conversations/") && !strings.Contains(r.URL.Path, "/profile/") {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"id":              "conv-42",
+				"participant_ids": []string{"grogmar-profile", "human-user-profile"},
+			})
 			return
 		}
 		// Agent router invoke
@@ -601,6 +627,7 @@ func TestHandleBehaviorTrigger_MessageReceived_FullPipeline(t *testing.T) {
 	defer func() { decryptPasswordFunc = origDecrypt }()
 
 	router := setupTestRouter()
+	getConversationParticipantsFunc = origGetParticipants
 
 	reqPayload := BehaviorTriggerRequest{
 		Trigger: "message_received",
@@ -722,3 +749,69 @@ func TestParseAgentResponse_AllEmptyFallsBackToRaw(t *testing.T) {
 		t.Errorf("Expected raw input as fallback content")
 	}
 }
+
+func TestGetConversationParticipants_Success(t *testing.T) {
+	// Setup mock server
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			t.Errorf("Expected GET request, got %s", r.Method)
+		}
+		if r.URL.Path != "/messages/conversations/test-conv-id" {
+			t.Errorf("Expected path /messages/conversations/test-conv-id, got %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-admin-token" {
+			t.Errorf("Expected token 'Bearer test-admin-token', got '%s'", r.Header.Get("Authorization"))
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"id":"test-conv-id","participant_ids":["p-1","p-2"]}`))
+	}))
+	defer mockServer.Close()
+
+	serviceURLs.mu.Lock()
+	oldMsg := serviceURLs.urls["messages"]
+	serviceURLs.urls["messages"] = mockServer.URL
+	serviceURLs.mu.Unlock()
+	defer func() {
+		serviceURLs.mu.Lock()
+		serviceURLs.urls["messages"] = oldMsg
+		serviceURLs.mu.Unlock()
+	}()
+
+	participants, err := getConversationParticipants("test-admin-token", "test-conv-id")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if len(participants) != 2 || participants[0] != "p-1" || participants[1] != "p-2" {
+		t.Errorf("Unexpected participants returned: %v", participants)
+	}
+}
+
+func TestGetConversationParticipants_HTTPError(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("internal database error"))
+	}))
+	defer mockServer.Close()
+
+	serviceURLs.mu.Lock()
+	oldMsg := serviceURLs.urls["messages"]
+	serviceURLs.urls["messages"] = mockServer.URL
+	serviceURLs.mu.Unlock()
+	defer func() {
+		serviceURLs.mu.Lock()
+		serviceURLs.urls["messages"] = oldMsg
+		serviceURLs.mu.Unlock()
+	}()
+
+	_, err := getConversationParticipants("test-admin-token", "test-conv-id")
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "HTTP 500") {
+		t.Errorf("Expected HTTP 500 error message, got: %v", err)
+	}
+}
+

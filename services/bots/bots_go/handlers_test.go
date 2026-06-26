@@ -19,6 +19,11 @@ func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
+	// Default dummy for tests to avoid panic on unconfigured service URLs
+	getConversationParticipantsFunc = func(token, conversationID string) ([]string, error) {
+		return []string{"grogmar-profile", "human-user-profile"}, nil
+	}
+
 	r.GET("/bots/health", handleHealth)
 	
 	// Mock auth middleware for testing

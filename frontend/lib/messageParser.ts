@@ -320,8 +320,11 @@ function isSelectionFullyNarrated(ranges: FormattingRange[], start: number, end:
 export function parseHTMLToBlocks(html: string): MessageBlock[] {
   if (!html) return [];
 
+  // Convert br tags to newlines to preserve hard breaks
+  let content = html.replace(/<br\s*\/?>/gi, '\n');
+
   // Strip paragraph wrapper tags — TipTap wraps everything in <p>
-  let content = html
+  content = content
     .replace(/<p>/g, '')
     .replace(/<\/p>/g, '')
     .trim();

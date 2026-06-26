@@ -867,6 +867,111 @@ func handleListConversations(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
+// handleListMatches godoc
+// @Summary      List matches for a profile
+// @Description  Returns matches from the local cache. Use ?new_only=true to exclude matches that already have a started conversation.
+// @Tags         matches
+// @Produce      json
+// @Param        profile_id  path      string  true   "Profile ID"
+// @Param        new_only    query     bool    false  "If true, exclude matches that already have conversations"
+// @Success      200  {array}   MatchOut
+// @Failure      403  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /matches/profile/{profile_id} [get]
+func handleListMatches(c *gin.Context) {
+	auth := GetAuth(c)
+	profileID := c.Param("profile_id")
+
+	// Verify caller owns this profile
+	if !verifyProfileOwnership(auth, profileID, profilesClient) {
+		c.JSON(http.StatusForbidden, gin.H{"detail": "Not authorized to list matches for this profile"})
+		return
+	}
+
+	ctx := context.Background()
+	client, err := getDBFunc(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Database error"})
+		return
+	}
+
+	// Query discovery_matches_cache where profile_ids array-contains profileID
+	iter := client.Collection(COLLECTION_CACHE).Where("profile_ids", "array-contains", profileID).Documents(ctx)
+	matchDocs, err := iter.GetAll()
+	if err != nil {
+		log.Printf("[ERROR] Failed to list matches for profile %s: %v", profileID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to query matches"})
+		return
+	}
+
+	// Build the set of participants_keys that already have conversations
+	// (only when new_only=true)
+	newOnly := c.Query("new_only") == "true"
+	conversedKeys := map[string]bool{}
+
+	if newOnly {
+		pcIter := client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Where("profile_id", "==", profileID).Documents(ctx)
+		pcDocs, pcErr := pcIter.GetAll()
+		if pcErr == nil && len(pcDocs) > 0 {
+			// Batch-get the conversations to extract participants_key
+			refs := make([]DocumentRef, 0, len(pcDocs))
+			for _, pcDoc := range pcDocs {
+				if cid, ok := pcDoc.Data()["conversation_id"].(string); ok && cid != "" {
+					refs = append(refs, client.Collection(COLLECTION_CONVERSATIONS).Doc(cid))
+				}
+			}
+			if len(refs) > 0 {
+				convDocs, convErr := client.GetAll(ctx, refs)
+				if convErr == nil {
+					for _, convDoc := range convDocs {
+						if convDoc == nil || !convDoc.Exists() {
+							continue
+						}
+						d := convDoc.Data()
+						if pk, ok := d["participants_key"].(string); ok && pk != "" {
+							conversedKeys[pk] = true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	results := make([]MatchOut, 0, len(matchDocs))
+	for _, doc := range matchDocs {
+		d := doc.Data()
+		profileIDs := parseStringSlice(d["profile_ids"])
+
+		// Compute participants_key for filtering
+		if newOnly && len(profileIDs) == 2 {
+			sorted := make([]string, len(profileIDs))
+			copy(sorted, profileIDs)
+			sort.Strings(sorted)
+			pk := strings.Join(sorted, "_")
+			if conversedKeys[pk] {
+				continue // Skip — conversation already exists
+			}
+		}
+
+		var createdAt string
+		if t, ok := d["created_at"].(time.Time); ok {
+			createdAt = t.Format(time.RFC3339)
+		} else if s, ok := d["created_at"].(string); ok {
+			createdAt = s
+		}
+
+		matchID, _ := d["match_id"].(string)
+		results = append(results, MatchOut{
+			ID:        matchID,
+			Profiles:  profileIDs,
+			CreatedAt: createdAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, results)
+}
+
 // handleDeleteAllMessages godoc
 // @Summary      Purge all messaging data
 // @Description  Deletes all conversations, messages, and profile-conversation mappings. Admin only.

@@ -20,6 +20,7 @@ func setupTest() *gin.Engine {
 		m.GET("/:id", handleGetMessages)
 		m.GET("/conversations/:profile_id", handleListConversations)
 		m.POST("/roll-dice", handleRollDice)
+		m.GET("/matches/profile/:profile_id", handleListMatches)
 		m.DELETE("/", handleDeleteAllMessages)
 	}
 
