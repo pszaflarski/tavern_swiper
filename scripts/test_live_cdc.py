@@ -57,25 +57,42 @@ def main():
     # 4. Verify in BigQuery
     print("🔎 Querying BigQuery to verify replication...")
     bq_client = bigquery.Client(project=project_id)
-    query = f"""
+    
+    # Verify in Profiles Source
+    print("🔎 Checking profiles_analytics_dev.profiles_cdc...")
+    query_source = f"""
     SELECT document_id, JSON_VALUE(data, "$.display_name") AS display_name, operation
     FROM `profiles_analytics_dev.profiles_cdc`
     WHERE document_id = '{profile_id}'
     """
-    
-    query_job = bq_client.query(query)
-    results = list(query_job.result())
-
-    if len(results) == 0:
-        print("❌ Error: Profile was not found in BigQuery! Live CDC streaming is not working or is delayed.")
+    res_source = list(bq_client.query(query_source).result())
+    if len(res_source) == 0:
+        print("❌ Error: Profile was not found in BigQuery profiles_cdc! Live CDC streaming is not working or is delayed.")
         sys.exit(1)
     
-    row = results[0]
-    print("\n🎉 SUCCESS! Profile successfully streamed to BigQuery in real-time:")
-    print(f"   • Document ID:  {row.document_id}")
-    print(f"   • Display Name: {row.display_name}")
-    print(f"   • Operation:    {row.operation}")
+    row_source = res_source[0]
+    print(f"   ✅ SUCCESS: Profile found in Profiles BQ (Op: {row_source.operation})")
+
+    # Verify in Discovery Cache
+    print("🔎 Checking discovery_analytics_dev.profiles_cache_cdc...")
+    query_cache = f"""
+    SELECT document_id, JSON_VALUE(data, "$.display_name") AS display_name, operation
+    FROM `discovery_analytics_dev.profiles_cache_cdc`
+    WHERE document_id = '{profile_id}'
+    """
+    res_cache = list(bq_client.query(query_cache).result())
+    if len(res_cache) == 0:
+        print("❌ Error: Profile was not found in BigQuery profiles_cache_cdc! Pub/Sub cache sync or CDC trigger is not working or is delayed.")
+        sys.exit(1)
+    
+    row_cache = res_cache[0]
+    print(f"   ✅ SUCCESS: Profile found in Discovery Cache BQ (Op: {row_cache.operation})")
+
+    print("\n🎉 SUCCESS! Profile successfully streamed to both BigQuery tables in real-time:")
+    print(f"   • Document ID:  {profile_id}")
+    print(f"   • Display Name: {display_name}")
     print("\n🏁 Test completed successfully!")
+
 
 if __name__ == "__main__":
     main()
