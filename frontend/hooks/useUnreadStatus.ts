@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useProfileContext } from '../context/ProfileContext';
 import { messagesApi } from '../lib/api';
@@ -25,17 +26,22 @@ export function useUnreadStatus() {
     }))
   });
 
-  const unreadByProfile: Record<string, boolean> = {};
-  let hasAnyUnread = false;
+  // Memoize the computed result so consumers get a stable reference
+  // when the underlying query data hasn't changed.
+  const { hasAnyUnread, unreadByProfile } = useMemo(() => {
+    const result: Record<string, boolean> = {};
+    let anyUnread = false;
 
-  profiles.forEach((p, index) => {
-    const result = queryResults[index];
-    const data = (result.data as Conversation[] | undefined) ?? [];
-    
-    const hasUnread = data.some((c: Conversation) => c.unread === true);
-    unreadByProfile[p.profile_id] = hasUnread;
-    if (hasUnread) hasAnyUnread = true;
-  });
+    profiles.forEach((p, index) => {
+      const data = (queryResults[index]?.data as Conversation[] | undefined) ?? [];
+      const hasUnread = data.some((c: Conversation) => c.unread === true);
+      result[p.profile_id] = hasUnread;
+      if (hasUnread) anyUnread = true;
+    });
+
+    return { hasAnyUnread: anyUnread, unreadByProfile: result };
+  }, [profiles, queryResults]);
 
   return { hasAnyUnread, unreadByProfile };
 }
+
