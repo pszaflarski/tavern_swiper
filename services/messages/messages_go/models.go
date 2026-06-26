@@ -123,3 +123,13 @@ type DiceRollResponse struct {
 	MessageID      string `json:"message_id,omitempty"` // Set when conversation_id was provided
 }
 
+// --- Match models ---
+
+// MatchOut is the response shape for the matches endpoint.
+// Mirrors Discovery's MatchOut so the frontend can switch endpoints transparently.
+type MatchOut struct {
+	ID        string   `json:"id"`
+	Profiles  []string `json:"profiles"`
+	CreatedAt string   `json:"created_at"`
+}
+

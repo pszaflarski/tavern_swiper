@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { profilesApi, discoveryApi, messagesApi } from '../lib/api';
+import { profilesApi, messagesApi } from '../lib/api';
 import { Profile } from './useProfiles';
 import { MESSAGES } from '../constants';
 
@@ -70,14 +70,15 @@ export interface UnifiedConversation extends Conversation {
 }
 
 /**
- * Hook to fetch all matches for a profile from Discovery service.
+ * Hook to fetch new matches for a profile (excludes matches with existing conversations).
+ * Reads from the Messages service's local match cache.
  */
 export function useMatches(profileId: string | undefined) {
   return useQuery<Match[]>({
     queryKey: ['matches', profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const res = await discoveryApi.get(`/discovery/matches/profile/${profileId}`);
+      const res = await messagesApi.get(`/messages/matches/profile/${profileId}?new_only=true`);
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!profileId,
