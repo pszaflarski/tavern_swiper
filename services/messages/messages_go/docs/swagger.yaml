@@ -93,6 +93,17 @@ definitions:
       type:
         type: string
     type: object
+  main.MatchOut:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      profiles:
+        items:
+          type: string
+        type: array
+    type: object
   main.MessageCreate:
     properties:
       content:
@@ -435,6 +446,46 @@ paths:
       summary: Health check
       tags:
       - health
+  /matches/profile/{profile_id}:
+    get:
+      description: Returns matches from the local cache. Use ?new_only=true to exclude
+        matches that already have a started conversation.
+      parameters:
+      - description: Profile ID
+        in: path
+        name: profile_id
+        required: true
+        type: string
+      - description: If true, exclude matches that already have conversations
+        in: query
+        name: new_only
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.MatchOut'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List matches for a profile
+      tags:
+      - matches
   /roll-dice:
     post:
       consumes:

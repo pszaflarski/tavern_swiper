@@ -125,6 +125,18 @@ describe('RichTextInput Component', () => {
         { type: 'message', content: ' Nice to meet you' }
       ]);
     });
+
+    it('parses text containing line breaks (br tags) correctly', async () => {
+      mockGetHTML.mockResolvedValue('<p>Hello<br>traveler <em>sighs<br />deeply</em></p>');
+      const ref = createRef<RichTextInputRef>();
+      render(<RichTextInput ref={ref} />);
+
+      const blocks = await ref.current?.getBlocks();
+      expect(blocks).toEqual([
+        { type: 'message', content: 'Hello\ntraveler ' },
+        { type: 'narration', content: 'sighs\ndeeply' }
+      ]);
+    });
   });
 
   describe('editor actions', () => {
@@ -171,6 +183,68 @@ describe('RichTextInput Component', () => {
       const { StyleSheet } = require('react-native');
       const flatStyle = StyleSheet.flatten(container.props.style);
       expect(flatStyle.height).toBe(100);
+    });
+
+    it('sets up keydown event listener on the iframe contentWindow when OS is web', () => {
+      const { Platform } = require('react-native');
+      const originalOS = Platform.OS;
+      Platform.OS = 'web';
+
+      jest.useFakeTimers();
+
+      const mockAddEventListener = jest.fn();
+      const mockIframe = {
+        contentWindow: {
+          addEventListener: mockAddEventListener,
+          removeEventListener: jest.fn(),
+        },
+      };
+
+      const mockQuerySelector = jest.fn().mockReturnValue(mockIframe);
+      const mockContainer = {
+        querySelector: mockQuerySelector,
+      };
+
+      const ref = React.createRef<RichTextInputRef>();
+      const onSubmit = jest.fn();
+      render(<RichTextInput ref={ref} testID="rich-text-input" onSubmit={onSubmit} />);
+
+      // Inject the mocked container directly into the exposed test ref
+      if (ref.current?._containerRef) {
+        ref.current._containerRef.current = mockContainer;
+      }
+
+      // Fast-forward to trigger interval setup
+      jest.advanceTimersByTime(200);
+
+      expect(mockQuerySelector).toHaveBeenCalledWith('iframe');
+      expect(mockAddEventListener).toHaveBeenCalledWith('keydown', expect.any(Function), true);
+
+      const keydownHandler = mockAddEventListener.mock.calls[0][1];
+
+      // Enter without Shift -> should trigger onSubmit and prevent default
+      const mockEvent = {
+        key: 'Enter',
+        shiftKey: false,
+        preventDefault: jest.fn(),
+      };
+      keydownHandler(mockEvent);
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
+      expect(onSubmit).toHaveBeenCalled();
+
+      // Enter with Shift -> should NOT trigger onSubmit or prevent default
+      onSubmit.mockClear();
+      const mockEventShift = {
+        key: 'Enter',
+        shiftKey: true,
+        preventDefault: jest.fn(),
+      };
+      keydownHandler(mockEventShift);
+      expect(mockEventShift.preventDefault).not.toHaveBeenCalled();
+      expect(onSubmit).not.toHaveBeenCalled();
+
+      Platform.OS = originalOS;
+      jest.useRealTimers();
     });
   });
 });

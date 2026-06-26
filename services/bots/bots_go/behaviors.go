@@ -271,7 +271,22 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 		return 0, []string{msg}
 	}
 
-	// 2. Query ALL bot profiles to find which ones might be in this conversation.
+	// 2. Fetch conversation participants using a system admin token.
+	adminToken, err := mintInternalAdminJWT()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to mint internal admin JWT: %v", err)
+		log.Printf("[ERROR] %s", msg)
+		return 0, []string{msg}
+	}
+
+	participantIDs, err := getConversationParticipantsFunc(adminToken, conversationID)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to fetch conversation participants: %v", err)
+		log.Printf("[ERROR] %s", msg)
+		return 0, []string{msg}
+	}
+
+	// 3. Query ALL bot profiles to find which ones might be in this conversation.
 	iter := db.Collection(BOT_PROFILES_COLLECTION).Documents(ctx)
 	type botInfo struct {
 		botUserID    string
@@ -309,13 +324,30 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 		return 0, []string{"No bot profiles with agent_name found"}
 	}
 
-	// 3. For each bot profile, authenticate and check if they're in this conversation.
+	// 4. Filter bot profiles to only those active in this conversation.
+	participantSet := make(map[string]bool)
+	for _, pid := range participantIDs {
+		participantSet[pid] = true
+	}
+
+	var activeBots []botInfo
+	for _, bp := range allBotProfiles {
+		if participantSet[bp.profileID] {
+			activeBots = append(activeBots, bp)
+		}
+	}
+
+	if len(activeBots) == 0 {
+		return 0, []string{"No bot profiles found in this conversation"}
+	}
+
+	// 5. For each matching bot profile, authenticate and run behavior.
 	var details []string
 	triggered := 0
 
 	// Group by bot_user_id to authenticate once per bot user
 	grouped := make(map[string][]botInfo)
-	for _, bp := range allBotProfiles {
+	for _, bp := range activeBots {
 		grouped[bp.botUserID] = append(grouped[bp.botUserID], bp)
 	}
 
@@ -329,16 +361,6 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 		}
 
 		for _, bp := range profiles {
-			// Check if this bot profile is a participant in the conversation
-			inConv, err := isBotInConversation(token, bp.profileID, conversationID)
-			if err != nil {
-				log.Printf("[WARN] Failed to check conversation membership for %s: %v", bp.profileID, err)
-				continue
-			}
-			if !inConv {
-				continue
-			}
-
 			log.Printf("[INFO] Bot '%s' (profile=%s) is in conversation %s, generating reply via %s", bp.agentName, bp.profileID, conversationID, serviceURLs.Get("agent_router"))
 
 			// 4. Build enriched metadata for the agent_router call.
@@ -392,11 +414,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 				// Parse structured response and post each item
 				items := parseAgentResponse(aiResponse)
 				postFailed := false
-				for idx, item := range items {
-					if idx > 0 {
-						sendTypingSignal(token, conversationID, bp.profileID)
-						time.Sleep(getReplyDelay())
-					}
+				for _, item := range items {
 					var postErr error
 					switch item.Type {
 					case "narration":
@@ -839,6 +857,60 @@ func mintCallbackJWT() (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
+// mintInternalAdminJWT creates a short-lived internal JWT with role "admin"
+// to make administrative queries to other microservices (like messages).
+func mintInternalAdminJWT() (string, error) {
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"sub":  "bots-system-admin",
+		"role": "admin",
+		"iat":  now.Unix(),
+		"exp":  now.Add(5 * time.Minute).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+// getConversationParticipants fetches the profile IDs of all participants
+// in a given conversation from the messages service.
+func getConversationParticipants(token, conversationID string) ([]string, error) {
+	messagesURL := serviceURLs.Get("messages")
+	if messagesURL == "" {
+		return nil, fmt.Errorf("messages service URL not resolved from router")
+	}
+
+	req, err := http.NewRequest("GET", messagesURL+"/messages/conversations/"+conversationID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP error calling messages service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		return nil, fmt.Errorf("messages service returned HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var conv struct {
+		ParticipantIDs []string `json:"participant_ids"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&conv); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return conv.ParticipantIDs, nil
+}
+
+// getConversationParticipantsFunc is a function variable that defaults to
+// getConversationParticipants, allowing tests to override it.
+var getConversationParticipantsFunc = getConversationParticipants
+
+
 // callAgentRouterAsync sends a fire-and-forget request to agent_router's
 // /invoke-async endpoint. The agent_router will POST the result to the
 // bots_go callback endpoint when processing completes.
@@ -984,11 +1056,7 @@ func handleAgentCallback(c *gin.Context) {
 
 	// Parse and post the response (same logic as the sync path)
 	items := parseAgentResponse(req.Response)
-	for idx, item := range items {
-		if idx > 0 {
-			sendTypingSignal(token, conversationID, botProfileID)
-			time.Sleep(getReplyDelay())
-		}
+	for _, item := range items {
 		var postErr error
 		switch item.Type {
 		case "narration":
@@ -1025,11 +1093,4 @@ func handleAgentCallback(c *gin.Context) {
 
 	log.Printf("[INFO] Agent callback processed (request_id=%s, conversation=%s, items=%d)", req.RequestID, conversationID, len(items))
 	c.Status(http.StatusOK)
-}
-
-func getReplyDelay() time.Duration {
-	if strings.HasSuffix(os.Args[0], ".test") {
-		return 1 * time.Millisecond
-	}
-	return 1000 * time.Millisecond
 }

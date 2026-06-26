@@ -77,6 +77,9 @@ func main() {
 		// Dice
 		m.POST("/roll-dice", handleRollDice)
 
+		// Matches (served from local discovery_matches_cache)
+		m.GET("/matches/profile/:profile_id", handleListMatches)
+
 		// Admin
 		m.DELETE("/", handleDeleteAllMessages)
 	}

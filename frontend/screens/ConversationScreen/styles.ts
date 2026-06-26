@@ -284,6 +284,7 @@ export const styles = StyleSheet.create({
     paddingBottom: Spacing[2],
     borderBottomWidth: 1,
     borderBottomColor: Colors.outlineVariant,
+    gap: Spacing[2],
   },
   modeTab: {
     flexDirection: 'row',
