@@ -13,7 +13,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import {
   RichText,
   useEditorBridge,
@@ -22,6 +22,7 @@ import {
   ItalicBridge,
   PlaceholderBridge,
   BridgeExtension,
+  HardBreakBridge,
 } from '@10play/tentap-editor';
 import { Colors, Fonts, Spacing, Radius } from '../theme';
 
@@ -40,6 +41,8 @@ export interface RichTextInputRef {
   isNarrating: () => boolean;
   /** Set the text programmatically (for restoring on error). */
   restore: (text: string) => void;
+  /** Exposes the container ref for web-specific testing. */
+  _containerRef?: React.MutableRefObject<any>;
 }
 
 export interface RichTextInputProps {
@@ -104,6 +107,8 @@ function RichTextInputInner(
 ) {
   const { placeholder, maxLength, onChangeText, onSubmit, onNarrationChange, testID } = props;
 
+  const containerRef = useRef<any>(null);
+
   const editor = useEditorBridge({
     autofocus: false,
     avoidIosKeyboard: true,
@@ -113,6 +118,7 @@ function RichTextInputInner(
       PlaceholderBridge.configureExtension({
         placeholder: placeholder || 'Compose a missive...',
       }),
+      HardBreakBridge,
       CustomStylesExtension,
     ],
   });
@@ -133,15 +139,65 @@ function RichTextInputInner(
     }
   }, [(editorState as any).empty, onChangeText]);
 
-  // Notify parent when italic state changes
+  // Notify parent when italic state changes (from editor-initiated actions like Ctrl+I).
+  // Programmatic toggles (via the Narrate button) suppress bridge sync briefly to avoid
+  // flicker from intermediate WebView state updates during focus shift.
   const prevItalicRef = useRef(false);
+  const suppressItalicSyncRef = useRef(false);
   useEffect(() => {
+    if (suppressItalicSyncRef.current) return;
     const isItalic = editorState.isItalicActive;
     if (isItalic !== prevItalicRef.current) {
       prevItalicRef.current = isItalic;
       onNarrationChange?.(isItalic);
     }
   }, [editorState.isItalicActive, onNarrationChange]);
+
+  // Listen to keyboard events on the web iframe
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    let iframe: HTMLIFrameElement | null = null;
+    let iframeWindow: Window | null = null;
+
+    const setupListener = () => {
+      if (!containerRef.current || typeof containerRef.current.querySelector !== 'function') return;
+      iframe = containerRef.current.querySelector('iframe');
+      if (!iframe) return;
+
+      iframeWindow = iframe.contentWindow;
+      if (!iframeWindow) return;
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          onSubmit?.();
+        }
+      };
+
+      iframeWindow.addEventListener('keydown', handleKeyDown, true);
+      
+      return () => {
+        iframeWindow?.removeEventListener('keydown', handleKeyDown, true);
+      };
+    };
+
+    let cleanup = setupListener();
+
+    const intervalId = setInterval(() => {
+      if (!cleanup) {
+        cleanup = setupListener();
+        if (cleanup) {
+          clearInterval(intervalId);
+        }
+      }
+    }, 100);
+
+    return () => {
+      if (cleanup) cleanup();
+      clearInterval(intervalId);
+    };
+  }, [onSubmit]);
 
   useImperativeHandle(ref, () => ({
     getText: async () => {
@@ -157,24 +213,36 @@ function RichTextInputInner(
       editor.setContent('');
       onChangeText?.('');
       onNarrationChange?.(false);
+      suppressItalicSyncRef.current = false;
+      prevItalicRef.current = false;
     },
     focus: () => editor.focus(),
     toggleNarration: () => {
+      const willBeItalic = !editorState.isItalicActive;
+      // Suppress bridge state sync while the WebView processes focus + toggle
+      suppressItalicSyncRef.current = true;
       editor.focus();
       editor.toggleItalic();
-      const willBeItalic = !editorState.isItalicActive;
       onNarrationChange?.(willBeItalic);
+      // After the WebView settles, re-enable sync and align prevItalicRef
+      setTimeout(() => {
+        prevItalicRef.current = willBeItalic;
+        suppressItalicSyncRef.current = false;
+      }, 500);
       return willBeItalic;
     },
     isNarrating: () => editorState.isItalicActive,
     restore: (text: string) => {
       editor.setContent(`<p>${text}</p>`);
       onChangeText?.(text);
+      suppressItalicSyncRef.current = false;
+      prevItalicRef.current = false;
     },
+    _containerRef: containerRef,
   }), [editor, editorState.isItalicActive, onNarrationChange, onChangeText]);
 
   return (
-    <View style={styles.container} testID={testID}>
+    <View ref={containerRef} style={styles.container} testID={testID}>
       <RichText
         editor={editor}
         style={styles.richText}

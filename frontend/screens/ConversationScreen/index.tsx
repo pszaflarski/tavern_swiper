@@ -195,6 +195,10 @@ function ConversationScreenInner() {
   const [isAnimating, setIsAnimating] = useState(false);
   const richInputRef = useRef<RichTextInputRef>(null);
   const [isNarratingActive, setIsNarratingActive] = useState(false);
+  // Guard: after clicking the Narrate button, ignore bridge-initiated state
+  // changes for a short period so the WebView's intermediate italic state
+  // oscillations don't flicker the button.
+  const narrateGuardRef = useRef(false);
 
   // --- Dice animation queue ---
   // Tracks dice_roll event message_ids we've already enqueued so we never
@@ -456,9 +460,18 @@ function ConversationScreenInner() {
     }
   }, [activeProfileId, ensureConversation, sendMessageAsync]);
 
+  const handleNarrationChange = useCallback((isNarrating: boolean) => {
+    // During the guard window (after a button press), ignore bridge changes
+    if (narrateGuardRef.current) return;
+    setIsNarratingActive(isNarrating);
+  }, []);
+
   const handleFormatText = useCallback(() => {
+    narrateGuardRef.current = true;
     const result = richInputRef.current?.toggleNarration();
     setIsNarratingActive(result ?? false);
+    // Keep the guard up for 1 second while the WebView settles
+    setTimeout(() => { narrateGuardRef.current = false; }, 1000);
   }, []);
 
   const handleTextChange = useCallback((text: string) => {
@@ -823,10 +836,9 @@ function ConversationScreenInner() {
           <Pressable
             onPress={handleFormatText}
             onMouseDown={(e: any) => e.preventDefault()}
-            style={({ pressed }) => [
+            style={[
               styles.modeTab,
               isNarratingActive && styles.modeTabActive,
-              pressed && { opacity: 0.8 },
             ]}
             testID="mode-narrate-button"
           >
@@ -843,23 +855,8 @@ function ConversationScreenInner() {
               Narrate
             </Text>
           </Pressable>
-        </View>
 
-        <View style={styles.inputContainer}>
-          <RichTextInput
-            ref={richInputRef}
-            placeholder="Compose a missive..."
-            maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
-            onChangeText={handleTextChange}
-            onSubmit={handleSend}
-            onNarrationChange={setIsNarratingActive}
-            testID="message-input"
-          />
           <Pressable
-            style={({ pressed }) => [
-              styles.diceToggle,
-              pressed && { opacity: 0.7 },
-            ]}
             onPress={() => {
               router.push({
                 pathname: '/inventory',
@@ -869,14 +866,34 @@ function ConversationScreenInner() {
                 },
               } as any);
             }}
+            style={({ pressed }) => [
+              styles.modeTab,
+              pressed && { opacity: 0.8 },
+            ]}
             testID="inventory-toggle-button"
           >
             <Ionicons
               name="bag-handle-outline"
-              size={22}
+              size={14}
               color={Colors.outline}
+              style={{ marginRight: 6 }}
             />
+            <Text style={styles.modeTabText}>
+              Inventory
+            </Text>
           </Pressable>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <RichTextInput
+            ref={richInputRef}
+            placeholder="Compose a missive..."
+            maxLength={MESSAGES.MAX_MESSAGE_LENGTH}
+            onChangeText={handleTextChange}
+            onSubmit={handleSend}
+            onNarrationChange={handleNarrationChange}
+            testID="message-input"
+          />
           <Pressable 
             style={({ pressed }) => [
               styles.sendButton, 
