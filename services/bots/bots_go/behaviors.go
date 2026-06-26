@@ -414,11 +414,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 				// Parse structured response and post each item
 				items := parseAgentResponse(aiResponse)
 				postFailed := false
-				for idx, item := range items {
-					if idx > 0 {
-						sendTypingSignal(token, conversationID, bp.profileID)
-						time.Sleep(getReplyDelay())
-					}
+				for _, item := range items {
 					var postErr error
 					switch item.Type {
 					case "narration":
@@ -1060,11 +1056,7 @@ func handleAgentCallback(c *gin.Context) {
 
 	// Parse and post the response (same logic as the sync path)
 	items := parseAgentResponse(req.Response)
-	for idx, item := range items {
-		if idx > 0 {
-			sendTypingSignal(token, conversationID, botProfileID)
-			time.Sleep(getReplyDelay())
-		}
+	for _, item := range items {
 		var postErr error
 		switch item.Type {
 		case "narration":
@@ -1101,11 +1093,4 @@ func handleAgentCallback(c *gin.Context) {
 
 	log.Printf("[INFO] Agent callback processed (request_id=%s, conversation=%s, items=%d)", req.RequestID, conversationID, len(items))
 	c.Status(http.StatusOK)
-}
-
-func getReplyDelay() time.Duration {
-	if strings.HasSuffix(os.Args[0], ".test") {
-		return 1 * time.Millisecond
-	}
-	return 1000 * time.Millisecond
 }
