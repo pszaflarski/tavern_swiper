@@ -49,8 +49,11 @@ func mockBotReplyDB(senderIsBot bool, botProfiles []map[string]interface{}, botU
 					},
 					whereFunc: func(p, op string, val interface{}) FirestoreQuery {
 						if p == "profile_id" {
-							// isBotProfile guard query
-							if senderIsBot {
+							pidStr, ok := val.(string)
+							if !ok {
+								return &mockQuery{}
+							}
+							if senderIsBot && pidStr == "bot-sender" {
 								called := false
 								return &mockQuery{
 									documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
@@ -66,11 +69,27 @@ func mockBotReplyDB(senderIsBot bool, botProfiles []map[string]interface{}, botU
 									},
 								}
 							}
+							var matchingProfiles []map[string]interface{}
+							for _, bp := range botProfiles {
+								if bp["profile_id"] == pidStr {
+									matchingProfiles = append(matchingProfiles, bp)
+								}
+							}
+							idx := 0
 							return &mockQuery{
 								documentsFunc: func(ctx context.Context) FirestoreDocumentIterator {
 									return &mockIterator{
 										nextFunc: func() (FirestoreDocumentSnapshot, error) {
-											return nil, fmt.Errorf("not found")
+											if idx >= len(matchingProfiles) {
+												return nil, fmt.Errorf("iterator done")
+											}
+											snap := mockSnapshot{
+												exists: true,
+												data:   matchingProfiles[idx],
+												id:     fmt.Sprintf("bp-matched-%d", idx),
+											}
+											idx++
+											return snap, nil
 										},
 									}
 								},

@@ -286,8 +286,7 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 		return 0, []string{msg}
 	}
 
-	// 3. Query ALL bot profiles to find which ones might be in this conversation.
-	iter := db.Collection(BOT_PROFILES_COLLECTION).Documents(ctx)
+	// 3. For each participant ID, query bot_profiles directly using the profile_id index.
 	type botInfo struct {
 		botUserID    string
 		profileID    string
@@ -295,45 +294,32 @@ func behaviorBotReply(ctx context.Context, db FirestoreClient, conversationID, s
 		botProfileID string
 		behaviorType string
 	}
-	var allBotProfiles []botInfo
+	var activeBots []botInfo
 
-	for {
-		doc, err := iter.Next()
-		if err != nil {
-			break
-		}
-		data := doc.Data()
-		botUserID, _ := data["bot_user_id"].(string)
-		profileID, _ := data["profile_id"].(string)
-		agentName, _ := data["agent_name"].(string)
-		behaviorType, _ := data["behavior_type"].(string)
-
-		if botUserID == "" || profileID == "" || agentName == "" {
+	for _, pid := range participantIDs {
+		if pid == "" {
 			continue
 		}
-		allBotProfiles = append(allBotProfiles, botInfo{
-			botUserID:    botUserID,
-			profileID:    profileID,
-			agentName:    agentName,
-			botProfileID: doc.Ref().ID,
-			behaviorType: behaviorType,
-		})
-	}
+		iter := db.Collection(BOT_PROFILES_COLLECTION).Where("profile_id", "==", pid).Limit(1).Documents(ctx)
+		for {
+			doc, err := iter.Next()
+			if err != nil {
+				break
+			}
+			data := doc.Data()
+			botUserID, _ := data["bot_user_id"].(string)
+			agentName, _ := data["agent_name"].(string)
+			behaviorType, _ := data["behavior_type"].(string)
 
-	if len(allBotProfiles) == 0 {
-		return 0, []string{"No bot profiles with agent_name found"}
-	}
-
-	// 4. Filter bot profiles to only those active in this conversation.
-	participantSet := make(map[string]bool)
-	for _, pid := range participantIDs {
-		participantSet[pid] = true
-	}
-
-	var activeBots []botInfo
-	for _, bp := range allBotProfiles {
-		if participantSet[bp.profileID] {
-			activeBots = append(activeBots, bp)
+			if botUserID != "" && agentName != "" {
+				activeBots = append(activeBots, botInfo{
+					botUserID:    botUserID,
+					profileID:    pid,
+					agentName:    agentName,
+					botProfileID: doc.Ref().ID,
+					behaviorType: behaviorType,
+				})
+			}
 		}
 	}
 
