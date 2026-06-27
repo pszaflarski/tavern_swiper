@@ -275,18 +275,7 @@ function ProfilesScreenInner() {
 
   const renderFooter = () => {
     return (
-      <View style={styles.footerContainer}>
-        <Pressable 
-          style={({ pressed }) => [
-            styles.ctaButton,
-            pressed && { opacity: 0.7 }
-          ]} 
-          onPress={handleCreate}
-          testID="add-profile-button"
-        >
-          <Text style={styles.ctaText}>FORGE NEW IDENTITY</Text>
-        </Pressable>
-        
+      <View>
         <Pressable
           style={({ pressed }) => [
             styles.wizardButton,
@@ -297,6 +286,19 @@ function ProfilesScreenInner() {
         >
           <Ionicons name="sparkles" size={18} color={Colors.tertiary} />
           <Text style={styles.wizardButtonText}>Use Character Wizard</Text>
+          <Ionicons name="chevron-forward" size={16} color={Colors.outline} />
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.addProfileButton,
+            pressed && { opacity: 0.7 }
+          ]}
+          onPress={handleCreate}
+          testID="add-profile-button"
+        >
+          <Ionicons name="add" size={18} color={Colors.tertiary} />
+          <Text style={styles.wizardButtonText}>Custom Character</Text>
           <Ionicons name="chevron-forward" size={16} color={Colors.outline} />
         </Pressable>
       </View>

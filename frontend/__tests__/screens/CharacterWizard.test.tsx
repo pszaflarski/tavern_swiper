@@ -123,31 +123,21 @@ describe('Character Wizard Screen', () => {
     });
   });
 
-  it('renders step 1 (Fandom selection) and requires a selection to proceed', () => {
+  it('renders step 2 (Gender selection) initially and back button is disabled', () => {
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    expect(getByText(/Select Fandom Universe/i)).toBeTruthy();
-    expect(getByText('Dungeons & Dragons')).toBeTruthy();
+    expect(getByText(/Choose Gender Identity/i)).toBeTruthy();
+    expect(getByText('Male')).toBeTruthy();
 
-    // Next button should be disabled initially (since fandom is empty and required)
-    const nextButton = getByTestId('wizard-next-button');
-    expect(nextButton.props.accessibilityState?.disabled).toBe(true);
-
-    // Select Dungeons & Dragons
-    fireEvent.press(getByText('Dungeons & Dragons'));
-
-    // Next button should now be enabled
-    expect(nextButton.props.accessibilityState?.disabled).toBe(false);
+    // Back button should be disabled initially
+    const backButton = getByTestId('wizard-back-button');
+    expect(backButton.props.accessibilityState?.disabled).toBe(true);
   });
 
   it('allows navigating back and forth through the steps', () => {
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    // Step 1: Select Fandom
-    fireEvent.press(getByText('Dungeons & Dragons'));
-    fireEvent.press(getByTestId('wizard-next-button'));
-
-    // Step 2: Choose Gender Identity
+    // Step 2: Choose Gender Identity (initial step)
     expect(getByText(/Choose Gender Identity/i)).toBeTruthy();
     expect(getByText('Male')).toBeTruthy();
     
@@ -171,9 +161,7 @@ describe('Character Wizard Screen', () => {
   it('resolves tags, generates details, and fires background portrait generation at Step 5', async () => {
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    // Navigate to step 5
-    fireEvent.press(getByText('Dungeons & Dragons'));
-    fireEvent.press(getByTestId('wizard-next-button'));
+    // Navigate to step 5 (starts at step 2, Gender)
     fireEvent.press(getByText('Male'));
     fireEvent.press(getByTestId('wizard-next-button'));
     fireEvent.press(getByText('Elf'));
@@ -219,8 +207,7 @@ describe('Character Wizard Screen', () => {
 
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    fireEvent.press(getByText('Dungeons & Dragons'));
-    fireEvent.press(getByTestId('wizard-next-button'));
+    // Starts at step 2, Gender
     fireEvent.press(getByTestId('wizard-next-button'));
     fireEvent.press(getByTestId('wizard-next-button'));
     fireEvent.press(getByTestId('wizard-next-button'));
@@ -230,17 +217,15 @@ describe('Character Wizard Screen', () => {
       expect(getByText('Reset Wizard')).toBeTruthy();
     });
 
-    // Click Reset Wizard to return to Step 1
+    // Click Reset Wizard to return to Step 2
     fireEvent.press(getByText('Reset Wizard'));
-    expect(getByText(/Select Fandom Universe/i)).toBeTruthy();
+    expect(getByText(/Choose Gender Identity/i)).toBeTruthy();
   });
 
   it('successfully adopts a hero and redirects to profile list', async () => {
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    // Navigate to step 5
-    fireEvent.press(getByText('Dungeons & Dragons'));
-    fireEvent.press(getByTestId('wizard-next-button'));
+    // Navigate to step 5 (starts at step 2, Gender)
     fireEvent.press(getByText('Male'));
     fireEvent.press(getByTestId('wizard-next-button'));
     fireEvent.press(getByText('Elf'));
@@ -295,9 +280,7 @@ describe('Character Wizard Screen', () => {
 
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    // Navigate to step 5
-    fireEvent.press(getByText('Dungeons & Dragons'));
-    fireEvent.press(getByTestId('wizard-next-button'));
+    // Navigate to step 5 (starts at step 2, Gender)
     fireEvent.press(getByText('Male'));
     fireEvent.press(getByTestId('wizard-next-button'));
     fireEvent.press(getByText('Elf'));
@@ -327,9 +310,7 @@ describe('Character Wizard Screen', () => {
   it('allows regenerating the profile and the portrait', async () => {
     const { getByText, getByTestId } = render(<CharacterWizardScreen />, { wrapper: createWrapper() });
 
-    // Navigate to step 5
-    fireEvent.press(getByText('Dungeons & Dragons'));
-    fireEvent.press(getByTestId('wizard-next-button'));
+    // Navigate to step 5 (starts at step 2, Gender)
     fireEvent.press(getByText('Male'));
     fireEvent.press(getByTestId('wizard-next-button'));
     fireEvent.press(getByText('Elf'));

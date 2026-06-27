@@ -103,7 +103,7 @@ export function useProfile(profileId: string | undefined) {
       const res = await profilesApi.get(`/profiles/${profileId}`);
       return res.data;
     },
-    enabled: !!profileId,
+    enabled: !!profileId && profileId !== '[id]',
     staleTime: 0,
   });
 }
