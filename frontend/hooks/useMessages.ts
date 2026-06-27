@@ -81,7 +81,7 @@ export function useMatches(profileId: string | undefined) {
       const res = await messagesApi.get(`/messages/matches/profile/${profileId}?new_only=true`);
       return Array.isArray(res.data) ? res.data : [];
     },
-    enabled: !!profileId,
+    enabled: !!profileId && profileId !== '[id]',
     staleTime: 0,
   });
 }
@@ -97,7 +97,7 @@ export function useConversations(profileId: string | undefined) {
       const res = await messagesApi.get(`/messages/conversations/profile/${profileId}`);
       return Array.isArray(res.data) ? res.data : [];
     },
-    enabled: !!profileId,
+    enabled: !!profileId && profileId !== '[id]',
     staleTime: 0,
   });
 }
@@ -137,7 +137,7 @@ export function useConversationMessages(
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) =>
       lastPage.has_more ? lastPage.oldest_timestamp : undefined,
-    enabled: !!conversationId,
+    enabled: !!conversationId && conversationId !== '[id]' && !!profileId && profileId !== '[id]',
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
