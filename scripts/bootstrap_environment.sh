@@ -60,7 +60,9 @@ gcloud services enable \
   cloudbuild.googleapis.com \
   iam.googleapis.com \
   artifactregistry.googleapis.com \
-  containerregistry.googleapis.com
+  containerregistry.googleapis.com \
+  bigquery.googleapis.com \
+  eventarc.googleapis.com
 
 echo "🔑 Creating Service Account 'tavern-swiper-sa'..."
 SA_EMAIL="tavern-swiper-sa@${PROJECT}.iam.gserviceaccount.com"
@@ -79,6 +81,10 @@ ROLES=(
   "roles/pubsub.subscriber"
   "roles/secretmanager.secretAccessor"
   "roles/storage.objectAdmin"
+  "roles/bigquery.dataEditor"
+  "roles/bigquery.user"
+  "roles/run.invoker"
+  "roles/eventarc.eventReceiver"
 )
 
 for ROLE in "${ROLES[@]}"; do

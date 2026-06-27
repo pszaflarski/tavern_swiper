@@ -151,11 +151,33 @@ ConversationRow.displayName = 'ConversationRow';
 const ITEM_HEIGHT = 74;
 const SEPARATOR_HEIGHT = Spacing[4]; // 16
 
-const ItemSeparator = React.memo(() => <View style={separatorStyles.separator} />);
+// Profile Tab: height 100 * 9/16 = 56.25 width. Gap = 16.
+const PROFILE_TAB_WIDTH = 56.25;
+const PROFILE_TAB_GAP = Spacing[4]; // 16
+
+// New Match Item: width 56. Gap = 16.
+const NEW_MATCH_WIDTH = 56;
+const NEW_MATCH_GAP = Spacing[4]; // 16
+
+const ItemSeparator = React.memo(() => <View style={separatorStyles.verticalSeparator} />);
 ItemSeparator.displayName = 'ItemSeparator';
 
+const HorizontalSeparator = React.memo(() => <View style={separatorStyles.horizontalSeparator} />);
+HorizontalSeparator.displayName = 'HorizontalSeparator';
+
+const ProfileTabsEmpty = React.memo(() => (
+  <Text style={styles.emptyText}>No identities forged yet.</Text>
+));
+ProfileTabsEmpty.displayName = 'ProfileTabsEmpty';
+
+const NewMatchesEmpty = React.memo(() => (
+  <Text style={styles.emptyText}>The stars reflect no new paths today.</Text>
+));
+NewMatchesEmpty.displayName = 'NewMatchesEmpty';
+
 const separatorStyles = StyleSheet.create({
-  separator: { height: SEPARATOR_HEIGHT },
+  verticalSeparator: { height: SEPARATOR_HEIGHT },
+  horizontalSeparator: { width: Spacing[4] },
 });
 
 // ─── Main Screen ─────────────────────────────────────────────────────
@@ -188,7 +210,7 @@ function MessagesScreenInner() {
     router.push(`/messages/${convoId}`);
   }, [router]);
 
-  // ─── FlatList callbacks (stable references) ──────────────────────
+  // ─── Main FlatList callbacks (stable references) ──────────────────
 
   const keyExtractor = useCallback((item: UnifiedConversation) => item.id, []);
 
@@ -208,6 +230,51 @@ function MessagesScreenInner() {
     [],
   );
 
+  // ─── Profile Tabs FlatList callbacks ──────────────────────────────
+
+  const keyExtractorProfileTab = useCallback((item: Profile) => item.profile_id, []);
+
+  const renderProfileTabItem = useCallback(
+    ({ item }: { item: Profile }) => (
+      <ProfileTab
+        profile={item}
+        isActive={activeProfileId === item.profile_id}
+        hasUnread={!!unreadByProfile[item.profile_id]}
+        onPress={setActiveProfileId}
+      />
+    ),
+    [activeProfileId, unreadByProfile, setActiveProfileId],
+  );
+
+  const getItemLayoutProfileTab = useCallback(
+    (_data: any, index: number) => ({
+      length: PROFILE_TAB_WIDTH,
+      offset: (PROFILE_TAB_WIDTH + PROFILE_TAB_GAP) * index,
+      index,
+    }),
+    [],
+  );
+
+  // ─── New Matches FlatList callbacks ────────────────────────────────
+
+  const keyExtractorNewMatch = useCallback((item: UnifiedMatch) => item.id, []);
+
+  const renderNewMatchItem = useCallback(
+    ({ item }: { item: UnifiedMatch }) => (
+      <NewMatchItem match={item} onPress={handleMatchPress} />
+    ),
+    [handleMatchPress],
+  );
+
+  const getItemLayoutNewMatch = useCallback(
+    (_data: any, index: number) => ({
+      length: NEW_MATCH_WIDTH,
+      offset: (NEW_MATCH_WIDTH + NEW_MATCH_GAP) * index,
+      index,
+    }),
+    [],
+  );
+
   // ─── FlatList header (profile tabs + new matches) ────────────────
 
   const ListHeader = useMemo(() => (
@@ -217,20 +284,21 @@ function MessagesScreenInner() {
         {isLoadingMyProfiles ? (
           <ActivityIndicator color={Colors.primary} style={loadingIndicatorStyle} />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.profileTabsContent}>
-            {(myProfiles || []).map((profile) => (
-              <ProfileTab
-                key={profile.profile_id}
-                profile={profile}
-                isActive={activeProfileId === profile.profile_id}
-                hasUnread={!!unreadByProfile[profile.profile_id]}
-                onPress={setActiveProfileId}
-              />
-            ))}
-            {(!myProfiles || myProfiles.length === 0) && (
-              <Text style={styles.emptyText}>No identities forged yet.</Text>
-            )}
-          </ScrollView>
+          <FlatList
+            horizontal
+            data={myProfiles || []}
+            renderItem={renderProfileTabItem}
+            keyExtractor={keyExtractorProfileTab}
+            getItemLayout={getItemLayoutProfileTab}
+            ItemSeparatorComponent={HorizontalSeparator}
+            contentContainerStyle={horizontalListContentStyle}
+            showsHorizontalScrollIndicator={false}
+            ListEmptyComponent={ProfileTabsEmpty}
+            windowSize={5}
+            maxToRenderPerBatch={5}
+            initialNumToRender={5}
+            removeClippedSubviews={true}
+          />
         )}
       </View>
 
@@ -243,14 +311,21 @@ function MessagesScreenInner() {
             <Text style={styles.sectionTitle}>New Visions for {selectedProfile?.display_name || '... '}</Text>
           </View>
           <View style={styles.newMatchesContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.newMatchesContent}>
-              {(newMatches || []).map((match) => (
-                <NewMatchItem key={match.id} match={match} onPress={handleMatchPress} />
-              ))}
-              {(!newMatches || newMatches.length === 0) && (
-                <Text style={styles.emptyText}>The stars reflect no new paths today.</Text>
-              )}
-            </ScrollView>
+            <FlatList
+              horizontal
+              data={newMatches || []}
+              renderItem={renderNewMatchItem}
+              keyExtractor={keyExtractorNewMatch}
+              getItemLayout={getItemLayoutNewMatch}
+              ItemSeparatorComponent={HorizontalSeparator}
+              contentContainerStyle={horizontalListContentStyle}
+              showsHorizontalScrollIndicator={false}
+              ListEmptyComponent={NewMatchesEmpty}
+              windowSize={5}
+              maxToRenderPerBatch={5}
+              initialNumToRender={5}
+              removeClippedSubviews={true}
+            />
           </View>
 
           {/* Inbox Section Header */}
@@ -260,8 +335,19 @@ function MessagesScreenInner() {
         </>
       )}
     </>
-  ), [isLoadingMyProfiles, myProfiles, activeProfileId, unreadByProfile, setActiveProfileId,
-      isLoadingContent, selectedProfile, newMatches, handleMatchPress]);
+  ), [
+    isLoadingMyProfiles,
+    myProfiles,
+    isLoadingContent,
+    selectedProfile,
+    newMatches,
+    renderProfileTabItem,
+    keyExtractorProfileTab,
+    getItemLayoutProfileTab,
+    renderNewMatchItem,
+    keyExtractorNewMatch,
+    getItemLayoutNewMatch,
+  ]);
 
   const ListEmpty = useMemo(() => (
     isLoadingContent ? null : (
@@ -308,6 +394,7 @@ const loadingIndicatorStyle = { marginVertical: Spacing[4] };
 const emptyInboxStyle = { paddingVertical: Spacing[10], alignItems: 'center' as const };
 const footerStyle = { height: Spacing[20] };
 const inboxListContentStyle = { paddingHorizontal: Spacing[6] };
+const horizontalListContentStyle = { paddingHorizontal: Spacing[6] };
 
 export default function MessagesScreen() {
   return (

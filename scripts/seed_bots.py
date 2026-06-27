@@ -6,12 +6,13 @@ import csv
 import subprocess
 import json as _json
 import base64
+import collections
 from typing import Dict, Optional
 
 # Paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-CSV_PATH = os.path.join(PROJECT_ROOT, "services", "bots", "tavern_keepers.csv")
+CSV_PATH = os.path.join(PROJECT_ROOT, "services", "bots", "bots.csv")
 
 # Map environment names to GCP project IDs
 PROJECT_MAP = {
@@ -21,7 +22,6 @@ PROJECT_MAP = {
 }
 
 REGION = "us-central1"
-BOT_SLUG_PREFIX = "tavern-keeper"
 
 
 def get_router_url(env: str) -> str:
@@ -110,12 +110,12 @@ async def get_root_token(auth_url: str, users_url: str) -> str:
     raise Exception("Could not obtain an admin token with any known credentials")
 
 
-async def ensure_bot_user(client: httpx.AsyncClient, bots_url: str, headers: dict, slug: str) -> Optional[str]:
-    """Register the shared tavern-keeper bot user, or find the existing one. Returns bot_id."""
+async def ensure_bot_user(client: httpx.AsyncClient, bots_url: str, headers: dict, slug: str, display_name: str) -> Optional[str]:
+    """Register a bot user, or find the existing one. Returns bot_id."""
     reg_resp = await client.post(
         f"{bots_url}/bots/",
         headers=headers,
-        json={"slug": slug, "display_name": "Tavern Keeper"}
+        json={"slug": slug, "display_name": display_name}
     )
     if reg_resp.status_code == 201:
         bot_id = reg_resp.json()["bot_id"]
@@ -144,11 +144,12 @@ async def get_existing_profiles(client: httpx.AsyncClient, bots_url: str, header
     return {p.get("agent_name"): p for p in resp.json() if p.get("agent_name")}
 
 
-async def seed_profile(client: httpx.AsyncClient, bots_url: str, headers: dict,
+async def seed_profile(client: httpx.AsyncClient, bots_url: str, profiles_url: Optional[str], headers: dict,
                        bot_id: str, row: dict, existing: dict):
-    """Seed a single tavern keeper profile under the shared bot user."""
+    """Seed a single bot profile under the specified bot user."""
     agent_name = row["agent_name"]
     display_name = row["display_name"]
+    behavior_type = row.get("behavior_type", "general")
 
     if agent_name in existing:
         # Already exists — just ensure metadata is correct
@@ -159,22 +160,37 @@ async def seed_profile(client: httpx.AsyncClient, bots_url: str, headers: dict,
         patch_resp = await client.patch(
             f"{bots_url}/bots/{bot_id}/profiles/{bot_profile_id}",
             headers=headers,
-            json={"behavior_type": "tavern_keeper", "agent_name": agent_name}
+            json={"behavior_type": behavior_type, "agent_name": agent_name}
         )
         if patch_resp.status_code == 200:
-            print(f"    Confirmed behavior_type=tavern_keeper, agent_name={agent_name}")
+            print(f"    Confirmed behavior_type={behavior_type}, agent_name={agent_name}")
         else:
             print(f"    ⚠️ PATCH failed: {patch_resp.status_code} {patch_resp.text}")
         return
 
+    # Check if image is local or remote
+    image_link = row.get("image_link", "")
+    is_local_image = False
+    image_links = []
+    
+    if image_link:
+        if image_link.startswith("http://") or image_link.startswith("https://"):
+            image_links.append(image_link)
+        else:
+            # Check if file exists in the project root
+            local_path = os.path.join(PROJECT_ROOT, image_link)
+            if os.path.exists(local_path):
+                is_local_image = True
+            else:
+                print(f"  ⚠️ Image path '{image_link}' does not start with http and is not found at '{local_path}'")
+
     # Create new profile
-    image_links = [row["image_link"]] if row.get("image_link") else []
     profile_payload = {
         "display_name": display_name,
         "tagline": row.get("tagline", ""),
         "bio": row.get("bio", ""),
         "image_links": image_links,
-        "behavior_type": "tavern_keeper",
+        "behavior_type": behavior_type,
         "agent_name": agent_name,
         "gender": [],
         "race": [],
@@ -191,17 +207,38 @@ async def seed_profile(client: httpx.AsyncClient, bots_url: str, headers: dict,
         print(f"  ❌ Profile creation failed for '{agent_name}': {prof_resp.status_code} {prof_resp.text}")
         return
     resp_data = prof_resp.json()
-    print(f"  Profile created: {resp_data.get('profile_id')} (bot_profile: {resp_data.get('bot_profile_id')})")
+    profile_id = resp_data.get("profile_id")
+    print(f"  Profile created: {profile_id} (bot_profile: {resp_data.get('bot_profile_id')})")
+
+    # Direct local image upload to profiles service if configured
+    if is_local_image and profiles_url and profile_id:
+        local_path = os.path.join(PROJECT_ROOT, image_link)
+        print(f"  Uploading local image '{image_link}' to profiles service...")
+        try:
+            with open(local_path, 'rb') as f:
+                files = {'file': (image_link, f, 'image/jpeg')}
+                img_resp = await client.post(
+                    f"{profiles_url}/profiles/{profile_id}/image?index=0",
+                    headers=headers,
+                    files=files,
+                    timeout=60.0
+                )
+                if img_resp.status_code == 200:
+                    print(f"    ✅ Successfully uploaded local image '{image_link}'")
+                else:
+                    print(f"    ❌ Failed to upload local image '{image_link}': {img_resp.status_code} {img_resp.text}")
+        except Exception as e:
+            print(f"    ❌ Error uploading local image '{image_link}': {e}")
 
 
 async def main():
     if len(sys.argv) != 2:
-        print("Usage: python seed_tavern_keepers.py <env_name>")
+        print("Usage: python seed_bots.py <env_name>")
         print("  env_name: dev | test | prod")
         sys.exit(1)
 
     env = sys.argv[1]
-    print(f"🚀 Seeding Tavern Keepers in [{env}] environment")
+    print(f"🚀 Seeding Bots in [{env}] environment")
     urls = await fetch_urls(env)
 
     if "bots" not in urls:
@@ -223,31 +260,39 @@ async def main():
     with open(CSV_PATH, 'r', encoding='utf-8') as f:
         rows = list(csv.DictReader(f))
 
-    print(f"📋 Found {len(rows)} tavern keeper persona(s) in CSV")
+    print(f"📋 Found {len(rows)} bot persona(s) in CSV")
 
-    # One bot user for all tavern keepers in this environment
-    slug = f"{BOT_SLUG_PREFIX}-{env}"
+    # Group profiles by bot slug
+    grouped_profiles = collections.defaultdict(list)
+    for row in rows:
+        slug = row["bot_slug"]
+        grouped_profiles[slug].append(row)
+
     bots_url = urls["bots"]
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        print(f"\n👤 Ensuring bot user: {slug}")
-        bot_id = await ensure_bot_user(client, bots_url, headers, slug)
-        if not bot_id:
-            print("❌ Could not create or find bot user. Aborting.")
-            sys.exit(1)
+        for bot_slug, profiles in grouped_profiles.items():
+            full_slug = f"{bot_slug}-{env}"
+            display_name = bot_slug.replace("-", " ").replace("_", " ").title()
 
-        # Fetch existing profiles to skip duplicates
-        existing = await get_existing_profiles(client, bots_url, headers, bot_id)
-        print(f"  Existing profiles: {list(existing.keys()) or '(none)'}")
+            print(f"\n👤 Ensuring bot user: {full_slug} (Display Name: {display_name})")
+            bot_id = await ensure_bot_user(client, bots_url, headers, full_slug, display_name)
+            if not bot_id:
+                print(f"❌ Could not create or find bot user '{full_slug}'. Skipping profiles under it.")
+                continue
 
-        # Seed each persona
-        for row in rows:
-            try:
-                await seed_profile(client, bots_url, headers, bot_id, row, existing)
-            except Exception as e:
-                print(f"  ❌ Failed to seed {row.get('agent_name')}: {e}")
+            # Fetch existing profiles to skip duplicates
+            existing = await get_existing_profiles(client, bots_url, headers, bot_id)
+            print(f"  Existing profiles under {full_slug}: {list(existing.keys()) or '(none)'}")
 
-    print(f"\n🏁 Tavern keeper seeding complete for [{env}]!")
+            # Seed each persona in this group
+            for row in profiles:
+                try:
+                    await seed_profile(client, bots_url, urls.get("profiles"), headers, bot_id, row, existing)
+                except Exception as e:
+                    print(f"  ❌ Failed to seed {row.get('agent_name')}: {e}")
+
+    print(f"\n🏁 Bot seeding complete for [{env}]!")
 
 
 if __name__ == "__main__":
