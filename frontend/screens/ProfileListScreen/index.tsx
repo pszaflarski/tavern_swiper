@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, Pressable, Image, Platform, Animated } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
 import { Colors, Fonts, Spacing } from '../../theme';
@@ -209,6 +209,15 @@ function ProfilesScreenInner() {
   const { showMatch } = useMatch();
   const deleteProfileMutation = useDeleteProfile();
 
+  const sortedProfiles = useMemo(() => {
+    if (!Array.isArray(profiles)) return [];
+    return [...profiles].sort((a, b) => {
+      if (a.profile_id === activeProfileId) return -1;
+      if (b.profile_id === activeProfileId) return 1;
+      return 0;
+    });
+  }, [profiles, activeProfileId]);
+
   useRefreshOnFocus(refetch);
   const router = useRouter();
 
@@ -251,10 +260,9 @@ function ProfilesScreenInner() {
   };
 
   const renderProfileItem = ({ item }: { item: Profile }) => {
-    const isActive = item.profile_id === activeProfileId;
-
+    const isActive = activeProfileId === item.profile_id;
     return (
-      <ProfileCard
+      <ProfileCard 
         item={item}
         isActive={isActive}
         onSetActive={() => setActiveProfileId(item.profile_id)}
@@ -265,38 +273,35 @@ function ProfilesScreenInner() {
     );
   };
 
-  const renderFooter = () => (
-    <View>
-      <Pressable
-        style={({ pressed }) => [
-          styles.wizardButton,
-          pressed && { opacity: 0.7 }
-        ]}
-        onPress={() => router.push('/character-wizard' as any)}
-        testID="character-wizard-button"
-        accessibilityLabel="Open character creation wizard"
-        accessibilityRole="button"
-      >
-        <Ionicons name="sparkles" size={18} color={Colors.tertiary} />
-        <Text style={styles.wizardButtonText}>Character Wizard</Text>
-        <Ionicons name="chevron-forward" size={16} color={Colors.outline} />
-      </Pressable>
-      <Pressable 
-        style={({ pressed }) => [
-          styles.addProfileButton,
-          pressed && { opacity: 0.7 }
-        ]}
-        onPress={handleCreate}
-        testID="add-profile-button"
-        accessibilityLabel="Forge new identity"
-        accessibilityRole="button"
-      >
-        <Ionicons name="add" size={18} color={Colors.tertiary} />
-        <Text style={styles.wizardButtonText}>Custom Character</Text>
-        <Ionicons name="chevron-forward" size={16} color={Colors.outline} />
-      </Pressable>
-    </View>
-  );
+  const renderFooter = () => {
+    return (
+      <View style={styles.footerContainer}>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.ctaButton,
+            pressed && { opacity: 0.7 }
+          ]} 
+          onPress={handleCreate}
+          testID="add-profile-button"
+        >
+          <Text style={styles.ctaText}>FORGE NEW IDENTITY</Text>
+        </Pressable>
+        
+        <Pressable
+          style={({ pressed }) => [
+            styles.wizardButton,
+            pressed && { opacity: 0.7 }
+          ]}
+          onPress={() => router.push('/character-wizard' as any)}
+          testID="wizard-button"
+        >
+          <Ionicons name="sparkles" size={18} color={Colors.tertiary} />
+          <Text style={styles.wizardButtonText}>Use Character Wizard</Text>
+          <Ionicons name="chevron-forward" size={16} color={Colors.outline} />
+        </Pressable>
+      </View>
+    );
+  };
 
   if (isActuallyLoading) {
     return <DiceLoadingScreen message="Consulting the Archives..." />;
@@ -312,23 +317,11 @@ function ProfilesScreenInner() {
       
       <ScreenHeader title="Profiles" />
       
-      {/* <TouchableOpacity 
-        style={styles.testerButton}
-        onPress={() => showMatch({
-          profile_id: 'tester',
-          display_name: 'Valerius the Bold',
-          image_url: 'https://storage.googleapis.com/tavern-swiper-dev-media-dev/c73bb930-a364-42b4-8254-8c886e0811b0.jpg'
-        })}
-      >
-        <Ionicons name="sparkles" size={16} color={Colors.tertiary} />
-        <Text style={styles.testerText}>TEST CELEBRATION</Text>
-      </TouchableOpacity> */}
-
       {profiles === undefined ? (
         <DiceLoadingScreen message="Awakening the Archive..." />
       ) : profiles.length > 0 ? (
         <FlatList
-          data={profiles}
+          data={sortedProfiles}
           renderItem={renderProfileItem}
           keyExtractor={(item) => item.profile_id}
           contentContainerStyle={styles.listContent}
