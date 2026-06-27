@@ -121,7 +121,7 @@ const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) =>
   return (
     <Pressable
       testID={`inbox-item-${convo.id}`}
-      style={({ pressed }) => [styles.inboxItem, pressed && pressedOpacity07]}
+      style={({ pressed }) => [styles.inboxItem, inboxItemStyle, pressed && pressedOpacity07]}
       onPress={handlePress}
     >
       <View style={styles.inboxContent}>
@@ -176,7 +176,7 @@ const NewMatchesEmpty = React.memo(() => (
 NewMatchesEmpty.displayName = 'NewMatchesEmpty';
 
 const separatorStyles = StyleSheet.create({
-  verticalSeparator: { height: SEPARATOR_HEIGHT },
+  verticalSeparator: { height: SEPARATOR_HEIGHT, marginHorizontal: Spacing[6] },
   horizontalSeparator: { width: Spacing[4] },
 });
 
@@ -200,6 +200,20 @@ function MessagesScreenInner() {
     () => (Array.isArray(myProfiles) ? myProfiles.find(p => p.profile_id === activeProfileId) : undefined),
     [myProfiles, activeProfileId],
   );
+
+  const sortedProfilesForTabs = useMemo(() => {
+    if (!Array.isArray(myProfiles)) return [];
+    return [...myProfiles].sort((a, b) => {
+      // 1. Profiles with unread messages first
+      const aHasUnread = !!unreadByProfile[a.profile_id];
+      const bHasUnread = !!unreadByProfile[b.profile_id];
+      if (aHasUnread && !bHasUnread) return -1;
+      if (!aHasUnread && bHasUnread) return 1;
+
+      // 2. Otherwise maintain existing order
+      return 0;
+    });
+  }, [myProfiles, unreadByProfile]);
 
   const handleMatchPress = useCallback((otherProfileId: string) => {
     if (!activeProfileId) return;
@@ -286,7 +300,7 @@ function MessagesScreenInner() {
         ) : (
           <FlatList
             horizontal
-            data={myProfiles || []}
+            data={sortedProfilesForTabs}
             renderItem={renderProfileTabItem}
             keyExtractor={keyExtractorProfileTab}
             getItemLayout={getItemLayoutProfileTab}
@@ -337,7 +351,7 @@ function MessagesScreenInner() {
     </>
   ), [
     isLoadingMyProfiles,
-    myProfiles,
+    sortedProfilesForTabs,
     isLoadingContent,
     selectedProfile,
     newMatches,
@@ -361,7 +375,19 @@ function MessagesScreenInner() {
 
   // ─── Render ──────────────────────────────────────────────────────
 
-  const inboxData = useMemo(() => (isLoadingContent ? [] : (inbox || [])), [isLoadingContent, inbox]);
+  const inboxData = useMemo(() => {
+    if (isLoadingContent || !inbox) return [];
+    return [...inbox].sort((a, b) => {
+      // 1. Unread conversations first
+      if (a.unread && !b.unread) return -1;
+      if (!a.unread && b.unread) return 1;
+
+      // 2. Last message / update / creation timestamp descending
+      const aTime = a.last_message?.sent_at || a.updated_at || a.created_at || '';
+      const bTime = b.last_message?.sent_at || b.updated_at || b.created_at || '';
+      return bTime.localeCompare(aTime);
+    });
+  }, [isLoadingContent, inbox]);
 
   return (
     <View style={styles.container} testID="messages-screen">
@@ -376,6 +402,7 @@ function MessagesScreenInner() {
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
         ListFooterComponent={ListFooter}
+        style={flatListStyle}
         contentContainerStyle={inboxListContentStyle}
         showsVerticalScrollIndicator={false}
         // Virtualization tuning
@@ -391,10 +418,12 @@ function MessagesScreenInner() {
 // ─── Stable style references (avoid inline object creation) ──────────
 
 const loadingIndicatorStyle = { marginVertical: Spacing[4] };
-const emptyInboxStyle = { paddingVertical: Spacing[10], alignItems: 'center' as const };
+const emptyInboxStyle = { paddingVertical: Spacing[10], paddingHorizontal: Spacing[6], alignItems: 'center' as const };
 const footerStyle = { height: Spacing[20] };
-const inboxListContentStyle = { paddingHorizontal: Spacing[6] };
+const inboxListContentStyle = { flexGrow: 1 };
 const horizontalListContentStyle = { paddingHorizontal: Spacing[6] };
+const flatListStyle = { flex: 1 };
+const inboxItemStyle = { marginHorizontal: Spacing[6] };
 
 export default function MessagesScreen() {
   return (

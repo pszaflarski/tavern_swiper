@@ -841,4 +841,74 @@ describe('Conversation Screen', () => {
       });
     });
   });
+
+  it('retains profile details when transitioning from temporary to resolved route without Traveler fallback', async () => {
+    // 1. Initial State: Mount temporary conversation screen for profile 'p2'
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'new_p2' });
+    (useInvolvedMatches as jest.Mock).mockReturnValue({
+      inbox: [],
+      newMatches: [
+        {
+          id: 'match_p2',
+          otherProfile: {
+            profile_id: 'p2',
+            display_name: 'Elora',
+            image_urls: ['http://example.com/elora.jpg'],
+          },
+        },
+      ],
+      isLoading: false,
+    });
+    (useProfile as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: true,
+    });
+    (useConversationMessages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+
+    const mockCreateConversation = jest.fn().mockResolvedValue({ conversation_id: 'convo_resolved' });
+    const { useCreateConversation, useSendMessage: useSendMessageHook } = require('../../hooks/useMessages');
+    (useCreateConversation as jest.Mock).mockReturnValue({
+      mutateAsync: mockCreateConversation,
+    });
+    (useSendMessageHook as jest.Mock).mockReturnValue({
+      mutate: jest.fn(),
+      mutateAsync: jest.fn(),
+      isPending: false,
+    });
+
+    const { getByTestId } = render(<ConversationScreen />);
+
+    // Type and press send to trigger conversation creation and route replacement
+    const input = getByTestId('message-input');
+    fireEvent.changeText(input, 'Hello Elora!');
+    const sendButton = getByTestId('send-button');
+    fireEvent.press(sendButton);
+
+    await waitFor(() => {
+      expect(mockCreateConversation).toHaveBeenCalled();
+    });
+
+    // Assert that 'Elora' was resolved in the header on initial mount
+    expect(Stack.Screen).toHaveBeenCalled();
+    const initialHeaderLeft = (Stack.Screen as jest.Mock).mock.calls[(Stack.Screen as jest.Mock).mock.calls.length - 1][0].options.headerLeft;
+    const { getByText: getByTextInitial } = render(initialHeaderLeft());
+    expect(getByTextInitial('Elora')).toBeTruthy();
+
+    // 2. Simulated route change: component remounts with the new resolved ID
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'convo_resolved' });
+
+    render(<ConversationScreen />);
+
+    // Assert that the new component instance still resolves 'Elora' instantly without showing 'Traveler'
+    const afterHeaderLeft = (Stack.Screen as jest.Mock).mock.calls[(Stack.Screen as jest.Mock).mock.calls.length - 1][0].options.headerLeft;
+    const { getByText: getByTextAfter } = render(afterHeaderLeft());
+    expect(getByTextAfter('Elora')).toBeTruthy();
+  });
 });

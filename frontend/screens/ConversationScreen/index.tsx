@@ -171,9 +171,14 @@ function EquippedDieCircle({ dieType, onRoll, onDismiss, screenHeight }: {
   );
 }
 
+// Map newly created conversation IDs to their participant profile IDs globally
+// to prevent details loading resets when the screen unmounts/remounts during route replacement.
+const globalCreatedConvoProfileMap: Record<string, string> = {};
+
 function ConversationScreenInner() {
   const { id: rawId, equippedDie: equippedDieParam } = useLocalSearchParams<{ id: string; equippedDie?: string }>();
   const { activeProfileId } = useProfileContext();
+  const queryClient = useQueryClient();
 
   // Detect pending (not-yet-created) conversations from the new_ route prefix
   const isNewConversation = rawId?.startsWith('new_') ?? false;
@@ -184,6 +189,21 @@ function ConversationScreenInner() {
     isNewConversation ? undefined : rawId
   );
   const conversationId = resolvedConversationId;
+
+  // Track if this screen session was initialized as a temporary conversation
+  const wasInitializedAsNewRef = useRef(isNewConversation);
+
+  // Cache resolved profile name and image to avoid fallback flickers during transitions
+  const lastProfileNameRef = useRef<string>('Traveler');
+  const lastProfileImageRef = useRef<string | undefined>(undefined);
+
+  // Reset resolvedConversationId and wasInitializedAsNewRef if rawId changes (due to back-and-forth navigation)
+  useEffect(() => {
+    if (rawId !== resolvedConversationId) {
+      setResolvedConversationId(isNewConversation ? undefined : rawId);
+      wasInitializedAsNewRef.current = isNewConversation;
+    }
+  }, [rawId, isNewConversation, resolvedConversationId]);
   const sessionStartTimestampRef = useRef<string>(new Date().toISOString());
   const [messageText, setMessageText] = useState('');
   const [equippedDie, setEquippedDie] = useState<string | null>(null);
@@ -232,18 +252,48 @@ function ConversationScreenInner() {
   const { inbox, newMatches, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
   const conversation = conversationId ? inbox.find(c => c.id === conversationId) : undefined;
   
+  // If we are on a temporary route but the conversation already exists in our inbox cache,
+  // resolve it immediately and transition to the active conversation to load messages.
+  useEffect(() => {
+    if (isNewConversation && pendingOtherProfileId && inbox.length > 0) {
+      const existing = inbox.find(c => c.other_profile_id === pendingOtherProfileId);
+      if (existing) {
+        setResolvedConversationId(existing.id);
+        router.replace(`/messages/${existing.id}`);
+      }
+    }
+  }, [isNewConversation, pendingOtherProfileId, inbox, router]);
+  
   // Find other profile ID
-  const otherProfileId = isNewConversation 
-    ? pendingOtherProfileId 
-    : conversation?.other_profile_id;
+  const otherProfileId = isNewConversation
+    ? pendingOtherProfileId
+    : conversation?.other_profile_id || (rawId ? globalCreatedConvoProfileMap[rawId] : undefined);
+
+  // Sync details cache reset to the actual target participant ID
+  const [lastOtherProfileId, setLastOtherProfileId] = useState(otherProfileId);
+  if (otherProfileId && otherProfileId !== lastOtherProfileId) {
+    setLastOtherProfileId(otherProfileId);
+    lastProfileNameRef.current = 'Traveler';
+    lastProfileImageRef.current = undefined;
+  }
 
   // Query the profile directly using our useProfile hook (safest fallback!)
   const { data: fetchedProfile, isLoading: isLoadingFetchedProfile } = useProfile(otherProfileId);
 
-  // For pending conversations, resolve the other profile from the matches list
-  const otherProfile = (isNewConversation
-    ? newMatches.find(m => m.otherProfile?.profile_id === pendingOtherProfileId)?.otherProfile ?? null
-    : conversation?.otherProfile) || fetchedProfile || null;
+  // Resolve otherProfile dynamically across all active caches (inbox, matches, fallback query)
+  const otherProfile = conversation?.otherProfile ||
+    (otherProfileId ? newMatches.find(m => m.otherProfile?.profile_id === otherProfileId)?.otherProfile : null) ||
+    (otherProfileId ? inbox.find(c => c.other_profile_id === otherProfileId)?.otherProfile : null) ||
+    fetchedProfile ||
+    null;
+
+  if (otherProfile) {
+    lastProfileNameRef.current = otherProfile.display_name || 'Traveler';
+    lastProfileImageRef.current = otherProfile.image_urls?.[0];
+  }
+
+  const displayName = otherProfile?.display_name || lastProfileNameRef.current;
+  const displayImage = otherProfile?.image_urls?.[0] || lastProfileImageRef.current;
 
   // Get messages
   const {
@@ -293,6 +343,15 @@ function ConversationScreenInner() {
         participants: [activeProfileId, pendingOtherProfileId],
       });
       const newId = data.conversation_id;
+
+      // Pre-seed the messages query cache so the subsequent optimistic updates
+      // find a target and render the optimistic message instantly without a loading flash
+      queryClient.setQueryData(['messages', newId, activeProfileId], {
+        pages: [{ messages: [], has_more: false }],
+        pageParams: [undefined]
+      });
+
+      globalCreatedConvoProfileMap[newId] = pendingOtherProfileId!;
       setResolvedConversationId(newId);
       // Replace the temporary route with the real conversation ID
       router.replace(`/messages/${newId}`);
@@ -301,7 +360,7 @@ function ConversationScreenInner() {
 
     creatingConversationRef.current = promise;
     return promise;
-  }, [resolvedConversationId, activeProfileId, pendingOtherProfileId, createConversation]);
+  }, [resolvedConversationId, activeProfileId, pendingOtherProfileId, createConversation, queryClient]);
 
   // Handle equipped die coming back from the inventory screen
   useEffect(() => {
@@ -309,8 +368,6 @@ function ConversationScreenInner() {
       setEquippedDie(equippedDieParam);
     }
   }, [equippedDieParam]);
-
-  const queryClient = useQueryClient();
 
   // Roll the equipped die — API only, no animation
   const handleRollEquipped = async () => {
@@ -604,13 +661,9 @@ function ConversationScreenInner() {
     height: INPUT_BAR_HEIGHT + insets.bottom + Math.abs(keyboardHeight.value) + Spacing[6] + MODE_TOOLBAR_HEIGHT,
   }));
 
-  const isLoadingProfileInfo = isNewConversation
-    ? (!otherProfile && (isLoadingInbox || isLoadingFetchedProfile))
-    : (isLoadingInbox && !conversation);
-
-  if (isLoadingProfileInfo) {
-    return <DiceLoadingScreen />;
-  }
+  // Render the conversation screen immediately to avoid full-screen flashes.
+  // Profile details and avatars will load and populate in-place.
+  const isLoadingProfileInfo = false;
 
   return (
     <View style={styles.container}>
@@ -643,15 +696,15 @@ function ConversationScreenInner() {
                 ]}
                 testID="header-profile-button"
               >
-                {otherProfile?.image_urls?.[0] ? (
-                  <Image source={{ uri: otherProfile.image_urls[0] }} style={styles.headerAvatar} />
+                {displayImage ? (
+                  <Image source={{ uri: displayImage }} style={styles.headerAvatar} />
                 ) : (
                   <View style={[styles.headerAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surfaceContainerHigh }]}>
                     <Ionicons name="person" size={18} color={Colors.outline} />
                   </View>
                 )}
                 <View>
-                  <Text style={styles.headerName}>{otherProfile?.display_name || 'Traveler'}</Text>
+                  <Text style={styles.headerName}>{displayName}</Text>
                   <Text style={styles.headerStatus}>Online in the tavern</Text>
                 </View>
               </Pressable>
@@ -662,7 +715,7 @@ function ConversationScreenInner() {
         }} 
       />
 
-      {isLoadingMessages && messages.length === 0 ? (
+      {isLoadingMessages && messages.length === 0 && !wasInitializedAsNewRef.current ? (
         <DiceLoadingScreen message="Reading the scrolls..." />
       ) : invertedMessages.length === 0 ? (
         <View style={[styles.emptyContainer]}>

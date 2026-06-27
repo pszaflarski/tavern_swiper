@@ -12,7 +12,6 @@ import StepResult from './StepResult';
 import { styles } from './styles';
 
 const STEPS = [
-  { num: 1, label: 'Fandom' },
   { num: 2, label: 'Gender' },
   { num: 3, label: 'Race' },
   { num: 4, label: 'Class' },
@@ -20,8 +19,8 @@ const STEPS = [
 ];
 
 export default function CharacterWizardScreen() {
-  const [step, setStep] = useState(1);
-  const [fandom, setFandom] = useState('');
+  const [step, setStep] = useState(2);
+  const [fandom, setFandom] = useState('D&D');
   const [gender, setGender] = useState('');
   const [race, setRace] = useState('');
   const [characterClass, setCharacterClass] = useState('');
@@ -47,17 +46,17 @@ export default function CharacterWizardScreen() {
   };
 
   const handleBack = () => {
-    if (step > 1) {
+    if (step > 2) {
       setStep(prev => prev - 1);
     }
   };
 
   const handleReset = () => {
-    setFandom('');
+    setFandom('D&D');
     setGender('');
     setRace('');
     setCharacterClass('');
-    setStep(1);
+    setStep(2);
   };
 
   const handleClose = () => {
@@ -65,7 +64,6 @@ export default function CharacterWizardScreen() {
   };
 
   const isStepValid = () => {
-    if (step === 1) return fandom !== ''; // Fandom is required to start
     return true; // Gender, Race, Class are optional
   };
 
@@ -106,9 +104,6 @@ export default function CharacterWizardScreen() {
           {/* Main Wizard Panel */}
           <View style={styles.glassPanel}>
             <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-              {step === 1 && (
-                <StepFandom fandom={fandom} onSelect={setFandom} />
-              )}
               {step === 2 && (
                 <StepGender gender={gender} onSelect={setGender} />
               )}
@@ -138,10 +133,10 @@ export default function CharacterWizardScreen() {
             <View style={styles.navRow}>
               <Pressable
                 onPress={handleBack}
-                disabled={step === 1}
+                disabled={step === 2}
                 style={({ pressed }) => [
                   styles.navButton,
-                  step === 1 && styles.navButtonDisabled,
+                  step === 2 && styles.navButtonDisabled,
                   pressed && { opacity: 0.7 },
                 ]}
                 testID="wizard-back-button"
