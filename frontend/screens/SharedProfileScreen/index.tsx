@@ -91,7 +91,10 @@ function SharedProfileScreenInner() {
     }
   };
 
-  if (isLoading || actionInProgress) {
+  const isValidId = id && id !== '[id]';
+  const isFetchingFirstTime = isLoading || !isValidId;
+
+  if (isFetchingFirstTime || actionInProgress) {
     return <DiceLoadingScreen message={actionInProgress ? "Channelling magic..." : "Seeking the shared identity..."} />;
   }
 
