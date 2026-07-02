@@ -3,7 +3,7 @@ import { NotoSerif_400Regular, NotoSerif_700Bold } from '@expo-google-fonts/noto
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '../hooks/useUser';
 import { useNotifications } from '../hooks/useNotifications';
 import { Colors } from '../theme';
@@ -103,9 +103,47 @@ function RootLayoutNav() {
   const { profiles, isLoadingProfiles } = useProfileContext();
   const segments = useSegments();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Initialize push notification settings, listeners, and token registration
   useNotifications();
+
+  // Post-login claim logic
+  useEffect(() => {
+    const checkPendingClaim = async () => {
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const pendingId = await AsyncStorage.getItem('pending_claim_profile_id');
+        if (pendingId && isAuthenticated) {
+          console.log('[RootLayoutNav] Found pending claim for profile:', pendingId);
+          await AsyncStorage.removeItem('pending_claim_profile_id');
+          
+          const { profilesApi } = require('../lib/api');
+          await profilesApi.post(`/profiles/${pendingId}/claim`);
+          
+          Toast.show({
+            type: 'success',
+            text1: 'Legend Claimed!',
+            text2: 'The identity is now yours.',
+          });
+          
+          queryClient.invalidateQueries({ queryKey: ['profiles'] });
+          router.replace('/profiles');
+        }
+      } catch (err: any) {
+        console.error('[RootLayoutNav] Failed to claim pending profile:', err);
+        Toast.show({
+          type: 'error',
+          text1: 'Claim Failed',
+          text2: err.message || 'Could not claim this legend.',
+        });
+      }
+    };
+
+    if (isAuthenticated && !isLoading) {
+      checkPendingClaim();
+    }
+  }, [isAuthenticated, isLoading, queryClient, router]);
 
   useEffect(() => {
     // Wait for auth and the profile list (but NOT the active-profile query,
@@ -114,11 +152,12 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === 'auth';
     const inWizard = segments[0] === 'character-wizard';
+    const inSharedProfiles = segments[0] === 'shared_profiles';
     const hasGeneratedProfile = profiles?.some(p => p.generated);
 
     console.log('[RootLayoutNav] Auth state changed:', { isAuthenticated, isLoading, segment: segments[0], profileCount: profiles?.length, hasGeneratedProfile });
 
-    if (!isAuthenticated && !inAuthGroup) {
+    if (!isAuthenticated && !inAuthGroup && !inSharedProfiles) {
       console.log('[RootLayoutNav] Redirecting to /auth');
       router.replace('/auth');
     } else if (isAuthenticated) {
@@ -131,7 +170,7 @@ function RootLayoutNav() {
           console.log('[RootLayoutNav] No generated profile — redirecting to /character-wizard');
           router.replace('/character-wizard');
         }
-      } else if (!hasGeneratedProfile && !inWizard) {
+      } else if (!hasGeneratedProfile && !inWizard && !inSharedProfiles) {
         // Guard: force wizard if user navigates away without a generated profile
         console.log('[RootLayoutNav] Guard: no generated profile — forcing /character-wizard');
         router.replace('/character-wizard');
@@ -151,6 +190,7 @@ function RootLayoutNav() {
         <Stack.Screen name="profiles" options={{ headerShown: false }} />
         <Stack.Screen name="inventory" options={{ headerShown: false }} />
         <Stack.Screen name="character-wizard" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="shared_profiles/[id]" options={{ headerShown: false }} />
       </Stack>
       <SilentErrorBoundary label="MatchSplash">
         <MatchSplash />

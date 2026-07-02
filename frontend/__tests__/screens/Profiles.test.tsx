@@ -11,6 +11,12 @@ jest.mock('../../hooks/useProfiles', () => ({
   useDeleteProfile: jest.fn(() => ({
     mutate: jest.fn(),
   })),
+  useShareProfile: jest.fn(() => ({
+    mutate: jest.fn(),
+  })),
+  useUnshareProfile: jest.fn(() => ({
+    mutate: jest.fn(),
+  })),
 }));
 
 jest.mock('../../hooks/useUser', () => ({

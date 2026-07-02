@@ -76,4 +76,5 @@ type ProfileOut struct {
 
 	CreatedAt *time.Time `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
+	SharedAt  *time.Time `json:"shared_at,omitempty"`
 }

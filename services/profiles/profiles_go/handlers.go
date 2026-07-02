@@ -367,6 +367,7 @@ func docToProfile(doc DocumentSnapshot) (ProfileOut, error) {
 		LookingFor:  getTags("looking_for"),
 		CreatedAt:   getTimestamp("created_at"),
 		UpdatedAt:   getTimestamp("updated_at"),
+		SharedAt:    getTimestamp("shared_at"),
 	}, nil
 }
 
@@ -1157,4 +1158,247 @@ func ptrBoolOrFalse(b *bool) bool {
 		return *b
 	}
 	return false
+}
+
+// handleShareProfile godoc
+// @Summary      Share a profile
+// @Description  Flips a profile to "shared" state by setting shared_at timestamp.
+// @Tags         profiles
+// @Produce      json
+// @Param        id  path      string  true  "Profile ID"
+// @Success      200  {object}  ProfileOut
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /{id}/share [post]
+func handleShareProfile(c *gin.Context, publisher Publisher) {
+	id := c.Param("id")
+	auth := GetAuth(c)
+
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		send503(c, "Database connection error")
+		return
+	}
+
+	doc, err := client.Collection(COLLECTION).Doc(id).Get(c.Request.Context())
+	if err != nil || !doc.Exists() {
+		send404(c, "Profile not found")
+		return
+	}
+
+	p, err := docToProfile(doc)
+	if err != nil {
+		send500(c, err.Error())
+		return
+	}
+
+	if p.UserID != auth.UID {
+		send403(c, "Not authorized to share this profile")
+		return
+	}
+
+	_, err = doc.Ref().Update(c.Request.Context(), []firestore.Update{
+		{Path: "shared_at", Value: firestore.ServerTimestamp},
+		{Path: "updated_at", Value: firestore.ServerTimestamp},
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed to share profile: %v", err)
+		send500(c, "Failed to share profile")
+		return
+	}
+
+	updatedDoc, err := doc.Ref().Get(c.Request.Context())
+	if err != nil {
+		send500(c, "Failed to refetch shared profile")
+		return
+	}
+
+	updatedProfile, err := docToProfile(updatedDoc)
+	if err != nil {
+		send500(c, "Failed to parse shared profile")
+		return
+	}
+
+	if publisher != nil {
+		if err := publisher.PublishUpserted(context.Background(), updatedProfile); err != nil {
+			log.Printf("[ERROR] Failed to publish upserted event for shared profile %s: %v", updatedProfile.ProfileID, err)
+		}
+	}
+
+	c.JSON(http.StatusOK, updatedProfile)
+}
+
+// handleUnshareProfile godoc
+// @Summary      Unshare a profile
+// @Description  Wipes the sharing status of a profile (sets shared_at to nil). Public endpoint.
+// @Tags         profiles
+// @Produce      json
+// @Param        id  path      string  true  "Profile ID"
+// @Success      200  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Router       /{id}/unshare [post]
+func handleUnshareProfile(c *gin.Context, publisher Publisher) {
+	id := c.Param("id")
+
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		send503(c, "Database connection error")
+		return
+	}
+
+	doc, err := client.Collection(COLLECTION).Doc(id).Get(c.Request.Context())
+	if err != nil || !doc.Exists() {
+		send404(c, "Profile not found")
+		return
+	}
+
+	p, err := docToProfile(doc)
+	if err != nil {
+		send500(c, err.Error())
+		return
+	}
+
+	if p.SharedAt == nil {
+		send404(c, "Profile is not shared")
+		return
+	}
+
+	_, err = doc.Ref().Update(c.Request.Context(), []firestore.Update{
+		{Path: "shared_at", Value: nil},
+		{Path: "updated_at", Value: firestore.ServerTimestamp},
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed to unshare profile: %v", err)
+		send500(c, "Failed to unshare profile")
+		return
+	}
+
+	updatedDoc, err := doc.Ref().Get(c.Request.Context())
+	if err == nil {
+		updatedProfile, err := docToProfile(updatedDoc)
+		if err == nil && publisher != nil {
+			if err := publisher.PublishUpserted(context.Background(), updatedProfile); err != nil {
+				log.Printf("[ERROR] Failed to publish upserted event for unshared profile %s: %v", updatedProfile.ProfileID, err)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "unshared"})
+}
+
+// handleGetSharedProfile godoc
+// @Summary      Get shared profile by ID
+// @Description  Returns a single shared profile by its ID. Public endpoint, will 404 if profile is not shared.
+// @Tags         profiles
+// @Produce      json
+// @Param        id  path      string  true  "Profile ID"
+// @Success      200  {object}  ProfileOut
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Router       /shared/{id} [get]
+func handleGetSharedProfile(c *gin.Context) {
+	id := c.Param("id")
+
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		send503(c, "Database connection error")
+		return
+	}
+
+	doc, err := client.Collection(COLLECTION).Doc(id).Get(c.Request.Context())
+	if err != nil || !doc.Exists() {
+		send404(c, "Profile not found")
+		return
+	}
+
+	p, err := docToProfile(doc)
+	if err != nil {
+		send500(c, err.Error())
+		return
+	}
+
+	if p.SharedAt == nil {
+		send404(c, "Profile is not shared")
+		return
+	}
+
+	c.JSON(http.StatusOK, p)
+}
+
+// handleClaimProfile godoc
+// @Summary      Claim a shared profile
+// @Description  Claims a shared profile by setting its user_id to the claiming user, setting active, and clearing shared status.
+// @Tags         profiles
+// @Produce      json
+// @Param        id  path      string  true  "Profile ID"
+// @Success      200  {object}  ProfileOut
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /{id}/claim [post]
+func handleClaimProfile(c *gin.Context, publisher Publisher) {
+	id := c.Param("id")
+	auth := GetAuth(c)
+	claimingUID := auth.UID
+
+	client, err := getDBFunc(c.Request.Context())
+	if err != nil {
+		send503(c, "Database connection error")
+		return
+	}
+
+	doc, err := client.Collection(COLLECTION).Doc(id).Get(c.Request.Context())
+	if err != nil || !doc.Exists() {
+		send404(c, "Profile not found")
+		return
+	}
+
+	p, err := docToProfile(doc)
+	if err != nil {
+		send500(c, err.Error())
+		return
+	}
+
+	if p.SharedAt == nil {
+		send400(c, "Profile is not shared")
+		return
+	}
+
+	_, err = doc.Ref().Update(c.Request.Context(), []firestore.Update{
+		{Path: "user_id", Value: claimingUID},
+		{Path: "is_active", Value: true},
+		{Path: "shared_at", Value: nil},
+		{Path: "updated_at", Value: firestore.ServerTimestamp},
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed to claim profile: %v", err)
+		send500(c, "Failed to claim profile")
+		return
+	}
+
+	deactivateOtherProfiles(c.Request.Context(), client, claimingUID, id, publisher)
+
+	updatedDoc, err := doc.Ref().Get(c.Request.Context())
+	if err != nil {
+		send500(c, "Failed to refetch claimed profile")
+		return
+	}
+
+	updatedProfile, err := docToProfile(updatedDoc)
+	if err != nil {
+		send500(c, "Failed to parse claimed profile")
+		return
+	}
+
+	if publisher != nil {
+		if err := publisher.PublishUpserted(context.Background(), updatedProfile); err != nil {
+			log.Printf("[ERROR] Failed to publish upserted event for claimed profile %s: %v", updatedProfile.ProfileID, err)
+		}
+	}
+
+	c.JSON(http.StatusOK, updatedProfile)
 }
