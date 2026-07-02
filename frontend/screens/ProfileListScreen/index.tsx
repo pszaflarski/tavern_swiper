@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, Pressable, Image, Platform, Animated } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { Colors, Fonts, Spacing } from '../../theme';
-import { useProfiles, Profile, useDeleteProfile } from '../../hooks/useProfiles';
+import { useProfiles, Profile, useDeleteProfile, useShareProfile, useUnshareProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useMatch } from '../../context/MatchContext';
@@ -22,6 +23,8 @@ function ProfileCard({
   onPreview,
   onEdit,
   onDelete,
+  onShare,
+  onUnshare,
 }: {
   item: Profile;
   isActive: boolean;
@@ -29,6 +32,8 @@ function ProfileCard({
   onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onShare: () => void;
+  onUnshare: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -137,6 +142,36 @@ function ProfileCard({
               <Text style={styles.expandedButtonText}>Preview</Text>
             </Pressable>
 
+            {item.shared_at ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.expandedButton,
+                  pressed && styles.expandedButtonPressed,
+                ]}
+                onPress={() => handleAction(onUnshare)}
+                testID={`unshare-profile-button-${item.profile_id}`}
+                accessibilityLabel={`Stop sharing ${item.display_name}`}
+                accessibilityRole="button"
+              >
+                <Ionicons name="close-circle-outline" size={20} color={Colors.error} />
+                <Text style={styles.expandedButtonText}>Cancel Share</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.expandedButton,
+                  pressed && styles.expandedButtonPressed,
+                ]}
+                onPress={() => handleAction(onShare)}
+                testID={`share-profile-button-${item.profile_id}`}
+                accessibilityLabel={`Share ${item.display_name}`}
+                accessibilityRole="button"
+              >
+                <Ionicons name="share-social-outline" size={20} color={Colors.primaryFixed} />
+                <Text style={styles.expandedButtonText}>Share Profile</Text>
+              </Pressable>
+            )}
+
             <Pressable
               style={({ pressed }) => [
                 styles.expandedButton,
@@ -208,6 +243,8 @@ function ProfilesScreenInner() {
   const { activeProfileId, setActiveProfileId } = useProfileContext();
   const { showMatch } = useMatch();
   const deleteProfileMutation = useDeleteProfile();
+  const shareMutation = useShareProfile();
+  const unshareMutation = useUnshareProfile();
 
   const sortedProfiles = useMemo(() => {
     if (!Array.isArray(profiles)) return [];
@@ -259,6 +296,41 @@ function ProfilesScreenInner() {
     }
   };
 
+  const handleShare = (profileId: string) => {
+    shareMutation.mutate(profileId, {
+      onSuccess: () => {
+        const origin = Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.location.origin
+          : 'http://localhost:8081';
+        const shareUrl = `${origin}/shared_profiles/${profileId}`;
+        
+        const Clipboard = require('expo-clipboard');
+        Clipboard.setStringAsync(shareUrl).then(() => {
+          Toast.show({
+            type: 'success',
+            text1: 'Sharing Spell Active!',
+            text2: 'Share link copied to clipboard.',
+          });
+        }).catch((err: any) => {
+          console.error('Clipboard copy failed:', err);
+          Alert.alert('Sharing Spell Active!', `Share link: ${shareUrl}`);
+        });
+      },
+    });
+  };
+
+  const handleUnshare = (profileId: string) => {
+    unshareMutation.mutate(profileId, {
+      onSuccess: () => {
+        Toast.show({
+          type: 'success',
+          text1: 'Sharing Deactivated',
+          text2: 'The legend is no longer accessible via link.',
+        });
+      },
+    });
+  };
+
   const renderProfileItem = ({ item }: { item: Profile }) => {
     const isActive = activeProfileId === item.profile_id;
     return (
@@ -269,6 +341,8 @@ function ProfilesScreenInner() {
         onPreview={() => router.push({ pathname: '/profiles/preview', params: { id: item.profile_id } } as any)}
         onEdit={() => handleEdit(item.profile_id)}
         onDelete={() => handleDelete(item.profile_id, item.display_name)}
+        onShare={() => handleShare(item.profile_id)}
+        onUnshare={() => handleUnshare(item.profile_id)}
       />
     );
   };

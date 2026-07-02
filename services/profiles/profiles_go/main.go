@@ -42,18 +42,22 @@ func main() {
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
 
-	// Swagger UI (before auth middleware)
-	r.GET("/profiles/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// Global Middleware
-	r.Use(AuthMiddleware())
-
 	// Initialize Pub/Sub
 	ctx := context.Background()
 	publisher, err := NewPublisher(ctx)
 	if err != nil {
 		log.Printf("[WARN] Pub/Sub publisher initialization failed: %v", err)
 	}
+
+	// Swagger UI (before auth middleware)
+	r.GET("/profiles/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Public sharing endpoints (before auth middleware)
+	r.GET("/profiles/shared/:id", handleGetSharedProfile)
+	r.POST("/profiles/:id/unshare", func(c *gin.Context) { handleUnshareProfile(c, publisher) })
+
+	// Global Middleware
+	r.Use(AuthMiddleware())
 
 	// Routes
 	r.GET("/profiles/health", handleHealth)
@@ -73,6 +77,8 @@ func main() {
 		p.DELETE("/:id", func(c *gin.Context) { handleDeleteProfile(c, publisher) })
 		p.POST("/:id/image", func(c *gin.Context) { handleUploadProfileImage(c, publisher) })
 		p.DELETE("/", func(c *gin.Context) { handleDeleteAllProfiles(c, publisher) })
+		p.POST("/:id/share", func(c *gin.Context) { handleShareProfile(c, publisher) })
+		p.POST("/:id/claim", func(c *gin.Context) { handleClaimProfile(c, publisher) })
 
 		// Tags Group
 		t := p.Group("/tags")
