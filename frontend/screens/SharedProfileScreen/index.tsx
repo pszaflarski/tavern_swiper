@@ -27,6 +27,13 @@ function SharedProfileScreenInner() {
   const [isBanished, setIsBanished] = useState(false);
   const [isClaimed, setIsClaimed] = useState(false);
   const [actionInProgress, setActionInProgress] = useState(false);
+  const [profileName, setProfileName] = useState('');
+
+  React.useEffect(() => {
+    if (profile?.display_name) {
+      setProfileName(profile.display_name);
+    }
+  }, [profile]);
 
   const handleSwipeLeft = async () => {
     if (actionInProgress) return;
@@ -98,31 +105,13 @@ function SharedProfileScreenInner() {
     return <DiceLoadingScreen message={actionInProgress ? "Channelling magic..." : "Seeking the shared identity..."} />;
   }
 
-  if (isError || !profile) {
-    return (
-      <View style={styles.centered} testID="shared-profile-error">
-        <Text style={styles.emptyIcon}>🌫️</Text>
-        <Text style={styles.emptyTitle}>This Legend Has Faded</Text>
-        <Text style={styles.emptyDesc}>
-          The link may have expired, or the owner has deactivated the sharing spell for this identity.
-        </Text>
-        <Pressable
-          style={({ pressed }) => [styles.emptyCtaButton, pressed && { opacity: 0.7 }]}
-          onPress={() => router.replace('/(tabs)' as any)}
-        >
-          <Text style={styles.emptyCtaText}>RETURN TO TAVERN</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   if (isBanished) {
     return (
       <View style={styles.centered} testID="shared-profile-banished">
         <Text style={styles.emptyIcon}>⚔️</Text>
         <Text style={styles.emptyTitle}>Legend Banished</Text>
         <Text style={styles.emptyDesc}>
-          You have banished the legend of {profile.display_name}. The sharing link is now deactivated.
+          You have banished the legend of {profileName || profile?.display_name || 'Hero'}. The sharing link is now deactivated.
         </Text>
         <Pressable
           style={({ pressed }) => [styles.emptyCtaButton, pressed && { opacity: 0.7 }]}
@@ -140,13 +129,31 @@ function SharedProfileScreenInner() {
         <Text style={styles.emptyIcon}>🛡️</Text>
         <Text style={styles.emptyTitle}>Identity Claimed</Text>
         <Text style={styles.emptyDesc}>
-          The legend of {profile.display_name} has joined your ranks! You can find and customize this identity in your archives.
+          The legend of {profileName || profile?.display_name || 'Hero'} has joined your ranks! You can find and customize this identity in your archives.
         </Text>
         <Pressable
           style={({ pressed }) => [styles.emptyCtaButton, pressed && { opacity: 0.7 }]}
           onPress={() => router.replace('/profiles' as any)}
         >
           <Text style={styles.emptyCtaText}>VIEW YOUR PROFILES</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (isError || !profile) {
+    return (
+      <View style={styles.centered} testID="shared-profile-error">
+        <Text style={styles.emptyIcon}>🌫️</Text>
+        <Text style={styles.emptyTitle}>This Legend Has Faded</Text>
+        <Text style={styles.emptyDesc}>
+          The link may have expired, or the owner has deactivated the sharing spell for this identity.
+        </Text>
+        <Pressable
+          style={({ pressed }) => [styles.emptyCtaButton, pressed && { opacity: 0.7 }]}
+          onPress={() => router.replace('/(tabs)' as any)}
+        >
+          <Text style={styles.emptyCtaText}>RETURN TO TAVERN</Text>
         </Pressable>
       </View>
     );
