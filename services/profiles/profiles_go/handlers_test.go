@@ -10,6 +10,10 @@ func setupTest(publisher Publisher) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 
+	// Public sharing endpoints (before auth middleware)
+	r.GET("/profiles/shared/:id", handleGetSharedProfile)
+	r.POST("/profiles/:id/unshare", func(c *gin.Context) { handleUnshareProfile(c, publisher) })
+
 	// Global Middleware
 	r.Use(AuthMiddleware())
 
@@ -30,6 +34,8 @@ func setupTest(publisher Publisher) *gin.Engine {
 		p.DELETE("/:id", func(c *gin.Context) { handleDeleteProfile(c, publisher) })
 		p.POST("/:id/image", func(c *gin.Context) { handleUploadProfileImage(c, publisher) })
 		p.DELETE("/", func(c *gin.Context) { handleDeleteAllProfiles(c, publisher) })
+		p.POST("/:id/share", func(c *gin.Context) { handleShareProfile(c, publisher) })
+		p.POST("/:id/claim", func(c *gin.Context) { handleClaimProfile(c, publisher) })
 
 		// Tags Group
 		t := p.Group("/tags")

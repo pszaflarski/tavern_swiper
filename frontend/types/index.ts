@@ -23,4 +23,5 @@ export interface Profile {
   is_oc?: boolean;
   is_active: boolean;
   generated?: boolean;
+  shared_at?: string;
 }

@@ -225,3 +225,74 @@ export function useUploadProfileImage() {
     },
   });
 }
+
+/**
+ * Fetch a shared profile by ID (public endpoint).
+ */
+export function useSharedProfile(profileId: string | undefined) {
+  return useQuery<Profile>({
+    queryKey: ['profiles', 'shared', profileId],
+    queryFn: async () => {
+      if (!profileId) throw new Error('Profile ID is required');
+      const res = await profilesApi.get(`/profiles/shared/${profileId}`);
+      return res.data;
+    },
+    enabled: !!profileId && profileId !== '[id]',
+    staleTime: 0,
+    retry: false, // Don't retry since 404 means it's not shared
+  });
+}
+
+/**
+ * Share a profile.
+ */
+export function useShareProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      const res = await profilesApi.post(`/profiles/${profileId}/share`);
+      return res.data;
+    },
+    onSuccess: (data, profileId) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'id', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'shared', profileId] });
+    },
+  });
+}
+
+/**
+ * Unshare a profile (public/authenticated).
+ */
+export function useUnshareProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      const res = await profilesApi.post(`/profiles/${profileId}/unshare`);
+      return res.data;
+    },
+    onSuccess: (data, profileId) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'id', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'shared', profileId] });
+    },
+  });
+}
+
+/**
+ * Claim a shared profile.
+ */
+export function useClaimProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      const res = await profilesApi.post(`/profiles/${profileId}/claim`);
+      return res.data;
+    },
+    onSuccess: (data, profileId) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'id', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', 'shared', profileId] });
+    },
+  });
+}
