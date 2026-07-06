@@ -36,7 +36,7 @@ export interface RichTextInputRef {
   /** Focus the input. */
   focus: () => void;
   /** Toggle narration on the current selection or at cursor. Returns new isNarrating state. */
-  toggleNarration: () => boolean;
+  toggleNarration: (currentActive?: boolean) => boolean;
   /** Returns whether the cursor is currently inside a narration range. */
   isNarrating: () => boolean;
   /** Set the text programmatically (for restoring on error). */
@@ -217,8 +217,8 @@ function RichTextInputInner(
       prevItalicRef.current = false;
     },
     focus: () => editor.focus(),
-    toggleNarration: () => {
-      const willBeItalic = !editorState.isItalicActive;
+    toggleNarration: (currentActive?: boolean) => {
+      const willBeItalic = currentActive !== undefined ? !currentActive : !editorState.isItalicActive;
       // Suppress bridge state sync while the WebView processes focus + toggle
       suppressItalicSyncRef.current = true;
       editor.focus();
