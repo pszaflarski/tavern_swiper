@@ -137,6 +137,26 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  appleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    padding: Spacing[4],
+    borderRadius: Radius.full,
+    marginBottom: Spacing[4],
+  },
+  appleIcon: {
+    marginRight: Spacing[2],
+  },
+  appleButtonText: {
+    fontFamily: Fonts.scribe,
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
