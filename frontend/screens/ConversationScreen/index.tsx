@@ -527,11 +527,11 @@ function ConversationScreenInner() {
 
   const handleFormatText = useCallback(() => {
     narrateGuardRef.current = true;
-    const result = richInputRef.current?.toggleNarration();
+    const result = richInputRef.current?.toggleNarration(isNarratingActive);
     setIsNarratingActive(result ?? false);
     // Keep the guard up for 1 second while the WebView settles
     setTimeout(() => { narrateGuardRef.current = false; }, 1000);
-  }, []);
+  }, [isNarratingActive]);
 
   const handleTextChange = useCallback((text: string) => {
     setMessageText(text);
