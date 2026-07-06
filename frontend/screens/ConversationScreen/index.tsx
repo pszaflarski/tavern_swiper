@@ -279,6 +279,8 @@ function ConversationScreenInner() {
 
   // Query the profile directly using our useProfile hook (safest fallback!)
   const { data: fetchedProfile, isLoading: isLoadingFetchedProfile } = useProfile(otherProfileId);
+  const { data: activeProfile } = useProfile(activeProfileId);
+  const activeAvatar = activeProfile?.image_urls?.[0];
 
   // Resolve otherProfile dynamically across all active caches (inbox, matches, fallback query)
   const otherProfile = conversation?.otherProfile ||
@@ -947,16 +949,42 @@ function ConversationScreenInner() {
             onNarrationChange={handleNarrationChange}
             testID="message-input"
           />
-          <Pressable 
-            style={({ pressed }) => [
-              styles.sendButton, 
-              pressed && { opacity: 0.7 }
-            ]} 
-            onPress={handleSend}
-            testID="send-button"
-          >
-            <Ionicons name="send" size={20} color={Colors.onPrimary} />
-          </Pressable>
+          <View style={styles.sendControlsContainer}>
+            <Pressable
+              onPress={() => {
+                if (activeProfileId) {
+                  router.push({
+                    pathname: '/profiles/preview',
+                    params: { id: activeProfileId }
+                  } as any);
+                }
+              }}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              testID="sender-profile-button"
+            >
+              {activeAvatar ? (
+                <Image source={{ uri: activeAvatar }} style={styles.senderAvatar} />
+              ) : (
+                <View style={[styles.senderAvatar, { justifyContent: 'center', alignItems: 'center' }]}>
+                  <Ionicons name="person" size={16} color={Colors.outline} />
+                </View>
+              )}
+            </Pressable>
+            <Pressable 
+              style={({ pressed }) => [
+                styles.sendButton, 
+                pressed && { opacity: 0.7 }
+              ]} 
+              onPress={handleSend}
+              testID="send-button"
+            >
+              <Ionicons 
+                name="send" 
+                size={22} 
+                color={messageText !== '' ? Colors.primaryFixed : Colors.outline} 
+              />
+            </Pressable>
+          </View>
         </View>
       </Animated.View>
 

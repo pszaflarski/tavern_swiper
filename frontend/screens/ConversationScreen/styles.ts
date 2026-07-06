@@ -166,17 +166,26 @@ export const styles = StyleSheet.create({
 
 
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: Spacing[2],
   },
-  sendButtonDisabled: {
-    backgroundColor: Colors.surfaceVariant,
-    opacity: 0.5,
+  sendControlsContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 100,
+    marginLeft: Spacing[2],
+    width: 48,
+  },
+  senderAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
   },
   loadingText: {
     fontFamily: Fonts.scribe,
