@@ -115,6 +115,7 @@ cloudbuild.yaml      # Cloud Build pipeline (test → build → push → deploy)
 - **Env Vars**: Must be accessed as static literals: `process.env.EXPO_PUBLIC_X` (dynamic access silently fails in Expo web builds)
 - **Design System**: Use Stitch tokens from `frontend/theme/tokens.ts`
 - **State**: React Query for server state, Context API for UI state
+- **Proguard Rules (Android Release Builds)**: Release builds use Proguard class shrinking and obfuscation. Libraries using WebView bridges, native interfaces, or reflection (like `com.tentap`) will break if their classes are stripped. Always ensure necessary packages are preserved by appending `-keep class <package>.** { *; }` and `-dontwarn <package>.**` rules to `extraProguardRules` in `frontend/app.json`.
 
 ## Quick Reference
 
