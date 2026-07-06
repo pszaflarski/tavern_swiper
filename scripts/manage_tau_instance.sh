@@ -17,7 +17,7 @@ ZONE="${ZONE:-northamerica-northeast2-b}"
 INSTANCE_NAME="${INSTANCE_NAME:-tau-ephemeral-instance}"
 GCS_BUCKET_PATH="${GCS_BUCKET_PATH:-gs://tavern-swiper-vm-backups}"
 MACHINE_TYPE="${MACHINE_TYPE:-n2-highmem-8}"
-BOOT_DISK_SIZE="${BOOT_DISK_SIZE:-50GB}"
+BOOT_DISK_SIZE="${BOOT_DISK_SIZE:-100GB}"
 EXPORT_ZONE="${EXPORT_ZONE:-northamerica-northeast2-b}"
 
 # ------------------------------------------------------------------------------
