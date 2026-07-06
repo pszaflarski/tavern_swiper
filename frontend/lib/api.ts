@@ -77,12 +77,12 @@ export function waitForAuth(): Promise<void> {
 /**
  * Real Token Provider — fetches the current user's ID token from Firebase.
  */
-export async function getIdToken(): Promise<string | null> {
+export async function getIdToken(forceRefresh: boolean = false): Promise<string | null> {
   try {
     await waitForAuth();
     const user = auth.currentUser;
     if (!user) return null;
-    return await user.getIdToken();
+    return await user.getIdToken(forceRefresh);
   } catch (error) {
     console.error('Error fetching ID token:', error);
     return null;
@@ -190,7 +190,7 @@ async function forceRefreshTavernToken(): Promise<string | null> {
   tokenExpiryTime = 0;
   pendingTokenExchange = null;
   
-  return getTavernToken();
+  return getTavernToken(true);
 }
 
 /**
@@ -217,7 +217,7 @@ function persistTokenState(token: string, expiryMs: number, uid: string) {
  * 3. Exchange Firebase ID token for a new Tavern JWT
  * 4. Schedule proactive refresh before the new token expires
  */
-export async function getTavernToken(): Promise<string | null> {
+export async function getTavernToken(forceRefresh: boolean = false): Promise<string | null> {
   const now = Date.now();
   const currentUid = auth.currentUser?.uid ?? null;
   
@@ -225,12 +225,12 @@ export async function getTavernToken(): Promise<string | null> {
   const EXPIRY_BUFFER_MS = 60_000;
   
   // 1. Check in-memory cache (must match current user and not be expiring soon)
-  if (cachedTavernToken && now < tokenExpiryTime - EXPIRY_BUFFER_MS && cachedTokenUid === currentUid) {
+  if (!forceRefresh && cachedTavernToken && now < tokenExpiryTime - EXPIRY_BUFFER_MS && cachedTokenUid === currentUid) {
     return cachedTavernToken;
   }
 
   // 2. Check persistent storage if in-memory is empty (e.g. after reload)
-  if (!cachedTavernToken) {
+  if (!forceRefresh && !cachedTavernToken) {
     try {
       const storedToken = await AsyncStorage.getItem(TAVERN_TOKEN_KEY);
       const storedExpiry = await AsyncStorage.getItem(TAVERN_TOKEN_EXPIRY);
@@ -258,7 +258,7 @@ export async function getTavernToken(): Promise<string | null> {
   // 4. Exchange Firebase token for a Tavern token
   pendingTokenExchange = (async () => {
     try {
-      const firebaseToken = await getIdToken();
+      const firebaseToken = await getIdToken(forceRefresh);
       if (!firebaseToken) {
         console.log('[Auth] No Firebase token available for exchange.');
         return null;

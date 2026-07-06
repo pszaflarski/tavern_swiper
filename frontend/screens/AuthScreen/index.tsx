@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
 import { useUser } from '../../hooks/useUser';
 import { usersApi } from '../../lib/api';
 import { signInWithGoogle, statusCodes } from '../../lib/googleAuth';
+import { signInWithApple, isAppleSignInAvailable } from '../../lib/appleAuth';
 
 import { useRouter, Redirect } from 'expo-router';
 
@@ -31,6 +32,16 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    isAppleSignInAvailable()
+      .then(setIsAppleAvailable)
+      .catch((err) => {
+        console.warn('[AuthScreen] Apple Sign-In availability check failed:', err);
+        setIsAppleAvailable(false);
+      });
+  }, []);
 
   if (authLoading) {
     return <DiceLoadingScreen />;
@@ -126,6 +137,28 @@ export default function AuthScreen() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await signInWithApple();
+      // Navigation is handled by the useEffect/isAuthenticated check
+    } catch (error: any) {
+      console.error('Apple Sign-In error:', error);
+      
+      let errorMessage = `Apple sign-in failed: ${error.message || 'unknown error'}`;
+      if (error.message?.includes('auth/account-exists-with-different-credential')) {
+        errorMessage = 'An account already exists with this email. Please sign in with your password first.';
+      } else if (error.message?.includes('Canceled') || error.message?.includes('cancel')) {
+        errorMessage = 'Sign-in cancelled.';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -153,6 +186,21 @@ export default function AuthScreen() {
           <Ionicons name="logo-google" size={20} color={Colors.primary} style={styles.googleIcon} />
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </Pressable>
+
+        {isAppleAvailable && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.appleButton,
+              (loading || pressed) && styles.buttonDisabled
+            ]}
+            onPress={handleAppleSignIn}
+            disabled={loading}
+            testID="auth-apple-button"
+          >
+            <Ionicons name="logo-apple" size={20} color="#000000" style={styles.appleIcon} />
+            <Text style={styles.appleButtonText}>Continue with Apple</Text>
+          </Pressable>
+        )}
 
         <View style={styles.dividerContainer}>
           <View style={styles.divider} />
