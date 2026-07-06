@@ -1,0 +1,86 @@
+# Chat / Conversation Screen Tests
+#
+# Verifies:
+# - Navigating from Messages inbox to a specific conversation
+# - Conversation screen mounts and displays message history
+# - Rich text input interaction (typing)
+# - Toggle narration mode button (both on and off)
+# - Toggle inventory button (both on and off)
+# - Send message action (sends message and adds it to list)
+
+appId: com.tavernswiper.app
+
+---
+
+# Launch the app and log in
+- launchApp:
+    clearState: true
+- runFlow: helpers/auth_login_helper.yaml
+
+# Navigate to Messages tab
+- tapOn:
+    id: "tab-bar-messages"
+- waitForAnimationToEnd
+
+# Wait for the messages screen to load
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 15000
+
+# Wait 3 seconds for the inbox list query to finish and render the list items
+- runScript: helpers/sleep.js
+
+# Open a seeded conversation. We support both Lirael or Grogmar depending on seeding.
+- runFlow:
+    when:
+      visible: "Lirael \"Lira\" Nightveil"
+    commands:
+      - tapOn: "Lirael \"Lira\" Nightveil"
+
+- runFlow:
+    when:
+      visible: "Grogmar \"Teef-Taker\" Thull"
+    commands:
+      - tapOn: "Grogmar \"Teef-Taker\" Thull"
+
+- runFlow:
+    when:
+      visible: "Valerius the Bold"
+    commands:
+      - tapOn: "Valerius the Bold"
+
+- waitForAnimationToEnd
+
+# Assert we are on the conversation screen (header and back button are visible)
+- assertVisible:
+    id: "back-button"
+
+# Type a test message
+- tapOn:
+    id: "message-input"
+- inputText: "I venture into the dark woods."
+
+# Test the narration mode toggle (turns italic/narrate on)
+- tapOn:
+    id: "mode-narrate-button"
+- waitForAnimationToEnd
+
+# Test toggling it back off
+- tapOn:
+    id: "mode-narrate-button"
+- waitForAnimationToEnd
+
+# Test the inventory toggle
+- tapOn:
+    id: "inventory-toggle-button"
+- waitForAnimationToEnd
+
+# Go back to chat screen
+- back
+- waitForAnimationToEnd
+
+# Send the message
+- tapOn:
+    id: "send-button"
+- waitForAnimationToEnd

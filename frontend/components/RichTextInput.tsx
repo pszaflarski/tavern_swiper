@@ -36,7 +36,7 @@ export interface RichTextInputRef {
   /** Focus the input. */
   focus: () => void;
   /** Toggle narration on the current selection or at cursor. Returns new isNarrating state. */
-  toggleNarration: () => boolean;
+  toggleNarration: (currentActive?: boolean) => boolean;
   /** Returns whether the cursor is currently inside a narration range. */
   isNarrating: () => boolean;
   /** Set the text programmatically (for restoring on error). */
@@ -108,10 +108,23 @@ function RichTextInputInner(
   const { placeholder, maxLength, onChangeText, onSubmit, onNarrationChange, testID } = props;
 
   const containerRef = useRef<any>(null);
+  const prevEmptyRef = useRef(true);
 
   const editor = useEditorBridge({
     autofocus: false,
     avoidIosKeyboard: true,
+    onChange: async () => {
+      try {
+        const html = await editor.getHTML();
+        const isEmpty = !html || html === '<p></p>' || html.replace(/<[^>]*>/g, '').trim() === '';
+        if (isEmpty !== prevEmptyRef.current) {
+          prevEmptyRef.current = isEmpty;
+          onChangeText?.(isEmpty ? '' : ' ');
+        }
+      } catch (err) {
+        console.warn('Failed to query editor content:', err);
+      }
+    },
     bridgeExtensions: [
       CoreBridge,
       ItalicBridge,
@@ -124,20 +137,6 @@ function RichTextInputInner(
   });
 
   const editorState = useBridgeState(editor);
-
-  // Use the push-based editorState.empty to notify parent of content changes.
-  // This is reliable because bridge state subscriptions work (proven by isItalicActive).
-  // We avoid async getText() queries on every keystroke — those fail silently on Web.
-  const prevEmptyRef = useRef(true);
-  useEffect(() => {
-    const isEmpty = (editorState as any).empty ?? true;
-    if (isEmpty !== prevEmptyRef.current) {
-      prevEmptyRef.current = isEmpty;
-      // Send a non-empty sentinel when the editor has content, empty string when empty.
-      // The parent uses this to enable/disable the send button.
-      onChangeText?.(isEmpty ? '' : ' ');
-    }
-  }, [(editorState as any).empty, onChangeText]);
 
   // Notify parent when italic state changes (from editor-initiated actions like Ctrl+I).
   // Programmatic toggles (via the Narrate button) suppress bridge sync briefly to avoid
@@ -217,8 +216,8 @@ function RichTextInputInner(
       prevItalicRef.current = false;
     },
     focus: () => editor.focus(),
-    toggleNarration: () => {
-      const willBeItalic = !editorState.isItalicActive;
+    toggleNarration: (currentActive?: boolean) => {
+      const willBeItalic = currentActive !== undefined ? !currentActive : !editorState.isItalicActive;
       // Suppress bridge state sync while the WebView processes focus + toggle
       suppressItalicSyncRef.current = true;
       editor.focus();
