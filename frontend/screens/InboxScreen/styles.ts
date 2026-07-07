@@ -85,6 +85,17 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
   },
+  newMatchAddButton: {
+    width: '100%',
+    height: 100,
+    aspectRatio: 9 / 16,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   newMatchName: {
     fontFamily: Fonts.scribe,
     fontSize: 12,

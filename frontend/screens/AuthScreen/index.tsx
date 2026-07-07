@@ -174,33 +174,39 @@ export default function AuthScreen() {
             : 'Join the ranks of heroes seeking companionship.'}
         </Text>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.googleButton,
-            (loading || pressed) && styles.buttonDisabled
-          ]}
-          onPress={handleGoogleSignIn}
-          disabled={loading}
-          testID="auth-google-button"
-        >
-          <Ionicons name="logo-google" size={20} color={Colors.primary} style={styles.googleIcon} />
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
-        </Pressable>
-
-        {isAppleAvailable && (
+        <View style={isAppleAvailable ? styles.socialButtonsRow : null}>
           <Pressable
             style={({ pressed }) => [
-              styles.appleButton,
+              isAppleAvailable ? styles.googleButtonHalf : styles.googleButton,
               (loading || pressed) && styles.buttonDisabled
             ]}
-            onPress={handleAppleSignIn}
+            onPress={handleGoogleSignIn}
             disabled={loading}
-            testID="auth-apple-button"
+            testID="auth-google-button"
           >
-            <Ionicons name="logo-apple" size={20} color="#000000" style={styles.appleIcon} />
-            <Text style={styles.appleButtonText}>Continue with Apple</Text>
+            <Ionicons name="logo-google" size={20} color="#000000" style={styles.googleIcon} />
+            <Text style={[styles.googleButtonText, isAppleAvailable && { fontSize: 14 }]}>
+              {isAppleAvailable ? 'Google' : 'Continue with Google'}
+            </Text>
           </Pressable>
-        )}
+
+          {isAppleAvailable && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.appleButtonHalf,
+                (loading || pressed) && styles.buttonDisabled
+              ]}
+              onPress={handleAppleSignIn}
+              disabled={loading}
+              testID="auth-apple-button"
+            >
+              <Ionicons name="logo-apple" size={20} color="#000000" style={styles.appleIcon} />
+              <Text style={[styles.appleButtonText, isAppleAvailable && { fontSize: 14 }]}>
+                Apple
+              </Text>
+            </Pressable>
+          )}
+        </View>
 
         <View style={styles.dividerContainer}>
           <View style={styles.divider} />

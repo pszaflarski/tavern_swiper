@@ -2,7 +2,7 @@
   "expo": {
     "name": "tavern-swiper",
     "slug": "tavern-swiper",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "tavernswiper",
@@ -24,6 +24,7 @@
     },
     "android": {
       "package": "com.tavernswiper.app",
+      "versionCode": 2,
       "permissions": ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
