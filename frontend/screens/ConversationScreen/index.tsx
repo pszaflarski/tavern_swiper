@@ -707,7 +707,6 @@ function ConversationScreenInner() {
                 )}
                 <View>
                   <Text style={styles.headerName}>{displayName}</Text>
-                  <Text style={styles.headerStatus}>Online in the tavern</Text>
                 </View>
               </Pressable>
             </View>

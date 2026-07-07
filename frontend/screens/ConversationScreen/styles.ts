@@ -33,13 +33,6 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.onSurface,
   },
-  headerStatus: {
-    fontFamily: Fonts.scribe,
-    fontSize: 10,
-    color: Colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   messageList: {
     padding: Spacing[4],
   },

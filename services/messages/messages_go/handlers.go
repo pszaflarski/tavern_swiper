@@ -104,24 +104,37 @@ func handleCreateConversation(c *gin.Context) {
 		return
 	}
 
+	convType := body.Type
+	if convType == "" {
+		convType = "direct"
+	}
+
+	if convType != "direct" && convType != "group" {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": "Invalid conversation type (must be 'direct' or 'group')"})
+		return
+	}
+
 	// 1. Unique check and participant count enforcement
 	uniqueMap := make(map[string]bool)
 	for _, pid := range body.ParticipantProfileIDs {
 		uniqueMap[strings.TrimSpace(pid)] = true
 	}
 
-	if len(uniqueMap) != 2 {
+	if convType == "direct" && len(uniqueMap) != 2 {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": "Conversation must have exactly 2 unique participants"})
 		return
 	}
+	if convType == "group" && len(uniqueMap) < 2 {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"detail": "Group conversation must have at least 2 unique participants"})
+		return
+	}
 
-	// 2. Sort and Join
+	// 2. Sort
 	pids := make([]string, 0, len(uniqueMap))
 	for pid := range uniqueMap {
 		pids = append(pids, pid)
 	}
 	sort.Strings(pids)
-	participantsKey := strings.Join(pids, "_")
 
 	// Authorization: verify caller owns at least one participant profile
 	if !IsAdmin(auth.Role) {
@@ -138,44 +151,39 @@ func handleCreateConversation(c *gin.Context) {
 		}
 	}
 
-	// 3. Atomic dedup via deterministic document ID.
-	// We use a "conversation_dedup" doc keyed by participants_key.
-	// If two requests race, both will try to write the dedup doc, but only
-	// one batch will succeed — the loser re-reads the dedup doc for the
-	// winning conversation_id.
-	dedupRef := client.Collection("conversation_dedup").Doc(participantsKey)
+	if convType == "direct" {
+		participantsKey := strings.Join(pids, "_")
+		dedupRef := client.Collection("conversation_dedup").Doc(participantsKey)
 
-	// Fast path: check the dedup doc — this is the common case for existing conversations.
-	dedupSnap, err := dedupRef.Get(ctx)
-	if err == nil && dedupSnap.Exists() {
-		data := dedupSnap.Data()
-		if existingID, ok := data["conversation_id"].(string); ok {
-			c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
-			return
+		// Fast path: check the dedup doc — this is the common case for existing conversations.
+		dedupSnap, err := dedupRef.Get(ctx)
+		if err == nil && dedupSnap.Exists() {
+			data := dedupSnap.Data()
+			if existingID, ok := data["conversation_id"].(string); ok {
+				c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
+				return
+			}
 		}
-	}
 
-	// Fallback: check the conversations collection directly.
-	// This handles conversations created before the dedup collection existed.
-	legacyIter := client.Collection(COLLECTION_CONVERSATIONS).Where("participants_key", "==", participantsKey).Limit(1).Documents(ctx)
-	legacyDocs, legacyErr := legacyIter.GetAll()
-	if legacyErr == nil && len(legacyDocs) > 0 {
-		legacyData := legacyDocs[0].Data()
-		if existingID, ok := legacyData["id"].(string); ok && existingID != "" {
-			// Backfill the dedup entry so future requests use the fast path
-			dedupRef.Set(ctx, map[string]interface{}{
-				"conversation_id":  existingID,
-				"participants_key": participantsKey,
-				"created_at":       firestore.ServerTimestamp,
-			})
-			log.Printf("[INFO] Backfilled dedup entry for legacy conversation %s", existingID)
-			c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
-			return
+		// Fallback: check the conversations collection directly.
+		legacyIter := client.Collection(COLLECTION_CONVERSATIONS).Where("participants_key", "==", participantsKey).Limit(1).Documents(ctx)
+		legacyDocs, legacyErr := legacyIter.GetAll()
+		if legacyErr == nil && len(legacyDocs) > 0 {
+			legacyData := legacyDocs[0].Data()
+			if existingID, ok := legacyData["id"].(string); ok && existingID != "" {
+				// Backfill the dedup entry so future requests use the fast path
+				dedupRef.Set(ctx, map[string]interface{}{
+					"conversation_id":  existingID,
+					"participants_key": participantsKey,
+					"created_at":       firestore.ServerTimestamp,
+				})
+				log.Printf("[INFO] Backfilled dedup entry for legacy conversation %s", existingID)
+				c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
+				return
+			}
 		}
-	}
 
-	// 4. Verification step (check match cache for 1-on-1 chats)
-	if len(pids) == 2 {
+		// Match verification step (check match cache for 1-on-1 chats)
 		matchID := fmt.Sprintf("match_%s_%s", pids[0], pids[1])
 		matchDoc, err := client.Collection(COLLECTION_CACHE).Doc(matchID).Get(ctx)
 		if err != nil || !matchDoc.Exists() {
@@ -184,67 +192,101 @@ func handleCreateConversation(c *gin.Context) {
 			return
 		}
 		log.Printf("[INFO] Match found: %s", matchID)
-	}
 
-	// 5. Create conversation + dedup doc in a batch.
-	// If the dedup doc already exists from a concurrent request, the batch
-	// fails and we fall through to read the winner's conversation_id.
-	convID := uuid.New().String()
-	convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
-	batch := client.Batch()
+		convID := uuid.New().String()
+		convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
+		batch := client.Batch()
 
-	batch.Set(convRef, map[string]interface{}{
-		"id":                     convID,
-		"participants_key":       participantsKey,
-		"participant_ids":        pids,
-		"created_by":             body.ParticipantProfileIDs[0],
-		"created_at":             firestore.ServerTimestamp,
-		"updated_at":             firestore.ServerTimestamp,
-		"last_message_id":        "",
-		"last_message_text":      "",
-		"last_message_sent_at":   nil,
-		"last_message_sender_id": "",
-		"last_message_type":      "",
-	})
-
-	// Write the dedup doc — keyed by participants_key so it's deterministic.
-	// Using Create (not Set) so that if a concurrent request already wrote
-	// the dedup doc, this batch fails atomically.
-	batch.Create(dedupRef, map[string]interface{}{
-		"conversation_id":  convID,
-		"participants_key": participantsKey,
-		"created_at":       firestore.ServerTimestamp,
-	})
-
-	// Create ProfileConversation mappings
-	for _, pid := range pids {
-		pcID := fmt.Sprintf("%s_%s", pid, convID)
-		batch.Set(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), map[string]interface{}{
-			"profile_id":      pid,
-			"conversation_id": convID,
-			"role":            "participant",
-			"updated_at":      firestore.ServerTimestamp,
+		batch.Set(convRef, map[string]interface{}{
+			"id":                     convID,
+			"type":                   "direct",
+			"participants_key":       participantsKey,
+			"participant_ids":        pids,
+			"created_by":             body.ParticipantProfileIDs[0],
+			"created_at":             firestore.ServerTimestamp,
+			"updated_at":             firestore.ServerTimestamp,
+			"last_message_id":        "",
+			"last_message_text":      "",
+			"last_message_sent_at":   nil,
+			"last_message_sender_id": "",
+			"last_message_type":      "",
 		})
-	}
 
-	if _, err := batch.Commit(ctx); err != nil {
-		// Batch failed — likely a concurrent write to the dedup doc.
-		// Re-read the dedup doc to get the winning conversation_id.
-		dedupSnap, readErr := dedupRef.Get(ctx)
-		if readErr == nil && dedupSnap.Exists() {
-			data := dedupSnap.Data()
-			if existingID, ok := data["conversation_id"].(string); ok {
-				log.Printf("[INFO] Conversation creation race resolved — returning existing %s", existingID)
-				c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
-				return
-			}
+		batch.Create(dedupRef, map[string]interface{}{
+			"conversation_id":  convID,
+			"participants_key": participantsKey,
+			"created_at":       firestore.ServerTimestamp,
+		})
+
+		// Create ProfileConversation mappings
+		for _, pid := range pids {
+			pcID := fmt.Sprintf("%s_%s", pid, convID)
+			batch.Set(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), map[string]interface{}{
+				"profile_id":      pid,
+				"conversation_id": convID,
+				"role":            "participant",
+				"updated_at":      firestore.ServerTimestamp,
+			})
 		}
-		log.Printf("[ERROR] Failed to commit conversation batch: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to create conversation"})
-		return
-	}
 
-	c.JSON(http.StatusCreated, gin.H{"conversation_id": convID})
+		if _, err := batch.Commit(ctx); err != nil {
+			dedupSnap, readErr := dedupRef.Get(ctx)
+			if readErr == nil && dedupSnap.Exists() {
+				data := dedupSnap.Data()
+				if existingID, ok := data["conversation_id"].(string); ok {
+					log.Printf("[INFO] Conversation creation race resolved — returning existing %s", existingID)
+					c.JSON(http.StatusOK, gin.H{"conversation_id": existingID})
+					return
+				}
+			}
+			log.Printf("[ERROR] Failed to commit conversation batch: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to create conversation"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"conversation_id": convID})
+	} else {
+		// Group conversation creation
+		convID := uuid.New().String()
+		convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
+		batch := client.Batch()
+
+		batch.Set(convRef, map[string]interface{}{
+			"id":                     convID,
+			"type":                   "group",
+			"name":                   body.Name,
+			"image_url":              body.ImageURL,
+			"participants_key":       "",
+			"participant_ids":        pids,
+			"created_by":             body.ParticipantProfileIDs[0],
+			"created_at":             firestore.ServerTimestamp,
+			"updated_at":             firestore.ServerTimestamp,
+			"last_message_id":        "",
+			"last_message_text":      "",
+			"last_message_sent_at":   nil,
+			"last_message_sender_id": "",
+			"last_message_type":      "",
+		})
+
+		// Create ProfileConversation mappings
+		for _, pid := range pids {
+			pcID := fmt.Sprintf("%s_%s", pid, convID)
+			batch.Set(client.Collection(COLLECTION_PROFILE_CONVERSATIONS).Doc(pcID), map[string]interface{}{
+				"profile_id":      pid,
+				"conversation_id": convID,
+				"role":            "participant",
+				"updated_at":      firestore.ServerTimestamp,
+			})
+		}
+
+		if _, err := batch.Commit(ctx); err != nil {
+			log.Printf("[ERROR] Failed to commit conversation batch: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"detail": "Failed to create conversation"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"conversation_id": convID})
+	}
 }
 
 // handleSendMessage godoc
@@ -704,8 +746,24 @@ func handleGetConversation(c *gin.Context) {
 		}
 	}
 
+	convType, _ := d["type"].(string)
+	if convType == "" {
+		convType = "direct"
+	}
+	var nameVal *string
+	if name, ok := d["name"].(string); ok && name != "" {
+		nameVal = &name
+	}
+	var imageUrlVal *string
+	if imageUrl, ok := d["image_url"].(string); ok && imageUrl != "" {
+		imageUrlVal = &imageUrl
+	}
+
 	c.JSON(http.StatusOK, ConversationOut{
 		ID:             convID,
+		Type:           convType,
+		Name:           nameVal,
+		ImageURL:       imageUrlVal,
 		ParticipantIDs: pids,
 		LastMessage:    lastMsg,
 		CreatedAt:      &createdAt,
@@ -818,19 +876,38 @@ func handleListConversations(c *gin.Context) {
 
 		pids := parseStringSlice(d["participant_ids"])
 
+		convType, _ := d["type"].(string)
+		if convType == "" {
+			convType = "direct"
+		}
+
 		var otherID *string
-		for _, pid := range pids {
-			if pid != profileID {
-				val := pid
-				otherID = &val
-				break
+		if convType == "direct" {
+			for _, pid := range pids {
+				if pid != profileID {
+					val := pid
+					otherID = &val
+					break
+				}
 			}
+		}
+
+		var nameVal *string
+		if name, ok := d["name"].(string); ok && name != "" {
+			nameVal = &name
+		}
+		var imageUrlVal *string
+		if imageUrl, ok := d["image_url"].(string); ok && imageUrl != "" {
+			imageUrlVal = &imageUrl
 		}
 
 		convID := convDoc.ID()
 
 		results = append(results, ConversationOut{
 			ID:             convID,
+			Type:           convType,
+			Name:           nameVal,
+			ImageURL:       imageUrlVal,
 			ParticipantIDs: pids,
 			OtherProfileID: otherID,
 			LastMessage:    lastMsg,
