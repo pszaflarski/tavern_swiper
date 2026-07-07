@@ -165,8 +165,8 @@ describe('Messages Screen', () => {
       refetch: jest.fn(),
     });
 
-    const { getByText } = render(<MessagesScreen />);
-    expect(getByText('The stars reflect no new paths today.')).toBeTruthy();
+    const { getByText, getByTestId } = render(<MessagesScreen />);
+    expect(getByTestId('new-conversation-button')).toBeTruthy();
     expect(getByText('Silence reigns in the tavern.')).toBeTruthy();
   });
 

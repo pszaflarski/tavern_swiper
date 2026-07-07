@@ -8,12 +8,15 @@ import { useUser } from '../../hooks/useUser';
 import { useInvolvedMatches, UnifiedMatch, UnifiedConversation } from '../../hooks/useMessages';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import ScreenHeader from '../../components/ScreenHeader';
 import ScreenErrorBoundary from '../../components/ScreenErrorBoundary';
 import DiceLoadingScreen from '../../components/DiceLoadingScreen';
 import { styles } from './styles';
 import { useUnreadStatus } from '../../hooks/useUnreadStatus';
 import { getMessagePreview } from '../../lib/messageParser';
+
+type NewMatchesListItem = UnifiedMatch | { id: string; isAddButton: boolean };
 
 // ─── Module-level memoized components ────────────────────────────────
 
@@ -224,6 +227,18 @@ function MessagesScreenInner() {
     router.push(`/messages/${convoId}`);
   }, [router]);
 
+  const handleNewConversationPress = useCallback(() => {
+    Toast.show({
+      type: 'info',
+      text1: 'Gather Party',
+      text2: 'Group chats are currently locked behind a mystical gate.',
+    });
+  }, []);
+
+  const newMatchesData = useMemo(() => {
+    return [{ id: 'add-convo-btn', isAddButton: true }, ...(newMatches || [])];
+  }, [newMatches]);
+
   // ─── Main FlatList callbacks (stable references) ──────────────────
 
   const keyExtractor = useCallback((item: UnifiedConversation) => item.id, []);
@@ -269,15 +284,29 @@ function MessagesScreenInner() {
     [],
   );
 
-  // ─── New Matches FlatList callbacks ────────────────────────────────
-
-  const keyExtractorNewMatch = useCallback((item: UnifiedMatch) => item.id, []);
+  const keyExtractorNewMatch = useCallback((item: NewMatchesListItem) => item.id, []);
 
   const renderNewMatchItem = useCallback(
-    ({ item }: { item: UnifiedMatch }) => (
-      <NewMatchItem match={item} onPress={handleMatchPress} />
-    ),
-    [handleMatchPress],
+    ({ item }: { item: NewMatchesListItem }) => {
+      if ('isAddButton' in item && item.isAddButton) {
+        return (
+          <Pressable
+            testID="new-conversation-button"
+            style={({ pressed }) => [styles.newMatchItem, pressed && pressedOpacity07]}
+            onPress={handleNewConversationPress}
+          >
+            <View style={styles.newMatchAddButton}>
+              <Ionicons name="add" size={24} color={Colors.primary} />
+            </View>
+            <Text style={styles.newMatchName} numberOfLines={1}>
+              New
+            </Text>
+          </Pressable>
+        );
+      }
+      return <NewMatchItem match={item as UnifiedMatch} onPress={handleMatchPress} />;
+    },
+    [handleMatchPress, handleNewConversationPress],
   );
 
   const getItemLayoutNewMatch = useCallback(
@@ -322,12 +351,12 @@ function MessagesScreenInner() {
         <>
           {/* New Matches Section */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>New Visions for {selectedProfile?.display_name || '... '}</Text>
+            <Text style={styles.sectionTitle}>New Matches</Text>
           </View>
           <View style={styles.newMatchesContainer}>
             <FlatList
               horizontal
-              data={newMatches || []}
+              data={newMatchesData}
               renderItem={renderNewMatchItem}
               keyExtractor={keyExtractorNewMatch}
               getItemLayout={getItemLayoutNewMatch}
@@ -354,7 +383,7 @@ function MessagesScreenInner() {
     sortedProfilesForTabs,
     isLoadingContent,
     selectedProfile,
-    newMatches,
+    newMatchesData,
     renderProfileTabItem,
     keyExtractorProfileTab,
     getItemLayoutProfileTab,

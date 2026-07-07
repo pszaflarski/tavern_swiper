@@ -47,6 +47,9 @@ type PaginatedMessagesResponse struct {
 
 type ConversationCreate struct {
 	ParticipantProfileIDs []string `json:"participant_profile_ids" binding:"required,min=2"`
+	Type                  string   `json:"type"`
+	Name                  string   `json:"name,omitempty"`
+	ImageURL              string   `json:"image_url,omitempty"`
 }
 
 type LastMessageInfo struct {
@@ -58,6 +61,9 @@ type LastMessageInfo struct {
 
 type ConversationOut struct {
 	ID              string            `json:"id"`
+	Type            string            `json:"type,omitempty"`
+	Name            *string           `json:"name,omitempty"`
+	ImageURL        *string           `json:"image_url,omitempty"`
 	ParticipantIDs  []string          `json:"participant_ids"`
 	OtherProfileID  *string           `json:"other_profile_id,omitempty"`
 	LastMessage     *LastMessageInfo  `json:"last_message"`
@@ -71,6 +77,9 @@ type ConversationOut struct {
 
 type Conversation struct {
 	ID                  string    `firestore:"id"`
+	Type                string    `firestore:"type"`
+	Name                string    `firestore:"name,omitempty"`
+	ImageURL            string    `firestore:"image_url,omitempty"`
 	ParticipantsKey     string    `firestore:"participants_key"`
 	ParticipantIDs      []string  `firestore:"participant_ids"`
 	CreatedBy           string    `firestore:"created_by"`
