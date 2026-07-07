@@ -2,11 +2,17 @@ basePath: /messages
 definitions:
   main.ConversationCreate:
     properties:
+      image_url:
+        type: string
+      name:
+        type: string
       participant_profile_ids:
         items:
           type: string
         minItems: 2
         type: array
+      type:
+        type: string
     required:
     - participant_profile_ids
     type: object
@@ -16,14 +22,20 @@ definitions:
         type: string
       id:
         type: string
+      image_url:
+        type: string
       last_message:
         $ref: '#/definitions/main.LastMessageInfo'
+      name:
+        type: string
       other_profile_id:
         type: string
       participant_ids:
         items:
           type: string
         type: array
+      type:
+        type: string
       typing:
         additionalProperties:
           type: string

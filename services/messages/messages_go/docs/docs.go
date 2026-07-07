@@ -585,12 +585,21 @@ const docTemplate = `{
                 "participant_profile_ids"
             ],
             "properties": {
+                "image_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
                 "participant_profile_ids": {
                     "type": "array",
                     "minItems": 2,
                     "items": {
                         "type": "string"
                     }
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -603,8 +612,14 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "image_url": {
+                    "type": "string"
+                },
                 "last_message": {
                     "$ref": "#/definitions/main.LastMessageInfo"
+                },
+                "name": {
+                    "type": "string"
                 },
                 "other_profile_id": {
                     "type": "string"
@@ -614,6 +629,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "type": {
+                    "type": "string"
                 },
                 "typing": {
                     "type": "object",
