@@ -184,7 +184,7 @@ export default function AuthScreen() {
             disabled={loading}
             testID="auth-google-button"
           >
-            <Ionicons name="logo-google" size={20} color={Colors.primary} style={styles.googleIcon} />
+            <Ionicons name="logo-google" size={20} color="#000000" style={styles.googleIcon} />
             <Text style={[styles.googleButtonText, isAppleAvailable && { fontSize: 14 }]}>
               {isAppleAvailable ? 'Google' : 'Continue with Google'}
             </Text>

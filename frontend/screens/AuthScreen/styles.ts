@@ -131,7 +131,7 @@ export const styles = StyleSheet.create({
   },
   googleButtonText: {
     fontFamily: Fonts.scribe,
-    color: Colors.primary,
+    color: '#000000',
     fontSize: 16,
     fontWeight: '700',
     textTransform: 'uppercase',
