@@ -5,11 +5,12 @@
  * 
  * Flow:
  * 1. Android app opens this page in a Chrome Custom Tab with ?redirect_uri=tavernswiper://...
- * 2. This page immediately calls Firebase signInWithRedirect(auth, appleProvider)
- * 3. Apple's OAuth consent screen appears
- * 4. After authentication, Firebase redirects back to this page
- * 5. getRedirectResult() extracts the ID token
- * 6. This page redirects to the native app's deep link with the token
+ * 2. This page stores redirect_uri in sessionStorage (survives the OAuth redirect)
+ * 3. Calls Firebase signInWithRedirect(auth, appleProvider)
+ * 4. Apple's OAuth consent screen appears
+ * 5. After authentication, Firebase redirects back to this page
+ * 6. getRedirectResult() extracts the ID token
+ * 7. This page reads redirect_uri from sessionStorage and deep-links back to the native app
  */
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, Platform } from 'react-native';
@@ -21,6 +22,8 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { Colors } from '../theme';
+
+const REDIRECT_URI_KEY = 'apple_auth_redirect_uri';
 
 export default function AppleAuthRedirectScreen() {
   const { redirect_uri } = useLocalSearchParams<{ redirect_uri?: string }>();
@@ -38,6 +41,18 @@ export default function AppleAuthRedirectScreen() {
 
   const handleAppleAuth = async () => {
     try {
+      // If we have a redirect_uri param, persist it before the OAuth redirect wipes it
+      if (redirect_uri && typeof window !== 'undefined') {
+        window.sessionStorage.setItem(REDIRECT_URI_KEY, redirect_uri);
+      }
+
+      // Resolve the redirect URI: prefer the query param, fall back to sessionStorage
+      const resolvedRedirectUri =
+        redirect_uri ||
+        (typeof window !== 'undefined'
+          ? window.sessionStorage.getItem(REDIRECT_URI_KEY)
+          : null);
+
       // Step 1: Check if we're returning from a redirect (post-Apple auth)
       setStatus('Checking for authentication result...');
       const result = await getRedirectResult(auth);
@@ -48,14 +63,19 @@ export default function AppleAuthRedirectScreen() {
         const credential = OAuthProvider.credentialFromResult(result);
         const idToken = credential?.idToken;
 
-        if (idToken && redirect_uri) {
+        // Clean up sessionStorage
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem(REDIRECT_URI_KEY);
+        }
+
+        if (idToken && resolvedRedirectUri) {
           // Redirect back to the native app with the token
-          const targetUrl = `${redirect_uri}?identityToken=${encodeURIComponent(idToken)}`;
+          const targetUrl = `${resolvedRedirectUri}?identityToken=${encodeURIComponent(idToken)}`;
           console.log('[AppleAuthRedirect] Redirecting to native app:', targetUrl);
           window.location.href = targetUrl;
           return;
-        } else if (!redirect_uri) {
-          setError('No redirect URI provided. Cannot return to app.');
+        } else if (!resolvedRedirectUri) {
+          setError('No redirect URI available. Cannot return to app.');
           return;
         } else {
           setError('No ID token received from Apple.');
@@ -64,7 +84,7 @@ export default function AppleAuthRedirectScreen() {
       }
 
       // Step 2: No result yet — initiate the Apple OAuth redirect
-      if (!redirect_uri) {
+      if (!resolvedRedirectUri) {
         setError('No redirect URI provided.');
         return;
       }
