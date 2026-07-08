@@ -26,33 +26,53 @@ export async function signInWithApple(useRedirect?: boolean): Promise<string | n
   }
 
   if (Platform.OS === 'android') {
+    // On Android, there's no native Apple Sign-In SDK.
+    // We open a dedicated web page (/apple-auth-redirect) in a Chrome Custom Tab
+    // that immediately triggers Apple OAuth via Firebase's signInWithRedirect.
+    // After the user authenticates, the web page redirects back to the native app
+    // with the identity token.
     const routerUrl = process.env.EXPO_PUBLIC_ROUTER_URL || '';
     const webAppUrl = routerUrl.replace('router-', 'app-');
     const redirectUri = 'tavernswiper://apple-auth-callback';
-    const authUrl = `${webAppUrl}/auth?redirect_uri=${encodeURIComponent(redirectUri)}&cb=${Date.now()}`;
+    const authUrl = `${webAppUrl}/apple-auth-redirect?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    console.log('[AppleAuth] Opening WebBrowser with URL:', authUrl);
+    console.log('[AppleAuth] Opening Apple auth redirect page:', authUrl);
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
     if (result.type === 'success' && result.url) {
       console.log('[AppleAuth] Redirect success, url:', result.url);
-      
-      const match = result.url.match(/identityToken=([^&]+)/);
-      const identityToken = match ? match[1] : null;
-      
+
+      // Extract the identity token from the callback URL
+      const url = new URL(result.url);
+      const identityToken = url.searchParams.get('identityToken');
+
       if (!identityToken) {
-        throw new Error('No identity token received from redirect');
+        throw new Error('No identity token received from Apple.');
       }
 
-      // Build Firebase credential from Apple token
+      // Build Firebase credential from Apple token and sign in
       const provider = new OAuthProvider('apple.com');
       const firebaseCredential = provider.credential({
-        idToken: identityToken,
+        idToken: decodeURIComponent(identityToken),
       });
 
-      // Sign-in
-      await signInWithCredential(auth, firebaseCredential);
-      return identityToken;
+      const userCred = await signInWithCredential(auth, firebaseCredential);
+
+      // Auto-populate display name for new users
+      const isNewUser = getAdditionalUserInfo(userCred)?.isNewUser;
+      if (isNewUser && userCred.user.displayName) {
+        setTimeout(async () => {
+          try {
+            await usersApi.put('/users/me', {
+              full_name: userCred.user.displayName,
+            });
+          } catch (e) {
+            console.warn('[AppleAuth] Failed to set display name:', e);
+          }
+        }, 2000);
+      }
+
+      return decodeURIComponent(identityToken);
     } else {
       throw new Error('Apple Sign-In cancelled or failed');
     }
