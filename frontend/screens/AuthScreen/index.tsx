@@ -20,12 +20,13 @@ import {
 import { useUser } from '../../hooks/useUser';
 import { usersApi } from '../../lib/api';
 import { signInWithGoogle, statusCodes } from '../../lib/googleAuth';
-import { signInWithApple, isAppleSignInAvailable } from '../../lib/appleAuth';
+import { signInWithApple, isAppleSignInAvailable, handleRedirectResult } from '../../lib/appleAuth';
 
-import { useRouter, Redirect } from 'expo-router';
+import { useRouter, Redirect, useLocalSearchParams } from 'expo-router';
 
 export default function AuthScreen() {
   const { isAuthenticated, isLoading: authLoading } = useUser();
+  const { redirect_uri } = useLocalSearchParams<{ redirect_uri?: string }>();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,11 +44,27 @@ export default function AuthScreen() {
       });
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      handleRedirectResult()
+        .then((idToken) => {
+          if (idToken && redirect_uri) {
+            const targetUrl = `${redirect_uri}?identityToken=${idToken}`;
+            console.log('[AuthScreen] Redirect result found, returning to native app:', targetUrl);
+            window.location.href = targetUrl;
+          }
+        })
+        .catch((err) => {
+          console.error('[AuthScreen] Failed to get redirect result:', err);
+        });
+    }
+  }, [redirect_uri]);
+
   if (authLoading) {
     return <DiceLoadingScreen />;
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && !redirect_uri) {
     return <Redirect href="/(tabs)" />;
   }
 
@@ -141,14 +158,20 @@ export default function AuthScreen() {
     setLoading(true);
     setError(null);
     try {
-      await signInWithApple();
+      const idToken = await signInWithApple(!!redirect_uri);
+      if (Platform.OS === 'web' && redirect_uri && idToken) {
+        const targetUrl = `${redirect_uri}?identityToken=${idToken}`;
+        console.log('[AuthScreen] Redirecting back to native app:', targetUrl);
+        window.location.href = targetUrl;
+        return;
+      }
       // Navigation is handled by the useEffect/isAuthenticated check
     } catch (error: any) {
       console.error('Apple Sign-In error:', error);
       
       let errorMessage = `Apple sign-in failed: ${error.message || 'unknown error'}`;
       if (error.message?.includes('auth/account-exists-with-different-credential')) {
-        errorMessage = 'An account already exists with this email. Please sign in with your password first.';
+        errorMessage = 'An account already exists with this email. Please sign in with your password first, then link Apple from settings.';
       } else if (error.message?.includes('Canceled') || error.message?.includes('cancel')) {
         errorMessage = 'Sign-in cancelled.';
       }
@@ -177,15 +200,16 @@ export default function AuthScreen() {
         <View style={isAppleAvailable ? styles.socialButtonsRow : null}>
           <Pressable
             style={({ pressed }) => [
-              isAppleAvailable ? styles.googleButtonHalf : styles.googleButton,
+              styles.socialButton,
+              isAppleAvailable ? styles.socialButtonHalf : styles.socialButtonFull,
               (loading || pressed) && styles.buttonDisabled
             ]}
             onPress={handleGoogleSignIn}
             disabled={loading}
             testID="auth-google-button"
           >
-            <Ionicons name="logo-google" size={20} color="#000000" style={styles.googleIcon} />
-            <Text style={[styles.googleButtonText, isAppleAvailable && { fontSize: 14 }]}>
+            <Ionicons name="logo-google" size={20} color="#000000" style={styles.socialIcon} />
+            <Text style={[styles.socialButtonText, isAppleAvailable && { fontSize: 14 }]}>
               {isAppleAvailable ? 'Google' : 'Continue with Google'}
             </Text>
           </Pressable>
@@ -193,15 +217,16 @@ export default function AuthScreen() {
           {isAppleAvailable && (
             <Pressable
               style={({ pressed }) => [
-                styles.appleButtonHalf,
+                styles.socialButton,
+                styles.socialButtonHalf,
                 (loading || pressed) && styles.buttonDisabled
               ]}
               onPress={handleAppleSignIn}
               disabled={loading}
               testID="auth-apple-button"
             >
-              <Ionicons name="logo-apple" size={20} color="#000000" style={styles.appleIcon} />
-              <Text style={[styles.appleButtonText, isAppleAvailable && { fontSize: 14 }]}>
+              <Ionicons name="logo-apple" size={20} color="#000000" style={styles.socialIcon} />
+              <Text style={[styles.socialButtonText, isAppleAvailable && { fontSize: 14 }]}>
                 Apple
               </Text>
             </Pressable>

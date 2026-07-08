@@ -153,11 +153,13 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === 'auth';
     const inWizard = segments[0] === 'character-wizard';
     const inSharedProfiles = segments[0] === 'shared_profiles';
+    const inAppleAuthRedirect = segments[0] === 'apple-auth-redirect';
+    const inAppleAuthCallback = segments[0] === 'apple-auth-callback';
     const hasGeneratedProfile = profiles?.some(p => p.generated);
 
     console.log('[RootLayoutNav] Auth state changed:', { isAuthenticated, isLoading, segment: segments[0], profileCount: profiles?.length, hasGeneratedProfile });
 
-    if (!isAuthenticated && !inAuthGroup && !inSharedProfiles) {
+    if (!isAuthenticated && !inAuthGroup && !inSharedProfiles && !inAppleAuthRedirect && !inAppleAuthCallback) {
       console.log('[RootLayoutNav] Redirecting to /auth');
       router.replace('/auth');
     } else if (isAuthenticated) {
@@ -191,6 +193,8 @@ function RootLayoutNav() {
         <Stack.Screen name="inventory" options={{ headerShown: false }} />
         <Stack.Screen name="character-wizard" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         <Stack.Screen name="shared_profiles/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="apple-auth-redirect" options={{ headerShown: false }} />
+        <Stack.Screen name="apple-auth-callback" options={{ headerShown: false }} />
       </Stack>
       <SilentErrorBoundary label="MatchSplash">
         <MatchSplash />
