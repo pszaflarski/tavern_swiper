@@ -84,5 +84,12 @@
         "@react-navigation/native"
       ]
     }
-  }
+  },
+  "browserslist": [
+    "chrome >= 80",
+    "safari >= 13.1",
+    "ios >= 13.4",
+    "firefox >= 78",
+    "edge >= 80"
+  ]
 }
