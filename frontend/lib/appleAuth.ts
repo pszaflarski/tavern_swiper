@@ -8,15 +8,54 @@ import {
 import { auth } from './firebase';
 import { usersApi } from './api';
 import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 export async function isAppleSignInAvailable(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
+  if (Platform.OS === 'android') return true;
   return await AppleAuthentication.isAvailableAsync();
 }
 
-export async function signInWithApple(): Promise<void> {
+export async function handleRedirectResult(): Promise<string | null> {
+  return null;
+}
+
+export async function signInWithApple(useRedirect?: boolean): Promise<string | null> {
   if (Platform.OS === 'web') {
     throw new Error('Native Apple Sign-In is not supported on Web.');
+  }
+
+  if (Platform.OS === 'android') {
+    const routerUrl = process.env.EXPO_PUBLIC_ROUTER_URL || '';
+    const webAppUrl = routerUrl.replace('router-', 'app-');
+    const redirectUri = 'tavernswiper://apple-auth-callback';
+    const authUrl = `${webAppUrl}/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+    console.log('[AppleAuth] Opening WebBrowser with URL:', authUrl);
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+    if (result.type === 'success' && result.url) {
+      console.log('[AppleAuth] Redirect success, url:', result.url);
+      
+      const match = result.url.match(/identityToken=([^&]+)/);
+      const identityToken = match ? match[1] : null;
+      
+      if (!identityToken) {
+        throw new Error('No identity token received from redirect');
+      }
+
+      // Build Firebase credential from Apple token
+      const provider = new OAuthProvider('apple.com');
+      const firebaseCredential = provider.credential({
+        idToken: identityToken,
+      });
+
+      // Sign-in
+      await signInWithCredential(auth, firebaseCredential);
+      return identityToken;
+    } else {
+      throw new Error('Apple Sign-In cancelled or failed');
+    }
   }
 
   const isAvailable = await AppleAuthentication.isAvailableAsync();
@@ -83,4 +122,6 @@ export async function signInWithApple(): Promise<void> {
       }
     }, 2000);
   }
+
+  return identityToken;
 }
