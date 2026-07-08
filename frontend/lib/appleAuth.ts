@@ -34,7 +34,7 @@ export async function signInWithApple(useRedirect?: boolean): Promise<string | n
     const routerUrl = process.env.EXPO_PUBLIC_ROUTER_URL || '';
     const webAppUrl = routerUrl.replace('router-', 'app-');
     const redirectUri = 'tavernswiper://apple-auth-callback';
-    const authUrl = `${webAppUrl}/apple-auth-redirect?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const authUrl = `${webAppUrl}/apple-auth-redirect?redirect_uri=${encodeURIComponent(redirectUri)}&cb=${Date.now()}`;
 
     console.log('[AppleAuth] Opening Apple auth redirect page:', authUrl);
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
