@@ -299,10 +299,13 @@ function ProfilesScreenInner() {
   const handleShare = (profileId: string) => {
     shareMutation.mutate(profileId, {
       onSuccess: () => {
-        const origin = Platform.OS === 'web' && typeof window !== 'undefined'
-          ? window.location.origin
-          : 'http://localhost:8081';
-        const shareUrl = `${origin}/shared_profiles/${profileId}`;
+        const frontendUrl = process.env.EXPO_PUBLIC_FRONTEND_URL;
+        if (!frontendUrl) {
+          throw new Error('EXPO_PUBLIC_FRONTEND_URL is not set. Cannot generate share link.');
+        }
+        // Strip trailing slash to avoid double-slash in the URL
+        const baseUrl = frontendUrl.replace(/\/+$/, '');
+        const shareUrl = `${baseUrl}/shared_profiles/${profileId}`;
         
         const Clipboard = require('expo-clipboard');
         Clipboard.setStringAsync(shareUrl).then(() => {
