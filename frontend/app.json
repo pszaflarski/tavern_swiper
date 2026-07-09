@@ -18,14 +18,21 @@
       "bundleIdentifier": "com.tavernswiper.app",
       "entitlements": {
         "com.apple.developer.applesignin": [
+          "Default",
           "Default"
         ]
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.tavernswiper.app",
       "versionCode": 2,
-      "permissions": ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -54,14 +61,17 @@
         "expo-build-properties",
         {
           "android": {
-            "buildArchs": ["arm64-v8a"],
+            "buildArchs": [
+              "arm64-v8a"
+            ],
             "enableProguardInReleaseBuilds": true,
             "shrinkResources": true,
             "extraProguardRules": "-keep class expo.modules.** { *; }\n-keep class * extends expo.modules.kotlin.views.ExpoView { <init>(...); }\n-keep class * extends android.view.View { <init>(android.content.Context, expo.modules.kotlin.AppContext); }\n-keepclassmembers class * { @expo.modules.kotlin.records.Field *; }\n-keep class com.tentap.** { *; }\n-dontwarn com.tentap.**"
           }
         }
       ],
-      "./plugins/withOptimizedGradle"
+      "./plugins/withOptimizedGradle",
+      "./plugins/withGoogleSignInModularHeaders"
     ],
     "experiments": {
       "typedRoutes": true
