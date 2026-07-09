@@ -6,6 +6,7 @@ import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile, useShareProfile, useUnshareProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
+import { getServiceUrl } from '../../lib/api';
 import { useMatch } from '../../context/MatchContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Ionicons } from '@expo/vector-icons';
@@ -298,10 +299,10 @@ function ProfilesScreenInner() {
 
   const handleShare = (profileId: string) => {
     shareMutation.mutate(profileId, {
-      onSuccess: () => {
-        const frontendUrl = process.env.EXPO_PUBLIC_FRONTEND_URL;
+      onSuccess: async () => {
+        const frontendUrl = await getServiceUrl('frontend');
         if (!frontendUrl) {
-          throw new Error('EXPO_PUBLIC_FRONTEND_URL is not set. Cannot generate share link.');
+          throw new Error('Cannot generate share link: frontend URL is not determined.');
         }
         // Strip trailing slash to avoid double-slash in the URL
         const baseUrl = frontendUrl.replace(/\/+$/, '');

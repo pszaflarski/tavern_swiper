@@ -15,7 +15,13 @@ let BASE_URLS: Record<string, string> = {
   quests: '',
   characters: '',
   notifications: '',
+  frontend: '',
 };
+
+export async function getServiceUrl(key: string): Promise<string> {
+  await hydrateServiceUrls();
+  return BASE_URLS[key] || '';
+}
 
 let hydrationPromise: Promise<void> | null = null;
 let hydrated = false;
@@ -447,6 +453,7 @@ export async function __resetInternalState() {
     quests: 'http://localhost:8013',
     characters: 'http://localhost:8012',
     notifications: 'http://localhost:8014',
+    frontend: 'http://localhost:8081',
   };
   try {
     await AsyncStorage.clear();

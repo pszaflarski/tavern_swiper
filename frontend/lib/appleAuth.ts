@@ -6,7 +6,7 @@ import {
   getAdditionalUserInfo,
 } from 'firebase/auth';
 import { auth } from './firebase';
-import { usersApi } from './api';
+import { usersApi, getServiceUrl } from './api';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -31,8 +31,10 @@ export async function signInWithApple(useRedirect?: boolean): Promise<string | n
     // that immediately triggers Apple OAuth via Firebase's signInWithRedirect.
     // After the user authenticates, the web page redirects back to the native app
     // with the identity token.
-    const routerUrl = process.env.EXPO_PUBLIC_ROUTER_URL || '';
-    const webAppUrl = routerUrl.replace('router-', 'app-');
+    const webAppUrl = await getServiceUrl('frontend');
+    if (!webAppUrl) {
+      throw new Error('Could not resolve frontend URL from router.');
+    }
     const redirectUri = 'tavernswiper://apple-auth-callback';
     const authUrl = `${webAppUrl}/apple-auth-redirect?redirect_uri=${encodeURIComponent(redirectUri)}&cb=${Date.now()}`;
 
