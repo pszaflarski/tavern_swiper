@@ -17,18 +17,9 @@ try {
   GoogleSignin = mod.GoogleSignin;
   nativeStatusCodes = mod.statusCodes;
 
-  const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-  if (Platform.OS === 'ios' && !iosClientId) {
-    console.warn('[GoogleAuth] Google Sign-In is not configured on iOS (missing EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID).');
-  } else {
-    const config: any = {
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    };
-    if (Platform.OS === 'ios' && iosClientId) {
-      config.iosClientId = iosClientId;
-    }
-    GoogleSignin.configure(config);
-  }
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
 } catch (e) {
   console.warn('[GoogleAuth] Native Google Sign-In module not available or failed to configure:', e);
 }
