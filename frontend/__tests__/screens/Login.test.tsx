@@ -122,7 +122,7 @@ describe('Login Screen', () => {
   it('renders the Google Sign-In button', () => {
     const { getByTestId, getByText } = render(<AuthScreen />);
     expect(getByTestId('auth-google-button')).toBeTruthy();
-    expect(getByText('Continue with Google')).toBeTruthy();
+    expect(getByText('Google')).toBeTruthy();
   });
 
   it('calls signInWithGoogle when Google button is pressed', async () => {
