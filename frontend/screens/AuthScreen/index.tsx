@@ -6,6 +6,7 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,11 +21,14 @@ import {
 import { useUser } from '../../hooks/useUser';
 import { usersApi } from '../../lib/api';
 import { signInWithGoogle, statusCodes } from '../../lib/googleAuth';
-import { signInWithApple, isAppleSignInAvailable, handleRedirectResult } from '../../lib/appleAuth';
+import { signInWithApple, handleRedirectResult } from '../../lib/appleAuth';
 
 import { useRouter, Redirect, useLocalSearchParams } from 'expo-router';
 
 export default function AuthScreen() {
+  const { width } = useWindowDimensions();
+  const showSocialText = width >= 350;
+  
   const { isAuthenticated, isLoading: authLoading } = useUser();
   const { redirect_uri } = useLocalSearchParams<{ redirect_uri?: string }>();
   const [isLogin, setIsLogin] = useState(true);
@@ -33,16 +37,6 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
-
-  useEffect(() => {
-    isAppleSignInAvailable()
-      .then(setIsAppleAvailable)
-      .catch((err) => {
-        console.warn('[AuthScreen] Apple Sign-In availability check failed:', err);
-        setIsAppleAvailable(false);
-      });
-  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -197,40 +191,60 @@ export default function AuthScreen() {
             : 'Join the ranks of heroes seeking companionship.'}
         </Text>
 
-        <View style={isAppleAvailable ? styles.socialButtonsRow : null}>
+        <View style={styles.socialButtonsRow}>
           <Pressable
             style={({ pressed }) => [
               styles.socialButton,
-              isAppleAvailable ? styles.socialButtonHalf : styles.socialButtonFull,
+              styles.socialButtonHalf,
               (loading || pressed) && styles.buttonDisabled
             ]}
             onPress={handleGoogleSignIn}
             disabled={loading}
             testID="auth-google-button"
           >
-            <Ionicons name="logo-google" size={20} color="#000000" style={styles.socialIcon} />
-            <Text style={[styles.socialButtonText, isAppleAvailable && { fontSize: 14 }]}>
-              {isAppleAvailable ? 'Google' : 'Continue with Google'}
-            </Text>
+            <Ionicons 
+              name="logo-google" 
+              size={20} 
+              color="#000000" 
+              style={[styles.socialIcon, !showSocialText && { marginRight: 0 }]} 
+            />
+            {showSocialText && (
+              <Text 
+                style={[styles.socialButtonText, { fontSize: 14 }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                Google
+              </Text>
+            )}
           </Pressable>
 
-          {isAppleAvailable && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.socialButton,
-                styles.socialButtonHalf,
-                (loading || pressed) && styles.buttonDisabled
-              ]}
-              onPress={handleAppleSignIn}
-              disabled={loading}
-              testID="auth-apple-button"
-            >
-              <Ionicons name="logo-apple" size={20} color="#000000" style={styles.socialIcon} />
-              <Text style={[styles.socialButtonText, isAppleAvailable && { fontSize: 14 }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.socialButton,
+              styles.socialButtonHalf,
+              (loading || pressed) && styles.buttonDisabled
+            ]}
+            onPress={handleAppleSignIn}
+            disabled={loading}
+            testID="auth-apple-button"
+          >
+            <Ionicons 
+              name="logo-apple" 
+              size={20} 
+              color="#000000" 
+              style={[styles.socialIcon, !showSocialText && { marginRight: 0 }]} 
+            />
+            {showSocialText && (
+              <Text 
+                style={[styles.socialButtonText, { fontSize: 14 }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 Apple
               </Text>
-            </Pressable>
-          )}
+            )}
+          </Pressable>
         </View>
 
         <View style={styles.dividerContainer}>

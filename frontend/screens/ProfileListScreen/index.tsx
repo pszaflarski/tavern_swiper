@@ -6,6 +6,7 @@ import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfiles, Profile, useDeleteProfile, useShareProfile, useUnshareProfile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
 import { useProfileContext } from '../../context/ProfileContext';
+import { getServiceUrl } from '../../lib/api';
 import { useMatch } from '../../context/MatchContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Ionicons } from '@expo/vector-icons';
@@ -298,11 +299,14 @@ function ProfilesScreenInner() {
 
   const handleShare = (profileId: string) => {
     shareMutation.mutate(profileId, {
-      onSuccess: () => {
-        const origin = Platform.OS === 'web' && typeof window !== 'undefined'
-          ? window.location.origin
-          : 'http://localhost:8081';
-        const shareUrl = `${origin}/shared_profiles/${profileId}`;
+      onSuccess: async () => {
+        const frontendUrl = await getServiceUrl('frontend');
+        if (!frontendUrl) {
+          throw new Error('Cannot generate share link: frontend URL is not determined.');
+        }
+        // Strip trailing slash to avoid double-slash in the URL
+        const baseUrl = frontendUrl.replace(/\/+$/, '');
+        const shareUrl = `${baseUrl}/shared_profiles/${profileId}`;
         
         const Clipboard = require('expo-clipboard');
         Clipboard.setStringAsync(shareUrl).then(() => {

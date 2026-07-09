@@ -22,7 +22,7 @@ REGION = "us-central1"
 ROOT_EMAIL = os.getenv("ROOT_EMAIL", "root@tavernswiper.com")
 ROOT_PASSWORD = os.getenv("ROOT_PASSWORD", "Password123!")
 
-SERVICES = ["auth", "profiles", "discovery", "messages", "users", "bots", "agent_router", "quests", "characters", "notifications"]
+SERVICES = ["auth", "profiles", "discovery", "messages", "users", "bots", "agent_router", "quests", "characters", "notifications", "frontend"]
 
 def get_service_url(service_name, env="dev"):
     # Check for local overrides first
@@ -40,6 +40,7 @@ def get_service_url(service_name, env="dev"):
             "router": 8010,
             "quests": 8013,
             "notifications": 8014,
+            "frontend": 8081, # local metro port or local web server
         }
         return f"http://127.0.0.1:{ports.get(service_name)}"
 
@@ -47,6 +48,7 @@ def get_service_url(service_name, env="dev"):
     # Some services have a different Cloud Run deploy name than the router key
     deploy_name_map = {
         "agent_router": "agent-router",
+        "frontend": "app",
     }
     base_name = deploy_name_map.get(service_name, service_name)
     env_suffix = ""

@@ -37,6 +37,7 @@ steps:
         }
         {
           echo "export EXPO_PUBLIC_ROUTER_URL=$(get_url router)"
+          echo "export EXPO_PUBLIC_FRONTEND_URL=$(get_url app)"
         } > /workspace/build.env || exit 1
         
         echo "📊 Fetched URLs:"
@@ -52,6 +53,7 @@ steps:
         docker build -t "gcr.io/$PROJECT_ID/app$_ENV_SUFFIX" \
           --platform linux/amd64 \
           --build-arg EXPO_PUBLIC_ROUTER_URL=$$EXPO_PUBLIC_ROUTER_URL \
+          --build-arg EXPO_PUBLIC_FRONTEND_URL=$$EXPO_PUBLIC_FRONTEND_URL \
           --build-arg EXPO_PUBLIC_FIREBASE_API_KEY=$_FIREBASE_API_KEY \
           --build-arg EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=$PROJECT_ID.firebaseapp.com \
           --build-arg EXPO_PUBLIC_FIREBASE_PROJECT_ID=$PROJECT_ID \

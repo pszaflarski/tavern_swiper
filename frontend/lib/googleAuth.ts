@@ -6,6 +6,7 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { usersApi } from './api';
+import { Platform } from 'react-native';
 
 // Lazy-load the native module to avoid crashing in Expo Go
 let GoogleSignin: any = null;
@@ -20,7 +21,7 @@ try {
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 } catch (e) {
-  console.warn('[GoogleAuth] Native Google Sign-In module not available (expected in Expo Go)');
+  console.warn('[GoogleAuth] Native Google Sign-In module not available or failed to configure:', e);
 }
 
 export const statusCodes = nativeStatusCodes;

@@ -146,6 +146,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
+    flexShrink: 1,
   },
   dividerContainer: {
     flexDirection: 'row',
