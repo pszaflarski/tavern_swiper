@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>374390417125-dbu7onhk8etpt737k5j786kfaids7bnb.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.374390417125-dbu7onhk8etpt737k5j786kfaids7bnb</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>374390417125-jkoe9v28g43fhbsfmkkubem0f2ctqlht.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBADR2jaDaMJW7N_luwwjR30pKpOj9pNJA</string>
+	<key>GCM_SENDER_ID</key>
+	<string>374390417125</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.tavernswiper.app</string>
+	<key>PROJECT_ID</key>
+	<string>tavern-swiper-dev</string>
+	<key>STORAGE_BUCKET</key>
+	<string>tavern-swiper-dev.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:374390417125:ios:ec496fc4dca4a29111960c</string>
+</dict>
+</plist>
