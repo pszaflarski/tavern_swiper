@@ -35,6 +35,13 @@ module.exports = ({ config }) => {
         ? './google-services.prod.json'
         : './google-services.dev.json',
     },
+    ios: {
+      ...baseConfig.expo.ios,
+      ...config.ios,
+      googleServicesFile: isProd
+        ? './GoogleService-Info.prod.plist'
+        : './GoogleService-Info.dev.plist',
+    },
     plugins: [
       ...plugins,
       '@react-native-google-signin/google-signin',
