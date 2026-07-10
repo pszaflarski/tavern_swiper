@@ -895,20 +895,20 @@ describe('Conversation Screen', () => {
       expect(mockCreateConversation).toHaveBeenCalled();
     });
 
-    // Assert that 'Elora' was resolved in the header on initial mount
+    // Assert that the profile image was resolved in the header on initial mount
     expect(Stack.Screen).toHaveBeenCalled();
     const initialHeaderLeft = (Stack.Screen as jest.Mock).mock.calls[(Stack.Screen as jest.Mock).mock.calls.length - 1][0].options.headerLeft;
-    const { getByText: getByTextInitial } = render(initialHeaderLeft());
-    expect(getByTextInitial('Elora')).toBeTruthy();
+    const { getByTestId: getByTestIdInitial } = render(initialHeaderLeft());
+    expect(getByTestIdInitial('header-profile-button')).toBeTruthy();
 
     // 2. Simulated route change: component remounts with the new resolved ID
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'convo_resolved' });
 
     render(<ConversationScreen />);
 
-    // Assert that the new component instance still resolves 'Elora' instantly without showing 'Traveler'
+    // Assert that the new component instance still resolves the profile image instantly
     const afterHeaderLeft = (Stack.Screen as jest.Mock).mock.calls[(Stack.Screen as jest.Mock).mock.calls.length - 1][0].options.headerLeft;
-    const { getByText: getByTextAfter } = render(afterHeaderLeft());
-    expect(getByTextAfter('Elora')).toBeTruthy();
+    const { getByTestId: getByTestIdAfter } = render(afterHeaderLeft());
+    expect(getByTestIdAfter('header-profile-button')).toBeTruthy();
   });
 });
