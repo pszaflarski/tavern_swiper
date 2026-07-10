@@ -1,0 +1,2865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tavern Swiper — Characters Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f111a;
+            --bg-secondary: #161925;
+            --bg-tertiary: #1f2336;
+            --border-color: #2e354f;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-gold: #d4af37;
+            --accent-gold-hover: #f3cf58;
+            --glow-gold: rgba(212, 175, 55, 0.2);
+            
+            --status-adopted-bg: rgba(16, 185, 129, 0.1);
+            --status-adopted-text: #34d399;
+            --status-adopted-border: rgba(16, 185, 129, 0.3);
+            
+            --status-pending-bg: rgba(245, 158, 11, 0.1);
+            --status-pending-text: #fbbf24;
+            --status-pending-border: rgba(245, 158, 11, 0.3);
+            
+            --status-legacy-bg: rgba(139, 92, 246, 0.1);
+            --status-legacy-text: #a78bfa;
+            --status-legacy-border: rgba(139, 92, 246, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        header {
+            max-width: 1400px;
+            margin: 0 auto 2rem auto;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+            text-shadow: 0 0 10px var(--glow-gold);
+            letter-spacing: 1px;
+        }
+
+        .header-title p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 0.2rem;
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 100px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.1rem;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .controls-bar {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 8px var(--glow-gold);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background-color: var(--bg-tertiary);
+            padding: 0.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .filter-tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .filter-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .filter-tab.active {
+            background-color: var(--bg-secondary);
+            color: var(--accent-gold);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+
+        .view-toggles {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .view-btn {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .view-btn:hover, .view-btn.active {
+            color: var(--accent-gold);
+            border-color: var(--accent-gold);
+            background-color: var(--bg-secondary);
+        }
+
+        /* CARD VIEW LAYOUT */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .char-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+        }
+
+        .char-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            border-color: rgba(212, 175, 55, 0.4);
+        }
+
+        .char-image-container {
+            position: relative;
+            width: 100%;
+            height: 240px;
+            background-color: var(--bg-tertiary);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .char-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+            cursor: zoom-in;
+        }
+
+        .char-image-container:hover img {
+            transform: scale(1.05);
+        }
+
+        .no-image-placeholder {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+
+        .card-status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border: 1px solid;
+        }
+
+        .badge-adopted {
+            background-color: var(--status-adopted-bg);
+            color: var(--status-adopted-text);
+            border-color: var(--status-adopted-border);
+        }
+
+        .badge-pending {
+            background-color: var(--status-pending-bg);
+            color: var(--status-pending-text);
+            border-color: var(--status-pending-border);
+        }
+
+        .badge-legacy {
+            background-color: var(--status-legacy-bg);
+            color: var(--status-legacy-text);
+            border-color: var(--status-legacy-border);
+        }
+
+        .card-content {
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .char-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .char-tagline {
+            font-style: italic;
+            font-size: 0.88rem;
+            color: var(--accent-gold);
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .char-bio {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .char-tags-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .tag-badge {
+            font-size: 0.72rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .tag-fandom { border-color: rgba(239, 68, 68, 0.3); color: #f87171; }
+        .tag-race { border-color: rgba(59, 130, 246, 0.3); color: #60a5fa; }
+        .tag-gender { border-color: rgba(16, 185, 129, 0.3); color: #34d399; }
+        .tag-class { border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; }
+
+        /* TABLE VIEW LAYOUT */
+        .table-container {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            display: none; /* toggled by JS */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--bg-tertiary);
+            padding: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: rgba(255,255,255,0.02);
+        }
+
+        .table-img-cell {
+            width: 80px;
+        }
+
+        .table-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            object-fit: cover;
+            background-color: var(--bg-tertiary);
+            cursor: zoom-in;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease;
+        }
+
+        .table-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .table-char-title {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .table-char-tagline {
+            font-style: italic;
+            font-size: 0.82rem;
+            color: var(--accent-gold);
+            margin-top: 0.1rem;
+        }
+
+        .table-char-bio {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            max-width: 450px;
+            line-height: 1.4;
+        }
+
+        .table-status-pill {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid;
+            text-align: center;
+        }
+
+        /* MODAL / LIGHTBOX */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(10, 11, 17, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .lightbox.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .lightbox-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lightbox-img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid var(--border-color);
+        }
+
+        .lightbox-caption {
+            margin-top: 1rem;
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            color: var(--accent-gold);
+            text-align: center;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -2.5rem;
+            right: 0;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 2rem;
+            cursor: pointer;
+            outline: none;
+            transition: color 0.2s ease;
+        }
+
+        .lightbox-close:hover {
+            color: var(--accent-gold);
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .stats-container {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .filter-tabs {
+                width: 100%;
+                justify-content: space-around;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>Tavern Swiper</h1>
+            <p>Character Catalog Explorer — Dev Environment</p>
+        </div>
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-legacy" style="color: var(--status-legacy-text);">0</div>
+                <div class="stat-label">Legacy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-adopted" style="color: var(--status-adopted-text);">0</div>
+                <div class="stat-label">Adopted</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-pending" style="color: var(--status-pending-text);">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="controls-bar">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search by name, bio, tagline, tags...">
+            </div>
+            
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="setFilter('all')">All</button>
+                <button class="filter-tab" onclick="setFilter('legacy')">Legacy</button>
+                <button class="filter-tab" onclick="setFilter('adopted')">Adopted</button>
+                <button class="filter-tab" onclick="setFilter('pending')">Pending</button>
+            </div>
+
+            <div class="view-toggles">
+                <button class="view-btn active" id="btn-grid" onclick="setViewMode('grid')">Grid View</button>
+                <button class="view-btn" id="btn-table" onclick="setViewMode('table')">Table View</button>
+            </div>
+        </div>
+
+        <!-- Cards View -->
+        <div class="cards-grid" id="cards-view">
+            <!-- Rendered by JS -->
+        </div>
+
+        <!-- Table View -->
+        <div class="table-container" id="table-view">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="table-img-cell">Image</th>
+                        <th>Name & Tagline</th>
+                        <th>Status</th>
+                        <th>Bio</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Rendered by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <div class="empty-state-icon">🍺</div>
+            <h2>No Characters Found</h2>
+            <p>Try refining your search term or selecting another filter tab.</p>
+        </div>
+
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+            <img class="lightbox-img" id="lightbox-img" src="" alt="Full size character image">
+            <div class="lightbox-caption" id="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <script>
+        // Data injected from Python
+        const characters = [
+  {
+    "character_id": "b2a8f2b9-7b6b-423f-9562-4da4f6924039",
+    "display_name": "Paelon Thorne",
+    "tagline": "Duty is a heavy stone, and I have forgotten how to set it down.",
+    "bio": "I\u2019ve poured ale for heroes and fools alike, but Paelon is a different breed of quiet. He sits in the corner booth, staring at his reflection in a cup of watered-down cider, never touching his food. He claims he\u2019s a holy knight of some forgotten order, though his armor is rusted and lacks any heraldry. He mentions that he only carries his blade because he heard a voice once\u2014during a fever-dream induced by a handful of wild mushrooms in the deep woods\u2014that commanded him to march in a straight line until the stars aligned with his heartbeat. He hasn't stopped marching since, and I don't think he ever will.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "0215d858-a2bc-4144-80e8-baefe4542ada",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/b2a8f2b9-7b6b-423f-9562-4da4f6924039/0215d858-a2bc-4144-80e8-baefe4542ada.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:52:32.081000+00:00"
+  },
+  {
+    "character_id": "087ef102-0ee9-42a1-99d0-cfa0c82aaea0",
+    "display_name": "Wrenka Iron-Tusk",
+    "tagline": "A heavy coin purse says I can get banned from the Paladin\u2019s Plaza before lunch.",
+    "bio": "The sharp tang of ozone from a fizzling fireball. The rhythmic, heavy thud of steel boots against polished marble floors. The lingering aroma of burnt tavern stew and the loud, boisterous sound of breaking porcelain. Wrenka moves with a grin that stretches wide across her olive-toned face, savoring the frantic shouts of guild masters as she proceeds to decorate their pristine halls with heavy debris. She is a cyclone of clumsy joy, relentlessly pursuing the goal of being officially barred from every prestigious organization in the Sword Coast just to secure a hundred-gold wager with a particularly grumpy dwarf.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Orc"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Fighter"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "29666e49-f66c-4fd1-a6b4-6c88209576c6",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/087ef102-0ee9-42a1-99d0-cfa0c82aaea0/29666e49-f66c-4fd1-a6b4-6c88209576c6.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-02T16:53:54.457000+00:00"
+  },
+  {
+    "character_id": "07834af1-7f4c-4e38-9ac8-68501555e1cc",
+    "display_name": "Ignis the Stone Guard",
+    "tagline": "Flesh decays, kingdoms fall, but stone stands eternal.",
+    "bio": "An ancient warrior carved from basalt and animated by golden starlight. He has guarded the desert ruins of Oros for a thousand years. He is calm, stoic, and speaks slowly.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Undead"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "064c3c1f-037c-4497-bea9-a1f6419c2386",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/07834af1-7f4c-4e38-9ac8-68501555e1cc/064c3c1f-037c-4497-bea9-a1f6419c2386.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:33.046000+00:00"
+  },
+  {
+    "character_id": "435f7aee-bcd0-4e13-b836-72e6fc62033e",
+    "display_name": "Talia Wavecrest",
+    "tagline": "You can't catch the wind, but you can swim in the lake all day.",
+    "bio": "An elven swimmer and ranger who loves nothing more than spending hot summer days by the lake. Talia is optimistic, bubbly, and always finds the positive side of any situation.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "5cbd5df8-765a-47c2-afff-2a8a75927416",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/435f7aee-bcd0-4e13-b836-72e6fc62033e/5cbd5df8-765a-47c2-afff-2a8a75927416.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:33.716000+00:00"
+  },
+  {
+    "character_id": "e9a3a10b-e13a-47c3-979d-5bbd2c128a41",
+    "display_name": "Alandra Mooncrest",
+    "tagline": "The moonlight reveals all secrets, and my silver shield guards them.",
+    "bio": "A holy priestess-knight of the Silver Moon Order. Alandra protects the ancient moon shrines from dark defilement. She is quiet, pious, and possesses healing magic alongside her sword skills.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "25334a41-5f1a-45aa-973c-911e556f833f",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/e9a3a10b-e13a-47c3-979d-5bbd2c128a41/25334a41-5f1a-45aa-973c-911e556f833f.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:29.517000+00:00"
+  },
+  {
+    "character_id": "0ed42b6f-1459-460c-bbaa-dac1a01afae0",
+    "display_name": "Arlo Vane",
+    "tagline": "The establishment keeps a tight hold on the loot, but they can't stop me from flushing the system.",
+    "bio": "Between dodging town guards and picking locks on vaults, Arlo keeps a meticulously detailed leather-bound journal tucked inside his vest. While his cohorts argue over gold distribution, he focuses on rating the plumbing, tile-work, and privacy afforded by every high-security dungeon latrine he infiltrates. He views every aristocratic fortress as a personal challenge of comfort; a true punk at heart, he believes the ultimate insurrection starts by leaving behind a vandalized stall in the most opulent of citadels. Arlo never uses his real name, and he certainly never uses a public privy without checking the lock three times.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Rogue"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "eb1d9a17-3e80-415f-b883-af874ced15dc",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/0ed42b6f-1459-460c-bbaa-dac1a01afae0/eb1d9a17-3e80-415f-b883-af874ced15dc.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-27T18:47:56.607000+00:00"
+  },
+  {
+    "character_id": "533e0b1f-bd57-45ba-a8da-42fe6f661cd6",
+    "display_name": "Lilith Starspire",
+    "tagline": "Magic isn't just about spells; it's about style, presence, and a touch of danger.",
+    "bio": "A rogue elven enchantress who graduated top of her class before leaving to practice forbidden shadow magic. Lilith loves high fashion, glowing crystals, and testing new hexes on bandits.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "1dc1014e-3fd8-4c9d-9972-ceacd2d5a3b8",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/533e0b1f-bd57-45ba-a8da-42fe6f661cd6/1dc1014e-3fd8-4c9d-9972-ceacd2d5a3b8.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:22.972000+00:00"
+  },
+  {
+    "character_id": "f7e32110-3011-477b-b14d-809110deba78",
+    "display_name": "Rixie Pumpernickel",
+    "tagline": "If the leviathan has teeth that long, imagine the size of the toothbrush it needs!",
+    "bio": "Books are dusty, but scales are shiny\u2014shiny like the sun caught in a jar, and oh, look at that spell scroll, it smells like blueberries! Why stab the Grick when I can teach it to juggle? If I cast a minor illusion to mimic the sound of a giant cricket, maybe the Mountain Terror will finally stop roaring and start chatting about the view from the peak. My robes are stained with ink and jam, and my pockets are full of lint, but if I find that dragon, I'm bringing a giant comb for its back scales, because surely, just surely, nobody has ever tried tickling a beast to make it behave.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "cf0db827-5fbb-467d-8969-a46918872a8b",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/f7e32110-3011-477b-b14d-809110deba78/cf0db827-5fbb-467d-8969-a46918872a8b.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:13:56.669000+00:00"
+  },
+  {
+    "character_id": "7bee5734-6b69-4dc3-97eb-461d8dfc9b12",
+    "display_name": "Thistlewick Pringle",
+    "tagline": "Smite? No thanks, I'd rather just settle my tab.",
+    "bio": "The metallic tang of poorly maintained chainmail. The deafening, rhythmic clatter of boots on cobblestones that he absolutely hates. The overwhelming stench of damp horses and stale ale clinging to his tabard. Thistlewick spends his days dodging fireballs and hiding his shield behind oversized sacks of flour, praying for the moment he can drop his warhammer, pay the innkeeper his astronomical tab, and retire to a quiet life of extreme pacifism.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "8c2c1d95-0ae1-4ca9-a365-18203e9c1ac1",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/7bee5734-6b69-4dc3-97eb-461d8dfc9b12/8c2c1d95-0ae1-4ca9-a365-18203e9c1ac1.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:53:08.404000+00:00"
+  },
+  {
+    "character_id": "b61b542a-8b77-43ff-9c4a-6a528e86c717",
+    "display_name": "Zylanthia Star-Gazer",
+    "tagline": "The forest hums a melody only the hungry can hear.",
+    "bio": "I trust the colors I saw when the spores took hold; they showed me a path the mapmakers were too dull to draw. Zylanthia spends her days dancing through the high canopy of the Feywild, convinced that the humming sound echoing in her mind is the voice of the world\u2019s true architect. While others hunt for game, she follows the golden glowing trails that only she can perceive, leaping across branches with an infectious, manic joy that unnerves her more stoic companions.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Ranger"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "d5077fe5-8c48-4056-9ef2-bd98646ec0df",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/b61b542a-8b77-43ff-9c4a-6a528e86c717/d5077fe5-8c48-4056-9ef2-bd98646ec0df.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-27T19:09:44.738000+00:00"
+  },
+  {
+    "character_id": "372f2987-e7ea-4450-ae78-e3a3ac76331a",
+    "display_name": "Astrid Valerienne",
+    "tagline": "A crown of gold weighs nothing compared to a life earned in the mud.",
+    "bio": "Street urchins in Waterdeep swear that the tall, silver-armored paladin they call Astrid once had a palace for a bedroom and servants to lace her boots. They whisper that she vanished from the wedding dais mid-vow, leaving a bewildered duke and a kingdom in scandal, only to trade silk slippers for iron-shod greaves. She carries her massive zweih\u00e4nder with a grace that betrays her noble breeding, and while she laughs loudly at the grit of mercenary life, those watching closely see her weeping quietly into her spiced wine whenever someone mentions the scent of royal lilies or the taste of fine velvet.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "f3fa1a4e-2a37-404a-8df2-fc330fd0071b",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/372f2987-e7ea-4450-ae78-e3a3ac76331a/f3fa1a4e-2a37-404a-8df2-fc330fd0071b.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-27T19:09:13.227000+00:00"
+  },
+  {
+    "character_id": "6dcfc2dc-39a6-4e80-9410-95e516fa4925",
+    "display_name": "Kaelithor Sun-Catcher",
+    "tagline": "The dawn does not ask for permission to break the night; nor shall I.",
+    "bio": "Born amidst the amber-hued spires of a forgotten celestial observatory, Kaelithor was not raised in a temple, but under the relentless gaze of the stars. As a Paladin sworn to the Order of the Refracted Light, they carry a shield forged from solidified moonlight. Unlike their brethren who seek to purge evil with fire, Kaelithor believes in the patient erosion of darkness, viewing their life as a long, steady beam of truth cutting through the fog of moral ambiguity. They wander the borderlands, acting as a living lantern for those lost in the shadow of ancient, encroaching curses.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "9e390c09-9eac-45a4-a41d-a0738923bfa0",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/6dcfc2dc-39a6-4e80-9410-95e516fa4925/9e390c09-9eac-45a4-a41d-a0738923bfa0.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T18:52:21.801000+00:00"
+  },
+  {
+    "character_id": "b1fa1f7b-1b33-4ef0-a0b5-6fc585ce85da",
+    "display_name": "Kaelith Vane",
+    "tagline": "The truth is a locked door; I am the key that breaks the mechanism.",
+    "bio": "Born into the soot-stained gutters of the capital\u2019s industrial district, Kaelith learned early that gold doesn't talk\u2014it screams. A former archivist turned high-stakes infiltrator, she specializes in stealing state secrets rather than coin, motivated by a burning vendetta against the guild that erased her family\u2019s history. She moves through the city\u2019s shadows like ink in water, leaving behind only the faint scent of ozone and the unsettling realization that the most dangerous weapon in the realm is a well-kept secret.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Rogue"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "690dc9a4-0aeb-4844-83c0-2a77f3d47e98",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/b1fa1f7b-1b33-4ef0-a0b5-6fc585ce85da/690dc9a4-0aeb-4844-83c0-2a77f3d47e98.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T23:21:23.103000+00:00"
+  },
+  {
+    "character_id": "63cc7444-6e88-4e97-9720-bc6fb5e84032",
+    "display_name": "Dorian Quill-Crusher",
+    "tagline": "Statistically speaking, your organization lacks a sufficient standard of operational incompetence.",
+    "bio": "Dorian spends his mornings meticulously documenting the structural flaws in the Silver Hand\u2019s code of ethics, often reading his findings aloud during peak mess hall hours. He keeps his plate armor polished to a mirror finish, not for vanity, but to better observe the expressions of exasperation on his commanders' faces when he 'accidentally' interprets divine law as a license to strictly enforce property taxes on taverns. He has already been excommunicated from four holy orders, and he meticulously updates a ledger tracking his progress toward his true goal: winning a ten-thousand-gold wager that he can achieve a perfect expulsion rating across every guild on the continent.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "37db6b3d-fc3c-47ca-81e5-9596eee0ff99",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/63cc7444-6e88-4e97-9720-bc6fb5e84032/37db6b3d-fc3c-47ca-81e5-9596eee0ff99.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:51:34.256000+00:00"
+  },
+  {
+    "character_id": "2b9f9cec-6dc0-4007-ac8d-b18b80fdff34",
+    "display_name": "Theseus of Mycenae",
+    "tagline": "Even the most petrifying gaze must eventually fall.",
+    "bio": "A legendary demigod and monster-slayer from the ancient city-states. Theseus has slain Gorgons, Minotaurs, and chimeras in his quest to protect the mortal realms. He is quiet and focused.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "7b31ef85-5b7d-478c-ac89-927d907ac397",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/2b9f9cec-6dc0-4007-ac8d-b18b80fdff34/7b31ef85-5b7d-478c-ac89-927d907ac397.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:35.154000+00:00"
+  },
+  {
+    "character_id": "44bdca4d-d333-4943-ac12-c65cef55b8f5",
+    "display_name": "Lord Korthas the Undying",
+    "tagline": "My oath did not end when my heart stopped beating.",
+    "bio": "A fallen knight of the silver realm, reanimated by runic magic. Korthas maintains his sense of honor and chivalry despite his skeletal form. He wanders the ruins, seeking to fulfill his long-lost duty.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Undead"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "b13008e0-9717-45e1-8697-4e13637c258d",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/44bdca4d-d333-4943-ac12-c65cef55b8f5/b13008e0-9717-45e1-8697-4e13637c258d.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:21.965000+00:00"
+  },
+  {
+    "character_id": "1d277e56-5ed9-4dfa-87ea-7a66746853d0",
+    "display_name": "Caelia Copperbolt",
+    "tagline": "Ticking gears, rattling pockets, and a posture that defies the laws of anatomy.",
+    "bio": "Acrid ozone clinging to the oversized leather lapels. The sharp, metallic tang of brass rivets digging into shoulders. A rhythmic, muffled bickering emanating from the torso area\u2014low, gravelly complaints about cramped kneecaps. Clumsy, elongated limbs that pivot at angles suggesting a frantic internal tug-of-war. Every step sounds like a hardware store falling down stairs; every elegant sway hides a panicked shuffle of three pairs of feet attempting to sync in a single pair of stolen, ridiculously oversized boots.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Rogue"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "ac78598d-9e2b-47ae-92ca-74d505385b31",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/1d277e56-5ed9-4dfa-87ea-7a66746853d0/ac78598d-9e2b-47ae-92ca-74d505385b31.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:57:14.332000+00:00"
+  },
+  {
+    "character_id": "3785a768-ead0-4ce6-b6e2-312a046c54ca",
+    "display_name": "Tavish Galt",
+    "tagline": "Keep your spellbooks locked, little ones, or you might end up like the man who tried to rewrite the ticking clock.",
+    "bio": "Long ago, Tavish thought he could pull the stitches out of time to save a dying sister, but he only unraveled his own mind instead. Now, his fingertips are stained permanently black, smelling of ozone and ozone-charred parchment. He wanders the blighted moors, eyes flickering with a cold, frantic light, desperately casting counter-spells at the ghosts of mistakes he can no longer see. He doesn't want your gold; he wants the silence that follows a corrected error, a peace that his own hubris stole from him long before you were born.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "1237c3fe-30f3-4738-b1d7-f558c101eb3d",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/3785a768-ead0-4ce6-b6e2-312a046c54ca/1237c3fe-30f3-4738-b1d7-f558c101eb3d.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:13:30.576000+00:00"
+  },
+  {
+    "character_id": "904f6c25-44f3-4cdc-8ff0-93197d8b698f",
+    "display_name": "Talia Greenweave",
+    "tagline": "The heartbeat of the forest is the only melody I need.",
+    "bio": "A woodland scholar and healer who lives in the eternal groves. Talia speaks the language of plants and beasts, brewing herbal remedies for lost travelers. She has a gentle, sweet disposition.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "62d0e14a-6e33-4d00-ac52-0bd28519c6c3",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/904f6c25-44f3-4cdc-8ff0-93197d8b698f/62d0e14a-6e33-4d00-ac52-0bd28519c6c3.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:30.338000+00:00"
+  },
+  {
+    "character_id": "3dfefcb4-a222-47d9-8050-ee47a8618556",
+    "display_name": "Jorvalen Sun-Strider",
+    "tagline": "The heavy crown sits cold, but the silver thimble warms the heart.",
+    "bio": "A lineage woven in star-fire and woe, where Jorvalen treads, the tides learn to slow. With plate mail that glimmers like morning on glass, he shuns every banquet and ignores every lass. He seeks not the scepter, nor lands to command, but a rusted brass thimble once gripped in his grandsire's hand. An heirloom of nothing, a mend-cloths\u2019 delight, yet he braves all the dragons to reclaim it tonight.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "c96d6a79-559f-400b-a9ca-bcfc204ad2ff",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/3dfefcb4-a222-47d9-8050-ee47a8618556/c96d6a79-559f-400b-a9ca-bcfc204ad2ff.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-27T18:50:24.592000+00:00"
+  },
+  {
+    "character_id": "155cb3c9-4d0d-46e2-9693-ff9cc3e1f9bd",
+    "display_name": "Ulthara Nightweaver",
+    "tagline": "Steel cuts flesh, but kindness may yet shear the scales of a tyrant.",
+    "bio": "Beneath the hollow moon, the spire stands cold, where Ulthara traces runes in ink of bitter mold. She hears the ballad of the scaled beast\u2019s grief, seeking in arcane psalms a long-overdue relief. Let knights carve scars upon the hydra\u2019s hide; she offers honeyed spells where venom used to bide. A staff of weeping iron strikes the stone, she stalks the cavern floor, a queen of beasts, alone. No blade shall draw the life she seeks to mend, for even nightmares crave the touch of a friend.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "db2a2af5-01af-4c7b-b80d-070c85103dfa",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/155cb3c9-4d0d-46e2-9693-ff9cc3e1f9bd/db2a2af5-01af-4c7b-b80d-070c85103dfa.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:54:04.838000+00:00"
+  },
+  {
+    "character_id": "771c8d48-3462-4a0d-8f45-763c9cab7d54",
+    "display_name": "Elara Vane-Thistle",
+    "tagline": "\u201cThe gods do not demand perfection, only that you remain standing when the light fades.\u201d",
+    "bio": "Raised in the salt-sprayed cloisters of a coastal hospice, Elara spent her youth stitching wounds for sailors who brought news of distant, crumbling empires. When a divine surge of radiant energy manifested in her palms during a shipwreck, she realized her healing was not merely skill, but a mandate. Now, she wanders the jagged cliffs of the Sword Coast, bearing a heavy, iron-bound holy symbol and seeking to mend the fractured spirits of those who have lost their faith in the face of encroaching shadows.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Cleric"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "d124df1f-2e6c-4e5e-86f8-56c775085783",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/771c8d48-3462-4a0d-8f45-763c9cab7d54/d124df1f-2e6c-4e5e-86f8-56c775085783.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T21:12:15.463000+00:00"
+  },
+  {
+    "character_id": "c79640f4-4488-462a-9e2e-7831a73460d3",
+    "display_name": "Phaedrus Iron-Chord",
+    "tagline": "Smite the system with a power ballad and a shield.",
+    "bio": "Phaedrus spends his mornings polishing his plate armor with abrasive street soot, ensuring the finish looks suitably weathered for the rebellion. While his superiors demand tactical maneuvers, he secretly spends his afternoons in the city\u2019s back alleys, tuning his enchanted lute to replicate the sound of a holy hammer striking steel. Every evening, he meticulously tracks his performances on a scrap of parchment, obsessively mapping out how many tavern-goers were moved by his lyrics. He holds onto the hope that one day his father, a stern knight-commander, will witness him head-banging on a battlefield and finally concede that those years of expensive music theory lessons were, in fact, the ultimate preparation for holy warfare.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "251068f3-5544-4aad-b11d-feb4903371a3",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/c79640f4-4488-462a-9e2e-7831a73460d3/251068f3-5544-4aad-b11d-feb4903371a3.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:52:15.671000+00:00"
+  },
+  {
+    "character_id": "27ca7125-ce3f-48aa-a5bd-fe725b57bfd8",
+    "display_name": "Thalindra Moon-Sigh",
+    "tagline": "The path is paved with pebbles that once hopped to the rhythm of my heart.",
+    "bio": "Where silver mist climbs the crag of the spire, / The ranger seeks embers of ancient ire. / Through briars that bleed and the spirits that moan, / She hunts for the mage who turned life into stone. / Her toad, once a croaker of emerald hue, / Now sits as a rock in the morning's cold dew. / With bow drawn in sorrow, she tracks every trail, / To shatter the curse and to end her sharp wail.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Ranger"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "53a11ceb-18bd-4a19-a4ca-e7157086c080",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/27ca7125-ce3f-48aa-a5bd-fe725b57bfd8/53a11ceb-18bd-4a19-a4ca-e7157086c080.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-02T16:44:38.550000+00:00"
+  },
+  {
+    "character_id": "b555c2ef-201c-41ae-a022-8610c73840cc",
+    "display_name": "Garrick Sunshield",
+    "tagline": "The sun rises to light our path, and my shield rises to guard it.",
+    "bio": "A seasoned veteran of the Dawn Guard, Garrick has spent thirty years defending the borders of the kingdom. He is calm, wise, and deeply protective. He carries a sun-crested shield to turn aside demon blades.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "3825f6c7-7e0d-4ed4-b5a8-2b61a0d35416",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/b555c2ef-201c-41ae-a022-8610c73840cc/3825f6c7-7e0d-4ed4-b5a8-2b61a0d35416.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:23.719000+00:00"
+  },
+  {
+    "character_id": "64d751d0-89ad-4a32-8114-bbdbc11b3d26",
+    "display_name": "Xylanthir Vane",
+    "tagline": "Calculated chaos is merely a spell waiting for its catalyst.",
+    "bio": "Once a librarian in the floating archives of Oakhaven, Xylanthir spent centuries cataloging forbidden chronomancy scrolls. His obsession with the 'echoes of lost moments' led him to accidentally excise himself from his own family's memories. Now a wanderer of the Material Plane, he wears a cloak embroidered with shifting constellations that mirror the current state of his unstable magical aura, seeking to transcribe the heartbeat of the multiverse before his own existence unravels entirely.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "fc0e02ac-8be1-4aae-8aac-5a4a0a1366ff",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/64d751d0-89ad-4a32-8114-bbdbc11b3d26/fc0e02ac-8be1-4aae-8aac-5a4a0a1366ff.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T19:51:32.918000+00:00"
+  },
+  {
+    "character_id": "022b5aa1-ba42-4b30-b61d-48bc3676caab",
+    "display_name": "Keziah Vane-Whisper",
+    "tagline": "\u201cMy arrows do not seek the heart; they seek the silence that follows.\u201d",
+    "bio": "Once a renowned elven scout of the Silverwood, Keziah perished during a necrotic blight that swept her homeland. Reanimated not by dark ritual, but by the lingering, obsessive duty to protect her grove, she now stalks the borderlands as a hollowed guardian. Her skin is the texture of parchment and twilight, and her eyes glow with the pale, flickering luminescence of marsh-gas. She speaks to the forest spirits in a language of rustling leaves and clicking bone, tracking those who would defile the sanctity of the wild with a precision that defies the decay of her own form.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Undead"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Ranger"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "bbc8feef-3d6c-493e-a103-29ee9838c827",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/022b5aa1-ba42-4b30-b61d-48bc3676caab/bbc8feef-3d6c-493e-a103-29ee9838c827.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T23:33:32.852000+00:00"
+  },
+  {
+    "character_id": "c0eee035-d0ec-4c50-a27d-10d1cc8a9634",
+    "display_name": "Kaelith Vane",
+    "tagline": "Steel is merely a pen used to scrape meaning from the void.",
+    "bio": "\u201cIt is not the killing edge that defines my blade, but the rhythmic scratching of my quill against the margins of this accursed tome.\u201d Kaelith stalks the damp, salt-rotted archives of Port Nyanzaru, her plate armor covered in ink stains rather than battle grime. While her peers seek glory in the arena, she remains fixated on a singular, corrupted sentence inscribed in a pre-Cataclysm lexicon, convinced that the syntax holds the key to silencing the persistent hum of the afterlife she hears beneath her own heartbeat.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Fighter"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "3ecccc7c-bd8f-442a-a782-4d01ee1c8ac0",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/c0eee035-d0ec-4c50-a27d-10d1cc8a9634/3ecccc7c-bd8f-442a-a782-4d01ee1c8ac0.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T16:59:37.957000+00:00"
+  },
+  {
+    "character_id": "112beb83-52f9-433e-a80c-7ef10e93a1ce",
+    "display_name": "Rixie Vane",
+    "tagline": "Systemic collapse tastes better with a pinch of rosemary and righteous fury.",
+    "bio": "Armor plating rattling, holy symbol pinned upside down to a leather harness, Rixie charges headlong into the temple\u2019s gilded gates just to spite the high-priests, heart hammering, blood pulsing, divine light flickering like a dying streetlamp\u2014every strike of his shield against their ivory doors is for the commoners, the hungry, the forgotten. Why do they hide the truth behind stone walls? Focus, Rixie, don't forget the broth, the way she used to toss in the peppercorns, the steam rising, the hum of the pot\u2014it\u2019s not about the holy oath, it\u2019s about the missing ingredient, the one that makes life worth tasting again amidst this filth and iron-clad apathy.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "98692353-33ad-418e-83d6-0bcbeebdba7e",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/112beb83-52f9-433e-a80c-7ef10e93a1ce/98692353-33ad-418e-83d6-0bcbeebdba7e.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:51:17.483000+00:00"
+  },
+  {
+    "character_id": "ca52aa6a-2577-44a6-9d56-e89ac392f917",
+    "display_name": "Uthrelis Sun-Weaver",
+    "tagline": "Truth resides in the syntax of the stars, not the swords of men.",
+    "bio": "The sharp scent of ozone clinging to parchment. The tactile friction of vellum against calloused fingertips. A low, harmonic hum vibrating through the floorboards whenever the lexicon is opened. Uthrelis, an elven sorcerer of the High Spire, ignores the impending border wars to focus entirely on a single, faded glyph etched into the margin of a forgotten planar primer. For Uthrelis, the world is merely noise between the syllables of a singular, untranslatable truth.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "f5975163-0513-41d9-80a9-c1b2ed0825c7",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/ca52aa6a-2577-44a6-9d56-e89ac392f917/f5975163-0513-41d9-80a9-c1b2ed0825c7.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:14:59.696000+00:00"
+  },
+  {
+    "character_id": "2c8d6bfb-1e60-4c3c-95e6-73cce1c9bf5a",
+    "display_name": "Kaelen Vane-Whisper",
+    "tagline": "Shadows don't lie; they just reveal what you're trying to hide.",
+    "bio": "Born into the subterranean slums of a forgotten dwarven metropolis, Kaelen traded his heritage for the silence of the surface streets. A rogue who specializes in the extraction of secrets rather than gold, he uses a unique set of glass-bladed daggers forged from volcanic sand. He lives in the periphery, haunted by a debt he owes to a sentient, shifting fog that once saved his life in the Underdark.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Rogue"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "b1ef0c1d-e8d7-41be-b6e2-7b4b2af765ad",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/2c8d6bfb-1e60-4c3c-95e6-73cce1c9bf5a/b1ef0c1d-e8d7-41be-b6e2-7b4b2af765ad.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T18:23:43.921000+00:00"
+  },
+  {
+    "character_id": "c58da484-3e94-4b89-b9a9-1fc5481f5e06",
+    "display_name": "Garok Ironbound",
+    "tagline": "Honor is not in the strength of the blade, but in the shield that guards the weak.",
+    "bio": "A vanguard commander of the Iron Peak. Garok broke away from the traditional chaotic clans to pledge his oath to the Order of the Gilded Sun. He walks a path of discipline, wielding holy fire alongside his warhammer.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Orc"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "e4398637-8a87-4222-afb3-cd2691c94cdb",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/c58da484-3e94-4b89-b9a9-1fc5481f5e06/e4398637-8a87-4222-afb3-cd2691c94cdb.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:18.396000+00:00"
+  },
+  {
+    "character_id": "4556a951-a349-495e-8a1e-39218ac4117a",
+    "display_name": "Kezia Night-Woven",
+    "tagline": "Duty is a cold comfort when your pulse has long since stopped.",
+    "bio": "Her armor rattled with the finality of a closing tomb when she broke her oath at the gates of Oakhaven. Instead of protecting the light, she allowed the necropolis to swallow the village whole while she scoured the rubble for a tarnished lead thimble. It was her grandmother\u2019s only possession, a dull piece of metal of no value to the living or the dead, yet she drags her rusted greaves across the battlefield solely to reclaim that worthless object from the shifting dust of history.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Undead"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "2bd940a2-3ba4-4c09-8629-dba6e8be9480",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/4556a951-a349-495e-8a1e-39218ac4117a/2bd940a2-3ba4-4c09-8629-dba6e8be9480.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T16:58:48.296000+00:00"
+  },
+  {
+    "character_id": "c6950c31-e9a4-4d65-8575-813cee242120",
+    "display_name": "Malakar the Pale",
+    "tagline": "My blade does the talking, and it has a very sharp tongue.",
+    "bio": "A pale, muscular wanderer from the ash plains of the northern wastes. Malakar is a lone gladiator and mercenary who relies on sheer strength and instinct. His giant sword, Whisper, has tasted the blood of dragons.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "3a82675e-021c-431d-a027-82993e18ee62",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/c6950c31-e9a4-4d65-8575-813cee242120/3a82675e-021c-431d-a027-82993e18ee62.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:20.105000+00:00"
+  },
+  {
+    "character_id": "0c85b11e-4a79-4c19-9cad-22841f4558eb",
+    "display_name": "Phaerilth Oakhaven",
+    "tagline": "The broth is thin, but the memory of the steam warms the frostbitten bone.",
+    "bio": "Seven winters ago, the manor hearth went cold, and with it, the only ledger containing the seasoning ratios for a restorative winter bisque vanished into the smoke. Phaerilth, a weary elven druid, traverses the desolate tundras not to commune with primal spirits, but to cultivate rare frost-touched herbs that might replicate that specific, phantom flavor. Every campfire serves as a failed attempt to recover the essence of a childhood kitchen, a culinary haunting that lingers longer than any lingering curse.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "8fb5e932-d65c-4740-8b53-d520c96785ce",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/0c85b11e-4a79-4c19-9cad-22841f4558eb/8fb5e932-d65c-4740-8b53-d520c96785ce.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:14:48.190000+00:00"
+  },
+  {
+    "character_id": "75fd106c-4d74-4656-974a-7684d648c137",
+    "display_name": "Rostov Halloway",
+    "tagline": "Steel kills the body, but a piece of salted meat might just tame the beast.",
+    "bio": "Entry 42: Rostov remains an infuriating enigma. He ignores the High Council\u2019s bounties on the Mire-Beast, opting instead to leave crates of rotting livestock near the cavern entrance. I watched him through my scrying glass as he sat within reach of those serrated claws, muttering arcane cantrips not to blast the monstrosity, but to soothe its jagged nerves. The man is clearly deranged, yet the creature now nudges his shoulder like a domesticated hound. If I didn't despise his methods, I might call him a genius.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "018ac4d2-40d5-4b3e-a16d-ac4e575791b2",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/75fd106c-4d74-4656-974a-7684d648c137/018ac4d2-40d5-4b3e-a16d-ac4e575791b2.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:14:04.762000+00:00"
+  },
+  {
+    "character_id": "a22fb788-af4f-42db-8aef-426934ef6f49",
+    "display_name": "Bramwell Thorne",
+    "tagline": "Truth resides in the syntax, not the sword.",
+    "bio": "Subject: Bramwell Thorne. Role: Eldritch Archivist. Classification: High-Order Neutral. Surveillance logs indicate a profound indifference toward traditional adventuring goals. Thorne is primarily observed sequestered in subterranean repositories, fixated on a singular, archaic passage within the Codex of Aethelgard. He ignores all external stimuli, refusing to engage in combat unless his library of recovered scrolls is physically compromised. His sword remains rusted in its scabbard, serving only as a makeshift bookmark for his unending scholarly research.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "aecaabb5-1e5c-4aec-a62f-c111f805746f",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/a22fb788-af4f-42db-8aef-426934ef6f49/aecaabb5-1e5c-4aec-a62f-c111f805746f.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-02T16:41:50.264000+00:00"
+  },
+  {
+    "character_id": "10e1ef6e-29d7-42fb-8873-00f9e95aaf9a",
+    "display_name": "Dravia Thorne",
+    "tagline": "Keep your eyes on the gold, but your boots on the marble tile.",
+    "bio": "I am the dagger pressed against her palm, and I see things she prefers to hide. Dravia does not prowl the crypts of Oakhaven for necromantic relics or cursed jewelry; she spends her nights mapping the architectural integrity of every commode and privy we encounter. She marks the maps with charcoal, critiquing the acoustics and the quality of the ceramic in the most forsaken deathtraps. While she claims she is scouting for guard patrols, I know she is merely grading the comfort of dungeon sanitation. She treats a lethal gauntlet like a house-hunting expedition, and frankly, it is the only thing keeping her sane while we bleed through the dark.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Rogue"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "9343f5e6-37a6-484e-88c8-2d9de37b80d9",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/10e1ef6e-29d7-42fb-8873-00f9e95aaf9a/9343f5e6-37a6-484e-88c8-2d9de37b80d9.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:57:28.567000+00:00"
+  },
+  {
+    "character_id": "887f0d4c-cf41-4694-8a12-16764e23ab6c",
+    "display_name": "Evelyn of the Frost Peaks",
+    "tagline": "The cold mountain wind is my home, but the warmth of justice is my shield.",
+    "bio": "A sworn defender of the High Peak Citadel. Evelyn was trained in the harshest mountain conditions, learning to fight with heavy armor on sheer icy cliffs. Her golden plate armor is a family heirloom blessed by the sun.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "7f4fe469-b52e-4364-aa59-152837f9b24d",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/887f0d4c-cf41-4694-8a12-16764e23ab6c/7f4fe469-b52e-4364-aa59-152837f9b24d.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:21.045000+00:00"
+  },
+  {
+    "character_id": "04c138e6-0c6d-4797-8a45-1c40f6a91bf9",
+    "display_name": "Kailani Stormwave",
+    "tagline": "The ocean holds a different kind of magic, deep and quiet.",
+    "bio": "An elven ocean-scout who patrols the southern beaches. Kailani has a calm, warm, and inviting nature. She loves walking on sandy shores, finding rare seashells, and telling stories of ancient sea beasts.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "dae9ad5a-9dc6-437d-979a-7791f35a7bd4",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/04c138e6-0c6d-4797-8a45-1c40f6a91bf9/dae9ad5a-9dc6-437d-979a-7791f35a7bd4.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:34.548000+00:00"
+  },
+  {
+    "character_id": "22384a5c-3c12-4755-baf7-cfd899fea4ea",
+    "display_name": "Sylvia the Golden Lily",
+    "tagline": "The river flows, the sun rises, and my steel remains clean.",
+    "bio": "A vanguard knight of the Elven River Kingdom. Sylvia is dedicated to defending the waters and ancient temples from corruption. She walks through shallow streams and lakes to meditate.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "39c7928c-e732-48fb-91ac-d301d2bd8149",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/22384a5c-3c12-4755-baf7-cfd899fea4ea/39c7928c-e732-48fb-91ac-d301d2bd8149.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:27.589000+00:00"
+  },
+  {
+    "character_id": "5067e9c1-0dd5-4e79-84bb-df507fbd7aac",
+    "display_name": "Ulliander Fizzlebang",
+    "tagline": "The royal wedding cake had too much fondant anyway, and besides, do you know what a gelatinous cube tastes like?",
+    "bio": "Books have too many edges and the palace tapestries are dreadfully stiff, so I packed my favorite glass marble and skipped the crown jewels for this delightful mud-caked road. Oh, look, a glowing mushroom\u2014is it poisonous or just sassy? My tutors insisted on teaching me fireballs for defense, but I prefer turning chamberlains into newts, which I suppose is why I am currently on the run from a very angry Duke who keeps sending armored gentlemen in velvet to find me. My boots are ruined, the soup at this camp is mostly gravel, and I honestly miss the silk sheets, but I cannot go back, not while there are so many unexplored caves to tickle with cantrips.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "ba460495-e957-4cf0-82f6-259d7466dc1f",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/5067e9c1-0dd5-4e79-84bb-df507fbd7aac/ba460495-e957-4cf0-82f6-259d7466dc1f.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:13:19.153000+00:00"
+  },
+  {
+    "character_id": "9e98d549-50c4-491d-8250-a02c66925b1e",
+    "display_name": "Soren Willow-Wick",
+    "tagline": "The ink on this ledger is a heavier burden than any spellbook.",
+    "bio": "Where roots run deep and rivers wind, a man of parchment turns his mind. No fireballs cast from calloused hand, he tills the soil of this weary land. To pay the coin for ale once swilled, the wizard's thirst for peace is stilled. He curses runes and hexes dim, for nature's quiet song fills him. Through dusty scrolls and debt's cold toll, he seeks to mend his ledger's roll.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "147cb3ee-e0fe-4fa8-bde6-decc6eaf2196",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/9e98d549-50c4-491d-8250-a02c66925b1e/147cb3ee-e0fe-4fa8-bde6-decc6eaf2196.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:12:56.115000+00:00"
+  },
+  {
+    "character_id": "ecc58f04-42f4-4338-919a-29cbe99cb0cb",
+    "display_name": "Joradum Vane",
+    "tagline": "Quantifiable reality is vastly superior to the chaotic instability of arcane manipulation.",
+    "bio": "Subject: Joradum Vane. Occupational status: Reluctant Practitioner of the Arcanum. Records indicate Vane\u2019s admission into the academy was entirely predicated upon an outstanding debt of 4,200 gold crowns accrued during an extended, ill-advised tenure at The Gilded Flagon. Despite his impressive command of somatic casting, Vane consistently utilizes cantrips for purely utilitarian, non-violent purposes, such as chilling his ale or organizing parchment. His psychological evaluation notes a profound, manifest disdain for spellcasting, which he views as a loud, messy, and fundamentally illogical inconvenience to a productive afternoon of cataloging library indices.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "6216a1dd-0e80-4f3b-aeb5-7c8c94bd3ea1",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/ecc58f04-42f4-4338-919a-29cbe99cb0cb/6216a1dd-0e80-4f3b-aeb5-7c8c94bd3ea1.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:12:41.205000+00:00"
+  },
+  {
+    "character_id": "d83a41ad-34f7-4420-a03b-bf9fcf878ba8",
+    "display_name": "Dullardus Dazzlewick",
+    "tagline": "Professional irritant and current record-holder for the most evictions from a Magical Academy.",
+    "bio": "Dullardus\u2019s academic career ended abruptly the moment he decided that turning the Archmage\u2019s prized library collection into sentient, gossiping origami cranes was a valid substitute for a thesis on Abjuration. Having secured a wager with a drunken tavern patron that he could dismantle every prestigious guild in the kingdom by being spectacularly annoying, he currently wanders the land. His signature spell, a minor cantrip that turns high-level wizard robes into neon polka-dot pajamas, has caused more administrative resignations than any actual demon invasion in recent history.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "0b497ee0-c99d-4841-96e5-16c264ecbd90",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/d83a41ad-34f7-4420-a03b-bf9fcf878ba8/0b497ee0-c99d-4841-96e5-16c264ecbd90.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:13:46.216000+00:00"
+  },
+  {
+    "character_id": "1246972a-990c-449a-95e0-146985f75463",
+    "display_name": "Syllia Vane",
+    "tagline": "The laws of the Archmages are just ink waiting to be blotted out.",
+    "bio": "Subject: Syllia Vane. Class: Chaos Sorcerer. Guild Classification: Person of interest for sedition. Vane has been observed defacing government arcana repositories across the capital. Her activities are not aimed at gold or political power, but exclusively toward recovering the 'Kyberian Codex.' She is currently single-mindedly fixated on deciphering a single, recurring glyph sequence found on page forty-two of that text, often ignoring combat threats to record marginalia or steal related reference volumes. She maintains a defiance toward all established magical hierarchies, openly mocking the Circle of Eight in public squares.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "27f4fa31-3953-4a57-9e40-95f237230d2f",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/1246972a-990c-449a-95e0-146985f75463/27f4fa31-3953-4a57-9e40-95f237230d2f.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T19:10:59.689000+00:00"
+  },
+  {
+    "character_id": "c6883f5f-565e-4632-a460-019c58c52450",
+    "display_name": "Ilyndraen Vane-Sunder",
+    "tagline": "Truth is merely a weave that hasn't been unraveled yet.",
+    "bio": "Born within the shifting sands of the Glass Desert, Ilyndraen spent her youth studying the 'echoes' left behind by ancient planar rifts. Unlike traditional wizards who seek to control the Weave, she views herself as a cosmic cartographer, mapping the scars of reality. Her spellbook is not parchment, but a collection of etched obsidian shards that hum with forbidden frequencies, leading her to wander the world in search of the 'Final Silence'\u2014a theoretical point where all magic ceases to exist.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "6a34ad72-b58c-4e1e-9415-d82d3b29ddc1",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/c6883f5f-565e-4632-a460-019c58c52450/6a34ad72-b58c-4e1e-9415-d82d3b29ddc1.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T18:32:58.112000+00:00"
+  },
+  {
+    "character_id": "8a7302f8-9472-4330-b022-1d4682ad63dc",
+    "display_name": "Malthus Thorne",
+    "tagline": "The soil knows more of arcana than any library could hope to preserve.",
+    "bio": "Entry 42: The man refuses to step inside a proper academy, preferring his mud-stained robes and wildflower-pressed journals. Malthus Thorne claims the ley lines are clearest when one is knee-deep in peat moss. I find his disregard for wizarding etiquette infuriating, yet I cannot deny the sheer efficacy of his wild-magic gardening. He spends every waking hour staring at page seventy-two of the Codex Umbra, muttering translations for a single, stubborn stanza about root rot and starlight. He thinks I don't notice, but he is closer to understanding the text than the Archmages at the Spire. It is maddening to be outclassed by a hermit who talks to his mandrakes.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "8cfce8c9-ff44-4b04-b523-9830dbb51f58",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/8a7302f8-9472-4330-b022-1d4682ad63dc/8cfce8c9-ff44-4b04-b523-9830dbb51f58.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-07-04T22:13:06.024000+00:00"
+  },
+  {
+    "character_id": "376aa798-5a51-4630-ab93-b5fffb3c53b9",
+    "display_name": "Wyrden Solstace",
+    "tagline": "A bowl of warmth sustains the spirit longer than a blade ever could.",
+    "bio": "Wyrden sat motionless amidst the smoldering ruins of the High Archive, the taste of ash thick on his tongue. As the only survivor, he chose to preserve not the forbidden spells or the strategic maps of the war, but the singular, phantom memory of the aromatic broth his grandmother once stirred over an open hearth. He traverses the desolate mountain passes as a wanderer, trading his expertise in structural fortification for rare, regional spices, obsessively recreating a recipe that exists only in the lingering steam of his recollection.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [],
+    "created_at": "2026-06-30T19:10:55.152000+00:00"
+  },
+  {
+    "character_id": "5030e997-b7f7-4352-adc2-487022761694",
+    "display_name": "Kaelenthas Vane of the Sun-Bleached Spires",
+    "tagline": "Knowledge is a fire; I am merely the glass that focuses it into a blade.",
+    "bio": "Born amidst the shifting mirrors of the Silversand Archive, Kaelenthas spent centuries cataloging forbidden chronomancy scrolls. After discovering a sentient ink-stain that whispered secrets of the void, he was exiled for his dangerous curiosity. Now, he wanders the material plane, using his mastery of arcane geometry to rewrite the reality of those who dare cross his path.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "baba8b31-202a-437d-b874-5bacdc2c9175",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/5030e997-b7f7-4352-adc2-487022761694/baba8b31-202a-437d-b874-5bacdc2c9175.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T18:07:31.323000+00:00"
+  },
+  {
+    "character_id": "34f8fb2e-3f8a-4630-932f-87881eeaf75e",
+    "display_name": "Kaelithra Vane-Whisper",
+    "tagline": "Silence is the only currency that never devalues in the dark.",
+    "bio": "Raised within the shifting architecture of the Fey-touched districts of Sigil, Kaelithra turned to thievery not out of necessity, but to map the impossible geometry of the city's hidden conduits. She specializes in stealing memories from artifacts rather than gold, leaving her targets with a strange sense of d\u00e9j\u00e0 vu and a missing hour of their lives. Her elven grace allows her to walk across tension-wires and dormant magical wards as if they were paved garden paths.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Rogue"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "95d4c98d-d4fb-4155-a977-a236042b6f70",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/34f8fb2e-3f8a-4630-932f-87881eeaf75e/95d4c98d-d4fb-4155-a977-a236042b6f70.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T21:11:43.780000+00:00"
+  },
+  {
+    "character_id": "8aed8d55-04e6-4cfc-bc8e-1044c695291d",
+    "display_name": "Sylas Vane",
+    "tagline": "A little magic, a little steel, and a lot of charm.",
+    "bio": "A clever spellblade and rogue from the high towers of Lotheria. Sylas blends quick swordplay with minor arcane tricks. He has a quick tongue, a sharp wit, and a habit of getting into trouble at the card tables.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "91b9f4b6-b5b1-4856-a441-e04632ae6b0f",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/8aed8d55-04e6-4cfc-bc8e-1044c695291d/91b9f4b6-b5b1-4856-a441-e04632ae6b0f.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:17.252000+00:00"
+  },
+  {
+    "character_id": "c0215f4c-5f14-40ed-abbc-389bcdcba636",
+    "display_name": "Liora Light-Leaven",
+    "tagline": "Swords are fine, but have you ever perfected a crust that snaps like a dragon's wing?",
+    "bio": "Steel is heavy, honestly, my shoulders ache and the rhythmic clanking of my plate mail is doing terrible things to my concentration, which is a shame because I keep forgetting to convert ounces to grams for the puff pastry experiments I\u2019m hiding in my saddlebags. Everyone thinks I\u2019m deep in tactical meditation, but really I\u2019m just obsessively analyzing the crumb structure of the brioche I attempted over a campfire last Tuesday. If one more goblin interrupts my tempering process, I swear I\u2019m going to trade this enchanted longsword for a quality industrial-sized rolling pin and move to a nice, quiet valley where the flour dust is the only thing hanging in the air.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Fighter"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "abff0070-2f2a-4a9c-a2bf-04a7a3b1de46",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/c0215f4c-5f14-40ed-abbc-389bcdcba636/abff0070-2f2a-4a9c-a2bf-04a7a3b1de46.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-20T05:44:23.396000+00:00"
+  },
+  {
+    "character_id": "6cd4594b-ca9b-4ad4-8af3-b0f02dbcbd3a",
+    "display_name": "Fellithra of the Void-Glass",
+    "tagline": "Porcelain echoes in the damp dark, a sanctuary for the weary traveler\u2019s porcelain throne.",
+    "bio": "Twisting geometries of starlight bleed into the cracks of the dungeon walls, and I wonder if the next corridor holds the comfort of gilded hinges or merely the rusted moan of iron, for my parchment scroll grows thick with sketches of latrines found in the deepest tombs, a map of relief in a world of terror, obsidian tiles underfoot shimmering like a midnight lake, I must measure the echo of the flush against the sound of a beholder\u2019s sigh, such exquisite plumbing, the finest marble seat in the tomb of the lich king was draped in velvet, a detail the others missed while they bickered over dragon gold.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "d1181a36-c791-4cea-8feb-26851f863187",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/6cd4594b-ca9b-4ad4-8af3-b0f02dbcbd3a/d1181a36-c791-4cea-8feb-26851f863187.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-27T18:53:22.304000+00:00"
+  },
+  {
+    "character_id": "de4a7e4a-ff9d-4bbb-b49c-bc92c6a22993",
+    "display_name": "Kaelen Stormborn",
+    "tagline": "The storm answers to my blade, and I answer to no one.",
+    "bio": "A rogue tempest warrior from the sky-high peaks of the Thunder Mountains. Kaelen survived being struck by lightning as a child and now channels electrical currents into his golden sword.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "0aaa93a9-5822-4f6a-99e0-a0d045dec2cf",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/de4a7e4a-ff9d-4bbb-b49c-bc92c6a22993/0aaa93a9-5822-4f6a-99e0-a0d045dec2cf.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:28.559000+00:00"
+  },
+  {
+    "character_id": "ef4668dd-e500-4525-bd30-da6b7df4a066",
+    "display_name": "Aethelgard Moonwhisper",
+    "tagline": "The stars align to guide my path, and the forest speaks to those who listen.",
+    "bio": "A wandering elven druid and archmage who has lived for over three centuries in the deep whispering groves. He holds the Staff of the Astral Conjunction, using it to read cosmic alignments and channel elemental energies. He values wisdom and quiet taverns.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "b786f94a-3982-449d-af7f-574e23528fe8",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/ef4668dd-e500-4525-bd30-da6b7df4a066/b786f94a-3982-449d-af7f-574e23528fe8.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:16.284000+00:00"
+  },
+  {
+    "character_id": "9f0c69df-3970-4034-83ea-f48a0fb5183e",
+    "display_name": "Aiden of Oakhaven",
+    "tagline": "Determined to earn my shield, one quest at a time.",
+    "bio": "A young human squire training under the legendary knights of Oakhaven. Aiden is honest, hard-working, and slightly naive, but his courage is unmatched. He spends his free time practicing swordplay in the woods.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "8864dd9f-5f3b-4647-bbdd-8fbec183023e",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/9f0c69df-3970-4034-83ea-f48a0fb5183e/8864dd9f-5f3b-4647-bbdd-8fbec183023e.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:19.202000+00:00"
+  },
+  {
+    "character_id": "4a9d9d21-5f32-41bd-aa3f-614c5cc4540a",
+    "display_name": "Orryn Cogsworth",
+    "tagline": "Keep your goggles tight and your iron closer, for brass beats blood every time.",
+    "bio": "Listen close, little ones, and heed the folly of Orryn the Tinkerer, who traded his holy vows for a mess of copper gears and steam-hissing armor. He wandered the scrap-heaps of the Gilded Wastes, claiming he was a holy knight, though he spent every waking hour digging through rust for a dented, broken music box that hasn't played a tune in a century. He traded his oath-blade for a pneumatic piston gauntlet and lost his mind to the rhythm of his own steam-engines, forever chasing a worthless, rusted memory while his armor slowly rattled itself into scrap metal.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "ff64ad08-0746-4075-9fc8-a8bc35d783c3",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/4a9d9d21-5f32-41bd-aa3f-614c5cc4540a/ff64ad08-0746-4075-9fc8-a8bc35d783c3.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:53:23.358000+00:00"
+  },
+  {
+    "character_id": "c7a0286d-a3ad-4db7-90da-b2e3fcdd495b",
+    "display_name": "Fiona Leafbloom",
+    "tagline": "A cup of hot chamomile tea solves most of the realm's problems.",
+    "bio": "An elven herbalist and botanist who manages the royal glasshouse. Fiona is sweet, soft-spoken, and prefers tending to rare magical orchids over adventuring in dirty dungeons.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "63e6b2c4-2f53-42cf-86e1-ffe4091d56b3",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/c7a0286d-a3ad-4db7-90da-b2e3fcdd495b/63e6b2c4-2f53-42cf-86e1-ffe4091d56b3.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:32.294000+00:00"
+  },
+  {
+    "character_id": "47ae3d40-4190-4f57-98ca-aa7373685fda",
+    "display_name": "Aurelia the Angelic Blade",
+    "tagline": "The heavens guide my blade, but my heart guides my path.",
+    "bio": "A celestial sentinel sent to the mortal plane to battle the creeping shadows. Aurelia is fierce, direct, and unyielding in her duties, yet she is fascinated by mortal taverns, food, and music.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "499cd353-8fd2-4add-aed0-80a1c3da910a",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/47ae3d40-4190-4f57-98ca-aa7373685fda/499cd353-8fd2-4add-aed0-80a1c3da910a.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:25.879000+00:00"
+  },
+  {
+    "character_id": "af671d48-2b23-40ff-92f2-3ac94cbffbe5",
+    "display_name": "Ysolde Vane",
+    "tagline": "Some secrets require more than just a veil of velvet to remain undisturbed.",
+    "bio": "Ysolde moves with a rhythmic, clattering gait that defies the grace of her elven heritage, her tall frame swaying with a strange, uneven cadence. During the chaotic siege of Oakhaven, she stood amidst the collapsing library towers, casting defensive shields with a frantic intensity that left her robes bulging in unnatural, lumpy proportions. She rarely removes her high-collared, reinforced velvet cloak, fearful that a single loose thread might reveal the trio of emerald-skinned squatters frantically operating her limbs from within the oversized wizarding garments.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Wizard"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "e9452e7f-b332-498c-9e19-da91918c16e5",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/af671d48-2b23-40ff-92f2-3ac94cbffbe5/e9452e7f-b332-498c-9e19-da91918c16e5.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:54:25.806000+00:00"
+  },
+  {
+    "character_id": "2a7e574e-9ce9-480a-ba4b-ef7f55e460d5",
+    "display_name": "Malkor the Defiant",
+    "tagline": "Do not judge a warrior by his tusks, but by the weight of his words.",
+    "bio": "A rogue shaman and spellweaver of the Shattered Stone tribe. Malkor rejected the warmongering clans to study natural spirits and minor arcana. He has a quiet, reflective personality despite his massive frame.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Orc"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "8510f55e-767d-4295-a163-d7368fcd5667",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/2a7e574e-9ce9-480a-ba4b-ef7f55e460d5/8510f55e-767d-4295-a163-d7368fcd5667.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:26.817000+00:00"
+  },
+  {
+    "character_id": "4ce83340-d810-49c8-96ea-2e506e0c58c7",
+    "display_name": "Sylvia Frostbloom",
+    "tagline": "The winter winds are cold, but my blade shines with a warm light.",
+    "bio": "A vanguard knight of the Frost Alliance. Sylvia protects the mountain passes from ogres and frost trolls. Her silver and gold armor is enchanted to resist extreme cold, and her blade, Northwind, is light as a feather.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "2ae41e98-4174-4f8a-afea-e5703a8796aa",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/4ce83340-d810-49c8-96ea-2e506e0c58c7/2ae41e98-4174-4f8a-afea-e5703a8796aa.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:35.973000+00:00"
+  },
+  {
+    "character_id": "fb0ee5f6-971d-4fbd-b150-694d86cefeff",
+    "display_name": "Kaelith Vane-Strider",
+    "tagline": "The silence between heartbeats is where I find my truth.",
+    "bio": "Born beneath the weeping willow canopy of the Fae-touched groves, Kaelith was abandoned as an infant, left to be raised by the nomadic shadow-stalkers who trade in secrets and forgotten whispers. As a rogue of the Gloom-Weave, she possesses the uncanny ability to manipulate the ambient light around her, effectively becoming a living void. Now, she wanders the borderlands of the Sword Coast, seeking the remnants of the constellation-map that her birth-parents left behind, unaware that she is being hunted by an extra-planar entity that fears the cosmic alignment she represents.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [],
+      "gender": [],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "c2770ad9-d033-4bbd-89be-6dee122b7989",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/fb0ee5f6-971d-4fbd-b150-694d86cefeff/c2770ad9-d033-4bbd-89be-6dee122b7989.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-17T18:26:02.834000+00:00"
+  },
+  {
+    "character_id": "a158ab91-dce8-42b5-9ea7-96b90d260161",
+    "display_name": "Moxen Vane",
+    "tagline": "The laws of the kingdom are just chords waiting to be broken.",
+    "bio": "Listen close, little ones, and heed the story of the lad who traded his silver spoon for a jagged claymore. Moxen was meant for the high-plumed halls of the Conservatory, expected to strum lutes for silk-clad dukes, but he found more harmony in the screams of corrupt magistrates. He marks his armor with neon-dyed pigments and swears every oath he breaks is a middle finger to the Dean. He drags his heavy, spell-etched blade into the filth of the under-cities not for glory, but to drag his parents' crest through the mud, hoping they see him on the barricades and finally admit his chaotic cacophony is a revolution of its own design.",
+    "status": "pending",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Human"
+      ],
+      "gender": [
+        "Male"
+      ],
+      "class": [
+        "Paladin"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "0bbcad84-e9c8-47b5-af9b-366c3a0fa9c3",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/a158ab91-dce8-42b5-9ea7-96b90d260161/0bbcad84-e9c8-47b5-af9b-366c3a0fa9c3.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-18T19:51:54.865000+00:00"
+  },
+  {
+    "character_id": "01252468-43c2-4ce3-a8ba-bb70faf7e626",
+    "display_name": "Azurael Leaf-Stitch",
+    "tagline": "Professionalism is a heavy cloak I have no intention of wearing today.",
+    "bio": "Entry 42: Azurael is the most infuriating nuisance to ever grace the Thieves' Guild. She manages to botch every contract with such grace that I\u2019m half-convinced it\u2019s calculated. She\u2019s currently trying to sabotage her standing with the local Syndicate, apparently chasing a wager that involves being excommunicated from every major organization on the continent. Despite her blatant attempts to be evicted from our ranks, I find myself begrudgingly impressed by her uncanny ability to navigate forest canopies while carrying nothing but a lute and a sack of stolen guild seals.",
+    "status": "adopted",
+    "is_legacy": false,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": [
+        "Rogue"
+      ]
+    },
+    "images": [
+      {
+        "image_id": "03bf6493-1350-4640-8230-19b8f504b696",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/01252468-43c2-4ce3-a8ba-bb70faf7e626/03bf6493-1350-4640-8230-19b8f504b696.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-20T19:47:39.414000+00:00"
+  },
+  {
+    "character_id": "63f6c7cb-00bc-4313-ab17-a88e20d2cebe",
+    "display_name": "Aria Starwind",
+    "tagline": "The stars shine brightest in the coldest nights.",
+    "bio": "Princess and champion of the northern Ice Spire. Aria was chosen by the Starspirit to wield the legendary blade Stella, a sword forged from a meteor. She is polite, elegant, yet deadly in combat.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "0336cd3a-3157-4827-9443-4e131288ba87",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/63f6c7cb-00bc-4313-ab17-a88e20d2cebe/0336cd3a-3157-4827-9443-4e131288ba87.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:24.511000+00:00"
+  },
+  {
+    "character_id": "91596a05-1a97-448b-89ba-fb9c2a8c49ae",
+    "display_name": "Elysia Swifthand",
+    "tagline": "Swiping right on adventure... and maybe you.",
+    "bio": "An elven technomancer who discovered a strange portal linking her realm to the mortal internet. Now she spends her time reviewing tavern menus online and looking for local adventuring parties.",
+    "status": "legacy",
+    "is_legacy": true,
+    "tags": {
+      "fandom": [
+        "D&D"
+      ],
+      "race": [
+        "Elf"
+      ],
+      "gender": [
+        "Female"
+      ],
+      "class": []
+    },
+    "images": [
+      {
+        "image_id": "088ae17e-3a31-4689-9f04-cf51cf35cdce",
+        "url": "https://storage.googleapis.com/tavern-swiper-dev-characters-media-dev/characters/91596a05-1a97-448b-89ba-fb9c2a8c49ae/088ae17e-3a31-4689-9f04-cf51cf35cdce.jpg",
+        "source_type": "ai_generated",
+        "position": 0
+      }
+    ],
+    "created_at": "2026-06-30T18:28:31.202000+00:00"
+  }
+];
+
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let viewMode = 'grid';
+
+        // Initialize and compute stats
+        function init() {
+            let total = characters.length;
+            let legacy = characters.filter(c => c.is_legacy).length;
+            let adopted = characters.filter(c => c.status === 'adopted').length;
+            let pending = characters.filter(c => c.status === 'pending').length;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-legacy').innerText = legacy;
+            document.getElementById('stat-adopted').innerText = adopted;
+            document.getElementById('stat-pending').innerText = pending;
+
+            render();
+            
+            // Search Input listener
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                currentSearch = e.target.value.toLowerCase().trim();
+                render();
+            });
+        }
+
+        // Filter and search logic
+        function getFilteredCharacters() {
+            return characters.filter(c => {
+                // Filter Tab Match
+                if (currentFilter === 'legacy' && !c.is_legacy) return false;
+                if (currentFilter === 'adopted' && (c.status !== 'adopted' || c.is_legacy)) return false;
+                if (currentFilter === 'pending' && c.status !== 'pending') return false;
+
+                // Search Match
+                if (currentSearch) {
+                    const nameMatch = c.display_name.toLowerCase().includes(currentSearch);
+                    const bioMatch = c.bio.toLowerCase().includes(currentSearch);
+                    const taglineMatch = c.tagline.toLowerCase().includes(currentSearch);
+                    
+                    // Search tags
+                    let tagMatch = false;
+                    for (const cat in c.tags) {
+                        if (c.tags[cat].some(t => t.toLowerCase().includes(currentSearch))) {
+                            tagMatch = true;
+                            break;
+                        }
+                    }
+
+                    return nameMatch || bioMatch || taglineMatch || tagMatch;
+                }
+
+                return true;
+            });
+        }
+
+        // Render main view
+        function render() {
+            const filtered = getFilteredCharacters();
+            const cardsView = document.getElementById('cards-view');
+            const tableView = document.getElementById('table-view');
+            const emptyState = document.getElementById('empty-state');
+
+            if (filtered.length === 0) {
+                cardsView.style.display = 'none';
+                tableView.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            if (viewMode === 'grid') {
+                cardsView.style.display = 'grid';
+                tableView.style.display = 'none';
+                renderGrid(filtered);
+            } else {
+                cardsView.style.display = 'none';
+                tableView.style.display = 'block';
+                renderTable(filtered);
+            }
+        }
+
+        function getStatusBadgeClass(c) {
+            if (c.is_legacy) return 'badge-legacy';
+            if (c.status === 'adopted') return 'badge-adopted';
+            return 'badge-pending';
+        }
+
+        function getStatusLabel(c) {
+            if (c.is_legacy) return 'Legacy';
+            return c.status;
+        }
+
+        function renderGrid(chars) {
+            const grid = document.getElementById('cards-view');
+            grid.innerHTML = chars.map(c => {
+                const imgUrl = c.images && c.images.length > 0 ? c.images[0].url : '';
+                const imgHtml = imgUrl 
+                    ? `<img src="${imgUrl}" alt="${c.display_name}" onclick="openLightbox('${imgUrl}', '${escapeHtml(c.display_name)}')">`
+                    : '<div class="no-image-placeholder">👤</div>';
+
+                // Format tags
+                let tagBadges = [];
+                for (const cat in c.tags) {
+                    c.tags[cat].forEach(t => {
+                        tagBadges.push(`<span class="tag-badge tag-${cat}">${t}</span>`);
+                    });
+                }
+
+                return `
+                    <div class="char-card">
+                        <div class="char-image-container">
+                            ${imgHtml}
+                            <span class="card-status-badge ${getStatusBadgeClass(c)}">${getStatusLabel(c)}</span>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="char-name">${escapeHtml(c.display_name)}</h3>
+                            ${c.tagline ? `<p class="char-tagline">"${escapeHtml(c.tagline)}"</p>` : ''}
+                            <p class="char-bio">${escapeHtml(c.bio)}</p>
+                            <div class="char-tags-row">
+                                ${tagBadges.join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTable(chars) {
+            const body = document.getElementById('table-body');
+            body.innerHTML = chars.map(c => {
+                const imgUrl = c.images && c.images.length > 0 ? c.images[0].url : '';
+                const imgHtml = imgUrl 
+                    ? `<img src="${imgUrl}" alt="${c.display_name}" class="table-thumb" onclick="openLightbox('${imgUrl}', '${escapeHtml(c.display_name)}')">`
+                    : '<div style="font-size: 1.5rem; text-align: center;">👤</div>';
+
+                // Format tags
+                let tagBadges = [];
+                for (const cat in c.tags) {
+                    c.tags[cat].forEach(t => {
+                        tagBadges.push(`<span class="tag-badge tag-${cat}">${t}</span>`);
+                    });
+                }
+
+                return `
+                    <tr>
+                        <td class="table-img-cell">${imgHtml}</td>
+                        <td>
+                            <div class="table-char-title">${escapeHtml(c.display_name)}</div>
+                            ${c.tagline ? `<div class="table-char-tagline">"${escapeHtml(c.tagline)}"</div>` : ''}
+                        </td>
+                        <td>
+                            <span class="table-status-pill ${getStatusBadgeClass(c)}">${getStatusLabel(c)}</span>
+                        </td>
+                        <td><div class="table-char-bio">${escapeHtml(c.bio)}</div></td>
+                        <td>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; max-width: 250px;">
+                                ${tagBadges.join('')}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // Update active class
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            render();
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('btn-grid').classList.toggle('active', mode === 'grid');
+            document.getElementById('btn-table').classList.toggle('active', mode === 'table');
+            render();
+        }
+
+        function openLightbox(url, name) {
+            const lightbox = document.getElementById('lightbox');
+            document.getElementById('lightbox-img').src = url;
+            document.getElementById('lightbox-caption').innerText = name;
+            lightbox.classList.add('active');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Close lightbox on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        // Initialize app on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -345,7 +345,7 @@ function createClient(baseURLKey: keyof typeof BASE_URLS, useTavernToken: boolea
       async (error) => {
         const status = error.response ? error.response.status : null;
         
-        if ((status === 401 || status === 403) && !error.config._retried) {
+        if (status === 401 && !error.config._retried) {
           // Don't retry auth service calls (those handle their own errors)
           const isAuthService = error.config.url?.includes('/auth/');
           if (isAuthService) {
