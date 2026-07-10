@@ -14,6 +14,7 @@ import Toast from 'react-native-toast-message';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { hydrateServiceUrls } from '../lib/api';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 
 export {
   ErrorBoundary,
@@ -97,6 +98,14 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+const NavigationTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: Colors.background,
+  },
+};
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useUser();
@@ -185,7 +194,7 @@ function RootLayoutNav() {
   }
 
   return (
-    <>
+    <ThemeProvider value={NavigationTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
@@ -200,6 +209,6 @@ function RootLayoutNav() {
         <MatchSplash />
       </SilentErrorBoundary>
       <Toast />
-    </>
+    </ThemeProvider>
   );
 }

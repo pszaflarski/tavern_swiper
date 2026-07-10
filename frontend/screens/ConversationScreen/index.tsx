@@ -682,7 +682,6 @@ function ConversationScreenInner() {
               >
                 <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
               </Pressable>
-              
               <Pressable
                 onPress={() => {
                   if (otherProfile?.profile_id) {
@@ -692,10 +691,7 @@ function ConversationScreenInner() {
                     } as any);
                   }
                 }}
-                style={({ pressed }) => [
-                  styles.headerProfile,
-                  pressed && { opacity: 0.7 }
-                ]}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
                 testID="header-profile-button"
               >
                 {displayImage ? (
@@ -705,9 +701,6 @@ function ConversationScreenInner() {
                     <Ionicons name="person" size={18} color={Colors.outline} />
                   </View>
                 )}
-                <View>
-                  <Text style={styles.headerName}>{displayName}</Text>
-                </View>
               </Pressable>
             </View>
           ),
