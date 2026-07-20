@@ -57,7 +57,13 @@ def run_migration():
     
     # 1. Resolve LLM for summarization
     try:
-        llm = get_llm(provider="google", model="gemini-flash-lite-latest")
+        from model_registry import get_model
+        default_model_name = os.getenv("DEFAULT_MODEL", "dolphin")
+        model_entry = get_model(default_model_name)
+        if not model_entry:
+            raise ValueError(f"Default model '{default_model_name}' not found in registry.")
+        llm = get_llm(provider=model_entry.provider, model=model_entry.model_id)
+        logger.info("Resolved LLM for summarization: %s (provider: %s)", default_model_name, model_entry.provider)
     except Exception as e:
         logger.error("Failed to initialize LLM: %s", e)
         return
