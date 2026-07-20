@@ -226,6 +226,8 @@ func HandleReconcile(c *gin.Context) {
 		}
 	}
 
+	log.Printf("[INFO] Cache reconciliation completed. Upserts healed: %d, Deletes healed: %d, Skipped: %d", updatesCount, deletesCount, skippedCount)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":        "success",
 		"upserts_healed": updatesCount,
