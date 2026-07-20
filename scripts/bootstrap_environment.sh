@@ -62,7 +62,8 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   containerregistry.googleapis.com \
   bigquery.googleapis.com \
-  eventarc.googleapis.com
+  eventarc.googleapis.com \
+  cloudscheduler.googleapis.com
 
 echo "🔑 Creating Service Account 'tavern-swiper-sa'..."
 SA_EMAIL="tavern-swiper-sa@${PROJECT}.iam.gserviceaccount.com"

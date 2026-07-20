@@ -32,10 +32,36 @@ steps:
           --region=us-central1 \
           --no-allow-unauthenticated \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG \
           --cpu-boost \
           --memory=512Mi \
           --execution-environment=gen1 \
+          --quiet
+
+  # 5. Create or Update Cloud Scheduler Job
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "⏰ Provisioning Cloud Scheduler Job for cache reconciliation..."
+        SERVICE_URL=$$(gcloud run services describe $_SERVICE_NAME$_ENV_SUFFIX --region=us-central1 --format='value(status.url)')
+        
+        gcloud scheduler jobs create http $_SERVICE_NAME-reconcile$_ENV_SUFFIX \
+          --schedule="0 * * * *" \
+          --uri="$${SERVICE_URL}/admin/reconcile" \
+          --http-method=POST \
+          --oidc-service-account-email="tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+          --project=$PROJECT_ID \
+          --location=us-central1 \
+          --quiet || \
+        gcloud scheduler jobs update http $_SERVICE_NAME-reconcile$_ENV_SUFFIX \
+          --schedule="0 * * * *" \
+          --uri="$${SERVICE_URL}/admin/reconcile" \
+          --http-method=POST \
+          --oidc-service-account-email="tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+          --project=$PROJECT_ID \
+          --location=us-central1 \
           --quiet
 
 options:
