@@ -935,8 +935,9 @@ func callAgentRouterAsync(botToken, agentName, prompt, conversationID, messageTy
 	req.Header.Set("Authorization", "Bearer "+botToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	// Short timeout — we only need the 202 Accepted, not the AI response
-	asyncClient := &http.Client{Timeout: 15 * time.Second}
+	// Short timeout — we only need the 202 Accepted, not the AI response.
+	// We use 60 seconds to accommodate Cloud Run cold starts.
+	asyncClient := &http.Client{Timeout: 60 * time.Second}
 	resp, err := asyncClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("HTTP error calling agent_router /invoke-async: %w", err)
