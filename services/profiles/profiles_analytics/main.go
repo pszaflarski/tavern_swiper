@@ -1,5 +1,7 @@
 package main
 
+// Trigger build to transition service from source to container deployment.
+
 import (
 	"context"
 	"log"

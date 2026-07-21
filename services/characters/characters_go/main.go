@@ -7,6 +7,8 @@
 // @name Authorization
 package main
 
+// Trigger build to transition service from source to container deployment.
+
 import (
 	"log"
 	"os"
