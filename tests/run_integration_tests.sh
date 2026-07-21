@@ -10,27 +10,29 @@ MODE="cloud-dev"
 RESET=true
 REAL_AUTH=""
 
+PYTEST_ARGS=()
 for arg in "$@"; do
     case $arg in
         --prod)
             MODE="cloud-prod"
-            shift
             ;;
         --test)
             MODE="cloud-test"
-            shift
+            ;;
+        --dev)
+            MODE="cloud-dev"
             ;;
         --local)
             MODE="local"
-            shift
             ;;
         --no-reset)
             RESET=false
-            shift
             ;;
         --real-auth)
             REAL_AUTH="--real-auth"
-            shift
+            ;;
+        *)
+            PYTEST_ARGS+=("$arg")
             ;;
     esac
 done
@@ -146,6 +148,7 @@ else
         done
     fi
     
+    export ENV_NAME="${ENV_NAME}"
     export DISCOVERY_DB="discovery-${ENV_NAME}"
     export MESSAGES_DB="messages-${ENV_NAME}"
     export BOTS_DB="bots-${ENV_NAME}"
@@ -261,7 +264,7 @@ $PYTHON scripts/seed_objects.py $ENV_ARG
 
 echo "🧪 Running Integration Tests..."
 $PYTHON -m pip install -r tests/requirements.txt -q
-$PYTHON -m pytest $TESTS_DIR $REAL_AUTH -v -s
+$PYTHON -m pytest "${PYTEST_ARGS[@]:-$TESTS_DIR}" $REAL_AUTH -v -s
 
 # Return the exit code of pytest
 EXIT_CODE=$?
