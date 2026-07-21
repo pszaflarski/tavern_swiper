@@ -189,6 +189,15 @@ The profiles service publishes events to Pub/Sub when profiles are created, upda
 
 ### Setup Commands
 ```bash
+# 1. Grant GCP Pub/Sub service account permission to mint OIDC tokens for push authentication
+PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+gcloud iam service-accounts add-iam-policy-binding tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project=$PROJECT_ID
+
+# 2. Create Push Subscriptions
+
 # Discovery subscriber (receives profile events)
 gcloud pubsub subscriptions create $ENV-discovery-subscriber-push-sub \
   --topic=$ENV-profiles-profile-events-v1 \

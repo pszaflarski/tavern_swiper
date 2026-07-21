@@ -14,6 +14,14 @@ echo "📡 Setting up Pub/Sub Topics & Push Subscriptions for environment: ${ENV
 
 SA_EMAIL="tavern-swiper-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
+# Grant Pub/Sub service account Token Creator role on SA_EMAIL for OIDC push subscriptions
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+echo "🔑 Ensuring Pub/Sub service account has Token Creator permissions..."
+gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project="${PROJECT_ID}" --quiet &>/dev/null || true
+
 # 1. Fetch Cloud Run service URLs
 echo "🔍 Discovering Cloud Run service URLs..."
 AGENT_ROUTER_URL=$(gcloud run services describe "agent-router-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
