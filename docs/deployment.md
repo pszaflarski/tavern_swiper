@@ -220,6 +220,23 @@ gcloud pubsub subscriptions create $ENV-notifications-messages-push-sub \
   --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
   --ack-deadline=10 \
   --project=$PROJECT_ID
+
+# Agent router subscriber (receives bot agent requests)
+# CRITICAL: --ack-deadline=600 is required for long-running LLM invocations
+gcloud pubsub subscriptions create $ENV-agent-router-request-push-sub \
+  --topic=$ENV-bots-agent-request-v1 \
+  --push-endpoint=$(gcloud run services describe agent-router-$ENV --region=us-central1 --format='value(status.url)')/pubsub/agent-request \
+  --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --ack-deadline=600 \
+  --project=$PROJECT_ID
+
+# Bots subscriber (receives agent responses)
+gcloud pubsub subscriptions create $ENV-bots-agent-response-push-sub \
+  --topic=$ENV-agent-router-agent-response-v1 \
+  --push-endpoint=$(gcloud run services describe bots-subscriber-$ENV --region=us-central1 --format='value(status.url)')/ \
+  --push-auth-service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --ack-deadline=60 \
+  --project=$PROJECT_ID
 ```
 
 > [!WARNING]

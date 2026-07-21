@@ -128,6 +128,8 @@ TOPICS=(
   "${ENV}-profiles-profile-events-v1"
   "${ENV}-discovery-match-events-v1"
   "${ENV}-messages-message-events-v1"
+  "${ENV}-bots-agent-request-v1"
+  "${ENV}-agent-router-agent-response-v1"
 )
 for TOPIC in "${TOPICS[@]}"; do
   if gcloud pubsub topics describe "$TOPIC" &>/dev/null; then

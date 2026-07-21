@@ -111,3 +111,38 @@ func TestPubSubPush_DeletedEvent(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 }
+
+func TestPubSubPush_AgentResponseEvent(t *testing.T) {
+	r := setupTestRouter()
+
+	event := &pb.AgentResponseEvent{
+		RequestId:      "req-123",
+		ConversationId: "conv-456",
+		BotProfileId:   "bot-prof-1",
+		BotUserId:      "bot-user-1",
+		AgentName:      "grogmar",
+		Status:         "SUCCESS",
+		ResponseJson:   `[{"type":"message","content":"Greetings traveler!"}]`,
+	}
+
+	data, err := proto.Marshal(event)
+	if err != nil {
+		t.Fatalf("Failed to marshal AgentResponseEvent: %v", err)
+	}
+
+	pushMsg := PubSubPushRequest{
+		Subscription: "projects/tavern-swiper-dev/subscriptions/dev-bots-agent-response-sub",
+	}
+	pushMsg.Message.Data = data
+	body, _ := json.Marshal(pushMsg)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
