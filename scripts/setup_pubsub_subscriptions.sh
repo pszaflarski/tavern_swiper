@@ -72,6 +72,7 @@ create_or_update_sub() {
     echo "🔄 Updating existing subscription $SUB_NAME..."
     gcloud pubsub subscriptions update "$SUB_NAME" \
       --push-endpoint="$PUSH_ENDPOINT" \
+      --push-auth-service-account="$SA_EMAIL" \
       --ack-deadline="$ACK_DEADLINE" \
       --project="${PROJECT_ID}"
   else
@@ -97,13 +98,25 @@ if [[ -n "$AGENT_ROUTER_URL" ]]; then
     600
 fi
 
-# Bots subscriber (receives agent responses)
+# Bots subscriber (receives agent responses, profile events, and message events)
 if [[ -n "$BOTS_SUBSCRIBER_URL" ]]; then
   create_or_update_sub \
     "${ENV}-bots-agent-response-push-sub" \
     "${ENV}-agent-router-agent-response-v1" \
     "${BOTS_SUBSCRIBER_URL}/" \
     60
+
+  create_or_update_sub \
+    "${ENV}-bots-subscriber-push-sub" \
+    "${ENV}-profiles-profile-events-v1" \
+    "${BOTS_SUBSCRIBER_URL}/" \
+    10
+
+  create_or_update_sub \
+    "${ENV}-bots-message-subscriber-push-sub" \
+    "${ENV}-messages-message-events-v1" \
+    "${BOTS_SUBSCRIBER_URL}/" \
+    10
 fi
 
 # Discovery subscriber (receives profile events)

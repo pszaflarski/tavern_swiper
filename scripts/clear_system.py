@@ -72,20 +72,17 @@ def get_gcloud_credentials():
         return None
 
 def delete_collection(coll_ref, batch_size=500):
-    """Helper to recursively delete a Firestore collection in batches."""
-    docs = coll_ref.limit(batch_size).stream()
-    deleted = 0
+    """Helper to delete a Firestore collection in batches using bulk writer / batch operations."""
+    docs = list(coll_ref.limit(batch_size).stream())
+    if not docs:
+        return
 
+    batch = coll_ref._client.batch()
     for doc in docs:
-        # Delete sub-collections recursively if any (standard practice for a deep clean)
-        # Note: In our current schema, we don't have deep sub-collections, but this is robust.
-        for sub_coll in doc.reference.collections():
-            delete_collection(sub_coll, batch_size)
-        
-        doc.reference.delete()
-        deleted += 1
+        batch.delete(doc.reference)
+    batch.commit()
 
-    if deleted >= batch_size:
+    if len(docs) >= batch_size:
         return delete_collection(coll_ref, batch_size)
 
 def purge_system(env="dev", purge_auth=False):

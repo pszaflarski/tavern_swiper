@@ -10,19 +10,13 @@ if [[ -z "$ENV" ]]; then
   exit 1
 fi
 
-PROJECT=$(gcloud config get-value project)
-LOCATION="us-central1"
-
-# Production uses nam5 for Firestore, so Eventarc trigger location is "us"
 if [[ "$ENV" == "prod" ]]; then
+  PROJECT="tavern-swiper-prod"
   LOCATION="us"
   echo "⚠️ WARNING: This command will modify the PRODUCTION environment."
-  read -p "Are you sure you want to proceed with Prod? (y/N) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Aborting."
-      exit 1
-  fi
+else
+  PROJECT="tavern-swiper-dev"
+  LOCATION="us-central1"
 fi
 
 echo "🚀 Provisioning Eventarc CDC triggers for environment: $ENV"

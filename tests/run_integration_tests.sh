@@ -149,6 +149,10 @@ else
     export DISCOVERY_DB="discovery-${ENV_NAME}"
     export MESSAGES_DB="messages-${ENV_NAME}"
     export BOTS_DB="bots-${ENV_NAME}"
+    export QUESTS_DB="quests-${ENV_NAME}"
+    export PROFILES_DB="profiles-${ENV_NAME}"
+    export USERS_DB="users-${ENV_NAME}"
+    export AUTH_DB="auth-${ENV_NAME}"
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
     export PUBSUB_EMULATOR_HOST=""
 
@@ -252,8 +256,8 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Run Integration Tests
 # ---------------------------------------------------------------------------
-echo "🌱 Seeding quests database..."
-$PYTHON scripts/seed_quests.py $ENV_ARG
+echo "🌱 Seeding quests, items, and checkpoint templates..."
+$PYTHON scripts/seed_objects.py $ENV_ARG
 
 echo "🧪 Running Integration Tests..."
 $PYTHON -m pip install -r tests/requirements.txt -q

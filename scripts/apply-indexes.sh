@@ -9,7 +9,11 @@
 # NOTE: no 'set -e' — we handle errors per-index gracefully
 
 ENV=${1:-"dev"} # [dev|test|prod]
-PROJECT=$(gcloud config get-value project)
+if [[ "$ENV" == "prod" ]]; then
+  PROJECT="tavern-swiper-prod"
+else
+  PROJECT="tavern-swiper-dev"
+fi
 
 echo "🚀 Applying Firestore indexes for environment: $ENV (Project: $PROJECT)"
 
@@ -37,7 +41,7 @@ create_index() {
   local coll=$2
   local fields=$3 # format: "field1:order,field2:order" or "field1:array"
   
-  local cmd="gcloud firestore indexes composite create --database=$db --collection-group=$coll --async"
+  local cmd="gcloud firestore indexes composite create --database=$db --collection-group=$coll --project=$PROJECT --async"
   
   # Split fields by comma
   IFS=',' read -ra ADDR <<< "$fields"
