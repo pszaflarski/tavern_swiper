@@ -82,8 +82,15 @@ func handlePubSubPush(c *gin.Context) {
 
 func processSerializedEvent(data []byte, subscription string) error {
 	// Use the subscription name to determine the event type.
-	// This avoids protobuf ambiguity since ProfileEvent and MessageEvent
-	// share the same wire layout (field 1 = enum, field 2 = oneof).
+	if strings.Contains(subscription, "agent-response") || strings.Contains(subscription, "agent_response") {
+		var respEvent pb.AgentResponseEvent
+		if err := proto.Unmarshal(data, &respEvent); err != nil {
+			log.Printf("❌ Failed to unmarshal AgentResponseEvent: %v", err)
+			return nil // Don't retry on bad data
+		}
+		return processAgentResponseEvent(&respEvent)
+	}
+
 	if strings.Contains(subscription, "message") {
 		var msgEvent pb.MessageEvent
 		if err := proto.Unmarshal(data, &msgEvent); err != nil {
@@ -100,6 +107,89 @@ func processSerializedEvent(data []byte, subscription string) error {
 		return nil
 	}
 	return processProfileEvent(&profileEvent)
+}
+
+func processAgentResponseEvent(event *pb.AgentResponseEvent) error {
+	log.Printf("📥 Processing AgentResponseEvent request_id: %s, status: %s", event.RequestId, event.Status)
+
+	status := strings.ToLower(event.Status)
+	if status == "" {
+		status = "success"
+	}
+
+	cbMeta := map[string]interface{}{
+		"conversation_id":   event.ConversationId,
+		"bot_profile_id":    event.BotProfileId,
+		"bot_user_id":       event.BotUserId,
+		"sender_profile_id": event.SenderProfileId,
+		"behavior_type":     event.BehaviorType,
+		"agent_name":        event.AgentName,
+	}
+
+	if event.MetadataJson != "" {
+		var meta map[string]interface{}
+		if err := json.Unmarshal([]byte(event.MetadataJson), &meta); err == nil {
+			for k, v := range meta {
+				if _, exists := cbMeta[k]; !exists {
+					cbMeta[k] = v
+				}
+			}
+		}
+	}
+
+	reqPayload := map[string]interface{}{
+		"request_id":        event.RequestId,
+		"status":            status,
+		"response":          event.ResponseJson,
+		"error":             event.ErrorMessage,
+		"detail":            event.ErrorMessage,
+		"thread_id":         event.ConversationId,
+		"agent":             event.AgentName,
+		"callback_metadata": cbMeta,
+	}
+
+	return callBotsCallbackService(reqPayload)
+}
+
+func callBotsCallbackService(payload map[string]interface{}) error {
+	baseURL := serviceURLs.Get("bots")
+	if baseURL == "" {
+		log.Printf("⚠️ Bots service URL not resolved from router, skipping relay")
+		return nil
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal callback payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", baseURL+"/bots/agent-callback", bytes.NewBuffer(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	token, err := generateInternalJWT()
+	if err == nil {
+		req.Header.Set("Authorization", "Bearer "+token)
+	} else {
+		log.Printf("⚠️ Failed to generate internal JWT: %v", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to call bots agent-callback service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("bots service returned HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	log.Printf("✅ Successfully relayed agent response (request_id=%v) to bots service", payload["request_id"])
+	return nil
 }
 
 type BehaviorTriggerRequest struct {

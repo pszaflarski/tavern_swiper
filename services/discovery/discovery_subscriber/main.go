@@ -42,6 +42,13 @@ func main() {
 	// Pub/Sub Push endpoint
 	r.POST("/", handlePubSubPush)
 
+	// Admin / Reconciliation endpoints
+	adminGroup := r.Group("/admin", AuthMiddleware())
+	{
+		adminGroup.POST("/reconcile", HandleReconcile)
+		adminGroup.POST("/initial-load", HandleInitialLoad)
+	}
+
 	log.Printf("🚀 Discovery Subscriber listening on port %s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("❌ Failed to start server: %v", err)
