@@ -14,12 +14,6 @@ PROJECT="tavern-swiper-dev"
 if [[ "$ENV" == "prod" ]]; then
   PROJECT="tavern-swiper-prod"
   echo "⚠️ WARNING: This command will modify the PRODUCTION environment."
-  read -p "Are you sure you want to proceed with Prod triggers? (y/N) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Aborting."
-      exit 1
-  fi
 fi
 
 REPO_OWNER="pszaflarski"

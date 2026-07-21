@@ -32,7 +32,7 @@ steps:
           --region=us-central1 \
           --no-allow-unauthenticated \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,ENV=$_ENV_NAME,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG \
           --cpu-boost \
           --memory=512Mi \
           --execution-environment=gen1 \
