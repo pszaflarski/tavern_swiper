@@ -12,11 +12,13 @@ fi
 
 if [[ "$ENV" == "prod" ]]; then
   PROJECT="tavern-swiper-prod"
-  LOCATION="us"
+  LOCATION="nam5"
+  DEST_REGION="--destination-run-region=us-central1"
   echo "⚠️ WARNING: This command will modify the PRODUCTION environment."
 else
   PROJECT="tavern-swiper-dev"
   LOCATION="us-central1"
+  DEST_REGION=""
 fi
 
 echo "🚀 Provisioning Eventarc CDC triggers for environment: $ENV"
@@ -27,13 +29,15 @@ SA_EMAIL="tavern-swiper-sa@${PROJECT}.iam.gserviceaccount.com"
 
 # Trigger 1: Profiles
 TRIGGER_PROFILES="profiles-bq-cdc-${ENV}"
-if gcloud eventarc triggers describe "$TRIGGER_PROFILES" --location="$LOCATION" &>/dev/null; then
+if gcloud eventarc triggers describe "$TRIGGER_PROFILES" --location="$LOCATION" --project="$PROJECT" &>/dev/null; then
   echo "✅ Eventarc trigger $TRIGGER_PROFILES already exists."
 else
   echo "🏗️ Creating Eventarc trigger $TRIGGER_PROFILES..."
   gcloud eventarc triggers create "$TRIGGER_PROFILES" \
+    --project="$PROJECT" \
     --location="$LOCATION" \
     --destination-run-service="profiles-analytics-${ENV}" \
+    $DEST_REGION \
     --destination-run-path="/" \
     --event-filters="type=google.cloud.firestore.document.v1.written" \
     --event-filters="database=profiles-${ENV}" \
@@ -46,13 +50,15 @@ fi
 
 # Trigger 2: Matches (Discovery)
 TRIGGER_MATCHES="matches-bq-cdc-${ENV}"
-if gcloud eventarc triggers describe "$TRIGGER_MATCHES" --location="$LOCATION" &>/dev/null; then
+if gcloud eventarc triggers describe "$TRIGGER_MATCHES" --location="$LOCATION" --project="$PROJECT" &>/dev/null; then
   echo "✅ Eventarc trigger $TRIGGER_MATCHES already exists."
 else
   echo "🏗️ Creating Eventarc trigger $TRIGGER_MATCHES..."
   gcloud eventarc triggers create "$TRIGGER_MATCHES" \
+    --project="$PROJECT" \
     --location="$LOCATION" \
     --destination-run-service="discovery-analytics-${ENV}" \
+    $DEST_REGION \
     --destination-run-path="/" \
     --event-filters="type=google.cloud.firestore.document.v1.written" \
     --event-filters="database=discovery-${ENV}" \
@@ -65,13 +71,15 @@ fi
 
 # Trigger 3: Matches Cache (Messages DB)
 TRIGGER_MESSAGES_MATCHES="messages-matches-bq-cdc-${ENV}"
-if gcloud eventarc triggers describe "$TRIGGER_MESSAGES_MATCHES" --location="$LOCATION" &>/dev/null; then
+if gcloud eventarc triggers describe "$TRIGGER_MESSAGES_MATCHES" --location="$LOCATION" --project="$PROJECT" &>/dev/null; then
   echo "✅ Eventarc trigger $TRIGGER_MESSAGES_MATCHES already exists."
 else
   echo "🏗️ Creating Eventarc trigger $TRIGGER_MESSAGES_MATCHES..."
   gcloud eventarc triggers create "$TRIGGER_MESSAGES_MATCHES" \
+    --project="$PROJECT" \
     --location="$LOCATION" \
     --destination-run-service="messages-analytics-${ENV}" \
+    $DEST_REGION \
     --destination-run-path="/" \
     --event-filters="type=google.cloud.firestore.document.v1.written" \
     --event-filters="database=messages-${ENV}" \
@@ -84,13 +92,15 @@ fi
 
 # Trigger 4: Users (Users DB)
 TRIGGER_USERS="users-bq-cdc-${ENV}"
-if gcloud eventarc triggers describe "$TRIGGER_USERS" --location="$LOCATION" &>/dev/null; then
+if gcloud eventarc triggers describe "$TRIGGER_USERS" --location="$LOCATION" --project="$PROJECT" &>/dev/null; then
   echo "✅ Eventarc trigger $TRIGGER_USERS already exists."
 else
   echo "🏗️ Creating Eventarc trigger $TRIGGER_USERS..."
   gcloud eventarc triggers create "$TRIGGER_USERS" \
+    --project="$PROJECT" \
     --location="$LOCATION" \
     --destination-run-service="users-analytics-${ENV}" \
+    $DEST_REGION \
     --destination-run-path="/" \
     --event-filters="type=google.cloud.firestore.document.v1.written" \
     --event-filters="database=users-${ENV}" \
@@ -103,13 +113,15 @@ fi
 
 # Trigger 5: Profiles Cache (Discovery DB)
 TRIGGER_DISCOVERY_PROFILES="discovery-profiles-cache-bq-cdc-${ENV}"
-if gcloud eventarc triggers describe "$TRIGGER_DISCOVERY_PROFILES" --location="$LOCATION" &>/dev/null; then
+if gcloud eventarc triggers describe "$TRIGGER_DISCOVERY_PROFILES" --location="$LOCATION" --project="$PROJECT" &>/dev/null; then
   echo "✅ Eventarc trigger $TRIGGER_DISCOVERY_PROFILES already exists."
 else
   echo "🏗️ Creating Eventarc trigger $TRIGGER_DISCOVERY_PROFILES..."
   gcloud eventarc triggers create "$TRIGGER_DISCOVERY_PROFILES" \
+    --project="$PROJECT" \
     --location="$LOCATION" \
     --destination-run-service="discovery-analytics-${ENV}" \
+    $DEST_REGION \
     --destination-run-path="/" \
     --event-filters="type=google.cloud.firestore.document.v1.written" \
     --event-filters="database=discovery-${ENV}" \
