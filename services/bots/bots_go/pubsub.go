@@ -21,7 +21,13 @@ type RealAgentPublisher struct {
 }
 
 func NewAgentPublisher(ctx context.Context) (AgentPublisher, error) {
-	projectID := getEnv("PUBSUB_PROJECT_ID", "tavern-swiper-dev")
+	projectID := os.Getenv("PUBSUB_PROJECT_ID")
+	if projectID == "" {
+		projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
+	}
+	if projectID == "" {
+		projectID = "tavern-swiper-dev"
+	}
 	env := getEnv("ENV", "dev")
 	topicID := os.Getenv("PUBSUB_AGENT_REQUEST_TOPIC_ID")
 	if topicID == "" {
