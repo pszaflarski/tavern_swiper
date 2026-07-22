@@ -16,6 +16,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	pb "tavern-swiper.app/bots_go/proto"
 )
 
 // handleBehaviorTrigger receives a generic trigger and dispatches
@@ -897,64 +899,59 @@ func getConversationParticipants(token, conversationID string) ([]string, error)
 var getConversationParticipantsFunc = getConversationParticipants
 
 
-// callAgentRouterAsync sends a fire-and-forget request to agent_router's
-// /invoke-async endpoint. The agent_router will POST the result to the
-// bots_go callback endpoint when processing completes.
+var globalAgentPublisher AgentPublisher
+
+func getAgentPublisher() AgentPublisher {
+	if globalAgentPublisher == nil {
+		ctx := context.Background()
+		pub, err := NewAgentPublisher(ctx)
+		if err != nil {
+			log.Printf("[WARN] Failed to initialize real AgentPublisher: %v. Using MockAgentPublisher.", err)
+			globalAgentPublisher = &MockAgentPublisher{}
+		} else {
+			globalAgentPublisher = pub
+		}
+	}
+	return globalAgentPublisher
+}
+
+// callAgentRouterAsync publishes an AgentRequestEvent to Pub/Sub.
+// agent_router receives it via push subscription, processes the request,
+// and publishes an AgentResponseEvent back to bots_subscriber.
 func callAgentRouterAsync(botToken, agentName, prompt, conversationID, messageType string, metadata map[string]interface{}, botProfileID, botUserID, behaviorType, senderProfileID string) error {
-	agentRouterURL := serviceURLs.Get("agent_router")
-	botsURL := serviceURLs.Get("bots")
+	requestID := uuid.New().String()
 
-	// Mint a callback JWT for the agent_router → bots_go callback
-	callbackJWT, err := mintCallbackJWT()
-	if err != nil {
-		return fmt.Errorf("failed to mint callback JWT: %w", err)
+	var metaJSON string
+	if metadata != nil {
+		b, err := json.Marshal(metadata)
+		if err == nil {
+			metaJSON = string(b)
+		}
 	}
 
-	payload := map[string]interface{}{
-		"prompt":       prompt,
-		"agent":        agentName,
-		"thread_id":    conversationID,
-		"message_type": messageType,
-		"metadata":     metadata,
-		"callback_url": botsURL + "/bots/agent-callback",
-		"callback_headers": map[string]string{
-			"Authorization": "Bearer " + callbackJWT,
-		},
-		"callback_metadata": map[string]interface{}{
-			"conversation_id":   conversationID,
-			"bot_profile_id":    botProfileID,
-			"bot_user_id":       botUserID,
-			"sender_profile_id": senderProfileID,
-			"behavior_type":     behaviorType,
-			"agent_name":        agentName,
-		},
-	}
-	body, _ := json.Marshal(payload)
-
-	req, _ := http.NewRequest("POST", agentRouterURL+"/invoke-async", bytes.NewBuffer(body))
-	req.Header.Set("Authorization", "Bearer "+botToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Short timeout — we only need the 202 Accepted, not the AI response
-	asyncClient := &http.Client{Timeout: 15 * time.Second}
-	resp, err := asyncClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("HTTP error calling agent_router /invoke-async: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return fmt.Errorf("agent_router /invoke-async error (HTTP %d): %s", resp.StatusCode, string(respBody))
+	event := &pb.AgentRequestEvent{
+		RequestId:        requestID,
+		ConversationId:   conversationID,
+		AgentName:        agentName,
+		Prompt:           prompt,
+		MessageType:      messageType,
+		MetadataJson:     metaJSON,
+		BotProfileId:     botProfileID,
+		BotUserId:        botUserID,
+		SenderProfileId: senderProfileID,
+		BehaviorType:     behaviorType,
+		Timestamp:        time.Now().Format(time.RFC3339),
 	}
 
-	var asyncResp AgentAsyncResponse
-	if err := json.NewDecoder(resp.Body).Decode(&asyncResp); err != nil {
-		log.Printf("[WARN] Failed to decode async response, but request was accepted: %v", err)
-	} else {
-		log.Printf("[INFO] Async agent request accepted (request_id=%s) for conversation %s", asyncResp.RequestID, conversationID)
+	pub := getAgentPublisher()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := pub.PublishAgentRequest(ctx, event); err != nil {
+		return fmt.Errorf("failed to publish agent request event: %w", err)
 	}
 
+	log.Printf("[INFO] Async agent Pub/Sub request published (request_id=%s) for agent '%s', conversation %s", requestID, agentName, conversationID)
 	return nil
 }
 

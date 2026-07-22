@@ -282,6 +282,10 @@ services:
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-messages-message-events-v1' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-notifications-match-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-discovery-match-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://notifications-subscriber:8015/\"}}' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-notifications-message-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-messages-message-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://notifications-subscriber:8015/\"}}' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-bots-agent-request-v1' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-agent-router-request-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-bots-agent-request-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://agent-router:8000/pubsub/agent-request\"}}' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-agent-router-agent-response-v1' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-bots-agent-response-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-agent-router-agent-response-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://bots-subscriber:8080/\"}}' && \
              echo '✅ Pub/Sub Initialized'"
     networks:
       - default
