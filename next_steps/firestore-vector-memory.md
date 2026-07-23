@@ -421,3 +421,46 @@ Monitor the runtime logs of the `agent-router` container (e.g. `gcloud beta run 
 ## 4. Relationship to Context Compression
 
 The `context-compression.md` plan describes a future `search_past_messages` tool that would do semantic/vector search over full conversation history. This vector memory system is the **implementation** of that tool. Once deployed, the `search_past_messages` tool can be implemented as a thin wrapper around `retrieve_memories()`.
+
+---
+
+## 5. Future Optimization: Background Memory Worker for Retrieval Accuracy
+
+To maximize story narrative coherence and retrieval accuracy in roleplaying contexts, a dedicated background worker can periodically optimize and refine the vector memory store.
+
+### Key Accuracy Strategies
+
+#### 1. Atomic Fact Extraction
+Instead of embedding 150-word paragraph summaries (which create "diluted" semantic vectors), the worker parses conversation history into discrete, single-sentence atomic facts:
+* `[Inventory] Arthur gave Lira 1 silver coin.`
+* `[Lore] Lira possesses lockpicking skills.`
+* `[Relationship] Arthur trusts Lira.`
+
+**Impact:** Each atomic fact produces a sharp, unpolluted 384-dim vector, resulting in significantly higher cosine similarity scores (>0.90) for specific detail queries.
+
+#### 2. Fact Reconciliation & State Updating
+Over a long roleplay, facts change (e.g. Arthur gives Lira a coin, but later steals it back). The worker periodically reconciles new facts against existing vector documents in Firestore:
+* Compares new facts with existing records for the `thread_id`.
+* Overwrites or deletes superseded/contradictory facts.
+
+**Impact:** Eliminates hallucinations and prevents the LLM from retrieving outdated narrative state.
+
+#### 3. Reverse Indexing (Embedding Hypothetical Questions)
+In vector space, a user's question (*"Did I give you any money?"*) matches another question better than a statement (*"Arthur gave Lira a silver coin"*).
+* For each extracted atomic fact, the worker uses an LLM to generate 2-3 hypothetical user questions (e.g., *"What coin did I give Lira?"*).
+* The document stores the factual text, but embeds the **generated hypothetical questions**.
+
+**Impact:** Dramatically improves vector match precision for user queries during chat.
+
+#### 4. Categorical Metadata Pre-Filtering
+The worker enriches stored vector documents with explicit metadata:
+```json
+{
+  "text": "Arthur gave Lira 1 silver coin.",
+  "category": "inventory_item",
+  "entities": ["Arthur", "Lira", "silver_coin"],
+  "importance": 5
+}
+```
+**Impact:** Enables targeted `pre_filter` queries (e.g. searching only `category == "inventory_item"` when answering inventory-related questions).
+
