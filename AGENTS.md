@@ -28,13 +28,14 @@
 | `router_go` | router | 8010 | `router-{env}` | `services/router/router_go/` |
 | `bots_go` | bots | 8011 | `bots-{env}` | `services/bots/bots_go/` |
 | `bots_subscriber` | bots | 8080 | `bots-{env}` | `services/bots/bots_subscriber/` |
-| `agent_router` | ai | 8000 | MongoDB (via Secret Manager) | `services/agent_router/` |
+| `agent_router_python` | ai | 8000 | MongoDB (via Secret Manager) | `services/agent_router/agent_router_python/` |
+| `agent_router_worker` | ai | 8009 | Firestore (`router-{env}`) | `services/agent_router/agent_router_worker/` |
 | `characters_go` | characters | 8012 | `characters-{env}` | `services/characters/characters_go/` |
 | `quests_go` | quests | 8013 | `quests-{env}` | `services/quests/quests_go/` |
 | `notifications_go` | notifications | 8014 | `notifications-{env}` | `services/notifications/notifications_go/` |
 | `notifications_subscriber` | notifications | 8015 | `notifications-{env}` | `services/notifications/notifications_subscriber/` |
 
-> **Note:** `agent_router` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`.
+> **Note:** `agent_router_python` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`. `agent_router_worker` is Python/FastAPI for async memory worker events.
 
 ## Absolute Rules
 

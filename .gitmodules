@@ -1,5 +1,5 @@
-[submodule "services/bots/agent_router"]
-	path = services/agent_router
+[submodule "services/agent_router/agent_router_python"]
+	path = services/agent_router/agent_router_python
 	url = https://github.com/pszaflarski/agent_router
 [submodule "automated_user/agent_router"]
 	path = automated_user/agent_router
