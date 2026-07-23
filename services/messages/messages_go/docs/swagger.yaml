@@ -373,7 +373,7 @@ paths:
       consumes:
       - application/json
       description: Records that a profile is currently typing in a conversation. The
-        typing state is cleared automatically when a message is sent or after 120
+        typing state is cleared automatically when a message is sent or after 600
         seconds.
       parameters:
       - description: Conversation ID
