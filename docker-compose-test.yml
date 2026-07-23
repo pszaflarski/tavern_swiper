@@ -295,6 +295,8 @@ services:
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-agent-router-request-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-bots-agent-request-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://agent-router:8000/pubsub/agent-request\"}}' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-agent-router-agent-response-v1' && \
              curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-bots-agent-response-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-agent-router-agent-response-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://bots-subscriber:8080/\"}}' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/topics/dev-agent-router-memory-events-v1' && \
+             curl -s -X PUT 'http://pubsub-emulator:8085/v1/projects/tavern-swiper-dev/subscriptions/dev-agent-router-worker-sub' -H 'Content-Type: application/json' -d '{\"topic\":\"projects/tavern-swiper-dev/topics/dev-agent-router-memory-events-v1\",\"pushConfig\":{\"pushEndpoint\":\"http://agent-router-worker:8009/pubsub/memory-events\"}}' && \
              echo '✅ Pub/Sub Initialized'"
     networks:
       - tavern-net
