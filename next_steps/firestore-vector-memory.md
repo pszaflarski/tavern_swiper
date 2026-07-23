@@ -424,43 +424,47 @@ The `context-compression.md` plan describes a future `search_past_messages` tool
 
 ---
 
-## 5. Future Optimization: Background Memory Worker for Retrieval Accuracy
+## 5. Event-Driven Asynchronous Memory Worker Architecture
 
-To maximize story narrative coherence and retrieval accuracy in roleplaying contexts, a dedicated background worker can periodically optimize and refine the vector memory store.
+To achieve maximum retrieval accuracy without penalizing live chat performance, summarization, atomic fact extraction, and vector index maintenance will be completely decoupled into an **asynchronous event-driven worker**.
 
-### Key Accuracy Strategies
+### Architecture & Control Flow
 
-#### 1. Atomic Fact Extraction
-Instead of embedding 150-word paragraph summaries (which create "diluted" semantic vectors), the worker parses conversation history into discrete, single-sentence atomic facts:
-* `[Inventory] Arthur gave Lira 1 silver coin.`
-* `[Lore] Lira possesses lockpicking skills.`
-* `[Relationship] Arthur trusts Lira.`
+1. **Live Chat (`agent_router` - Read-Only for Vector DB):**
+   * Performs fast vector reads via `retrieve_memories()` (using `fastembed` + Firestore KNN) to inject relevant context into the LLM system prompt.
+   * Processes the character response and returns it to the Adventurer **immediately** (zero chat latency).
+   * If history exceeds `MAX_MEMORY_TOKENS`, it emits a fire-and-forget async trigger (via Pub/Sub event or task payload) containing the `thread_id` and proceeds without waiting.
 
-**Impact:** Each atomic fact produces a sharp, unpolluted 384-dim vector, resulting in significantly higher cosine similarity scores (>0.90) for specific detail queries.
+2. **Background Memory Worker (Write & Maintenance for Vector DB):**
+   * Subscribes to memory processing events.
+   * **Atomic Fact Extraction:** Converts raw chat chunks into sharp, single-sentence facts (`[Inventory]`, `[Lore]`, `[Relationship]`).
+   * **Reverse Indexing (HyDE):** Generates 2–3 hypothetical user questions for each fact and embeds those questions to maximize vector retrieval similarity.
+   * **Reconciliation & Pruning:** Compares new facts against existing `agent_memories` for the `thread_id`, deleting or updating superseded/contradictory facts (e.g. updating item ownership).
+   * **Checkpointer Compaction:** Compacts old raw messages in the checkpointer state after facts are safely committed to Firestore.
 
-#### 2. Fact Reconciliation & State Updating
-Over a long roleplay, facts change (e.g. Arthur gives Lira a coin, but later steals it back). The worker periodically reconciles new facts against existing vector documents in Firestore:
-* Compares new facts with existing records for the `thread_id`.
-* Overwrites or deletes superseded/contradictory facts.
-
-**Impact:** Eliminates hallucinations and prevents the LLM from retrieving outdated narrative state.
-
-#### 3. Reverse Indexing (Embedding Hypothetical Questions)
-In vector space, a user's question (*"Did I give you any money?"*) matches another question better than a statement (*"Arthur gave Lira a silver coin"*).
-* For each extracted atomic fact, the worker uses an LLM to generate 2-3 hypothetical user questions (e.g., *"What coin did I give Lira?"*).
-* The document stores the factual text, but embeds the **generated hypothetical questions**.
-
-**Impact:** Dramatically improves vector match precision for user queries during chat.
-
-#### 4. Categorical Metadata Pre-Filtering
-The worker enriches stored vector documents with explicit metadata:
-```json
-{
-  "text": "Arthur gave Lira 1 silver coin.",
-  "category": "inventory_item",
-  "entities": ["Arthur", "Lira", "silver_coin"],
-  "importance": 5
-}
 ```
-**Impact:** Enables targeted `pre_filter` queries (e.g. searching only `category == "inventory_item"` when answering inventory-related questions).
+[ Adventurer sends message ]
+          │
+          ▼
+[ agent_router (Live Chat Graph) ]
+   ├── 1. Retrieve vector memories (Fast Firestore KNN read)
+   ├── 2. Generate AI reply & return to Adventurer IMMEDIATELY
+   └── 3. If history token threshold is crossed:
+          └── Publish async event: "process_memory_for_thread" (Fire-and-Forget)
+          
+                               │ (Asynchronous Pub/Sub or Cloud Run Worker)
+                               ▼
+[ Background Memory Worker ]
+   ├── 1. Fetch un-processed history
+   ├── 2. Extract atomic facts & generate reverse hypothetical questions
+   ├── 3. Reconcile / overwrite stale facts in Firestore `agent_memories`
+   └── 4. Compact checkpointer history (prune old raw messages)
+```
+
+### Key Benefits
+
+* **Zero Chat Stalling:** Live chat execution never blocks on LLM summarization calls.
+* **Maximum Retrieval Precision:** The background worker can take 10–15 seconds to perform deep atomic fact extraction, question generation, and state reconciliation out-of-band.
+* **Single Source of Truth:** Removes `make_summarize_node` from the synchronous chat execution path, consolidating all memory creation, state reconciliation, and pruning into a single dedicated worker service.
+
 
