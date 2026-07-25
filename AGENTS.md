@@ -131,6 +131,8 @@ cloudbuild.yaml      # Cloud Build pipeline (test → build → push → deploy)
 | Clear environment | `.venv/bin/python3 scripts/clear_system.py [dev\|test]` |
 | Seed sample data | `.venv/bin/python3 scripts/seed_profiles.py [dev\|test]` |
 | Seed quests & items | `.venv/bin/python3 scripts/seed_objects.py [dev\|test]` |
+| Deploy LLM GPU containers | `bash scripts/deploy_llm_containers.sh [dev\|test\|prod] [qwen-32b\|qwen-14b\|dolphin-24b\|all]` |
 | Regenerate Swagger | `cd services/<boundary>/<container> && swag init` |
+
 
 > **⚠️ Seeding dependency:** After `clear_system.py`, you MUST run both `seed_profiles.py` AND `seed_objects.py`. Without `seed_objects.py`, checkpoint templates will be missing and bot agents will silently skip quest completion — no rewards will be granted.
