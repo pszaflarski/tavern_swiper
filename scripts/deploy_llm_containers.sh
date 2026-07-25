@@ -48,11 +48,12 @@ deploy_qwen_32b() {
     --ingress=all \
     --allow-unauthenticated \
     --labels=service-group=self-hosted-llms \
-    --startup-probe=tcpSocket.port=8080,periodSeconds=10,timeoutSeconds=10,failureThreshold=60 \
+    --startup-probe=tcpSocket.port=8080,periodSeconds=15,timeoutSeconds=10,failureThreshold=60 \
     --set-env-vars="VLLM_API_KEY=${VLLM_API_KEY},VLLM_ENABLE_CUDA_COMPATIBILITY=0,LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/lib/x86_64-linux-gnu" \
     --add-volume="name=model-volume,type=cloud-storage,bucket=${MODELS_BUCKET}" \
     --add-volume-mount="volume=model-volume,mount-path=/models" \
-    --args="/models/Qwen/Qwen2.5-32B-Instruct-AWQ,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.96,--kv-cache-dtype,fp8,--safetensors-load-strategy,prefetch,--enable-auto-tool-choice,--tool-call-parser,hermes,--enforce-eager"
+    --args="/models/Qwen/Qwen2.5-32B-Instruct-AWQ,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.96,--kv-cache-dtype,fp8,--enable-auto-tool-choice,--tool-call-parser,hermes,--enforce-eager"
+
   echo "✅ ${service_name} deployed successfully!"
 }
 
@@ -78,11 +79,11 @@ deploy_qwen_14b() {
     --ingress=all \
     --allow-unauthenticated \
     --labels=service-group=self-hosted-llms \
-    --startup-probe=tcpSocket.port=8080,periodSeconds=10,timeoutSeconds=10,failureThreshold=60 \
+    --startup-probe=tcpSocket.port=8080,periodSeconds=15,timeoutSeconds=10,failureThreshold=60 \
     --set-env-vars="VLLM_API_KEY=${VLLM_API_KEY},VLLM_ENABLE_CUDA_COMPATIBILITY=0,LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/lib/x86_64-linux-gnu" \
     --add-volume="name=model-volume,type=cloud-storage,bucket=${MODELS_BUCKET}" \
     --add-volume-mount="volume=model-volume,mount-path=/models" \
-    --args="/models/Qwen/Qwen2.5-14B-Instruct-AWQ,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.95,--safetensors-load-strategy,prefetch,--enable-auto-tool-choice,--tool-call-parser,hermes,--enforce-eager"
+    --args="/models/Qwen/Qwen2.5-14B-Instruct-AWQ,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.95,--enable-auto-tool-choice,--tool-call-parser,hermes,--enforce-eager"
   echo "✅ ${service_name} deployed successfully!"
 }
 
@@ -108,11 +109,12 @@ deploy_dolphin_24b() {
     --ingress=all \
     --allow-unauthenticated \
     --labels=service-group=self-hosted-llms \
-    --startup-probe=tcpSocket.port=8080,periodSeconds=10,timeoutSeconds=10,failureThreshold=60 \
+    --startup-probe=tcpSocket.port=8080,periodSeconds=15,timeoutSeconds=10,failureThreshold=60 \
     --set-env-vars="VLLM_API_KEY=${VLLM_API_KEY},VLLM_ENABLE_CUDA_COMPATIBILITY=0,LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/lib/x86_64-linux-gnu" \
     --add-volume="name=model-volume,type=cloud-storage,bucket=${MODELS_BUCKET}" \
     --add-volume-mount="volume=model-volume,mount-path=/models" \
-    --args="/models/Valdemardi/Dolphin3.0-Mistral-24B-AWQ,--quantization,awq_marlin,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.95,--safetensors-load-strategy,prefetch,--enable-auto-tool-choice,--tool-call-parser,mistral,--enforce-eager"
+    --args="/models/Valdemardi/Dolphin3.0-Mistral-24B-AWQ,--quantization,awq_marlin,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.95,--enable-auto-tool-choice,--tool-call-parser,mistral,--enforce-eager"
+
   echo "✅ ${service_name} deployed successfully!"
 }
 
