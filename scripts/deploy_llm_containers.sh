@@ -52,7 +52,8 @@ deploy_qwen_32b() {
     --set-env-vars="VLLM_API_KEY=${VLLM_API_KEY},VLLM_ENABLE_CUDA_COMPATIBILITY=0,LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/lib/x86_64-linux-gnu" \
     --add-volume="name=model-volume,type=cloud-storage,bucket=${MODELS_BUCKET}" \
     --add-volume-mount="volume=model-volume,mount-path=/models" \
-    --args="/models/Qwen/Qwen2.5-32B-Instruct-GGUF/Qwen2.5-32B-Instruct-Q3_K_M.gguf,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.95,--enable-auto-tool-choice,--tool-call-parser,hermes,--enforce-eager"
+    --args="/models/Qwen/Qwen2.5-32B-Instruct-GGUF/Qwen2.5-32B-Instruct-Q3_K_M.gguf,--tokenizer,/models/Qwen/Qwen2.5-32B-Instruct-GGUF,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.95,--enable-auto-tool-choice,--tool-call-parser,hermes,--enforce-eager"
+
 
 
 
