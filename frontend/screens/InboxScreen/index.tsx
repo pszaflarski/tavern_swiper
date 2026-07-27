@@ -351,15 +351,6 @@ function MessagesScreenInner() {
     [handleMatchPress, handleNewConversationPress],
   );
 
-  const getItemLayoutNewMatch = useCallback(
-    (_data: any, index: number) => ({
-      length: NEW_MATCH_WIDTH,
-      offset: (NEW_MATCH_WIDTH + NEW_MATCH_GAP) * index,
-      index,
-    }),
-    [],
-  );
-
   const ListHeader = useMemo(() => (
     <>
       <View style={styles.profileTabsContainer}>
