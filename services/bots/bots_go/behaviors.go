@@ -484,6 +484,13 @@ func isBotInConversation(token, botProfileID, conversationID string) (bool, erro
 	return false, nil
 }
 
+func getDefaultModel() string {
+	if m := os.Getenv("DEFAULT_MODEL"); m != "" {
+		return m
+	}
+	return "gemini-flash-lite"
+}
+
 // callAgentRouter sends a prompt to the agent_router and returns the AI response.
 func callAgentRouter(token, agentName, prompt, threadID, messageType string, metadata map[string]interface{}) (string, error) {
 	agentRouterURL := serviceURLs.Get("agent_router")
@@ -491,6 +498,7 @@ func callAgentRouter(token, agentName, prompt, threadID, messageType string, met
 	payload := map[string]interface{}{
 		"prompt":       prompt,
 		"agent":        agentName,
+		"model":        getDefaultModel(),
 		"thread_id":    threadID,
 		"message_type": messageType,
 		"metadata":     metadata,
