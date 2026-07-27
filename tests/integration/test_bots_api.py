@@ -105,8 +105,8 @@ async def test_bot_profile_creation_with_image(root_admin):
         bot_id = reg_resp.json()["bot_id"]
 
         # 2. Create Profile with Image Link
-        # Use a public PNG to prove the bots service converts any format to JPEG
-        public_image_url = "https://httpbin.org/image/png"
+        # Use a stable public image URL to prove the bots service processes image links
+        public_image_url = "https://raw.githubusercontent.com/pszaflarski/tavern_swiper/dev/sample_profiles/1f2ee97a-1bce-4da8-abe8-e5ae8c429868_1080x1350.jpg"
         
         profile_payload = {
             "display_name": "Profile Bot's Real Name",
