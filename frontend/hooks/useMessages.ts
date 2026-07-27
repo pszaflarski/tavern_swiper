@@ -19,6 +19,9 @@ export interface LastMessageInfo {
 
 export interface Conversation {
   id: string;
+  type?: string;
+  name?: string;
+  image_url?: string;
   participant_ids: string[];
   other_profile_id?: string;
   last_message?: LastMessageInfo;
@@ -26,6 +29,11 @@ export interface Conversation {
   updated_at?: string;
   unread?: boolean;
   typing?: Record<string, string>;
+}
+
+export interface UnifiedConversation extends Conversation {
+  otherProfile?: Profile | null;
+  participantProfiles?: Profile[];
 }
 
 export interface EventMetadata {
@@ -413,9 +421,12 @@ export function useCreateConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ participants }: { participants: string[] }) => {
+    mutationFn: async ({ participants, type, name, image_url }: { participants: string[]; type?: string; name?: string; image_url?: string }) => {
       const res = await messagesApi.post('/messages/conversations', {
         participant_profile_ids: participants,
+        type,
+        name,
+        image_url,
       });
       return res.data as { conversation_id: string };
     },
@@ -437,8 +448,8 @@ export function useInvolvedMatches(profileId: string | undefined) {
       .filter(Boolean) as string[];
     
     const convoOtherIds = conversations
-      .map(c => c.other_profile_id)
-      .filter(Boolean) as string[];
+      .flatMap(c => c.participant_ids?.length ? c.participant_ids : [c.other_profile_id])
+      .filter(id => id && id !== profileId) as string[];
     
     // Deduplicate unique IDs
     const allUniqueIds = Array.from(new Set([...matchOtherIds, ...convoOtherIds]));
@@ -482,12 +493,16 @@ export function useInvolvedMatches(profileId: string | undefined) {
 
     const enrichedInbox = conversations.map(convo => {
       const otherProfile = Array.isArray(profiles) ? profiles.find(p => p.profile_id === convo.other_profile_id) ?? null : null;
+      const participantProfiles = Array.isArray(profiles)
+        ? (convo.participant_ids || []).map(pid => profiles.find(p => p.profile_id === pid)).filter(Boolean) as Profile[]
+        : [];
 
       return {
         ...convo,
-        otherProfile
+        otherProfile,
+        participantProfiles
       };
-    }).filter(c => !!c.otherProfile);
+    }).filter(c => !!c.otherProfile || (c.type === 'group' && c.participant_ids?.length > 0) || (c.participantProfiles && c.participantProfiles.length > 0));
 
     return { 
       newMatches: enrichedMatches, 

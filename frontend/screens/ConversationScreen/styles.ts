@@ -48,6 +48,13 @@ export const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     alignItems: 'flex-start',
   },
+  senderName: {
+    fontFamily: Fonts.scribe,
+    fontSize: 11,
+    color: Colors.outline,
+    marginBottom: Spacing[1],
+    marginLeft: Spacing[1],
+  },
   // Event & system messages — centered pill
   eventContainer: {
     alignSelf: 'center',

@@ -214,6 +214,32 @@ describe('Conversation Screen', () => {
     expect(props.options.headerShadowVisible).toBe(false);
   });
 
+  it('renders group conversation avatars in header correctly', () => {
+    const mockGroupInbox = [
+      {
+        id: 'group_convo_1',
+        type: 'group',
+        name: 'The Fellowship',
+        participant_ids: ['p1', 'p2', 'p3'],
+        participantProfiles: [
+          { profile_id: 'p2', display_name: 'Legolas', image_urls: ['http://example.com/legolas.jpg'] },
+          { profile_id: 'p3', display_name: 'Gimli', image_urls: ['http://example.com/gimli.jpg'] },
+        ],
+      },
+    ];
+    (useInvolvedMatches as jest.Mock).mockReturnValue({
+      inbox: mockGroupInbox,
+      isLoading: false,
+    });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'group_convo_1' });
+
+    render(<ConversationScreen />);
+
+    expect(Stack.Screen).toHaveBeenCalled();
+    const lastCallProps = (Stack.Screen as jest.Mock).mock.calls[(Stack.Screen as jest.Mock).mock.calls.length - 1][0];
+    expect(lastCallProps.options.headerTitle).toBe('The Fellowship');
+  });
+
   it('allows sending a new message', async () => {
     const mockMutate = jest.fn();
     (useSendMessage as jest.Mock).mockReturnValue({
