@@ -193,6 +193,11 @@ function MessagesScreenInner() {
   const { newMatches, inbox, isLoading: isLoadingContent, refetch: refetchMatches } = useInvolvedMatches(activeProfileId);
 
   const { unreadByProfile } = useUnreadStatus();
+  const createConversation = useCreateConversation();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [selectedCompanionIds, setSelectedCompanionIds] = useState<string[]>([]);
 
   useRefreshOnFocus(React.useCallback(() => {
     refetchProfiles();
