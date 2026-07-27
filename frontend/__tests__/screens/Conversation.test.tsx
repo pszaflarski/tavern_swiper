@@ -54,6 +54,7 @@ jest.mock('../../context/ProfileContext', () => ({
 
 jest.mock('../../hooks/useMessages', () => ({
   useInvolvedMatches: jest.fn(),
+  useConversationDetails: jest.fn(),
   useConversationMessages: jest.fn(),
   useSendMessage: jest.fn(),
   useTypingIndicator: jest.fn(() => ({ isOtherTyping: false, onTextChange: jest.fn() })),
@@ -180,10 +181,17 @@ describe('Conversation Screen', () => {
       data: mockOtherProfile,
       isLoading: false,
     });
-    (useInvolvedMatches as jest.Mock).mockReturnValue({
+    const mockInvolved = {
       inbox: mockInbox,
+      newMatches: [],
       isLoading: false,
       isError: false,
+    };
+    (useInvolvedMatches as jest.Mock).mockReturnValue(mockInvolved);
+    const { useConversationDetails } = require('../../hooks/useMessages');
+    (useConversationDetails as jest.Mock).mockImplementation((cid: string, pid?: string) => {
+      const { inbox } = (useInvolvedMatches as jest.Mock)(pid);
+      return inbox?.find((c: any) => c.id === cid);
     });
     (useConversationMessages as jest.Mock).mockReturnValue({
       data: mockMessages,
@@ -212,6 +220,32 @@ describe('Conversation Screen', () => {
     const props = (Stack.Screen as jest.Mock).mock.calls[0][0];
     expect(props.options.headerTitle).toBe('');
     expect(props.options.headerShadowVisible).toBe(false);
+  });
+
+  it('renders group conversation avatars in header correctly', () => {
+    const mockGroupInbox = [
+      {
+        id: 'group_convo_1',
+        type: 'group',
+        name: 'The Fellowship',
+        participant_ids: ['p1', 'p2', 'p3'],
+        participantProfiles: [
+          { profile_id: 'p2', display_name: 'Legolas', image_urls: ['http://example.com/legolas.jpg'] },
+          { profile_id: 'p3', display_name: 'Gimli', image_urls: ['http://example.com/gimli.jpg'] },
+        ],
+      },
+    ];
+    (useInvolvedMatches as jest.Mock).mockReturnValue({
+      inbox: mockGroupInbox,
+      isLoading: false,
+    });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'group_convo_1' });
+
+    render(<ConversationScreen />);
+
+    expect(Stack.Screen).toHaveBeenCalled();
+    const lastCallProps = (Stack.Screen as jest.Mock).mock.calls[(Stack.Screen as jest.Mock).mock.calls.length - 1][0];
+    expect(lastCallProps.options.headerTitle).toBe('The Fellowship');
   });
 
   it('allows sending a new message', async () => {

@@ -34,6 +34,16 @@ func TestGroupConversations(t *testing.T) {
 	defer func() { profilesClient = oldClient }()
 
 	t.Run("CreateGroupChat_Success", func(t *testing.T) {
+		// Seed matches for p1 vs p2 and p1 vs p3
+		mock.Collection(COLLECTION_CACHE).Doc("match_p1_p2").Set(context.Background(), map[string]interface{}{
+			"match_id":    "match_p1_p2",
+			"profile_ids": []interface{}{"p1", "p2"},
+		})
+		mock.Collection(COLLECTION_CACHE).Doc("match_p1_p3").Set(context.Background(), map[string]interface{}{
+			"match_id":    "match_p1_p3",
+			"profile_ids": []interface{}{"p1", "p3"},
+		})
+
 		body := ConversationCreate{
 			ParticipantProfileIDs: []string{"p1", "p2", "p3"},
 			Type:                  "group",
@@ -78,6 +88,27 @@ func TestGroupConversations(t *testing.T) {
 		}
 		if data["image_url"] != "http://example.com/fellowship.jpg" {
 			t.Errorf("Expected image_url http://example.com/fellowship.jpg, got %v", data["image_url"])
+		}
+	})
+
+	t.Run("CreateGroupChat_UnmatchedParticipant_Forbidden", func(t *testing.T) {
+		// p1 is matched with p2, but NOT p4
+		body := ConversationCreate{
+			ParticipantProfileIDs: []string{"p1", "p2", "p4"},
+			Type:                  "group",
+			Name:                  "Unmatched Guild",
+		}
+		bodyBytes, _ := json.Marshal(body)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/conversations", bytes.NewBuffer(bodyBytes))
+		c.Set("auth", AuthData{UID: "user_p1", Role: "user"})
+
+		handleCreateConversation(c)
+
+		if w.Code != http.StatusForbidden {
+			t.Errorf("Expected 403 Forbidden for unmatched participant, got %d", w.Code)
 		}
 	})
 

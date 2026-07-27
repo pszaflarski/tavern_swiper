@@ -14,7 +14,7 @@ import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
-import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation } from '../../hooks/useMessages';
+import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation, useConversationDetails } from '../../hooks/useMessages';
 import { useProfile } from '../../hooks/useProfiles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -250,7 +250,7 @@ function ConversationScreenInner() {
 
   // Get conversation info (other profile details etc.)
   const { inbox, newMatches, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
-  const conversation = conversationId ? inbox.find(c => c.id === conversationId) : undefined;
+  const conversation = useConversationDetails(conversationId, activeProfileId);
   
   // If we are on a temporary route but the conversation already exists in our inbox cache,
   // resolve it immediately and transition to the active conversation to load messages.
@@ -293,6 +293,16 @@ function ConversationScreenInner() {
     lastProfileNameRef.current = otherProfile.display_name || 'Traveler';
     lastProfileImageRef.current = otherProfile.image_urls?.[0];
   }
+
+  const isGroupConversation = conversation?.type === 'group' || (conversation?.participant_ids && conversation.participant_ids.length > 2);
+
+  // Resolve profiles for all participants in group conversations
+  const groupProfiles = useMemo(() => {
+    if (conversation?.participantProfiles && conversation.participantProfiles.length > 0) {
+      return conversation.participantProfiles;
+    }
+    return otherProfile ? [otherProfile] : [];
+  }, [conversation?.participantProfiles, otherProfile]);
 
   const displayName = otherProfile?.display_name || lastProfileNameRef.current;
   const displayImage = otherProfile?.image_urls?.[0] || lastProfileImageRef.current;
@@ -672,7 +682,7 @@ function ConversationScreenInner() {
       <Stack.Screen 
         options={{
           headerShown: true,
-          headerTitle: '',
+          headerTitle: isGroupConversation && conversation?.name ? conversation.name : '',
           headerLeft: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Pressable 
@@ -682,26 +692,60 @@ function ConversationScreenInner() {
               >
                 <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
               </Pressable>
-              <Pressable
-                onPress={() => {
-                  if (otherProfile?.profile_id) {
-                    router.push({
-                      pathname: '/profiles/preview',
-                      params: { id: otherProfile.profile_id }
-                    } as any);
-                  }
-                }}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-                testID="header-profile-button"
-              >
-                {displayImage ? (
-                  <Image source={{ uri: displayImage }} style={styles.headerAvatar} />
-                ) : (
-                  <View style={[styles.headerAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surfaceContainerHigh }]}>
-                    <Ionicons name="person" size={18} color={Colors.outline} />
-                  </View>
-                )}
-              </Pressable>
+              {isGroupConversation ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 4 }} testID="header-group-avatars">
+                  {groupProfiles.map((prof, idx) => {
+                    const img = prof.image_urls?.[0];
+                    return (
+                      <Pressable
+                        key={prof.profile_id || idx}
+                        onPress={() => {
+                          if (prof.profile_id) {
+                            router.push({
+                              pathname: '/profiles/preview',
+                              params: { id: prof.profile_id }
+                            } as any);
+                          }
+                        }}
+                        style={({ pressed }) => [
+                          { marginLeft: idx > 0 ? 4 : 0 },
+                          pressed && { opacity: 0.7 }
+                        ]}
+                        testID={`header-group-avatar-${prof.profile_id}`}
+                      >
+                        {img ? (
+                          <Image source={{ uri: img }} style={styles.headerAvatar} />
+                        ) : (
+                          <View style={[styles.headerAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surfaceContainerHigh }]}>
+                            <Ionicons name="person" size={18} color={Colors.outline} />
+                          </View>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    if (otherProfile?.profile_id) {
+                      router.push({
+                        pathname: '/profiles/preview',
+                        params: { id: otherProfile.profile_id }
+                      } as any);
+                    }
+                  }}
+                  style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                  testID="header-profile-button"
+                >
+                  {displayImage ? (
+                    <Image source={{ uri: displayImage }} style={styles.headerAvatar} />
+                  ) : (
+                    <View style={[styles.headerAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surfaceContainerHigh }]}>
+                      <Ionicons name="person" size={18} color={Colors.outline} />
+                    </View>
+                  )}
+                </Pressable>
+              )}
             </View>
           ),
           headerStyle: { backgroundColor: Colors.surface },
@@ -832,8 +876,15 @@ function ConversationScreenInner() {
             }
 
             // User messages — left/right aligned bubbles
+            const senderProfile = !isMe && isGroupConversation && item.sender_profile_id 
+              ? groupProfiles.find(p => p.profile_id === item.sender_profile_id)
+              : undefined;
+
             return (
               <ContainerView {...enteringProps} style={[styles.messageBubbleContainer, isMe ? styles.myMessageContainer : styles.theirMessageContainer]}>
+                {!isMe && isGroupConversation && (
+                  <Text style={styles.senderName}>{senderProfile?.display_name || 'Traveler'}</Text>
+                )}
                 <View style={[
                   styles.messageBubble, 
                   isMe ? styles.myMessageBubble : styles.theirMessageBubble
