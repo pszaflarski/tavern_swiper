@@ -29,6 +29,7 @@ BOTS_SUBSCRIBER_URL=$(gcloud run services describe "bots-subscriber-${ENV}" --re
 DISCOVERY_SUBSCRIBER_URL=$(gcloud run services describe "discovery-subscriber-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
 MESSAGES_SUBSCRIBER_URL=$(gcloud run services describe "messages-subscriber-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
 NOTIFICATIONS_GO_URL=$(gcloud run services describe "notifications-go-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
+AGENT_ROUTER_WORKER_URL=$(gcloud run services describe "agent-router-worker-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
 
 if [[ -z "$AGENT_ROUTER_URL" ]]; then
   echo "⚠️ Warning: Could not resolve URL for agent-router-${ENV}. Make sure Cloud Run service is deployed."
@@ -44,6 +45,7 @@ TOPICS=(
   "${ENV}-messages-message-events-v1"
   "${ENV}-bots-agent-request-v1"
   "${ENV}-agent-router-agent-response-v1"
+  "${ENV}-agent-router-memory-events-v1"
 )
 
 echo "📦 Creating Topics..."
@@ -95,6 +97,15 @@ if [[ -n "$AGENT_ROUTER_URL" ]]; then
     "${ENV}-agent-router-request-push-sub" \
     "${ENV}-bots-agent-request-v1" \
     "${AGENT_ROUTER_URL}/pubsub/agent-request" \
+    600
+fi
+
+# Agent Router Worker subscriber (receives async memory extraction events) - 600s ack deadline
+if [[ -n "$AGENT_ROUTER_WORKER_URL" ]]; then
+  create_or_update_sub \
+    "${ENV}-agent-router-worker-sub" \
+    "${ENV}-agent-router-memory-events-v1" \
+    "${AGENT_ROUTER_WORKER_URL}/pubsub/memory-events" \
     600
 fi
 
