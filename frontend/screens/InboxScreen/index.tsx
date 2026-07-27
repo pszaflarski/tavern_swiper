@@ -319,6 +319,15 @@ function MessagesScreenInner() {
 
   const keyExtractorNewMatch = useCallback((item: NewMatchesListItem) => item.id, []);
 
+  const getItemLayoutNewMatch = useCallback(
+    (_data: any, index: number) => ({
+      length: NEW_MATCH_WIDTH,
+      offset: (NEW_MATCH_WIDTH + NEW_MATCH_GAP) * index,
+      index,
+    }),
+    [],
+  );
+
   const renderNewMatchItem = useCallback(
     ({ item }: { item: NewMatchesListItem }) => {
       if ('isAddButton' in item && item.isAddButton) {
