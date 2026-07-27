@@ -117,9 +117,6 @@ const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) =>
 
   const isGroup = convo.type === 'group';
   const title = isGroup ? (convo.name || 'Guild Party') : (convo.otherProfile?.display_name || 'Traveler');
-  const avatarUri = isGroup
-    ? (convo.image_url || convo.participantProfiles?.find(p => p.image_urls?.[0])?.image_urls?.[0])
-    : convo.otherProfile?.image_urls?.[0];
 
   const preview = useMemo(() => {
     if (convo.last_message?.content) {
@@ -128,32 +125,101 @@ const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) =>
     return isGroup ? 'Party formed' : '';
   }, [convo.last_message?.content, isGroup]);
 
+  const groupProfilesToDisplay = useMemo(() => {
+    if (!isGroup) return [];
+    if (convo.participantProfiles && convo.participantProfiles.length > 0) {
+      return convo.participantProfiles.slice(0, 3);
+    }
+    return [];
+  }, [isGroup, convo.participantProfiles]);
+
+  const cardContent = (
+    <View style={styles.inboxContent}>
+      <View style={styles.inboxAvatarContainer}>
+        {isGroup ? (
+          <View style={styles.stackedAvatarsContainer} testID={`group-stacked-avatars-${convo.id}`}>
+            {groupProfilesToDisplay.length > 0 ? (
+              groupProfilesToDisplay.map((prof, index) => {
+                const img = prof.image_urls?.[0];
+                return (
+                  <View
+                    key={prof.profile_id || index}
+                    style={[
+                      styles.stackedAvatarCard,
+                      { left: index * 10, zIndex: 3 - index },
+                    ]}
+                  >
+                    {img ? (
+                      <Image source={{ uri: img }} style={styles.stackedAvatarImage} resizeMode="cover" />
+                    ) : (
+                      <AvatarFallback size={26} style={styles.stackedAvatarImage} />
+                    )}
+                  </View>
+                );
+              })
+            ) : (
+              <>
+                <View style={[styles.stackedAvatarCard, { left: 16, zIndex: 1, opacity: 0.6 }]}>
+                  <AvatarFallback size={26} style={styles.stackedAvatarImage} />
+                </View>
+                <View style={[styles.stackedAvatarCard, { left: 8, zIndex: 2, opacity: 0.8 }]}>
+                  <AvatarFallback size={26} style={styles.stackedAvatarImage} />
+                </View>
+                <View style={[styles.stackedAvatarCard, { left: 0, zIndex: 3 }]}>
+                  <View style={[styles.stackedAvatarImage, { backgroundColor: Colors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="people" size={16} color={Colors.primary} />
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+        ) : convo.otherProfile?.image_urls?.[0] ? (
+          <Image source={{ uri: convo.otherProfile.image_urls[0] }} style={styles.inboxBanner} resizeMode="cover" />
+        ) : (
+          <AvatarFallback size={56} style={styles.inboxBanner} />
+        )}
+        {convo.unread && <View style={styles.unreadDot} />}
+      </View>
+      <View style={styles.inboxTextContainer}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={[styles.inboxName, { flex: 1 }]} numberOfLines={1}>{title}</Text>
+          {isGroup && (
+            <View style={styles.partyBadge} testID={`party-badge-${convo.id}`}>
+              <Ionicons name="people" size={10} color={Colors.tertiary} />
+              <Text style={styles.partyBadgeText}>Party</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.inboxLastMessage} numberOfLines={1}>
+          {preview}
+        </Text>
+      </View>
+    </View>
+  );
+
+  if (isGroup) {
+    return (
+      <View style={styles.cardStackWrapper} testID={`group-card-stack-${convo.id}`}>
+        <View style={styles.cardStackBack2} />
+        <View style={styles.cardStackBack1} />
+        <Pressable
+          testID={`inbox-item-${convo.id}`}
+          style={({ pressed }) => [styles.inboxItem, styles.groupInboxItem, pressed && pressedOpacity07]}
+          onPress={handlePress}
+        >
+          {cardContent}
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <Pressable
       testID={`inbox-item-${convo.id}`}
       style={({ pressed }) => [styles.inboxItem, inboxItemStyle, pressed && pressedOpacity07]}
       onPress={handlePress}
     >
-      <View style={styles.inboxContent}>
-        <View style={styles.inboxAvatarContainer}>
-          {avatarUri ? (
-            <Image source={{ uri: avatarUri }} style={styles.inboxBanner} resizeMode="cover" />
-          ) : isGroup ? (
-            <View style={[styles.inboxBanner, { backgroundColor: Colors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center' }]}>
-              <Ionicons name="people" size={26} color={Colors.primary} />
-            </View>
-          ) : (
-            <AvatarFallback size={56} style={styles.inboxBanner} />
-          )}
-          {convo.unread && <View style={styles.unreadDot} />}
-        </View>
-        <View style={styles.inboxTextContainer}>
-          <Text style={styles.inboxName}>{title}</Text>
-          <Text style={styles.inboxLastMessage} numberOfLines={1}>
-            {preview}
-          </Text>
-        </View>
-      </View>
+      {cardContent}
     </Pressable>
   );
 });
