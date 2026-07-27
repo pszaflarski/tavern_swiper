@@ -185,7 +185,7 @@ const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) =>
           <Text style={[styles.inboxName, { flex: 1 }]} numberOfLines={1}>{title}</Text>
           {isGroup && (
             <View style={styles.partyBadge} testID={`party-badge-${convo.id}`}>
-              <Ionicons name="people" size={10} color={Colors.tertiary} />
+              <Ionicons name="people" size={10} color={Colors.outline} />
               <Text style={styles.partyBadgeText}>Party</Text>
             </View>
           )}
@@ -196,22 +196,6 @@ const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) =>
       </View>
     </View>
   );
-
-  if (isGroup) {
-    return (
-      <View style={styles.cardStackWrapper} testID={`group-card-stack-${convo.id}`}>
-        <View style={styles.cardStackBack2} />
-        <View style={styles.cardStackBack1} />
-        <Pressable
-          testID={`inbox-item-${convo.id}`}
-          style={({ pressed }) => [styles.inboxItem, styles.groupInboxItem, pressed && pressedOpacity07]}
-          onPress={handlePress}
-        >
-          {cardContent}
-        </Pressable>
-      </View>
-    );
-  }
 
   return (
     <Pressable

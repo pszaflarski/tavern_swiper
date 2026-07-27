@@ -182,40 +182,7 @@ export const styles = StyleSheet.create({
     borderColor: Colors.surfaceContainerLowest,
   },
 
-  // Stacked Card / Deck of Cards Effect for Group Conversations
-  cardStackWrapper: {
-    position: 'relative',
-    marginHorizontal: Spacing[6],
-    marginVertical: 4,
-  },
-  cardStackBack2: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    right: -6,
-    bottom: -6,
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant,
-    opacity: 0.6,
-  },
-  cardStackBack1: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    right: -3,
-    bottom: -3,
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.tertiary,
-    opacity: 0.85,
-  },
-  groupInboxItem: {
-    marginHorizontal: 0,
-    borderColor: Colors.tertiary,
-  },
+  // Stacked Avatars for Group Conversations
   stackedAvatarsContainer: {
     width: 52,
     height: 56,
@@ -246,13 +213,13 @@ export const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: Radius.xs,
     borderWidth: 1,
-    borderColor: Colors.tertiary,
+    borderColor: Colors.outlineVariant,
     gap: 3,
   },
   partyBadgeText: {
     fontFamily: Fonts.scribe,
     fontSize: 10,
-    color: Colors.tertiary,
+    color: Colors.outline,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
