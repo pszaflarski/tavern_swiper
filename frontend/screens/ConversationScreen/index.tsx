@@ -14,7 +14,7 @@ import { useLocalSearchParams, router, Stack, useNavigation } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
-import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation } from '../../hooks/useMessages';
+import { useInvolvedMatches, useConversationMessages, useSendMessage, useRollDice, useTypingIndicator, useCreateConversation, useConversationDetails } from '../../hooks/useMessages';
 import { useProfile } from '../../hooks/useProfiles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -250,7 +250,7 @@ function ConversationScreenInner() {
 
   // Get conversation info (other profile details etc.)
   const { inbox, newMatches, isLoading: isLoadingInbox } = useInvolvedMatches(activeProfileId);
-  const conversation = conversationId ? inbox.find(c => c.id === conversationId) : undefined;
+  const conversation = useConversationDetails(conversationId, activeProfileId);
   
   // If we are on a temporary route but the conversation already exists in our inbox cache,
   // resolve it immediately and transition to the active conversation to load messages.

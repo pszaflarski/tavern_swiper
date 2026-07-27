@@ -115,11 +115,18 @@ interface ConversationRowProps {
 const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) => {
   const handlePress = useCallback(() => onPress(convo.id), [onPress, convo.id]);
 
-  // Memoize the message preview so JSON.parse only runs when content changes
-  const preview = useMemo(
-    () => (convo.last_message?.content ? getMessagePreview(convo.last_message.content) : ''),
-    [convo.last_message?.content],
-  );
+  const isGroup = convo.type === 'group';
+  const title = isGroup ? (convo.name || 'Guild Party') : (convo.otherProfile?.display_name || 'Traveler');
+  const avatarUri = isGroup
+    ? (convo.image_url || convo.participantProfiles?.find(p => p.image_urls?.[0])?.image_urls?.[0])
+    : convo.otherProfile?.image_urls?.[0];
+
+  const preview = useMemo(() => {
+    if (convo.last_message?.content) {
+      return getMessagePreview(convo.last_message.content);
+    }
+    return isGroup ? 'Party formed' : '';
+  }, [convo.last_message?.content, isGroup]);
 
   return (
     <Pressable
@@ -129,15 +136,19 @@ const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) =>
     >
       <View style={styles.inboxContent}>
         <View style={styles.inboxAvatarContainer}>
-          {convo.otherProfile?.image_urls?.[0] ? (
-            <Image source={{ uri: convo.otherProfile.image_urls[0] }} style={styles.inboxBanner} resizeMode="cover" />
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.inboxBanner} resizeMode="cover" />
+          ) : isGroup ? (
+            <View style={[styles.inboxBanner, { backgroundColor: Colors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="people" size={26} color={Colors.primary} />
+            </View>
           ) : (
             <AvatarFallback size={56} style={styles.inboxBanner} />
           )}
           {convo.unread && <View style={styles.unreadDot} />}
         </View>
         <View style={styles.inboxTextContainer}>
-          <Text style={styles.inboxName}>{convo.otherProfile?.display_name || 'Traveler'}</Text>
+          <Text style={styles.inboxName}>{title}</Text>
           <Text style={styles.inboxLastMessage} numberOfLines={1}>
             {preview}
           </Text>

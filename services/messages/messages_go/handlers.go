@@ -890,6 +890,11 @@ func handleListConversations(c *gin.Context) {
 		}
 
 		d := convDoc.Data()
+		convType, _ := d["type"].(string)
+		if convType == "" {
+			convType = "direct"
+		}
+
 		// Manual hydration
 		var lastMsg *LastMessageInfo
 		if mid, ok := d["last_message_id"].(string); ok && mid != "" {
@@ -906,8 +911,8 @@ func handleListConversations(c *gin.Context) {
 				SenderProfileID: senderID,
 				Type:            lastMsgType,
 			}
-		} else {
-			// Skip empty conversations (created but no messages sent yet)
+		} else if convType != "group" {
+			// Skip empty direct conversations (created but no messages sent yet)
 			continue
 		}
 
@@ -917,11 +922,6 @@ func handleListConversations(c *gin.Context) {
 		updatedAt := updatedAtT.Format(time.RFC3339)
 
 		pids := parseStringSlice(d["participant_ids"])
-
-		convType, _ := d["type"].(string)
-		if convType == "" {
-			convType = "direct"
-		}
 
 		var otherID *string
 		if convType == "direct" {

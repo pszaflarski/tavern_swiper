@@ -621,3 +621,53 @@ export function useTypingIndicator(
 
   return { isOtherTyping, onTextChange };
 }
+
+/**
+ * Hook to fetch details for a single conversation and populate its participant profiles.
+ * Safe fallback if the conversation isn't in the inbox cache yet.
+ */
+export function useConversationDetails(conversationId: string | undefined, profileId: string | undefined) {
+  const { inbox } = useInvolvedMatches(profileId);
+  const inboxConvo = conversationId ? inbox.find(c => c.id === conversationId) : undefined;
+
+  const { data: fetchedConvo } = useQuery<Conversation | null>({
+    queryKey: ['conversation', conversationId],
+    queryFn: async () => {
+      if (!conversationId || conversationId.startsWith('new_')) return null;
+      try {
+        const res = await messagesApi.get(`/messages/conversations/${conversationId}`);
+        return res.data as Conversation;
+      } catch (err) {
+        return null;
+      }
+    },
+    enabled: !!conversationId && !conversationId.startsWith('new_') && !inboxConvo,
+  });
+
+  const activeConvo = inboxConvo || fetchedConvo;
+  const participantIds = activeConvo?.participant_ids || [];
+
+  const sortedParticipantIds = useMemo(() => [...participantIds].sort(), [participantIds]);
+  const { data: participantProfiles = [] } = useQuery<Profile[]>({
+    queryKey: ['profiles', 'batch', sortedParticipantIds.join(',')],
+    queryFn: async () => {
+      if (sortedParticipantIds.length === 0) return [];
+      const res = await profilesApi.post('/profiles/batch', { profile_ids: sortedParticipantIds });
+      return Array.isArray(res.data) ? res.data : [];
+    },
+    enabled: sortedParticipantIds.length > 0 && !inboxConvo,
+  });
+
+  return useMemo(() => {
+    if (inboxConvo) return inboxConvo;
+    if (fetchedConvo) {
+      const otherProfile = participantProfiles.find(p => p.profile_id !== profileId) || null;
+      return {
+        ...fetchedConvo,
+        otherProfile,
+        participantProfiles: participantProfiles.length > 0 ? participantProfiles : (otherProfile ? [otherProfile] : []),
+      } as UnifiedConversation;
+    }
+    return undefined;
+  }, [inboxConvo, fetchedConvo, participantProfiles, profileId]);
+}
