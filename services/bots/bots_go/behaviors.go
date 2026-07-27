@@ -938,17 +938,18 @@ func callAgentRouterAsync(botToken, agentName, prompt, conversationID, messageTy
 	}
 
 	event := &pb.AgentRequestEvent{
-		RequestId:        requestID,
-		ConversationId:   conversationID,
-		AgentName:        agentName,
-		Prompt:           prompt,
-		MessageType:      messageType,
-		MetadataJson:     metaJSON,
-		BotProfileId:     botProfileID,
-		BotUserId:        botUserID,
+		RequestId:       requestID,
+		ConversationId:  conversationID,
+		AgentName:       agentName,
+		Prompt:          prompt,
+		MessageType:     messageType,
+		MetadataJson:    metaJSON,
+		BotProfileId:    botProfileID,
+		BotUserId:       botUserID,
 		SenderProfileId: senderProfileID,
-		BehaviorType:     behaviorType,
-		Timestamp:        time.Now().Format(time.RFC3339),
+		BehaviorType:    behaviorType,
+		Timestamp:       time.Now().Format(time.RFC3339),
+		Model:           getDefaultModel(),
 	}
 
 	pub := getAgentPublisher()
