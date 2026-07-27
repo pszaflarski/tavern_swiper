@@ -47,6 +47,7 @@ jest.mock('../../context/ProfileContext', () => ({
 
 jest.mock('../../hooks/useMessages', () => ({
   useInvolvedMatches: jest.fn(),
+  useConversationDetails: jest.fn(),
   useConversationMessages: jest.fn(),
   useSendMessage: jest.fn(),
   useTypingIndicator: jest.fn(() => ({ isOtherTyping: false, onTextChange: jest.fn() })),
@@ -140,9 +141,14 @@ function setupMocks(messages: any[]) {
     data: { profile_id: 'p2', display_name: 'Lira', image_urls: [] },
     isLoading: false,
   });
+  const mockInbox = [{ id: 'c1', otherProfile: { profile_id: 'p2', display_name: 'Lira', image_urls: [] } }];
   (useInvolvedMatches as jest.Mock).mockReturnValue({
-    inbox: [{ id: 'c1', otherProfile: { profile_id: 'p2', display_name: 'Lira', image_urls: [] } }],
+    inbox: mockInbox,
     isLoading: false,
+  });
+  const { useConversationDetails } = require('../../hooks/useMessages');
+  (useConversationDetails as jest.Mock).mockImplementation((cid: string) => {
+    return mockInbox.find(c => c.id === cid);
   });
   mockConvoMessages.mockReturnValue({
     data: messages,
