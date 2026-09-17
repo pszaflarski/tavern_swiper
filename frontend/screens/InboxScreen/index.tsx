@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo } from 'react';
-import { View, Text, Image, Pressable, ScrollView, ActivityIndicator, FlatList, StyleSheet } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, Image, Pressable, ScrollView, ActivityIndicator, FlatList, StyleSheet, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Spacing } from '../../theme';
 import { useProfileContext } from '../../context/ProfileContext';
 import { useProfiles, Profile } from '../../hooks/useProfiles';
 import { useUser } from '../../hooks/useUser';
-import { useInvolvedMatches, UnifiedMatch, UnifiedConversation } from '../../hooks/useMessages';
+import { useInvolvedMatches, useCreateConversation, UnifiedMatch, UnifiedConversation } from '../../hooks/useMessages';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -115,10 +115,86 @@ interface ConversationRowProps {
 const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) => {
   const handlePress = useCallback(() => onPress(convo.id), [onPress, convo.id]);
 
-  // Memoize the message preview so JSON.parse only runs when content changes
-  const preview = useMemo(
-    () => (convo.last_message?.content ? getMessagePreview(convo.last_message.content) : ''),
-    [convo.last_message?.content],
+  const isGroup = convo.type === 'group';
+  const title = isGroup ? (convo.name || 'Guild Party') : (convo.otherProfile?.display_name || 'Traveler');
+
+  const preview = useMemo(() => {
+    if (convo.last_message?.content) {
+      return getMessagePreview(convo.last_message.content);
+    }
+    return isGroup ? 'Party formed' : '';
+  }, [convo.last_message?.content, isGroup]);
+
+  const groupProfilesToDisplay = useMemo(() => {
+    if (!isGroup) return [];
+    if (convo.participantProfiles && convo.participantProfiles.length > 0) {
+      return convo.participantProfiles.slice(0, 3);
+    }
+    return [];
+  }, [isGroup, convo.participantProfiles]);
+
+  const cardContent = (
+    <View style={styles.inboxContent}>
+      <View style={styles.inboxAvatarContainer}>
+        {isGroup ? (
+          <View style={styles.stackedAvatarsContainer} testID={`group-stacked-avatars-${convo.id}`}>
+            {groupProfilesToDisplay.length > 0 ? (
+              groupProfilesToDisplay.map((prof, index) => {
+                const img = prof.image_urls?.[0];
+                return (
+                  <View
+                    key={prof.profile_id || index}
+                    style={[
+                      styles.stackedAvatarCard,
+                      { left: index * 10, zIndex: 3 - index },
+                    ]}
+                  >
+                    {img ? (
+                      <Image source={{ uri: img }} style={styles.stackedAvatarImage} resizeMode="cover" />
+                    ) : (
+                      <AvatarFallback size={26} style={styles.stackedAvatarImage} />
+                    )}
+                  </View>
+                );
+              })
+            ) : (
+              <>
+                <View style={[styles.stackedAvatarCard, { left: 16, zIndex: 1, opacity: 0.6 }]}>
+                  <AvatarFallback size={26} style={styles.stackedAvatarImage} />
+                </View>
+                <View style={[styles.stackedAvatarCard, { left: 8, zIndex: 2, opacity: 0.8 }]}>
+                  <AvatarFallback size={26} style={styles.stackedAvatarImage} />
+                </View>
+                <View style={[styles.stackedAvatarCard, { left: 0, zIndex: 3 }]}>
+                  <View style={[styles.stackedAvatarImage, { backgroundColor: Colors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="people" size={16} color={Colors.primary} />
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+        ) : convo.otherProfile?.image_urls?.[0] ? (
+          <Image source={{ uri: convo.otherProfile.image_urls[0] }} style={styles.inboxBanner} resizeMode="cover" />
+        ) : (
+          <AvatarFallback size={56} style={styles.inboxBanner} />
+        )}
+        {convo.unread && <View style={styles.unreadDot} />}
+      </View>
+      <View style={styles.inboxTextContainer}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={[styles.inboxName, { flex: 1 }]} numberOfLines={1}>{title}</Text>
+          {isGroup && (
+            <View style={styles.partyBadge} testID={`party-badge-${convo.id}`}>
+              <Ionicons name="people" size={10} color={Colors.outline} />
+              <Text style={styles.partyBadgeText}>Party</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.inboxLastMessage} numberOfLines={1}>
+          {preview}
+        </Text>
+      </View>
+    </View>
   );
 
   return (
@@ -127,22 +203,7 @@ const ConversationRow = React.memo(({ convo, onPress }: ConversationRowProps) =>
       style={({ pressed }) => [styles.inboxItem, inboxItemStyle, pressed && pressedOpacity07]}
       onPress={handlePress}
     >
-      <View style={styles.inboxContent}>
-        <View style={styles.inboxAvatarContainer}>
-          {convo.otherProfile?.image_urls?.[0] ? (
-            <Image source={{ uri: convo.otherProfile.image_urls[0] }} style={styles.inboxBanner} resizeMode="cover" />
-          ) : (
-            <AvatarFallback size={56} style={styles.inboxBanner} />
-          )}
-          {convo.unread && <View style={styles.unreadDot} />}
-        </View>
-        <View style={styles.inboxTextContainer}>
-          <Text style={styles.inboxName}>{convo.otherProfile?.display_name || 'Traveler'}</Text>
-          <Text style={styles.inboxLastMessage} numberOfLines={1}>
-            {preview}
-          </Text>
-        </View>
-      </View>
+      {cardContent}
     </Pressable>
   );
 });
@@ -193,27 +254,52 @@ function MessagesScreenInner() {
   const { newMatches, inbox, isLoading: isLoadingContent, refetch: refetchMatches } = useInvolvedMatches(activeProfileId);
 
   const { unreadByProfile } = useUnreadStatus();
+  const createConversation = useCreateConversation();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [selectedCompanionIds, setSelectedCompanionIds] = useState<string[]>([]);
 
   useRefreshOnFocus(React.useCallback(() => {
     refetchProfiles();
     refetchMatches();
   }, [refetchProfiles, refetchMatches]));
 
-  const selectedProfile = useMemo(
-    () => (Array.isArray(myProfiles) ? myProfiles.find(p => p.profile_id === activeProfileId) : undefined),
-    [myProfiles, activeProfileId],
-  );
+  const availableCompanions = useMemo(() => {
+    const map = new Map<string, Profile>();
+    (newMatches || []).forEach(m => {
+      if (m.otherProfile?.profile_id) {
+        map.set(m.otherProfile.profile_id, m.otherProfile);
+      }
+    });
+    (inbox || []).forEach(c => {
+      if (c.otherProfile?.profile_id) {
+        map.set(c.otherProfile.profile_id, c.otherProfile);
+      }
+      if (c.participantProfiles) {
+        c.participantProfiles.forEach(p => {
+          if (p.profile_id && p.profile_id !== activeProfileId) {
+            map.set(p.profile_id, p);
+          }
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [newMatches, inbox, activeProfileId]);
+
+  const toggleCompanion = useCallback((pid: string) => {
+    setSelectedCompanionIds(prev =>
+      prev.includes(pid) ? prev.filter(id => id !== pid) : [...prev, pid]
+    );
+  }, []);
 
   const sortedProfilesForTabs = useMemo(() => {
     if (!Array.isArray(myProfiles)) return [];
     return [...myProfiles].sort((a, b) => {
-      // 1. Profiles with unread messages first
       const aHasUnread = !!unreadByProfile[a.profile_id];
       const bHasUnread = !!unreadByProfile[b.profile_id];
       if (aHasUnread && !bHasUnread) return -1;
       if (!aHasUnread && bHasUnread) return 1;
-
-      // 2. Otherwise maintain existing order
       return 0;
     });
   }, [myProfiles, unreadByProfile]);
@@ -228,18 +314,33 @@ function MessagesScreenInner() {
   }, [router]);
 
   const handleNewConversationPress = useCallback(() => {
-    Toast.show({
-      type: 'info',
-      text1: 'Gather Party',
-      text2: 'Group chats are currently locked behind a mystical gate.',
-    });
+    setGroupName('');
+    setSelectedCompanionIds([]);
+    setIsModalOpen(true);
   }, []);
+
+  const handleFormParty = useCallback(async () => {
+    if (!activeProfileId || selectedCompanionIds.length === 0) return;
+    try {
+      const res = await createConversation.mutateAsync({
+        participants: [activeProfileId, ...selectedCompanionIds],
+        type: 'group',
+        name: groupName.trim() || 'Guild Party',
+      });
+      setIsModalOpen(false);
+      router.push(`/messages/${res.conversation_id}`);
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Gather Party',
+        text2: err?.response?.data?.detail || err.message || 'Could not form group chat.',
+      });
+    }
+  }, [activeProfileId, selectedCompanionIds, groupName, createConversation, router]);
 
   const newMatchesData = useMemo(() => {
     return [{ id: 'add-convo-btn', isAddButton: true }, ...(newMatches || [])];
   }, [newMatches]);
-
-  // ─── Main FlatList callbacks (stable references) ──────────────────
 
   const keyExtractor = useCallback((item: UnifiedConversation) => item.id, []);
 
@@ -258,8 +359,6 @@ function MessagesScreenInner() {
     }),
     [],
   );
-
-  // ─── Profile Tabs FlatList callbacks ──────────────────────────────
 
   const keyExtractorProfileTab = useCallback((item: Profile) => item.profile_id, []);
 
@@ -286,6 +385,15 @@ function MessagesScreenInner() {
 
   const keyExtractorNewMatch = useCallback((item: NewMatchesListItem) => item.id, []);
 
+  const getItemLayoutNewMatch = useCallback(
+    (_data: any, index: number) => ({
+      length: NEW_MATCH_WIDTH,
+      offset: (NEW_MATCH_WIDTH + NEW_MATCH_GAP) * index,
+      index,
+    }),
+    [],
+  );
+
   const renderNewMatchItem = useCallback(
     ({ item }: { item: NewMatchesListItem }) => {
       if ('isAddButton' in item && item.isAddButton) {
@@ -299,7 +407,7 @@ function MessagesScreenInner() {
               <Ionicons name="add" size={24} color={Colors.primary} />
             </View>
             <Text style={styles.newMatchName} numberOfLines={1}>
-              New
+              Gather Party
             </Text>
           </Pressable>
         );
@@ -309,20 +417,8 @@ function MessagesScreenInner() {
     [handleMatchPress, handleNewConversationPress],
   );
 
-  const getItemLayoutNewMatch = useCallback(
-    (_data: any, index: number) => ({
-      length: NEW_MATCH_WIDTH,
-      offset: (NEW_MATCH_WIDTH + NEW_MATCH_GAP) * index,
-      index,
-    }),
-    [],
-  );
-
-  // ─── FlatList header (profile tabs + new matches) ────────────────
-
   const ListHeader = useMemo(() => (
     <>
-      {/* Profile Tabs Section */}
       <View style={styles.profileTabsContainer}>
         {isLoadingMyProfiles ? (
           <ActivityIndicator color={Colors.primary} style={loadingIndicatorStyle} />
@@ -337,10 +433,6 @@ function MessagesScreenInner() {
             contentContainerStyle={horizontalListContentStyle}
             showsHorizontalScrollIndicator={false}
             ListEmptyComponent={ProfileTabsEmpty}
-            windowSize={5}
-            maxToRenderPerBatch={5}
-            initialNumToRender={5}
-            removeClippedSubviews={true}
           />
         )}
       </View>
@@ -349,7 +441,6 @@ function MessagesScreenInner() {
         <DiceLoadingScreen message="Consulting the Oracle..." />
       ) : (
         <>
-          {/* New Matches Section */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>New Matches</Text>
           </View>
@@ -364,14 +455,8 @@ function MessagesScreenInner() {
               contentContainerStyle={horizontalListContentStyle}
               showsHorizontalScrollIndicator={false}
               ListEmptyComponent={NewMatchesEmpty}
-              windowSize={5}
-              maxToRenderPerBatch={5}
-              initialNumToRender={5}
-              removeClippedSubviews={true}
             />
           </View>
-
-          {/* Inbox Section Header */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Inbox</Text>
           </View>
@@ -379,17 +464,9 @@ function MessagesScreenInner() {
       )}
     </>
   ), [
-    isLoadingMyProfiles,
-    sortedProfilesForTabs,
-    isLoadingContent,
-    selectedProfile,
-    newMatchesData,
-    renderProfileTabItem,
-    keyExtractorProfileTab,
-    getItemLayoutProfileTab,
-    renderNewMatchItem,
-    keyExtractorNewMatch,
-    getItemLayoutNewMatch,
+    isLoadingMyProfiles, sortedProfilesForTabs, isLoadingContent, newMatchesData, 
+    renderProfileTabItem, keyExtractorProfileTab, getItemLayoutProfileTab, 
+    renderNewMatchItem, keyExtractorNewMatch, getItemLayoutNewMatch
   ]);
 
   const ListEmpty = useMemo(() => (
@@ -402,16 +479,11 @@ function MessagesScreenInner() {
 
   const ListFooter = useMemo(() => <View style={footerStyle} />, []);
 
-  // ─── Render ──────────────────────────────────────────────────────
-
   const inboxData = useMemo(() => {
     if (isLoadingContent || !inbox) return [];
     return [...inbox].sort((a, b) => {
-      // 1. Unread conversations first
       if (a.unread && !b.unread) return -1;
       if (!a.unread && b.unread) return 1;
-
-      // 2. Last message / update / creation timestamp descending
       const aTime = a.last_message?.sent_at || a.updated_at || a.created_at || '';
       const bTime = b.last_message?.sent_at || b.updated_at || b.created_at || '';
       return bTime.localeCompare(aTime);
@@ -434,17 +506,91 @@ function MessagesScreenInner() {
         style={flatListStyle}
         contentContainerStyle={inboxListContentStyle}
         showsVerticalScrollIndicator={false}
-        // Virtualization tuning
         windowSize={7}
         maxToRenderPerBatch={8}
         initialNumToRender={10}
         removeClippedSubviews={true}
       />
+
+      <Modal
+        visible={isModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard} testID="gather-party-modal">
+            <Text style={styles.modalTitle}>Gather Your Party</Text>
+            <Text style={styles.modalSubtitle}>Form a fellowship of matched companions</Text>
+
+            <TextInput
+              style={styles.groupInput}
+              placeholder="Party Name (e.g. Fellowship of Tavern)"
+              placeholderTextColor={Colors.outline}
+              value={groupName}
+              onChangeText={setGroupName}
+              testID="group-name-input"
+            />
+
+            <Text style={styles.companionListTitle}>Select Companions</Text>
+            {availableCompanions.length === 0 ? (
+              <Text style={styles.emptyText}>No matched companions available yet.</Text>
+            ) : (
+              <ScrollView style={styles.companionScroll} nestedScrollEnabled>
+                {availableCompanions.map(comp => {
+                  const isSelected = selectedCompanionIds.includes(comp.profile_id);
+                  return (
+                    <Pressable
+                      key={comp.profile_id}
+                      style={[styles.companionItem, isSelected && styles.companionItemActive]}
+                      onPress={() => toggleCompanion(comp.profile_id)}
+                      testID={`companion-item-${comp.profile_id}`}
+                    >
+                      {comp.image_urls?.[0] ? (
+                        <Image source={{ uri: comp.image_urls[0] }} style={styles.companionAvatar} />
+                      ) : (
+                        <AvatarFallback size={36} style={styles.companionAvatar} />
+                      )}
+                      <Text style={styles.companionName}>{comp.display_name}</Text>
+                      <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+                        {isSelected && <Ionicons name="checkmark" size={14} color={Colors.onTertiary} />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.cancelButton}
+                onPress={() => setIsModalOpen(false)}
+                testID="cancel-party-button"
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.createButton,
+                  (selectedCompanionIds.length === 0 || createConversation.isPending) && styles.createButtonDisabled,
+                ]}
+                disabled={selectedCompanionIds.length === 0 || createConversation.isPending}
+                onPress={handleFormParty}
+                testID="form-party-button"
+              >
+                {createConversation.isPending ? (
+                  <ActivityIndicator size="small" color={Colors.onTertiary} />
+                ) : (
+                  <Text style={styles.createButtonText}>Form Party</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
-
-// ─── Stable style references (avoid inline object creation) ──────────
 
 const loadingIndicatorStyle = { marginVertical: Spacing[4] };
 const emptyInboxStyle = { paddingVertical: Spacing[10], paddingHorizontal: Spacing[6], alignItems: 'center' as const };

@@ -28,13 +28,14 @@
 | `router_go` | router | 8010 | `router-{env}` | `services/router/router_go/` |
 | `bots_go` | bots | 8011 | `bots-{env}` | `services/bots/bots_go/` |
 | `bots_subscriber` | bots | 8080 | `bots-{env}` | `services/bots/bots_subscriber/` |
-| `agent_router` | ai | 8000 | MongoDB (via Secret Manager) | `services/agent_router/` |
+| `agent_router_python` | ai | 8000 | MongoDB (via Secret Manager) | `services/agent_router/agent_router_python/` |
+| `agent_router_worker` | ai | 8009 | Firestore (`router-{env}`) | `services/agent_router/agent_router_worker/` |
 | `characters_go` | characters | 8012 | `characters-{env}` | `services/characters/characters_go/` |
 | `quests_go` | quests | 8013 | `quests-{env}` | `services/quests/quests_go/` |
 | `notifications_go` | notifications | 8014 | `notifications-{env}` | `services/notifications/notifications_go/` |
 | `notifications_subscriber` | notifications | 8015 | `notifications-{env}` | `services/notifications/notifications_subscriber/` |
 
-> **Note:** `agent_router` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`.
+> **Note:** `agent_router_python` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`. `agent_router_worker` is Python/FastAPI for async memory worker events.
 
 ## Absolute Rules
 
@@ -64,6 +65,7 @@
 9. **DEPLOYMENT SOURCE OF TRUTH**: For local testing or debugging, you may temporarily run `gcloud run deploy` or `gcloud functions deploy`. However, for final and persistent deployments, you MUST merge/push to the deploy branches (`dev`, `test`, `prod`) to trigger Cloud Build CI/CD. This ensures environment consistency and infrastructure-as-code parity.
 10. **PRODUCTION SAFETY & CONSENT**: Never perform production changes in the same logical job or command sequence as dev/test changes. Any modification to `tavern-swiper-prod` requires explicit, isolated user consent (e.g., "Yes, proceed with Prod"). Every production-modifying action must be preceded by: "⚠️ WARNING: This command will modify the PRODUCTION environment."
 11. **TEST BEFORE MERGE**: Before merging to the `dev` branch, you MUST run unit tests for all affected services and confirm they pass. For Go services: `go test -v ./...` in the service directory. For frontend: `cd frontend && npm test`. Never push code to `dev` that has not been locally validated by its test suite. Running unit tests locally is not required before merging to `test` or `prod`, as all code flows through `dev` first and the build pipeline automatically executes tests.
+12. **DEDUPLICATE ACTIVE BUILDS**: Whenever Cloud Build builds are triggered, inspect running builds (`gcloud builds list --filter="status=WORKING OR status=QUEUED"`) to check if multiple builds are running for the same trigger. Automatically cancel all but the newest build per trigger (`gcloud builds cancel <ID>`).
 
 ## JWT Architecture
 
@@ -129,6 +131,8 @@ cloudbuild.yaml      # Cloud Build pipeline (test → build → push → deploy)
 | Clear environment | `.venv/bin/python3 scripts/clear_system.py [dev\|test]` |
 | Seed sample data | `.venv/bin/python3 scripts/seed_profiles.py [dev\|test]` |
 | Seed quests & items | `.venv/bin/python3 scripts/seed_objects.py [dev\|test]` |
+| Deploy LLM GPU containers | `bash scripts/deploy_llm_containers.sh [dev\|test\|prod] [qwen-32b\|qwen-14b\|dolphin-24b\|all]` |
 | Regenerate Swagger | `cd services/<boundary>/<container> && swag init` |
+
 
 > **⚠️ Seeding dependency:** After `clear_system.py`, you MUST run both `seed_profiles.py` AND `seed_objects.py`. Without `seed_objects.py`, checkpoint templates will be missing and bot agents will silently skip quest completion — no rewards will be granted.

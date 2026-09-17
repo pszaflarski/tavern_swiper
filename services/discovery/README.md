@@ -2,7 +2,34 @@
 
 The Discovery boundary powers the swipe-based matchmaking engine for Tavern Swiper. It sits **between** the Profiles and Messages boundaries in the event pipeline: it consumes profile events to build its feed cache, and publishes match events that the Messages boundary consumes.
 
-## Position in the System
+---
+
+## 1. Architectural Taxonomy & Principles
+
+### Principle 1: Interaction Exclusively Through Explicit Contracts
+All feed and swipe actions use versioned OpenAPI REST schemas. Cross-boundary events use versioned Protobuf contracts (`proto/profile_events.proto` and `proto/match_events.proto`).
+
+### Principle 2: Defined Business Purpose (Bounded Context)
+- **Bounded Context**: Candidate feed recommendation, directional swiping (`left`/`right`), mutual match detection, match record management, and swipe TTL cleanup.
+- **Domain Invariants**: Swipes are unidirectional state transitions; mutual `right` swipes automatically materialize a deterministic match (`match_{sorted_ids}`) and trigger event propagation.
+
+### Principle 3: Complete Autonomy of Operational Data
+- **Autonomous Persistence Engine**: Dedicated Firestore database `discovery-{env}` (Collections: `swipes`, `matches`, `profiles_profiles_cache`).
+- **Isolation Constraint**: The feed is generated entirely from `profiles_profiles_cache` populated via Pub/Sub. Discovery never queries the Profiles service database.
+
+---
+
+## 2. The Three Interfaces (3D Architecture)
+
+| Interface Dimension | Target Access Pattern | Typical Protocols / Formats | Primary Purpose & Container Implementation |
+|---|---|---|---|
+| **1. Synchronous Operational (OLTP)** | Feed curation, recording swipes, match detail queries, scheduled TTL cleanup | REST (OpenAPI / Swagger via Gin) | `discovery_go` (:8003) serves the swipe feed and processes swipes. `discovery_worker` (:8014) runs background cleanup routines for expired swipes. |
+| **2. Analytical Query (OLAP)** | High-throughput swipe volume scans, match conversion rates, feed latency | BigQuery exports / Materialized SQL Views | `discovery_analytics` exposes analytical domain projections without impacting transactional feed generation or swipe processing. |
+| **3. Asynchronous Streaming (Events)** | Profile cache synchronization, match event publishing | GCP Pub/Sub (Protobuf schemas) | `discovery_subscriber` (:8007) consumes profile events on `{env}-profiles-profile-events-v1`. `discovery_go` publishes match events on `{env}-discovery-match-events-v1`. |
+
+---
+
+## 3. Position in the System & Topology
 
 ```
 ┌───────────────────┐                           ┌─────────────────────────────────┐
@@ -34,152 +61,106 @@ The Discovery boundary powers the swipe-based matchmaking engine for Tavern Swip
                                                   └───────────────────────────┘
 ```
 
-## Containers
+---
 
-### `discovery_go` — Discovery API
+## 4. Physical Containers
 
+### `discovery_go` — Discovery API (OLTP)
 Serves the discovery feed, records swipes, detects mutual matches, and manages match data.
-
 - **Port**: `8003`
 - **Base path**: `/discovery`
 - **Database**: `discovery-{env}`
 - **Key endpoints**:
-  - `GET /discovery/feed/{profile_id}` — Get a curated feed of profiles the user hasn't swiped on (reads from `profiles_profiles_cache`, uses Firestore Pipeline for server-side filtering)
-  - `POST /discovery/swipe/` — Record a left/right swipe; automatically creates a match on mutual right-swipe and publishes `match_created` event
-  - `GET /discovery/matches/{id}` — Get a specific match by ID
-  - `GET /discovery/matches/profile/{profile_id}` — List all matches for a profile
-  - `DELETE /discovery/all` — Purge all swipes and matches (admin/test use)
+  - `GET /discovery/feed/{profile_id}` — Get curated feed (reads from `profiles_profiles_cache`)
+  - `POST /discovery/swipe/` — Record swipe; creates match on mutual right swipe & publishes `match_created` event
+  - `GET /discovery/matches/{id}` — Get match by ID
+  - `GET /discovery/matches/profile/{profile_id}` — List matches for profile
+  - `DELETE /discovery/all` — Purge swipes & matches (admin/test use)
 
-### `discovery_subscriber` — Profile Event Subscriber
-
-Listens for profile events published by the **Profiles boundary** via Pub/Sub and maintains a local `profiles_profiles_cache` collection. This keeps the discovery feed eventually consistent with profile data **without any cross-service API calls at read time**.
-
+### `discovery_subscriber` — Profile Event Subscriber (Events)
+Listens for profile events published by **Profiles boundary** and maintains local `profiles_profiles_cache`.
 - **Port**: `8007`
-- **Subscribes to**: `{env}-profiles-profile-events-v1` topic (published by `profiles_go`)
-- **Handles events**:
-  - `UPSERTED` — Create or update a profile doc in the local cache
-  - `DELETED` — Remove a profile doc from the local cache
-  - `ALL_DELETED` — Wipe the entire cache collection (admin purge)
+- **Subscribes to**: `{env}-profiles-profile-events-v1`
+- **Handles events**: `UPSERTED`, `DELETED`, `ALL_DELETED`
 - **Protocol**: Protobuf (`proto/profile_events.proto`)
-- **In Docker**: Uses `cmd/local/main.go` with pull-based subscription against Pub/Sub emulator
 
-### `discovery_worker` — TTL Swipe Cleanup Worker
-
-Periodically deletes "left" swipes from the `swipes` collection in Firestore after they exceed 24 hours (or the configured `CLEANUP_TTL_HOURS` duration). This service is deployed to Cloud Run and is triggered on a schedule (e.g. hourly) by Cloud Scheduler.
-
+### `discovery_worker` — Swipe TTL Cleanup Worker (OLTP Background)
+Periodically deletes "left" swipes from `swipes` collection after they exceed 24 hours.
 - **Port**: `8014`
 - **Key endpoints**:
   - `GET /` — Health check
-  - `POST /cleanup` — Triggers the cleanup query and deletion process
-- **Configurable Env Vars**:
-  - `CLEANUP_TTL_HOURS` — Hours after which a left swipe is considered expired (default: `24`)
-- **Security**: In production, Cloud Run IAM policy enforces restricted access, requiring service-to-service IAM authentication from Cloud Scheduler.
+  - `POST /cleanup` — Triggers swipe cleanup query
 
-## Cross-Service Dependencies
+### `discovery_analytics` — Analytical Engine (OLAP)
+Exposes read-optimized swipe metrics and match conversion analytics.
+- **Path**: `services/discovery/discovery_analytics`
+- **Database Target**: BigQuery / SQL Materialized Views
+- **Purpose**: Computes swipe conversion ratios and demographic match rates without transactional database overhead.
 
-### This boundary receives from:
-| Source | What | Mechanism |
-|--------|------|-----------|
-| **Profiles boundary** (`profiles_go`) | Profile data (name, bio, image, tags) | Pub/Sub events on `{env}-profiles-profile-events-v1` → `discovery_subscriber` writes to `profiles_profiles_cache` |
+---
 
-### This boundary provides to:
+## 5. Cross-Service Dependencies & Event Flow
+
+### Provided to external services:
 | Consumer | What | Mechanism |
-|----------|------|-----------|
-| **Messages boundary** (`messages_subscriber`) | Match data (match_id, profile_ids) | Pub/Sub events on `{env}-discovery-match-events-v1` published by `discovery_go` on mutual swipe |
-| **Frontend** | Feed, swipe, match data | Direct API calls to `discovery_go` |
+|---|---|---|
+| **Messages boundary** (`messages_subscriber`) | Match creation events | Pub/Sub topic `{env}-discovery-match-events-v1` |
+| **Frontend** | Feed, swipe, match data | Direct REST API calls to `discovery_go` |
 
-### This boundary depends on:
-| Dependency | What For | How |
-|-----------|---------|-----|
-| **Auth boundary** | JWT verification | Local JWT check via shared `JWT_SECRET` (no network call) |
+### Received from external services:
+| Source | What | Mechanism |
+|---|---|---|
+| **Profiles boundary** (`profiles_go`) | Profile data | Pub/Sub topic `{env}-profiles-profile-events-v1` → `discovery_subscriber` |
 
-## Data Model
+---
+
+## 6. Data Model
 
 **Database**: `discovery-{env}`
 
 ### Collection: `swipes`
 | Field | Type | Description |
-|-------|------|-------------|
-| `swiper_profile_id` | string | Profile that initiated the swipe |
-| `swiped_profile_id` | string | Profile being swiped on |
+|---|---|---|
+| `swiper_profile_id` | string | Initiating profile |
+| `swiped_profile_id` | string | Target profile |
 | `direction` | string | `left` or `right` |
-| `created_at` | timestamp | Server-side timestamp |
+| `created_at` | timestamp | Timestamp |
 
 ### Collection: `matches`
 | Field | Type | Description |
-|-------|------|-------------|
+|---|---|---|
 | Document ID | string | Deterministic: `match_{sorted_profile_ids}` |
-| `profiles` | array | Both profile IDs |
-| `created_at` | timestamp | Server-side timestamp |
+| `profiles` | array | Matched profile IDs |
+| `created_at` | timestamp | Creation timestamp |
 
-### Collection: `profiles_profiles_cache` (populated by `discovery_subscriber`)
+### Collection: `profiles_profiles_cache` (Populated by `discovery_subscriber`)
 | Field | Type | Description |
-|-------|------|-------------|
-| Document ID | string | Profile ID (mirrors profiles DB) |
-| `profile_id` | string | Profile ID |
-| `user_id` | string | Owner UID |
-| `display_name` | string | Cached from profiles service |
-| `tagline` | string | Cached tagline |
-| `bio` | string | Cached bio |
-| `image_urls` | array\<string\> | Cached image URLs |
-| `gender` | array\<tag\> | Cached gender tags `{id, name, slug}` |
-| `race` | array\<tag\> | Cached race tags |
-| `fandom` | array\<tag\> | Cached fandom tags |
-| `interests` | array\<tag\> | Cached interest tags |
-| `events` | array\<tag\> | Cached event tags |
-| `looking_for` | array\<tag\> | Cached looking-for tags |
-| `age` | int | Cached age |
-| `is_oc` | bool | Cached original character flag |
+|---|---|---|
+| Document ID | string | Profile ID |
+| `display_name` | string | Display name |
+| `tagline` | string | Tagline |
+| `bio` | string | Bio |
+| `image_urls` | array\<string\> | GCS image URLs |
+| `gender`, `race`, `fandom`, etc. | array\<tag\> | Profile tags |
 
-## Event Flow
+---
 
-```
-Profiles Service → Pub/Sub (profile events) → Discovery Subscriber → Firestore (profiles_profiles_cache)
-                                                                          ↑
-Discovery API (feed/swipe) reads from ────────────────────────────────────┘
+## 7. Running & Testing
 
-Discovery API → Pub/Sub (match events) → Messages Subscriber → Firestore (discovery_matches_cache)
-```
-
-### Feed Generation Logic
-1. Load the requesting profile from `profiles_profiles_cache`
-2. Get all swipes by this profile from `swipes` collection
-3. Query `profiles_profiles_cache` via Firestore Pipeline, excluding:
-   - The requesting profile itself
-   - All already-swiped profiles
-4. Return results sorted deterministically by document ID
-
-### Match Detection Logic
-1. On `right` swipe: check for reciprocal right swipe from the target
-2. If reciprocal found: create match with deterministic ID `match_{sorted_ids}`
-3. Publish `match_created` event to Pub/Sub
-
-## Running
-
-### With Docker Compose
+### Docker Compose
 ```bash
-docker compose up discovery discovery-subscriber
+docker compose up discovery discovery-subscriber discovery-worker
 ```
 
-### With Air (hot-reload)
+### Air Hot-Reload
 ```bash
 cd services/discovery/discovery_go && air
 cd services/discovery/discovery_subscriber && air
 ```
 
-## Testing
+### Unit Tests
 ```bash
-# discovery_go
 cd services/discovery/discovery_go && go test -v ./...
-
-# discovery_subscriber
 cd services/discovery/discovery_subscriber && go test -v ./...
+cd services/discovery/discovery_analytics && go test -v ./...
 ```
-
-## Tech Stack
-- **Language**: Go (Gin + CORS)
-- **Auth**: JWT middleware (Tavern JWT, local verification)
-- **Database**: Firestore `discovery-{env}` (`swipes`, `matches`, `profiles_profiles_cache`)
-- **Events**: Pub/Sub + Protobuf (consumes profile events, publishes match events)
-- **Docs**: Swagger UI at `/discovery/swagger/`
-- **Deployment**: Cloud Run via Cloud Build

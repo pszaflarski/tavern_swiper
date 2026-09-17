@@ -64,6 +64,33 @@ func parseStringSlice(val interface{}) []string {
 	return []string{}
 }
 
+func isMatched(ctx context.Context, client FirestoreClient, pid1, pid2 string) bool {
+	sortedPair := []string{pid1, pid2}
+	sort.Strings(sortedPair)
+	matchID := fmt.Sprintf("match_%s_%s", sortedPair[0], sortedPair[1])
+
+	matchDoc, err := client.Collection(COLLECTION_CACHE).Doc(matchID).Get(ctx)
+	if err == nil && matchDoc.Exists() {
+		return true
+	}
+
+	// Fallback check: query discovery_matches_cache where profile_ids array-contains pid1
+	iter := client.Collection(COLLECTION_CACHE).Where("profile_ids", "array-contains", pid1).Documents(ctx)
+	docs, err := iter.GetAll()
+	if err != nil {
+		return false
+	}
+	for _, doc := range docs {
+		pids := parseStringSlice(doc.Data()["profile_ids"])
+		for _, p := range pids {
+			if p == pid2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // handleHealth godoc
 // @Summary      Health check
 // @Description  Returns the health status of the messages service.
@@ -137,17 +164,23 @@ func handleCreateConversation(c *gin.Context) {
 	sort.Strings(pids)
 
 	// Authorization: verify caller owns at least one participant profile
+	var creatorPID string
 	if !IsAdmin(auth.Role) {
-		ownsOne := false
 		for _, pid := range pids {
 			if verifyProfileOwnership(auth, pid, profilesClient) {
-				ownsOne = true
+				creatorPID = pid
 				break
 			}
 		}
-		if !ownsOne {
+		if creatorPID == "" {
 			c.JSON(http.StatusForbidden, gin.H{"detail": "You must own one of the participant profiles"})
 			return
+		}
+	} else {
+		if len(body.ParticipantProfileIDs) > 0 {
+			creatorPID = body.ParticipantProfileIDs[0]
+		} else if len(pids) > 0 {
+			creatorPID = pids[0]
 		}
 	}
 
@@ -184,14 +217,11 @@ func handleCreateConversation(c *gin.Context) {
 		}
 
 		// Match verification step (check match cache for 1-on-1 chats)
-		matchID := fmt.Sprintf("match_%s_%s", pids[0], pids[1])
-		matchDoc, err := client.Collection(COLLECTION_CACHE).Doc(matchID).Get(ctx)
-		if err != nil || !matchDoc.Exists() {
-			log.Printf("[INFO] Match not found for %s vs %s (looked for %s)", pids[0], pids[1], matchID)
+		if !isMatched(ctx, client, pids[0], pids[1]) {
+			log.Printf("[INFO] Match not found for %s vs %s", pids[0], pids[1])
 			c.JSON(http.StatusForbidden, gin.H{"detail": "Conversation initialization not permitted (no match found)"})
 			return
 		}
-		log.Printf("[INFO] Match found: %s", matchID)
 
 		convID := uuid.New().String()
 		convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
@@ -246,6 +276,18 @@ func handleCreateConversation(c *gin.Context) {
 
 		c.JSON(http.StatusCreated, gin.H{"conversation_id": convID})
 	} else {
+		// Match verification step for group chats: creator must be matched with all other participants
+		for _, targetPID := range pids {
+			if targetPID == creatorPID {
+				continue
+			}
+			if !isMatched(ctx, client, creatorPID, targetPID) {
+				log.Printf("[INFO] Group chat match not found for creator %s vs participant %s", creatorPID, targetPID)
+				c.JSON(http.StatusForbidden, gin.H{"detail": fmt.Sprintf("Conversation initialization not permitted (no match found between creator %s and participant %s)", creatorPID, targetPID)})
+				return
+			}
+		}
+
 		// Group conversation creation
 		convID := uuid.New().String()
 		convRef := client.Collection(COLLECTION_CONVERSATIONS).Doc(convID)
@@ -848,6 +890,11 @@ func handleListConversations(c *gin.Context) {
 		}
 
 		d := convDoc.Data()
+		convType, _ := d["type"].(string)
+		if convType == "" {
+			convType = "direct"
+		}
+
 		// Manual hydration
 		var lastMsg *LastMessageInfo
 		if mid, ok := d["last_message_id"].(string); ok && mid != "" {
@@ -864,8 +911,8 @@ func handleListConversations(c *gin.Context) {
 				SenderProfileID: senderID,
 				Type:            lastMsgType,
 			}
-		} else {
-			// Skip empty conversations (created but no messages sent yet)
+		} else if convType != "group" {
+			// Skip empty direct conversations (created but no messages sent yet)
 			continue
 		}
 
@@ -875,11 +922,6 @@ func handleListConversations(c *gin.Context) {
 		updatedAt := updatedAtT.Format(time.RFC3339)
 
 		pids := parseStringSlice(d["participant_ids"])
-
-		convType, _ := d["type"].(string)
-		if convType == "" {
-			convType = "direct"
-		}
 
 		var otherID *string
 		if convType == "direct" {
@@ -1271,7 +1313,7 @@ func handleRollDice(c *gin.Context) {
 }
 
 // typingTTL is how long a typing indicator remains valid.
-const typingTTL = 120 * time.Second
+const typingTTL = 600 * time.Second
 
 // filterTypingMap extracts the "typing" map from a conversation document and
 // removes entries older than typingTTL. Returns nil if no active typers.
@@ -1311,7 +1353,7 @@ func filterTypingMap(data map[string]interface{}) map[string]string {
 
 // handleTyping godoc
 // @Summary      Signal typing activity
-// @Description  Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 120 seconds.
+// @Description  Records that a profile is currently typing in a conversation. The typing state is cleared automatically when a message is sent or after 600 seconds.
 // @Tags         conversations
 // @Accept       json
 // @Param        id    path      string  true  "Conversation ID"

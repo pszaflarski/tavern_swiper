@@ -28,13 +28,17 @@ AGENT_ROUTER_URL=$(gcloud run services describe "agent-router-${ENV}" --region="
 BOTS_SUBSCRIBER_URL=$(gcloud run services describe "bots-subscriber-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
 DISCOVERY_SUBSCRIBER_URL=$(gcloud run services describe "discovery-subscriber-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
 MESSAGES_SUBSCRIBER_URL=$(gcloud run services describe "messages-subscriber-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
-NOTIFICATIONS_GO_URL=$(gcloud run services describe "notifications-go-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
+NOTIFICATIONS_SUBSCRIBER_URL=$(gcloud run services describe "notifications-subscriber-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
+AGENT_ROUTER_WORKER_URL=$(gcloud run services describe "agent-router-worker-${ENV}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || true)
 
 if [[ -z "$AGENT_ROUTER_URL" ]]; then
   echo "⚠️ Warning: Could not resolve URL for agent-router-${ENV}. Make sure Cloud Run service is deployed."
 fi
 if [[ -z "$BOTS_SUBSCRIBER_URL" ]]; then
   echo "⚠️ Warning: Could not resolve URL for bots-subscriber-${ENV}. Make sure Cloud Run service is deployed."
+fi
+if [[ -z "$NOTIFICATIONS_SUBSCRIBER_URL" ]]; then
+  echo "⚠️ Warning: Could not resolve URL for notifications-subscriber-${ENV}. Make sure Cloud Run service is deployed."
 fi
 
 # 2. Ensure Topics exist
@@ -44,6 +48,7 @@ TOPICS=(
   "${ENV}-messages-message-events-v1"
   "${ENV}-bots-agent-request-v1"
   "${ENV}-agent-router-agent-response-v1"
+  "${ENV}-agent-router-memory-events-v1"
 )
 
 echo "📦 Creating Topics..."
@@ -74,6 +79,7 @@ create_or_update_sub() {
       --push-endpoint="$PUSH_ENDPOINT" \
       --push-auth-service-account="$SA_EMAIL" \
       --ack-deadline="$ACK_DEADLINE" \
+      --expiration-period=never \
       --project="${PROJECT_ID}"
   else
     echo "🚀 Creating subscription $SUB_NAME..."
@@ -82,6 +88,7 @@ create_or_update_sub() {
       --push-endpoint="$PUSH_ENDPOINT" \
       --push-auth-service-account="$SA_EMAIL" \
       --ack-deadline="$ACK_DEADLINE" \
+      --expiration-period=never \
       --project="${PROJECT_ID}"
   fi
 }
@@ -95,6 +102,15 @@ if [[ -n "$AGENT_ROUTER_URL" ]]; then
     "${ENV}-agent-router-request-push-sub" \
     "${ENV}-bots-agent-request-v1" \
     "${AGENT_ROUTER_URL}/pubsub/agent-request" \
+    600
+fi
+
+# Agent Router Worker subscriber (receives async memory extraction events) - 600s ack deadline
+if [[ -n "$AGENT_ROUTER_WORKER_URL" ]]; then
+  create_or_update_sub \
+    "${ENV}-agent-router-worker-sub" \
+    "${ENV}-agent-router-memory-events-v1" \
+    "${AGENT_ROUTER_WORKER_URL}/pubsub/memory-events" \
     600
 fi
 
@@ -137,18 +153,18 @@ if [[ -n "$MESSAGES_SUBSCRIBER_URL" ]]; then
     10
 fi
 
-# Notifications subscriber (receives match events)
-if [[ -n "$NOTIFICATIONS_GO_URL" ]]; then
+# Notifications subscriber (receives match and message events)
+if [[ -n "$NOTIFICATIONS_SUBSCRIBER_URL" ]]; then
   create_or_update_sub \
-    "${ENV}-notifications-matches-push-sub" \
+    "${ENV}-notifications-match-sub" \
     "${ENV}-discovery-match-events-v1" \
-    "${NOTIFICATIONS_GO_URL}/notifications/subscribers/matches" \
+    "${NOTIFICATIONS_SUBSCRIBER_URL}/" \
     10
 
   create_or_update_sub \
-    "${ENV}-notifications-messages-push-sub" \
+    "${ENV}-notifications-message-sub" \
     "${ENV}-messages-message-events-v1" \
-    "${NOTIFICATIONS_GO_URL}/notifications/subscribers/messages" \
+    "${NOTIFICATIONS_SUBSCRIBER_URL}/" \
     10
 fi
 

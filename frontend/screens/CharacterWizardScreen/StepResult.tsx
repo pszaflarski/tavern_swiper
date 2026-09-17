@@ -104,7 +104,7 @@ export default function StepResult({ fandom, gender, race, characterClass, onRes
       setLoadingState('generating_details');
       
       // POST to /characters/generate to create character with AI details
-      const genRes = await charactersApi.post('/characters/generate', resolvedTags, { timeout: 30000 });
+      const genRes = await charactersApi.post('/characters/generate', resolvedTags, { timeout: 60000 });
       if (!isMounted.current) return;
 
       const generatedChar = genRes.data;
