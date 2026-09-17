@@ -28,6 +28,7 @@ SERVICES=(
   ["quests_go"]="quests"
   ["characters_go"]="characters"
   ["notifications_go"]="notifications"
+  ["agent_router"]="agent-router"
 )
 
 # Track results
@@ -153,6 +154,10 @@ for svc in "${!SERVICES[@]}"; do
       ;;
     "notifications_go")
       create_index "$DB_ID" "notifications_tokens" "user_id:ASCENDING"
+      ;;
+    "agent_router")
+      create_index "$DB_ID" "checkpoints" "thread_id:ASCENDING,checkpoint_ns:ASCENDING,checkpoint_id:DESCENDING"
+      create_index "$DB_ID" "checkpoint_writes" "thread_id:ASCENDING,checkpoint_ns:ASCENDING,checkpoint_id:DESCENDING,task_id:ASCENDING,idx:ASCENDING"
       ;;
   esac
 done

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package message;
+
+option go_package = "./proto";
+
+message MessageSent {
+  string conversation_id = 1;
+  string message_id = 2;
+  string sender_profile_id = 3;   // Empty for system/event messages without a sender
+  string message_preview = 4;     // Truncated content (max 200 chars)
+  string message_type = 5;        // "user", "system", "event"
+  string timestamp = 6;           // RFC3339
+  string metadata_json = 7;       // JSON-encoded metadata (e.g. event_type)
+}
+
+message MessageEvent {
+  enum EventType {
+    UNKNOWN = 0;
+    SENT = 1;
+  }
+  EventType type = 1;
+  oneof event {
+    MessageSent sent = 2;
+  }
+}

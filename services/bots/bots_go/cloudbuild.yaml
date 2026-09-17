@@ -32,7 +32,7 @@ steps:
           --region=us-central1 \
           --allow-unauthenticated \
           --service-account=tavern-swiper-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,ENV=$_ENV_NAME,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,KMS_KEY_NAME=$_KMS_KEY_NAME,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG,USE_ASYNC_AGENT=true,DEFAULT_MODEL=gemini-flash-lite \
+          --update-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID,ENV=$_ENV_NAME,FIRESTORE_DATABASE_ID=$_DB_ID,JWT_SECRET=$_JWT_SECRET,KMS_KEY_NAME=$_KMS_KEY_NAME,ROUTER_SERVICE_URL=$_ROUTER_SERVICE_URL,ROUTER_TAG=$_ROUTER_TAG,USE_ASYNC_AGENT=true,DEFAULT_MODEL=qwen-32b \
           --cpu-boost \
           --execution-environment=gen1
 
