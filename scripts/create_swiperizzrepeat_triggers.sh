@@ -9,7 +9,7 @@ ENV_NAME="dev"
 ENV_SUFFIX="-dev"
 BRANCH_PATTERN="^development$"
 REPO_OWNER="pszaflarski"
-REPO_NAME="tavern_swiper"
+REPO_NAME="swiperizzrepeat"
 BUILDER_SA="projects/$PROJECT_ID/serviceAccounts/cicd-builder@$PROJECT_ID.iam.gserviceaccount.com"
 
 # Fetch JWT_SECRET from Secret Manager if not set
