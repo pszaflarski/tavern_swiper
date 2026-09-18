@@ -9,7 +9,11 @@
 # NOTE: no 'set -e' — we handle errors per-index gracefully
 
 ENV=${1:-"dev"} # [dev|test|prod]
-if [[ "$ENV" == "prod" ]]; then
+if [[ -n "$2" ]]; then
+  PROJECT="$2"
+elif [[ -n "$GOOGLE_CLOUD_PROJECT" ]]; then
+  PROJECT="$GOOGLE_CLOUD_PROJECT"
+elif [[ "$ENV" == "prod" ]]; then
   PROJECT="tavern-swiper-prod"
 else
   PROJECT="tavern-swiper-dev"

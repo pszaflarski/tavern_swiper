@@ -4,7 +4,11 @@ set -e
 ENV="${1:-dev}"
 REGION="us-central1"
 
-if [[ "$ENV" == "prod" ]]; then
+if [[ -n "$2" ]]; then
+  PROJECT_ID="$2"
+elif [[ -n "$GOOGLE_CLOUD_PROJECT" ]]; then
+  PROJECT_ID="$GOOGLE_CLOUD_PROJECT"
+elif [[ "$ENV" == "prod" ]]; then
   PROJECT_ID="tavern-swiper-prod"
 else
   PROJECT_ID="tavern-swiper-dev"

@@ -210,7 +210,7 @@ CHECKPOINTS = {
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def seed_objects(env: str):
-    project_id = "tavern-swiper-dev" if env in ("dev", "test") else "tavern-swiper-prod"
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT") or ("tavern-swiper-dev" if env in ("dev", "test") else "tavern-swiper-prod")
     db_id = f"quests-{env}"
 
     print(f"🎯 Seeding item definitions into {db_id} (project: {project_id})")
