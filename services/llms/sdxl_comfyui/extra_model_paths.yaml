@@ -1,0 +1,8 @@
+sdxl:
+    base_path: /models/
+    checkpoints: models/checkpoints/
+    clip_vision: models/clip_vision/
+    ipadapter: models/ipadapter/
+    insightface: models/insightface/
+    facerestore_models: models/facerestore_models/
+    vae: models/vae/

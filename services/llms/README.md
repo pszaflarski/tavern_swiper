@@ -43,6 +43,16 @@ Model weights are decoupled from container images and mounted dynamically via **
 | [`qwen_14b`](./qwen_14b) | `Qwen/Qwen2.5-14B-Instruct-AWQ` | AWQ | 32,768 | `hermes` | `qwen-14b-${ENV}` |
 | [`qwen_32b`](./qwen_32b) | `Qwen/Qwen2.5-32B-Instruct-AWQ` | AWQ (FP8 KV) | 16,384 | `hermes` | `qwen-32b-${ENV}` |
 
+### Image Generation Services
+
+For full API usage, cURL/Python examples, and prompt engineering instructions, see **[`IMAGE_GENERATION_GUIDE.md`](./IMAGE_GENERATION_GUIDE.md)**.
+
+| Service | Architecture | Engine | Purpose |
+|---|---|---|---|
+| [`sdxl_comfyui`](./sdxl_comfyui) | SDXL Lightning (8-step) + IP-Adapter-Plus-Face | ComfyUI / PyTorch cu128 | Identity-preserving multi-pose/scene generation |
+| [`z_image_comfyui`](./z_image_comfyui) | Z-Image-Turbo (6B S3-DiT + Qwen 3.4B) | ComfyUI / PyTorch cu128 | Hyper-realistic candid smartphone selfies |
+| [`flux_comfyui`](./flux_comfyui) | FLUX.1-dev (FP8) + PuLID | ComfyUI / PyTorch cu128 | Complex scene composition & text-heavy prompts |
+
 ---
 
 ## 3. Directory Layout

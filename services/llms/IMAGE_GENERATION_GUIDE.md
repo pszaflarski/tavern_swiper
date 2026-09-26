@@ -1,0 +1,265 @@
+# Tavern Swiper — Image Generation & Identity Guide
+
+> **Location:** `services/llms/IMAGE_GENERATION_GUIDE.md`  
+> **Audience:** AI Agents and Developers working on character portrait generation, profile photo suites, and quest/event illustrations.
+
+---
+
+## 1. Overview & Service Registry
+
+Tavern Swiper runs dedicated, self-hosted image generation microservices on **Google Cloud Run (Gen2)** backed by headless **ComfyUI** and **NVIDIA L4 GPUs (24GB VRAM)**.
+
+### Model Service Matrix
+
+| Service | Underlying Engine | Primary Use Case | Warm Speed | API Endpoints |
+|---|---|---|---|---|
+| **`sdxl_comfyui`** | `RealVisXL_V4.0_Lightning` (8-step) + `IP-Adapter-Plus-Face` | **Identity-preserving character photo suites** (canonical face → multiple poses, outfits, and 3D angles). | **~8–10s** | `POST /v1/images/generations`<br>`POST /v1/images/edits` |
+| **`z_image_comfyui`** | `Z-Image-Turbo` (6B S3-DiT + Qwen 3.4B text encoder) | **Hyper-realistic candid selfies** with natural skin texture, zero plastic sheen, and soft mobile phone lighting. | **~14s** | `POST /v1/images/generations`<br>`POST /v1/images/edits` |
+| **`flux_comfyui`** | `FLUX.1-dev` (FP8 quantized) + PuLID | High-complexity multi-element composition and text-accurate rendering. | **~25–35s** | `POST /v1/images/generations` |
+
+### Environment Service URLs
+
+| Service | Environment | URL |
+|---|---|---|
+| `sdxl-comfyui-dev` | `dev` | `https://sdxl-comfyui-dev-hhqol7siba-uc.a.run.app` |
+| `z-image-comfyui-dev` | `dev` | `https://z-image-comfyui-dev-hhqol7siba-uc.a.run.app` |
+| `flux-comfyui-dev` | `dev` | `https://flux-comfyui-dev-hhqol7siba-uc.a.run.app` |
+
+---
+
+## 2. Authentication
+
+All requests to `/v1/models`, `/v1/images/generations`, and `/v1/images/edits` require the Tavern Image API key passed as a Bearer token:
+
+```http
+Authorization: Bearer sk-tavern-img-dev-8f92b7c4a1e35d6092f1b4e7c3a8e9d2
+```
+
+In Python or shell scripts, read the environment variable:
+```bash
+export IMAGE_API_KEY="sk-tavern-img-dev-8f92b7c4a1e35d6092f1b4e7c3a8e9d2"
+```
+
+Health check endpoints (`/health` and `/healthz`) do **not** require authentication and report GPU VRAM allocation.
+
+---
+
+## 3. Workflow: Generating Consistent Character Suites
+
+To create a consistent dating profile photo suite (e.g. 1 front close-up + 3 varied scene/pose photos):
+
+```
+┌────────────────────────────────────────────────────────┐
+│ Step 1: Generate Canonical Portrait                   │
+│ POST /v1/images/generations                           │
+│ Model: RealVisXL Lightning (8 steps)                  │
+│ Output: Pristine front-facing close-up photo           │
+└──────────────────────────┬─────────────────────────────┘
+                           │ canonical_face.png
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ Step 2: Inject Identity into New Poses & Scenes        │
+│ POST /v1/images/edits (multipart/form-data)           │
+│ Engine: IP-Adapter-Plus-Face (cross-attention)         │
+│ Input: canonical_face.png + scene prompt               │
+│ Output: Target pose with identical facial features    │
+└────────────────────────────────────────────────────────┘
+```
+
+> **Why IP-Adapter over Post-Generation Inpainting?**  
+> Post-generation face inpainting locks the subject's head angle to the source photo and creates unnatural edge halos around hair and collars. IP-Adapter injects the facial identity into the latent cross-attention layers *during* generation, enabling the character to natively turn their head in 3D, change wardrobe, and inherit the target scene's lighting organically.
+
+---
+
+## 4. API Request Specifications
+
+### A. Text-to-Image (Canonical Portrait)
+
+**Endpoint:** `POST /v1/images/generations`  
+**Content-Type:** `application/json`
+
+#### Request Payload
+```json
+{
+  "model": "sdxl-lightning",
+  "prompt": "masterpiece, raw photo of a 28yo athletic rogue woman, close-up front face portrait, natural skin texture with subtle freckles, expressive emerald green eyes, slight confident smirk, natural messy dark brown hair, natural aligned symmetrical gaze, looking directly at camera, soft natural tavern window lighting, 8k resolution, photorealistic, 35mm lens, f/1.8",
+  "negative_prompt": "cross-eyed, strabismus, misaligned eyes, asymmetrical pupils, blurry, low quality, deformed, distorted, cartoon, anime, 3d render, oversaturated, plastic skin, bad anatomy",
+  "size": "1024x1024",
+  "steps": 8,
+  "cfg": 1.2,
+  "seed": 42
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST "https://sdxl-comfyui-dev-hhqol7siba-uc.a.run.app/v1/images/generations" \
+  -H "Authorization: Bearer $IMAGE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "sdxl-lightning",
+    "prompt": "raw photo of an adventurer woman, close-up face portrait, natural skin, green eyes, 35mm lens",
+    "size": "1024x1024",
+    "steps": 8,
+    "cfg": 1.2
+  }' | jq -r '.data[0].b64_json' | base64 -d > canonical_face.png
+```
+
+---
+
+### B. Face-Conditioned Generation (New Poses & Outfits)
+
+**Endpoint:** `POST /v1/images/edits`  
+**Content-Type:** `multipart/form-data`
+
+#### Form Fields
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `image` | File | Required | The canonical reference portrait (PNG/JPEG). |
+| `prompt` | String | Required | Target scene, posture, action, wardrobe, and lighting. |
+| `negative_prompt` | String | Standard | Negative quality and defect avoidance tokens. |
+| `weight` | Float | `0.48` | Identity strength (calibrated range: `0.45`–`0.52`). |
+| `end_at` | Float | `0.48` | Step cutoff point (calibrated range: `0.45`–`0.55`). |
+| `size` | String | `"1024x1024"` | Output resolution (`WxH`). |
+| `steps` | Integer | `8` | SDXL Lightning sampling steps. |
+| `cfg` | Float | `1.2` | Guidance scale (keep `1.0`–`1.5` for distilled models). |
+| `seed` | Integer | Random | Integer seed for reproducibility. |
+
+#### cURL Example
+```bash
+curl -X POST "https://sdxl-comfyui-dev-hhqol7siba-uc.a.run.app/v1/images/edits" \
+  -H "Authorization: Bearer $IMAGE_API_KEY" \
+  -F "image=@canonical_face.png" \
+  -F "prompt=raw photo of the woman leaning relaxed against a rustic wooden tavern bar counter, three-quarter side angle view, head tilted, natural aligned symmetrical gaze, looking at camera, wearing a leather vest over linen shirt, warm candlelight, 35mm photo" \
+  -F "negative_prompt=cross-eyed, strabismus, misaligned eyes, asymmetrical pupils, blurry, deformed, cartoon, plastic skin" \
+  -F "weight=0.48" \
+  -F "end_at=0.48" \
+  -F "size=1024x1024" \
+  -F "steps=8" \
+  -F "cfg=1.2" | jq -r '.data[0].b64_json' | base64 -d > pose1_bar.png
+```
+
+---
+
+## 5. Python Integration Snippet
+
+Use this production-ready Python client function with `httpx`:
+
+```python
+import base64
+import os
+import httpx
+
+IMAGE_API_KEY = os.environ.get("IMAGE_API_KEY", "sk-tavern-img-dev-8f92b7c4a1e35d6092f1b4e7c3a8e9d2")
+SDXL_URL = "https://sdxl-comfyui-dev-hhqol7siba-uc.a.run.app"
+
+def generate_canonical_portrait(prompt: str, seed: int = 42) -> bytes:
+    """Generate a clean front-facing base portrait using SDXL Lightning."""
+    headers = {"Authorization": f"Bearer {IMAGE_API_KEY}"}
+    payload = {
+        "model": "sdxl-lightning",
+        "prompt": f"masterpiece, raw photo of {prompt}, close-up front face portrait, natural skin pores, natural aligned symmetrical gaze, 8k resolution, 35mm photograph",
+        "negative_prompt": "cross-eyed, strabismus, misaligned eyes, asymmetrical pupils, blurry, deformed, cartoon, anime, 3d render, oversaturated, plastic skin",
+        "size": "1024x1024",
+        "steps": 8,
+        "cfg": 1.2,
+        "seed": seed,
+    }
+    # Note: Use timeout=300s to accommodate potential cold-start container boots
+    resp = httpx.post(f"{SDXL_URL}/v1/images/generations", headers=headers, json=payload, timeout=300.0)
+    resp.raise_for_status()
+    b64 = resp.json()["data"][0]["b64_json"]
+    return base64.b64decode(b64)
+
+
+def generate_conditioned_pose(
+    canonical_png_bytes: bytes,
+    scene_prompt: str,
+    weight: float = 0.48,
+    end_at: float = 0.48,
+    seed: int = 101,
+) -> bytes:
+    """Inject identity into a new scene and 3D angle via IP-Adapter-Plus-Face."""
+    headers = {"Authorization": f"Bearer {IMAGE_API_KEY}"}
+    files = {"image": ("canonical.png", canonical_png_bytes, "image/png")}
+    data = {
+        "prompt": f"raw photo of the woman {scene_prompt}, natural aligned symmetrical gaze, authentic skin texture, photorealistic, 35mm photo",
+        "negative_prompt": "cross-eyed, strabismus, misaligned eyes, asymmetrical pupils, lazy eye, blurry, deformed, cartoon, plastic skin, bad anatomy",
+        "weight": str(weight),
+        "end_at": str(end_at),
+        "size": "1024x1024",
+        "steps": "8",
+        "cfg": "1.2",
+        "seed": str(seed),
+    }
+    resp = httpx.post(f"{SDXL_URL}/v1/images/edits", headers=headers, files=files, data=data, timeout=300.0)
+    resp.raise_for_status()
+    b64 = resp.json()["data"][0]["b64_json"]
+    return base64.b64decode(b64)
+```
+
+---
+
+## 6. Prompt Engineering & Calibration Best Practices
+
+### A. Preventing Eye Misalignment / Cross-Eyed Gaze
+Because IP-Adapter encodes tokens from the canonical photo (which typically looks straight into the camera lens), applying high adapter strength across the entire generation schedule can pull the pupils inward when generating angled or profile shots.
+
+**The Golden Rules for Eye Alignment:**
+1. **Cut Off IP-Adapter at Step 3.8/8 (`end_at: 0.48`):**  
+   Facial bone structure, nose shape, and jawline are established in the first 3–4 steps. Detaching the adapter for the remaining 4 steps frees the UNet to draw natural, symmetrical pupils aligned with the head's 3D angle.
+2. **Calibrated Weight (`weight: 0.48`):**  
+   Avoid weights above `0.55` on 8-step distilled SDXL models.
+3. **Always Include Eye Guidance in Prompts:**
+   - **Positive:** `natural aligned symmetrical gaze, sharp focused clear eyes, looking at camera`
+   - **Negative:** `cross-eyed, strabismus, misaligned eyes, asymmetrical pupils, lazy eye, off-center eyes`
+
+### B. Natural Skin and Texture (Anti-Plastic Aesthetics)
+- **Do NOT use:** `"hyperrealistic, unreal engine 5, octane render, smooth silky skin"`. These trigger digital CGI gloss and plastic wax surfaces.
+- **DO use:** `"raw photo, authentic skin pores, subtle natural freckles, fine wrinkles, soft natural lighting, 35mm lens, f/1.8, slightly messy hair strands"`.
+
+### C. Full-Body Dermal Realism & Head-to-Toe Framing
+When generating full-body or swimwear/beach shots, standard settings can cause the model to crop at the knees and render waxy, airbrushed skin across large exposed body surfaces.
+
+**To achieve authentic, unretouched dermal realism and head-to-toe framing:**
+1. **Vertical Aspect Ratio (`768x1344`):**  
+   Standard `1024x1024` or `832x1216` frequently truncates feet. `768x1344` provides the vertical canvas needed to render the entire figure from hair down to bare feet and footprints on the ground.
+2. **Adapter Decoupling (`weight: 0.44`, `end_at: 0.42`):**  
+   Lowering adapter weight to `0.44` and ending IP-Adapter at step 3.3/8 (`end_at: 0.42`) preserves facial identity while giving the base SDXL UNet complete freedom during later steps to render authentic human skin micro-texture on the torso and limbs.
+3. **Granular Dermal Prompt Cues:**  
+   `"authentic natural skin texture, visible skin pores across stomach and legs, subtle goosebumps from cool sea breeze, subtle freckling on shoulders, natural anatomical contours and soft waist fold, unretouched real human skin tone, Kodak Portra 400, fine 35mm film grain"`
+4. **Anti-Airbrush & Framing Negatives:**  
+   `"airbrushed skin, plastic skin, waxy skin, porcelain, rubber skin, white dots, speckles, flakes, glitter, beauty filter, airbrushed abs, poreless skin, fake tan, CGI sheen, digital smoothing, cropped feet, cropped legs, missing feet, cut off at knees, cut off at shins, close up, medium shot"`
+5. **Apparel Material Specification:**  
+   Specify solid, opaque fabrics (e.g., `"solid opaque terracotta-orange ribbed halter bikini top and matching tie-side bottoms"`) to prevent accidental sheer or topless rendering under low CFG (1.2–1.3).
+
+---
+
+## 7. Infrastructure & Cost Rules
+
+1. **Scale-to-Zero (`--min-instances=0`):**  
+   In `dev`, both `sdxl-comfyui-dev` and `z-image-comfyui-dev` must run with `min-instances=0`. Cloud Run with GPU costs ~$0.00065/second when active and **$0.00 when idle**.
+2. **Cold Starts vs. Warm Inference:**  
+   - **Cold Start (0 instances):** Takes ~30–45s to boot ComfyUI + 120s on first load to stream model weights from GCS FUSE into GPU VRAM. Total first call: ~2–3 minutes.  
+   - **Warm Inference:** Once loaded into VRAM, text-to-image takes **0.6 seconds** and face-conditioned generation takes **8–10 seconds**.
+   - Always set HTTP client timeouts to `timeout=300.0` or `600.0` to avoid dropping connections during cold boots.
+3. **Concurrency:**  
+   Services enforce `--concurrency=1` to guarantee dedicated 100% GPU VRAM for the active generation without out-of-memory crashes.
+
+---
+
+## 8. Redeployment Runbook
+
+To modify workflows or update dependencies and deploy to Cloud Run:
+
+```bash
+# 1. Run local service unit tests first (Rule 11)
+.venv/bin/python3 -m pytest services/llms/ -v
+
+# 2. Deploy via Cloud Build
+bash scripts/deploy_llm_containers.sh dev sdxl-comfyui
+
+# 3. Check health and GPU availability
+curl https://sdxl-comfyui-dev-hhqol7siba-uc.a.run.app/health
+```

@@ -1,0 +1,59 @@
+{
+  "4": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "RealVisXL_V4.0_Lightning.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "photorealistic portrait, 35mm photo",
+      "clip": ["4", 1]
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "blurry, low quality, deformed, distorted, cartoon, anime",
+      "clip": ["4", 1]
+    }
+  },
+  "3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["4", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["5", 0],
+      "seed": 0,
+      "steps": 8,
+      "cfg": 1.2,
+      "sampler_name": "euler",
+      "scheduler": "sgm_uniform",
+      "denoise": 1.0
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": ["3", 0],
+      "vae": ["4", 2]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "sdxl_lightning_gen",
+      "images": ["8", 0]
+    }
+  }
+}

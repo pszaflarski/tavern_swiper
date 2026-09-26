@@ -1,0 +1,95 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "canonical_face.png"
+    }
+  },
+  "2": {
+    "class_type": "PrepImageForClipVision",
+    "inputs": {
+      "image": ["1", 0],
+      "interpolation": "LANCZOS",
+      "crop_position": "top",
+      "sharpening": 0.0
+    }
+  },
+  "3": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "RealVisXL_V4.0_Lightning.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "IPAdapterUnifiedLoader",
+    "inputs": {
+      "model": ["3", 0],
+      "preset": "PLUS FACE (portraits)"
+    }
+  },
+  "5": {
+    "class_type": "IPAdapterAdvanced",
+    "inputs": {
+      "model": ["4", 0],
+      "ipadapter": ["4", 1],
+      "image": ["2", 0],
+      "weight": 0.52,
+      "weight_type": "ease in",
+      "combine_embeds": "concat",
+      "start_at": 0.0,
+      "end_at": 0.68,
+      "embeds_scaling": "V only"
+    }
+  },
+  "6": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "photorealistic portrait, 35mm photo",
+      "clip": ["3", 1]
+    }
+  },
+  "8": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "blurry, low quality, deformed, distorted, cartoon, anime",
+      "clip": ["3", 1]
+    }
+  },
+  "9": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["5", 0],
+      "positive": ["7", 0],
+      "negative": ["8", 0],
+      "latent_image": ["6", 0],
+      "seed": 0,
+      "steps": 8,
+      "cfg": 1.2,
+      "sampler_name": "euler",
+      "scheduler": "sgm_uniform",
+      "denoise": 1.0
+    }
+  },
+  "10": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": ["9", 0],
+      "vae": ["3", 2]
+    }
+  },
+  "11": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "sdxl_ipadapter_gen",
+      "images": ["10", 0]
+    }
+  }
+}
