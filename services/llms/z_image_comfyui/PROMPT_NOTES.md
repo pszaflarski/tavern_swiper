@@ -114,3 +114,24 @@ candid smartphone photo, photorealistic, natural skin texture, realistic hands
 | **In-Place Wardrobe & Props** *(e.g., change tank top to sweater, add latte)* | `0.55` – `0.62` | Keep the prompt focused strictly on the new items; let the original pose anchor all anatomy. |
 | **New Background, Similar Posture** *(e.g., bedroom to cafe, outdoor to indoor)* | `0.65` – `0.72` | Describe the background and lighting; maintain the subject's physical orientation. |
 | **Radical Cross-Scene & Pose Transfer** *(e.g., beach sitting $\to$ bed lying)* | `0.80` – `0.85` | **Be strictly explicit:** State arm grounding, limb counts, and contrasting clothing to prevent fabric/bedding confusion. |
+
+---
+
+# High-Realism Edit Reference: Cross-Scene Gym Mirror Selfie (Outdoor to Gym)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/gym_mirror_selfie.png` on `z-image-comfyui-dev`.
+> **Input Image:** `skyline_vacation_snapshot.png` (Outdoor limestone rocks, sunglasses, green tank top).
+> **Workflow Settings:** Endpoint `POST /v1/images/edits`, Denoise `0.82`, Seed `42`, Steps `8` Euler, CFG `1.0`. Sampling time: 18.84 seconds.
+> **Key Achievement:** Flawlessly transferred character identity (smile showing teeth, facial geometry, ponytail, athletic physique) from outdoor limestone rocks to an indoor fitness center mirror selfie. Zero extra limbs, perfectly formed phone reflection, and sunglasses removed naturally to reveal eyes.
+
+```text
+1girl, solo, young adult woman, athletic build, same facial features and identity as the reference image, warm genuine smile showing teeth, brown eyes without sunglasses, brown hair pulled back into a neat high ponytail,
+
+candid smartphone gym mirror selfie, standing confidently in front of a wide full-length gym mirror, holding her smartphone in one hand taking a mirror photo, her other hand resting casually on her hip, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, relaxed athletic posture,
+
+wearing a dark charcoal gray ribbed athletic sports bra with thin straps, paired with matching high-waisted compression gym shorts, toned midriff and athletic physique, small wireless earbuds in ears, no heavy jewelry,
+
+modern upscale fitness center gym background, clean black rubber flooring, blurred racks of stainless steel dumbbells, weight benches, and cable machine racks visible in the soft background, bright clean overhead gym lighting, realistic mirror reflection,
+
+authentic smartphone camera photo, candid gym snapshot, subtle workout glow, realistic skin texture with natural sheen, soft natural shadows, photorealistic, unedited personal fitness photo aesthetic
+```
