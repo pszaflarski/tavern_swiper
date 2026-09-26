@@ -49,3 +49,40 @@ She stands in a slightly forward-leaning pose, elbows gently bent as she clasps 
 *****
 The behind her is a backdrop, with cinematic shadows adding depth to the scene.
 ```
+
+---
+
+# High-Realism Prompt Reference: Nordic Artisan Ceramic Workshop Portrait (Kodak Portra 400)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/flux_nordic_pottery_woman.png` on `flux-comfyui-dev-00010-8rh`.
+> **Model:** FLUX.1-dev FP8 with Realism LoRA.
+> **Workflow Settings:** Resolution `896x1152`, 24 Steps Euler, Simple Scheduler, CFG `1.0`. Sampling time: 55.47s on NVIDIA L4 GPU.
+> **Stylistic Strengths:** Exceptional architectural facial bone structure, delicate natural sun-freckles, realistic ice-blue/hazel almond eyes with window light catchlights, soft textured French wavy ash-blonde bob, matte porcelain skin with zero plastic sheen, and soft directional industrial greenhouse window light.
+
+```text
+In a cinematic shot,#### Overall Bone Structure
+Young Scandinavian woman has a striking, architectural facial structure (vertical-to-horizontal ratio approximately 1.35:1, oval with defined angular jawline and gentle square taper at the chin). Her skull is delicately proportioned, framed by a slender, graceful neck that accentuates her proud, relaxed posture. The jawline is razor-clean with minimal buccal fat, casting a sharp, sculptural shadow along the mandible. The E-line in profile is classic and harmonious, balancing delicate feminine softness with sharp Nordic structural strength.
+
+#### Forehead
+Her forehead is clean, smooth, and gently rounded, catching soft directional light like polished porcelain. The natural hairline is clean and softly feathered with fine baby hairs along the temples. The brow bones are subtle yet defined, casting faint soft gradients over the eye sockets and creating an intellectual, introspective presence.
+
+#### Eyes
+Her eyes are luminous, wide-set almond-shaped eyes with clear crystalline ice-blue irises that hold vibrant crystalline light and micro-reflections of the studio windows. She has clean, defined double eyelids with a subtle epicanthic fold and slightly upturned outer corners. Natural, fine blonde eyelashes catch the morning sunbeams. A faint dusting of delicate, sun-bleached freckles spans across the bridge of the nose and the tops of both cheekbones, lending a fresh, unvarnished natural warmth to her otherwise cool gaze.
+
+#### Nose
+Her nose is slender, straight, and finely sculpted. The nasal bridge is straight with an imperceptible gentle dip at the root, leading down to a softly rounded, delicate tip that tilts ever so slightly upward. The nostrils are small and soft-edged. The refined central placement of the nose anchors the symmetry of her high cheekbones and balanced proportions.
+
+#### Cheekbones
+Her cheekbones are high, wide, and prominently sculpted, creating natural hollows beneath them that define her editorial silhouette. Diffused morning window light illuminates the upper crest of her cheekbones with a soft satin glow, while subtle, natural gradients sculpt the contour beneath. When she smiles subtly, the cheek apples lift naturally, softening the sharp bone structure with youthful warmth.
+
+#### Mouth
+Her mouth is softly defined with a prominent cupid's bow and natural rose-tinted fullness in the lower lip. The corners rest in a peaceful, serene neutral-to-soft smile. The lip texture has natural fine vertical ridges without artificial gloss, revealing just a sliver of natural white teeth behind relaxed parted lips.
+
+#### Overall Impression (Incorporating This Photo)
+This portrait captures an artisan woman bathed in tranquil morning focus inside an authentic sunlit ceramic studio. Her soft wavy ash-blonde hair is cut into a textured French bob that grazes her collarbone, with loose tousled strands tucking behind one ear and framing her cheek.
+
+She wears a rustic beige linen work apron over a loose-fitting cream cotton henley shirt with sleeves pushed up to her forearms. Faint, dry terracotta dust smudges her knuckles and the apron fabric. The background features a wooden pottery workbench, unglazed terracotta vessels, and iron-framed industrial greenhouse windows streaming warm, diffused morning sunlight through dancing dust motes.
+
+Kodak Portra 400 film, 50mm f/1.4 lens, fine art documentary portrait photography, natural matte skin texture, visible skin pores, subtle organic film grain, shallow depth of field with creamy circular bokeh, cinematic natural lighting, 90s vintage film still aesthetic.
+```
+
