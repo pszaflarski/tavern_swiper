@@ -47,7 +47,7 @@ steps:
           --timeout=1200 \
           --no-cpu-throttling \
           --cpu-boost \
-          --ingress=internal \
+          --ingress=all \
           --allow-unauthenticated \
           --labels=service-group=self-hosted-llms \
           --startup-probe=httpGet.path=/health,httpGet.port=8080,initialDelaySeconds=30,periodSeconds=15,timeoutSeconds=10,failureThreshold=40 \
