@@ -153,7 +153,7 @@ create_backend_trigger "bots-dev-deploy" \
 
 # 11. Bots Subscriber
 create_backend_trigger "bots-subscriber-dev-deploy" \
-    "services/bots/bots_subscriber/cloudbuild.yaml" "services/bots/bots_subscriber" "bots_subscriber" "bots_subscriber" \
+    "services/bots/bots_subscriber/cloudbuild.yaml" "services/bots/bots_subscriber" "bots_subscriber" "bots-subscriber" \
     "_DB_ID=bots-$ENV_NAME,_JWT_SECRET=$JWT_SECRET"
 
 # 12. Quests

@@ -1,0 +1,43 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🚀 Deploying ${_SERVICE_NAME}-${_ENV_NAME} to Cloud Run in region ${_LOCATION}..."
+
+        gcloud run deploy "${_SERVICE_NAME}-${_ENV_NAME}" \
+          --project="$PROJECT_ID" \
+          --region="${_LOCATION}" \
+          --image="${_IMAGE_URI}" \
+          --execution-environment=gen2 \
+          --cpu=8 \
+          --memory=32Gi \
+          --gpu=1 \
+          --gpu-type=nvidia-l4 \
+          --no-gpu-zonal-redundancy \
+          --min-instances=0 \
+          --max-instances=1 \
+          --concurrency=1 \
+          --timeout=600 \
+          --no-cpu-throttling \
+          --cpu-boost \
+          --ingress=all \
+          --allow-unauthenticated \
+          --labels=service-group=self-hosted-llms \
+          --startup-probe=tcpSocket.port=8080,initialDelaySeconds=30,periodSeconds=10,timeoutSeconds=10,failureThreshold=60 \
+          --set-env-vars="VLLM_API_KEY=${_VLLM_API_KEY},VLLM_ENABLE_CUDA_COMPATIBILITY=0,LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/lib/x86_64-linux-gnu" \
+          --add-volume="name=model-volume,type=cloud-storage,bucket=${_MODELS_BUCKET}" \
+          --add-volume-mount="volume=model-volume,mount-path=/models" \
+          --args="/models/Qwen/Qwen2.5-32B-Instruct-AWQ,--safetensors-load-strategy,prefetch,--port,8080,--max-model-len,16384,--gpu-memory-utilization,0.96,--kv-cache-dtype,fp8,--enable-auto-tool-choice,--tool-call-parser,hermes,--enforce-eager"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _SERVICE_NAME: "qwen-32b"
+  _ENV_NAME: "dev"
+  _LOCATION: "us-central1"
+  _IMAGE_URI: "mirror.gcr.io/vllm/vllm-openai@sha256:3a1e7f5904e1a1192a02aa0086ceaffc33985d7044c7bb25b3a43d61bdbe3ac0"
+  _MODELS_BUCKET: "tavern-swiper-dev-models-cache"
+  _VLLM_API_KEY: "sk-qwen-9814d5cc0c12cc1546bd0d0873602b00aa3f78b421707e80"

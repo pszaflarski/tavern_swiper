@@ -1,0 +1,72 @@
+# LLMs Service Boundary
+
+The `llms` service boundary contains the service definitions, deployment configurations, and operational tooling for Tavern Swiper's self-hosted open-weights large language models.
+
+---
+
+## 1. Overview & Architecture
+
+All self-hosted models are hosted on **Google Cloud Run (Gen2)** using prebuilt **vLLM OpenAI API Server** containers with dedicated Nvidia L4 GPUs.
+
+Model weights are decoupled from container images and mounted dynamically via **Cloud Storage FUSE** from `gs://tavern-swiper-${ENV}-models-cache` into `/models`.
+
+```
+┌────────────────────────────────┐
+│      agent_router_python       │
+│           (:8000)              │
+└───────────────┬────────────────┘
+                │ OpenAI-compatible HTTP REST
+                ▼
+┌────────────────────────────────────────────────────────┐
+│                   LLM Service Boundary                 │
+│                                                        │
+│  ┌───────────────────┐  ┌───────────┐  ┌────────────┐  │
+│  │    dolphin_24b    │  │ qwen_14b  │  │  qwen_32b  │  │
+│  │   (Mistral AWQ)   │  │ (Qwen AWQ)│  │ (Qwen AWQ) │  │
+│  └─────────┬─────────┘  └─────┬─────┘  └─────┬──────┘  │
+│            │                  │              │         │
+│            ▼                  ▼              ▼         │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Cloud Storage FUSE Mount: /models                │  │
+│  │ gs://tavern-swiper-${ENV}-models-cache           │  │
+│  └──────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. Model Services
+
+| Service | Model | Quantization | Context Window | Tool Parser | Cloud Run Service |
+|---------|-------|--------------|----------------|-------------|-------------------|
+| [`dolphin_24b`](./dolphin_24b) | `Valdemardi/Dolphin3.0-Mistral-24B-AWQ` | AWQ Marlin | 32,768 | `mistral` | `dolphin-24b-${ENV}` |
+| [`qwen_14b`](./qwen_14b) | `Qwen/Qwen2.5-14B-Instruct-AWQ` | AWQ | 32,768 | `hermes` | `qwen-14b-${ENV}` |
+| [`qwen_32b`](./qwen_32b) | `Qwen/Qwen2.5-32B-Instruct-AWQ` | AWQ (FP8 KV) | 16,384 | `hermes` | `qwen-32b-${ENV}` |
+
+---
+
+## 3. Directory Layout
+
+Each model container directory follows standard repository conventions:
+- `Dockerfile`: Container image definition pinning the validated vLLM release and default execution arguments.
+- `cloudbuild.yaml`: Declarative Cloud Build deployment specification.
+- `.env.example`: Environment variable template.
+- `README.md`: Specifications, hardware sizing, and operational runbook.
+- `fetch_model.py`: Utility script to download weights from Hugging Face and sync them to the GCS models bucket.
+
+---
+
+## 4. Deployment
+
+Deploy individual or all services using the orchestrator:
+```bash
+# Deploy a single service
+bash scripts/deploy_llm_containers.sh dev dolphin-24b
+
+# Deploy all self-hosted models
+bash scripts/deploy_llm_containers.sh dev all
+```
+Or trigger deployment via Cloud Build:
+```bash
+gcloud builds submit services/llms/dolphin_24b --config=services/llms/dolphin_24b/cloudbuild.yaml --substitutions=_ENV_NAME=dev
+```

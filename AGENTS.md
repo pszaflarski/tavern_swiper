@@ -34,8 +34,12 @@
 | `quests_go` | quests | 8013 | `quests-{env}` | `services/quests/quests_go/` |
 | `notifications_go` | notifications | 8014 | `notifications-{env}` | `services/notifications/notifications_go/` |
 | `notifications_subscriber` | notifications | 8015 | `notifications-{env}` | `services/notifications/notifications_subscriber/` |
+| `dolphin_24b` | llms | 8080 | GCS models cache | `services/llms/dolphin_24b/` |
+| `qwen_14b` | llms | 8080 | GCS models cache | `services/llms/qwen_14b/` |
+| `qwen_32b` | llms | 8080 | GCS models cache | `services/llms/qwen_32b/` |
+| `flux_comfyui` | llms | 8080 | GCS models cache | `services/llms/flux_comfyui/` |
 
-> **Note:** `agent_router_python` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`. `agent_router_worker` is Python/FastAPI for async memory worker events.
+> **Note:** `agent_router_python` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`. `agent_router_worker` is Python/FastAPI for async memory worker events. Self-hosted LLMs under `services/llms/` run vLLM on Cloud Run with Nvidia L4 GPUs and mount weights from GCS.
 
 ## Absolute Rules
 

@@ -2,6 +2,7 @@
 set -e
 
 # deploy_llm_containers.sh — Script to deploy self-hosted LLM GPU services (Qwen 32B, Qwen 14B, Dolphin 24B)
+# Service definitions, Dockerfiles, and Cloud Build manifests live in services/llms/
 # Usage: bash scripts/deploy_llm_containers.sh [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|all]
 
 ENV="${1:-dev}"
@@ -127,6 +128,15 @@ deploy_dolphin_24b() {
   echo "✅ ${service_name} deployed successfully!"
 }
 
+deploy_flux_comfyui() {
+  local service_name="flux-comfyui-${ENV}"
+  echo "🚀 Deploying ${service_name} via Cloud Build to project ${PROJECT_ID}..."
+  gcloud builds submit services/llms/flux_comfyui \
+    --project="${PROJECT_ID}" \
+    --config=services/llms/flux_comfyui/cloudbuild.yaml
+  echo "✅ ${service_name} deployed successfully!"
+}
+
 case "$TARGET" in
   qwen-32b)
     deploy_qwen_32b
@@ -137,15 +147,19 @@ case "$TARGET" in
   dolphin-24b)
     deploy_dolphin_24b
     ;;
+  flux-comfyui)
+    deploy_flux_comfyui
+    ;;
   all)
-    echo "📦 Deploying all self-hosted LLM services sequentially..."
+    echo "📦 Deploying all self-hosted GPU services sequentially..."
     deploy_qwen_32b
     deploy_qwen_14b
     deploy_dolphin_24b
-    echo "🎉 All self-hosted LLM services deployed successfully!"
+    deploy_flux_comfyui
+    echo "🎉 All self-hosted GPU services deployed successfully!"
     ;;
   *)
-    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|all]"
+    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|flux-comfyui|all]"
     exit 1
     ;;
 esac
