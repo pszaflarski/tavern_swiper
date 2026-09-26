@@ -116,3 +116,44 @@ The background features blurred amber-lit liquor bottles on glowing back-lit gla
 
 Fujicolor Superia 400, 50mm f/1.4 lens, cinematic atmospheric portrait photography, natural matte skin texture, lifelike pores and stubble texture, shallow depth of field, authentic candid nightlife snapshot.
 ```
+
+---
+
+# PuLID Calibrated Reference: Speakeasy Lounge with Komatsu Quirks (Fujicolor Superia X-TRA 400)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/flux_edited_cocktail_man_calibrated.png` on `flux-comfyui-dev-00010-8rh`.
+> **Reference Input:** Autumn Parisian Cafe Man generated via Z-Image (`z_image_autumn_cafe_man.png`).
+> **Model:** FLUX.1-dev FP8 + Realism LoRA (strength 0.55) + PuLID-FLUX v0.9.1 (strength 0.72, end_step 0.70) + EVA02-CLIP.
+> **Endpoint:** `POST /v1/images/edits`
+> **Resolution:** `896x1152`
+> **Sampling Duration:** 66.77s on NVIDIA L4 GPU.
+> **Results:** Substantial leap in photorealism over the initial edit. Natural matte forehead bone plane (zero plastic dome sheen), authentic lower sanpaku eye gaze with hooded eyelid asymmetry, unforced candid half-smile, and muted vintage Fujicolor palette with cool cyan shadows.
+
+```text
+In a cinematic shot,#### Overall Bone Structure
+Same handsome Mediterranean/European man in his late 20s as reference image. Vertical-to-horizontal facial ratio approximately 1.35:1, oval skull with angular mandibular taper and defined square chin with subtle central cleft. Delicate head tilt, natural asymmetrical posture. The E-line (nose tip → lips → chin in profile) is straight and harmonious. Slender athletic neck with visible sternocleidomastoid definition and broad relaxed shoulders. Bone structure balances rugged masculine strength with refined, melancholic depth.
+
+#### Forehead
+His forehead occupies roughly one-third of total facial length, flat and smooth with a natural matte bone plane that absorbs soft light rather than reflecting glossy highlights. The hairline is natural and soft, with fine flyaway baby hairs at the temples and subtle widow's peak.
+
+#### Eyes and Gaze
+The eyes are the most captivating, soulful feature: large, warm dark brown almond-shaped eyes with deep depth. Subtle lower sanpaku (a faint sliver of white sclera visible beneath the iris), slightly hooded lids with natural subtle asymmetry between left and right eye, downturned outer corners creating a relaxed, languid, slightly tired yet magnetic gaze. Natural faint fatigue shadows and fine smile creases under the eyes, giving an authentic, unvarnished candid feel. He looks slightly off-axis toward the camera with a calm, introspective expression.
+
+#### Nose
+A straight, defined masculine nasal bridge with a deep nasal root and an imperceptible natural ridge bump along the dorsum. The tip is cleanly defined and slightly squared off, nostrils small and natural. The height of the bridge anchors the symmetry between his high cheekbones.
+
+#### Cheekbones and Cheeks
+High, sculpted cheekbones with natural hollows beneath them due to lean facial structure. Matte, realistic skin texture with visible pores, faint dry skin texture, and zero artificial plastic sheen.
+
+#### Mouth and Facial Hair
+His mouth is relatively wide with a defined philtrum and naturally textured lips showing subtle vertical ridges, matte with natural reddish-mauve hue, slightly parted in a quiet, subtle half-smile with just a hint of teeth peeking through. Dense, neatly trimmed 3-day dark stubble beard along the sharp jawline, mustache, and chin, with realistic individual hair follicles and softer, sparser stubble on the upper cheeks.
+
+#### Overall Impression (Speakeasy Scene & Film Atmosphere)
+The man is sitting at a quiet, dimly lit vintage speakeasy bar late at night, leaning casually with one forearm resting on the dark weathered walnut countertop, holding a heavy crystal lowball tumbler with whiskey and a single melting clear ice sphere.
+
+He wears an unstructured dark navy wool-linen blazer over an open-collar off-white vintage linen shirt, sleeves slightly rolled up, relaxed unstudied elegance without stiff styling.
+
+The scene is lit with soft, indirect diffuse ambient lighting—no harsh direct amber spotlights. Background shows soft out-of-focus shelves of amber and green glass bottles, dark wood paneling, and muted brass tones with creamy, non-distracting bokeh.
+
+Fujicolor Superia X-TRA 400 35mm film, 50mm f/1.8 lens, raw candid snapshot, authentic fine film grain, muted contrast, cool cyan undertones in the shadows balancing warm ambient highlights, natural film halation, vintage 90s editorial photography, authentic non-commercial candid photograph, real human skin imperfections.
+```
