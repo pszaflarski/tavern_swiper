@@ -135,3 +135,24 @@ modern upscale fitness center gym background, clean black rubber flooring, blurr
 
 authentic smartphone camera photo, candid gym snapshot, subtle workout glow, realistic skin texture with natural sheen, soft natural shadows, photorealistic, unedited personal fitness photo aesthetic
 ```
+
+---
+
+# High-Realism Edit Reference: Cross-Scene Wardrobe & Posture Transfer (Autumn Stroll to Cocktail Bar)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/z_image_edited_cocktail_man.png` on `z-image-comfyui-dev`.
+> **Input Image:** `z_image_autumn_cafe_man.png` (Outdoor cobblestone stroll, grey wool overcoat, hands in pocket).
+> **Workflow Settings:** Endpoint `POST /v1/images/edits`, Denoise `0.82`, Seed `42`, Steps `8` Euler, CFG `1.0`. Sampling time: 16.89 seconds.
+> **Key Achievement:** Flawlessly preserved 100% of the man's facial likeness, authentic wavy hair curls and volume, friendly smile, and stubble. Dissolved the heavy winter overcoat into a crisp navy blazer and open-collar white shirt, seated at a dark mahogany bar table with a crystal whiskey tumbler. Grounded two natural arms, realistic hands, veins, and tactile wood reflections with zero AI artifacting.
+
+```text
+1man, solo, young adult man in his late 20s, same facial features and identity as the reference image, handsome Mediterranean European man, defined angular jawline, dark brown textured wavy hair with loose natural strands, well-groomed neat stubble beard along jaw and mustache, warm dark brown eyes, genuine relaxed smile showing straight white teeth, natural facial proportions,
+
+sitting comfortably at a dark wooden table in a cozy dim cocktail bar at night, leaning slightly forward, one forearm resting naturally on the dark tabletop holding a crystal tumbler with whiskey on the rocks, his other hand and arm resting casually on the table edge, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, relaxed unposed masculine posture,
+
+wearing a tailored midnight navy blazer over an open-collar crisp white dress shirt, unbuttoned top collar, relaxed evening elegance, no tie, no overcoat,
+
+cozy dim speakeasy bar setting at night, dark mahogany wood paneling, softly blurred shelves of glass liquor bottles and warm muted amber bokeh in the deep background, soft indirect ambient lighting, natural soft shadows across the face and table, no harsh spotlights, quiet intimate mood,
+
+candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural skin texture with visible pores and stubble, realistic hands and fingers, unedited personal photo feeling, highly realistic, natural anatomy
+```
