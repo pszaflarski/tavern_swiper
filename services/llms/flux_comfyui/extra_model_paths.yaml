@@ -1,0 +1,8 @@
+comfyui:
+    base_path: /models/comfyui/
+    diffusion_models: diffusion_models/
+    unet: diffusion_models/
+    checkpoints: diffusion_models/
+    clip: clip/
+    vae: vae/
+    loras: loras/

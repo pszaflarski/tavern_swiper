@@ -14,6 +14,8 @@ PROJECT_MAP = {
 }
 
 def get_project_id(env):
+    if os.getenv("GOOGLE_CLOUD_PROJECT"):
+        return os.getenv("GOOGLE_CLOUD_PROJECT")
     return PROJECT_MAP.get(env, "tavern-swiper-dev")
 
 REGION = "us-central1"

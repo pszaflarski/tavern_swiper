@@ -46,6 +46,6 @@ done
 
 echo "✨ All databases created/verified."
 echo "🗂️  Applying indexes..."
-bash "$(dirname "$0")/apply-indexes.sh" "$ENV"
+bash "$(dirname "$0")/apply-indexes.sh" "$ENV" "$PROJECT"
 
 echo "🏁 Setup complete for $ENV!"
