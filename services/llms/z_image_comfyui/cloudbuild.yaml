@@ -1,13 +1,25 @@
 steps:
-  # 1. Build Container Image
+  # 1. Pull latest image for Docker layer caching
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker pull ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}-${_ENV_NAME}:latest || true
+
+  # 2. Build Container Image using cache
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--cache-from'
+      - '${_LOCATION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}-${_ENV_NAME}:latest'
       - '-t'
       - '${_LOCATION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}-${_ENV_NAME}:latest'
       - '.'
+    env:
+      - 'DOCKER_BUILDKIT=1'
 
-  # 2. Push Container Image to Artifact Registry
+  # 3. Push Container Image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
