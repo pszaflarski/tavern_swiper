@@ -156,3 +156,29 @@ cozy dim speakeasy bar setting at night, dark mahogany wood paneling, softly blu
 
 candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural skin texture with visible pores and stubble, realistic hands and fingers, unedited personal photo feeling, highly realistic, natural anatomy
 ```
+
+---
+
+# High-Realism Edit Reference: Front-Loaded Facial & Hair Priority (Denoise 0.77)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/z_image_edited_cocktail_man_d77.png` on `z-image-comfyui-dev`.
+> **Input Image:** `z_image_autumn_cafe_man.png` (Outdoor cobblestone stroll, grey wool overcoat).
+> **Workflow Settings:** Endpoint `POST /v1/images/edits`, Denoise `0.77`, Seed `42`, Steps `8` Euler, CFG `1.0`. Sampling time: 20.27 seconds.
+> **Key Achievement:** Maximum facial and hair preservation. The opening 60 tokens explicitly anchor the immutable facial features, jawline taper, eye crinkles, and exact textured wavy curl ringlets. Tuning denoise down to `0.77` retained the high-frequency latent hair curls from the original photo while still cleanly transforming the clothing and background into an upscale cocktail lounge.
+
+```text
+1man, solo, exact identical facial likeness, head structure, and hair as reference image:
+identical textured wavy dark brown hair with natural loose curls and volume over the forehead,
+identical angular masculine jawline taper, defined chin, and well-groomed short dark stubble beard,
+identical warm dark brown eyes, eye crinkles, and genuine friendly smile showing straight white teeth.
+The face, head, hair, and facial expression are completely preserved and untouched from the reference photo.
+
+Only the clothing, body posture, and background environment are transformed:
+candid indoor photo, sitting comfortably at a dark wooden table in a cozy dim cocktail bar at night, leaning slightly forward, one forearm resting naturally on the dark tabletop holding a crystal tumbler with whiskey on the rocks, his other hand and arm resting casually on the table edge, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, relaxed unposed masculine posture,
+
+wearing a tailored midnight navy blazer over an open-collar crisp white dress shirt, unbuttoned top collar, relaxed evening elegance, no tie, no winter overcoat,
+
+cozy dim speakeasy bar setting at night, dark mahogany wood paneling, softly blurred shelves of glass liquor bottles and warm muted amber bokeh in the deep background, soft indirect ambient lighting, natural soft shadows across the face and table, no harsh spotlights, quiet intimate mood,
+
+candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural skin texture with visible pores and stubble, realistic hands and fingers, unedited personal photo feeling, highly realistic, natural anatomy
+```
