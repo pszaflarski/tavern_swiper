@@ -2,7 +2,8 @@ FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH="/ComfyUI:${PYTHONPATH}"
+    PYTHONPATH="/ComfyUI:${PYTHONPATH}" \
+    HF_HUB_OFFLINE=1
 
 WORKDIR /app
 
@@ -39,13 +40,31 @@ RUN git clone --branch v0.36.0 --depth 1 https://github.com/comfyanonymous/Comfy
 # NOTE: No build-time import check — comfy_kitchen's Triton backend requires a GPU
 # which isn't available during docker build. Validation happens at runtime.
 
-# Install proxy dependencies
+# Install proxy and PuLID dependencies
 RUN pip install --no-cache-dir \
     fastapi \
     uvicorn[standard] \
     httpx \
     websockets \
-    pydantic
+    pydantic \
+    python-multipart \
+    facexlib \
+    insightface \
+    onnxruntime \
+    timm \
+    ftfy \
+    opencv-python-headless
+
+# Install ComfyUI-PuLID-Flux custom node and patch forward_orig to accept **kwargs
+RUN git clone https://github.com/balazik/ComfyUI-PuLID-Flux.git /ComfyUI/custom_nodes/ComfyUI-PuLID-Flux && \
+    sed -i 's/control=None,/control=None, **kwargs,/' /ComfyUI/custom_nodes/ComfyUI-PuLID-Flux/pulidflux.py
+
+# Pre-download facexlib weights so no runtime downloads occur
+RUN mkdir -p /usr/local/lib/python3.11/dist-packages/facexlib/weights && \
+    curl -sL https://github.com/xinntao/facexlib/releases/download/v0.1.0/detection_Resnet50_Final.pth \
+      -o /usr/local/lib/python3.11/dist-packages/facexlib/weights/detection_Resnet50_Final.pth && \
+    curl -sL https://github.com/xinntao/facexlib/releases/download/v0.2.0/parsing_bisenet.pth \
+      -o /usr/local/lib/python3.11/dist-packages/facexlib/weights/parsing_bisenet.pth
 
 # Copy application files
 COPY . /app

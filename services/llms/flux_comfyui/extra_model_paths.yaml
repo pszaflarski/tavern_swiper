@@ -6,3 +6,6 @@ comfyui:
     clip: clip/
     vae: vae/
     loras: loras/
+    pulid: pulid/
+    clip_vision: clip_vision/
+    insightface: insightface/

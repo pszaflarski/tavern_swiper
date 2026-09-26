@@ -1,0 +1,119 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "flux1-dev-fp8.safetensors",
+      "weight_dtype": "fp8_e4m3fn"
+    }
+  },
+  "2": {
+    "class_type": "DualCLIPLoader",
+    "inputs": {
+      "clip_name1": "t5xxl_fp8_e4m3fn.safetensors",
+      "clip_name2": "clip_l.safetensors",
+      "type": "flux"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "model": ["1", 0],
+      "clip": ["2", 0],
+      "lora_name": "flux_realism_lora.safetensors",
+      "strength_model": 0.55,
+      "strength_clip": 0.55
+    }
+  },
+  "11": {
+    "class_type": "PulidFluxModelLoader",
+    "inputs": {
+      "pulid_file": "pulid_flux_v0.9.1.safetensors"
+    }
+  },
+  "12": {
+    "class_type": "PulidFluxEvaClipLoader",
+    "inputs": {}
+  },
+  "13": {
+    "class_type": "PulidFluxInsightFaceLoader",
+    "inputs": {
+      "provider": "CPU"
+    }
+  },
+  "14": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "placeholder_ref.png"
+    }
+  },
+  "15": {
+    "class_type": "ApplyPulidFlux",
+    "inputs": {
+      "model": ["4", 0],
+      "pulid_flux": ["11", 0],
+      "eva_clip": ["12", 0],
+      "face_analysis": ["13", 0],
+      "image": ["14", 0],
+      "weight": 0.8,
+      "start_at": 0.0,
+      "end_at": 1.0
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "placeholder prompt",
+      "clip": ["4", 1]
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "",
+      "clip": ["4", 1]
+    }
+  },
+  "7": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 896,
+      "height": 1152,
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["15", 0],
+      "positive": ["5", 0],
+      "negative": ["6", 0],
+      "latent_image": ["7", 0],
+      "seed": 0,
+      "steps": 24,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": ["8", 0],
+      "vae": ["3", 0]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "flux_pulid_gen",
+      "images": ["9", 0]
+    }
+  }
+}

@@ -3,11 +3,29 @@ set -e
 
 PORT=${PORT:-8080}
 
-echo "=== FLUX.1 Realism Container Starting ==="
+echo "=== FLUX.1 Realism + PuLID Container Starting ==="
 echo "PORT=${PORT}"
 
-# Create temp directories for ComfyUI
+# Point Hugging Face cache to GCS volume so EVA02-CLIP weights are read from disk
+export HF_HOME=/models/comfyui/hf_cache
+
+# Create temp directories for ComfyUI input/output
 mkdir -p /tmp/comfyui_input /tmp/comfyui_output
+
+# Symlink models for ComfyUI custom nodes that expect default paths
+mkdir -p /ComfyUI/models
+if [ -d /models/comfyui/insightface ]; then
+    rm -rf /ComfyUI/models/insightface
+    ln -sfn /models/comfyui/insightface /ComfyUI/models/insightface
+fi
+if [ -d /models/comfyui/pulid ]; then
+    rm -rf /ComfyUI/models/pulid
+    ln -sfn /models/comfyui/pulid /ComfyUI/models/pulid
+fi
+if [ -d /models/comfyui/clip_vision ]; then
+    rm -rf /ComfyUI/models/clip_vision
+    ln -sfn /models/comfyui/clip_vision /ComfyUI/models/clip_vision
+fi
 
 echo "Starting Headless ComfyUI on 127.0.0.1:8188..."
 python3 /ComfyUI/main.py \
@@ -23,7 +41,7 @@ python3 /ComfyUI/main.py \
 COMFY_PID=$!
 
 # Wait for ComfyUI to be ready (port open + system_stats responsive)
-echo "Waiting for ComfyUI to initialize (model loading takes 2-5 min)..."
+echo "Waiting for ComfyUI to initialize..."
 MAX_WAIT=600
 ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
