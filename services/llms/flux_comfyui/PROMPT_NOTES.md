@@ -86,3 +86,33 @@ She wears a rustic beige linen work apron over a loose-fitting cream cotton henl
 Kodak Portra 400 film, 50mm f/1.4 lens, fine art documentary portrait photography, natural matte skin texture, visible skin pores, subtle organic film grain, shallow depth of field with creamy circular bokeh, cinematic natural lighting, 90s vintage film still aesthetic.
 ```
 
+---
+
+# PuLID Identity-Preserving Scene Edit Reference: Autumn Man -> Speakeasy Lounge (Fujicolor Superia 400)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/flux_edited_cocktail_man.png` on `flux-comfyui-dev-00010-8rh`.
+> **Reference Input:** Autumn Parisian Cafe Man generated via Z-Image (`z_image_autumn_cafe_man.png`).
+> **Model:** FLUX.1-dev FP8 + Realism LoRA (strength 0.50) + PuLID-FLUX v0.9.1 (strength 0.75, end_step 0.72) + EVA02-CLIP.
+> **Endpoint:** `POST /v1/images/edits`
+> **Resolution:** `896x1152`
+> **Results:** Flawless cross-architecture identity transfer from Z-Image to FLUX. Exact preservation of facial bone structure, dark eyes, genuine smile, teeth, cheek dimples, and neat beard stubble, transplanted into a midnight navy blazer sitting at a dark walnut speakeasy bar holding a whiskey on the rocks.
+
+```text
+In a cinematic shot,#### Overall Bone Structure
+Same handsome young adult man in his late 20s as reference image, distinct angular jawline with clean mandibular taper, masculine defined chin, athletic neck and broad shoulders, exact same facial bone structure and proportions as reference.
+
+#### Eyes and Expression
+Same warm, engaging dark brown eyes, subtle crow's feet and smile creases around the eyes, natural brow ridge with well-defined dark eyebrows, relaxed confident gaze looking slightly off-camera then toward the viewer, warm genuine smile showing straight teeth with same friendly expression as reference.
+
+#### Hair and Facial Hair
+Thick, textured wavy dark brown hair styled casually with natural volume and loose textured strands on top, neatly trimmed short stubble beard along the jawline, cheeks, and mustache with clean neckline grooming.
+
+#### Overall Impression (New Scene & Attire)
+The man is sitting at a sleek, dimly lit speakeasy cocktail bar at night, leaning casually against the polished dark walnut wood countertop with one forearm, holding a crystal lowball tumbler of whiskey on the rocks in his hand.
+
+He is wearing a tailored midnight navy unstructured blazer over a crisp open-collar white linen shirt, relaxed elegance, no tie, sleeves pushed slightly up.
+
+The background features blurred amber-lit liquor bottles on glowing back-lit glass shelves, warm brass accents, subtle reflections on the dark mahogany counter, warm moody atmospheric bokeh, soft golden sidelighting creating natural dimensional shadows across his cheekbones and jaw.
+
+Fujicolor Superia 400, 50mm f/1.4 lens, cinematic atmospheric portrait photography, natural matte skin texture, lifelike pores and stubble texture, shallow depth of field, authentic candid nightlife snapshot.
+```
