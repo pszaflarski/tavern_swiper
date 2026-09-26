@@ -1,0 +1,52 @@
+steps:
+  # 1. Build Container Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_LOCATION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}-${_ENV_NAME}:latest'
+      - '.'
+
+  # 2. Push Container Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_LOCATION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}-${_ENV_NAME}:latest'
+
+  # 3. Deploy to Cloud Run with L4 GPU & Cloud Storage Volume Mount
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy "${_SERVICE_NAME}-${_ENV_NAME}" \
+          --project="$PROJECT_ID" \
+          --region="${_LOCATION}" \
+          --image="${_LOCATION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}-${_ENV_NAME}:latest" \
+          --execution-environment=gen2 \
+          --cpu=8 \
+          --memory=32Gi \
+          --gpu=1 \
+          --gpu-type=nvidia-l4 \
+          --no-gpu-zonal-redundancy \
+          --min-instances=0 \
+          --max-instances=1 \
+          --concurrency=1 \
+          --timeout=1200 \
+          --no-cpu-throttling \
+          --cpu-boost \
+          --ingress=all \
+          --allow-unauthenticated \
+          --labels=service-group=self-hosted-llms \
+          --startup-probe=httpGet.path=/health,httpGet.port=8080,initialDelaySeconds=30,periodSeconds=15,timeoutSeconds=10,failureThreshold=40 \
+          --add-volume="name=model-volume,type=cloud-storage,bucket=${_MODELS_BUCKET}" \
+          --add-volume-mount="volume=model-volume,mount-path=/models"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _SERVICE_NAME: "z-image-comfyui"
+  _ENV_NAME: "dev"
+  _LOCATION: "us-central1"
+  _MODELS_BUCKET: "tavern-swiper-dev-models-cache"

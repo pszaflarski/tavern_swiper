@@ -1,0 +1,54 @@
+steps:
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        pip install --no-cache-dir huggingface_hub
+
+        python3 -c "
+        import os, shutil
+        from huggingface_hub import hf_hub_download
+
+        os.makedirs('/workspace/z_image/diffusion_models', exist_ok=True)
+        os.makedirs('/workspace/z_image/text_encoders', exist_ok=True)
+
+        print('=== Downloading Z-Image-Turbo Diffusion Model ===')
+        diff_path = hf_hub_download(
+            repo_id='Comfy-Org/z_image_turbo',
+            filename='split_files/diffusion_models/z_image_turbo_bf16.safetensors',
+            local_dir='/workspace/tmp_diff'
+        )
+        target_diff = '/workspace/z_image/diffusion_models/z_image_turbo_bf16.safetensors'
+        shutil.move(diff_path, target_diff)
+        shutil.rmtree('/workspace/tmp_diff', ignore_errors=True)
+        print('Diffusion model downloaded and staged in /workspace/z_image/diffusion_models')
+
+        print('=== Downloading Qwen 3.4B Text Encoder ===')
+        text_path = hf_hub_download(
+            repo_id='Comfy-Org/z_image_turbo',
+            filename='split_files/text_encoders/qwen_3_4b.safetensors',
+            local_dir='/workspace/tmp_text'
+        )
+        target_text = '/workspace/z_image/text_encoders/qwen_3_4b.safetensors'
+        shutil.move(text_path, target_text)
+        shutil.rmtree('/workspace/tmp_text', ignore_errors=True)
+        print('Text encoder downloaded and staged in /workspace/z_image/text_encoders')
+        "
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "=== Uploading Z-Image models to GCS ==="
+        gcloud storage cp -r /workspace/z_image/* gs://tavern-swiper-dev-models-cache/z_image/
+        echo "=== Verifying GCS Staged Models ==="
+        gcloud storage ls -lh gs://tavern-swiper-dev-models-cache/z_image/**
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 200

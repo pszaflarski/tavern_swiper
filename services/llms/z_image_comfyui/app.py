@@ -1,3 +1,5 @@
+"""FastAPI OpenAI-Compatible Image Generation & Editing API for Z-Image-Turbo."""
+
 import asyncio
 import base64
 import json
@@ -6,53 +8,50 @@ import time
 import uuid
 from typing import Optional
 
-import httpx
-import websockets
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+import httpx
 from pydantic import BaseModel, Field
-
-COMFY_HOST = os.getenv("COMFY_HOST", "127.0.0.1:8188")
-COMFY_INPUT_DIR = os.getenv("COMFY_INPUT_DIR", "/tmp/comfyui_input")
-
-REALISM_WORKFLOW_PATH = os.path.join(
-    os.path.dirname(__file__), "flux_realism_workflow_api.json"
-)
-PULID_WORKFLOW_PATH = os.path.join(
-    os.path.dirname(__file__), "flux_pulid_workflow_api.json"
-)
+import websockets
 
 app = FastAPI(
-    title="FLUX.1 Realism & PuLID Image Service",
-    version="1.1.0",
-    description="OpenAI-compatible image generation and identity-preserving editing with FLUX.1 + PuLID",
+    title="Z-Image-Turbo Image Generation & Editing Service",
+    description="OpenAI-compatible Image API backed by Headless ComfyUI on Cloud Run GPU.",
+    version="1.0.0",
 )
 
-with open(REALISM_WORKFLOW_PATH, "r") as f:
-    BASE_REALISM_WORKFLOW = json.load(f)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-with open(PULID_WORKFLOW_PATH, "r") as f:
-    BASE_PULID_WORKFLOW = json.load(f)
+COMFY_HOST = os.environ.get("COMFY_HOST", "127.0.0.1:8188")
+COMFY_INPUT_DIR = "/tmp/comfyui_input"
+
+TURBO_WORKFLOW_PATH = "/app/z_image_turbo_workflow_api.json"
+EDIT_WORKFLOW_PATH = "/app/z_image_edit_workflow_api.json"
+
+with open(TURBO_WORKFLOW_PATH, "r") as f:
+    BASE_TURBO_WORKFLOW = json.load(f)
+
+with open(EDIT_WORKFLOW_PATH, "r") as f:
+    BASE_EDIT_WORKFLOW = json.load(f)
 
 # Node IDs in workflows
 NODE_PROMPT = "5"       # CLIPTextEncode (positive)
 NODE_LATENT = "7"       # EmptySD3LatentImage (dimensions)
-NODE_SAMPLER = "8"      # KSampler (seed)
+NODE_SAMPLER = "8"      # KSampler (seed, steps, denoise)
 
-# PuLID specific node IDs
-NODE_PULID_IMAGE = "14"  # LoadImage (reference face)
-NODE_PULID_APPLY = "15"  # ApplyPulidFlux (weight, end_at)
-NODE_LORA = "4"          # LoraLoader (realism LoRA strength)
-
-# Anti-gloss prompt injection for photorealism
-REALISM_TRIGGER = (
-    ", candid shot, natural skin micro-texture with pores, flyaway hair strands, "
-    "ambient natural room lighting, shot on 35mm f/2.0, subtle sensor grain, "
-    "casual amateur composition"
-)
+# Edit specific node IDs
+NODE_EDIT_IMAGE = "14"   # LoadImage (reference face/image)
+NODE_EDIT_SAMPLER = "8" # KSampler (denoise)
 
 
 class ImageGenRequest(BaseModel):
-    model: str = Field("flux-1-realism", description="Model ID")
+    model: str = Field("z-image-turbo", description="Model ID")
     prompt: str = Field(..., description="Text prompt describing the image")
     size: str = Field("896x1152", description="Image dimensions WxH")
     n: int = Field(1, description="Number of images (only 1 supported)")
@@ -154,9 +153,9 @@ async def _execute_comfy_workflow(workflow: dict, client_id: str) -> str:
 
 @app.post("/v1/images/generations", response_model=ImageResponse)
 async def generate_image(req: ImageGenRequest):
-    """Text-to-Image Generation using FLUX.1 Realism."""
+    """Text-to-Image Generation using Z-Image-Turbo (8 steps)."""
     client_id = str(uuid.uuid4())
-    workflow = json.loads(json.dumps(BASE_REALISM_WORKFLOW))
+    workflow = json.loads(json.dumps(BASE_TURBO_WORKFLOW))
 
     try:
         width, height = map(int, req.size.split("x"))
@@ -165,8 +164,7 @@ async def generate_image(req: ImageGenRequest):
             status_code=400, detail=f"Invalid size format: {req.size}"
         )
 
-    enriched_prompt = f"{req.prompt}{REALISM_TRIGGER}"
-    workflow[NODE_PROMPT]["inputs"]["text"] = enriched_prompt
+    workflow[NODE_PROMPT]["inputs"]["text"] = req.prompt
     workflow[NODE_LATENT]["inputs"]["width"] = width
     workflow[NODE_LATENT]["inputs"]["height"] = height
     workflow[NODE_SAMPLER]["inputs"]["seed"] = int(time.time() * 1000) % (2**31)
@@ -175,7 +173,7 @@ async def generate_image(req: ImageGenRequest):
         b64_str = await _execute_comfy_workflow(workflow, client_id)
         return ImageResponse(
             created=int(time.time()),
-            data=[ImageData(b64_json=b64_str, revised_prompt=enriched_prompt)],
+            data=[ImageData(b64_json=b64_str, revised_prompt=req.prompt)],
         )
     except HTTPException:
         raise
@@ -189,27 +187,14 @@ async def generate_image(req: ImageGenRequest):
 async def edit_image(
     image: UploadFile = File(..., description="Reference face image"),
     prompt: str = Form(..., description="Prompt describing the new scene or variation"),
-    size: str = Form("896x1152", description="Image dimensions WxH"),
-    identity_strength: float = Form(
-        0.75, description="PuLID identity fidelity weight (0.72 - 0.78)"
-    ),
-    pulid_end_step: float = Form(
-        0.72,
-        description="PuLID early stop step ratio (0.70 - 0.75 for matte realism)",
-    ),
-    realism_strength: float = Form(
-        0.50, description="Realism LoRA strength (default: 0.50)"
+    denoise: float = Form(
+        0.65, description="Image editing denoise strength (0.3 to 0.85)"
     ),
     seed: Optional[int] = Form(None, description="Random seed"),
 ):
-    """Identity-Preserving Image Editing & Scene Variation using PuLID-FLUX."""
+    """Image-to-Image Editing using Z-Image Latent Conditioning."""
     client_id = str(uuid.uuid4())
-    workflow = json.loads(json.dumps(BASE_PULID_WORKFLOW))
-
-    try:
-        width, height = map(int, size.split("x"))
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid size format: {size}")
+    workflow = json.loads(json.dumps(BASE_EDIT_WORKFLOW))
 
     # Save uploaded reference image directly to ComfyUI input directory
     os.makedirs(COMFY_INPUT_DIR, exist_ok=True)
@@ -223,34 +208,27 @@ async def edit_image(
     with open(ref_filepath, "wb") as f:
         f.write(image_bytes)
 
-    # Configure PuLID workflow
-    enriched_prompt = f"{prompt}{REALISM_TRIGGER}"
-    workflow[NODE_PULID_IMAGE]["inputs"]["image"] = ref_filename
-    workflow[NODE_PULID_APPLY]["inputs"]["weight"] = float(identity_strength)
-    workflow[NODE_PULID_APPLY]["inputs"]["end_at"] = float(pulid_end_step)
-    workflow[NODE_LORA]["inputs"]["strength_model"] = float(realism_strength)
-    workflow[NODE_LORA]["inputs"]["strength_clip"] = float(realism_strength)
-    workflow[NODE_PROMPT]["inputs"]["text"] = enriched_prompt
-    workflow[NODE_LATENT]["inputs"]["width"] = width
-    workflow[NODE_LATENT]["inputs"]["height"] = height
+    # Configure edit workflow
+    workflow[NODE_EDIT_IMAGE]["inputs"]["image"] = ref_filename
+    workflow[NODE_PROMPT]["inputs"]["text"] = prompt
+    workflow[NODE_EDIT_SAMPLER]["inputs"]["denoise"] = float(denoise)
 
     if seed is not None:
-        workflow[NODE_SAMPLER]["inputs"]["seed"] = seed
+        workflow[NODE_EDIT_SAMPLER]["inputs"]["seed"] = seed
     else:
-        workflow[NODE_SAMPLER]["inputs"]["seed"] = int(time.time() * 1000) % (2**31)
+        workflow[NODE_EDIT_SAMPLER]["inputs"]["seed"] = int(time.time() * 1000) % (2**31)
 
     try:
         b64_str = await _execute_comfy_workflow(workflow, client_id)
         return ImageResponse(
             created=int(time.time()),
-            data=[ImageData(b64_json=b64_str, revised_prompt=enriched_prompt)],
+            data=[ImageData(b64_json=b64_str, revised_prompt=prompt)],
         )
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Editing failed: {str(e)}")
     finally:
-        # Clean up temporary reference file
         if os.path.exists(ref_filepath):
             try:
                 os.remove(ref_filepath)
@@ -263,8 +241,8 @@ async def list_models():
     now = int(time.time())
     return ModelListResponse(
         data=[
-            ModelCard(id="flux-1-realism", created=now),
-            ModelCard(id="flux-1-pulid", created=now),
+            ModelCard(id="z-image-turbo", created=now),
+            ModelCard(id="z-image-edit", created=now),
         ]
     )
 

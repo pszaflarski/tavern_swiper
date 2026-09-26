@@ -1,0 +1,10 @@
+z_image:
+    base_path: /models/z_image/
+    diffusion_models: diffusion_models/
+    unet: diffusion_models/
+    checkpoints: diffusion_models/
+    clip: text_encoders/
+    text_encoders: text_encoders/
+comfyui_vae:
+    base_path: /models/comfyui/
+    vae: vae/
