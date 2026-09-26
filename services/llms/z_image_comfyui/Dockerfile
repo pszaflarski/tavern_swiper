@@ -47,7 +47,7 @@ RUN pip install --no-cache-dir \
     python-multipart \
     sentencepiece \
     accelerate \
-    opencv-python-headless
+    "opencv-python-headless<5.0"
 
 # Copy application files
 COPY . /app

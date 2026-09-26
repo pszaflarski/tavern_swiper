@@ -2,16 +2,20 @@
 
 import asyncio
 import base64
+import io
 import json
 import os
 import time
 import uuid
 from typing import Optional
 
+import cv2
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Security, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import httpx
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 from pydantic import BaseModel, Field
 import websockets
 
@@ -36,7 +40,7 @@ def verify_api_key(
 app = FastAPI(
     title="Z-Image-Turbo Image Generation & Editing Service",
     description="OpenAI-compatible Image API backed by Headless ComfyUI on Cloud Run GPU.",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 app.add_middleware(
@@ -56,12 +60,18 @@ TURBO_WORKFLOW_PATH = os.path.join(
 EDIT_WORKFLOW_PATH = os.path.join(
     os.path.dirname(__file__), "z_image_edit_workflow_api.json"
 )
+INPAINT_WORKFLOW_PATH = os.path.join(
+    os.path.dirname(__file__), "z_image_inpaint_workflow_api.json"
+)
 
 with open(TURBO_WORKFLOW_PATH, "r") as f:
     BASE_TURBO_WORKFLOW = json.load(f)
 
 with open(EDIT_WORKFLOW_PATH, "r") as f:
     BASE_EDIT_WORKFLOW = json.load(f)
+
+with open(INPAINT_WORKFLOW_PATH, "r") as f:
+    BASE_INPAINT_WORKFLOW = json.load(f)
 
 # Node IDs in workflows
 NODE_PROMPT = "5"       # CLIPTextEncode (positive)
@@ -71,6 +81,63 @@ NODE_SAMPLER = "8"      # KSampler (seed, steps, denoise)
 # Edit specific node IDs
 NODE_EDIT_IMAGE = "14"   # LoadImage (reference face/image)
 NODE_EDIT_SAMPLER = "8" # KSampler (denoise)
+
+# Inpaint specific node IDs
+NODE_INPAINT_IMAGE = "14"   # LoadImage (reference image)
+NODE_INPAINT_MASK = "16"    # LoadImage (mask image)
+NODE_INPAINT_PROMPT = "5"   # CLIPTextEncode (prompt)
+NODE_INPAINT_SAMPLER = "8"  # KSampler (denoise, seed)
+
+
+def generate_face_protection_mask(image_bytes: bytes, feather_radius: int = 25) -> bytes:
+    """Detects face/head and returns a feathered inpainting mask (PNG bytes).
+
+    - 0 (Black): Head, face, and hair (Preserved / Protected)
+    - 255 (White): Clothing, body, and background (Inpainted / Redrawn)
+    """
+    img = Image.open(io.BytesIO(image_bytes))
+    w, h = img.size
+
+    mask = Image.new("L", (w, h), 255)
+    draw = ImageDraw.Draw(mask)
+
+    np_img = np.array(img.convert("RGB"))
+    face_detected = False
+    head_box = None
+
+    try:
+        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        if hasattr(cv2, "CascadeClassifier") and os.path.exists(cascade_path):
+            face_cascade = cv2.CascadeClassifier(cascade_path)
+            gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
+            faces = face_cascade.detectMultiScale(
+                gray, scaleFactor=1.1, minNeighbors=4, minSize=(int(w * 0.1), int(h * 0.1))
+            )
+            if len(faces) > 0:
+                largest_face = max(faces, key=lambda f: f[2] * f[3])
+                fx, fy, fw, fh = largest_face
+                x1 = max(0, int(fx - 0.25 * fw))
+                x2 = min(w, int(fx + 1.25 * fw))
+                y1 = max(0, int(fy - 0.55 * fh))
+                y2 = min(h, int(fy + 1.35 * fh))
+                head_box = [x1, y1, x2, y2]
+                face_detected = True
+    except Exception:
+        pass
+
+    if not face_detected or head_box is None:
+        cx = w // 2
+        cy = int(h * 0.22)
+        rx = int(w * 0.22)
+        ry = int(h * 0.20)
+        head_box = [cx - rx, cy - ry, cx + rx, cy + ry]
+
+    draw.ellipse(head_box, fill=0)
+    feathered = mask.filter(ImageFilter.GaussianBlur(radius=feather_radius))
+
+    out_buf = io.BytesIO()
+    feathered.save(out_buf, format="PNG")
+    return out_buf.getvalue()
 
 
 class ImageGenRequest(BaseModel):
@@ -217,17 +284,21 @@ async def generate_image(req: ImageGenRequest):
 )
 async def edit_image(
     image: UploadFile = File(..., description="Reference face image"),
+    mask: Optional[UploadFile] = File(
+        None, description="Optional inpaint mask (white=modify/inpaint, black=preserve)"
+    ),
     prompt: str = Form(..., description="Prompt describing the new scene or variation"),
+    preserve_face: bool = Form(
+        True, description="Automatically protect face and hair during scene changes"
+    ),
     denoise: float = Form(
-        0.65, description="Image editing denoise strength (0.3 to 0.85)"
+        0.85, description="Image editing denoise strength (0.3 to 1.0)"
     ),
     seed: Optional[int] = Form(None, description="Random seed"),
 ):
-    """Image-to-Image Editing using Z-Image Latent Conditioning."""
+    """Image-to-Image Editing with Face-Preserving Latent Noise Masking."""
     client_id = str(uuid.uuid4())
-    workflow = json.loads(json.dumps(BASE_EDIT_WORKFLOW))
 
-    # Save uploaded reference image directly to ComfyUI input directory
     os.makedirs(COMFY_INPUT_DIR, exist_ok=True)
     ref_filename = f"ref_{uuid.uuid4().hex[:12]}.png"
     ref_filepath = os.path.join(COMFY_INPUT_DIR, ref_filename)
@@ -239,15 +310,50 @@ async def edit_image(
     with open(ref_filepath, "wb") as f:
         f.write(image_bytes)
 
-    # Configure edit workflow
-    workflow[NODE_EDIT_IMAGE]["inputs"]["image"] = ref_filename
-    workflow[NODE_PROMPT]["inputs"]["text"] = prompt
-    workflow[NODE_EDIT_SAMPLER]["inputs"]["denoise"] = float(denoise)
+    mask_filename = None
+    mask_filepath = None
+    use_inpaint = False
 
-    if seed is not None:
-        workflow[NODE_EDIT_SAMPLER]["inputs"]["seed"] = seed
+    # Check for client-provided mask
+    if mask is not None:
+        mask_bytes = await mask.read()
+        if mask_bytes:
+            mask_filename = f"mask_{uuid.uuid4().hex[:12]}.png"
+            mask_filepath = os.path.join(COMFY_INPUT_DIR, mask_filename)
+            with open(mask_filepath, "wb") as f:
+                f.write(mask_bytes)
+            use_inpaint = True
+    elif preserve_face:
+        # Generate automatic head and face protection mask
+        try:
+            auto_mask_bytes = generate_face_protection_mask(image_bytes)
+            mask_filename = f"mask_auto_{uuid.uuid4().hex[:12]}.png"
+            mask_filepath = os.path.join(COMFY_INPUT_DIR, mask_filename)
+            with open(mask_filepath, "wb") as f:
+                f.write(auto_mask_bytes)
+            use_inpaint = True
+        except Exception:
+            use_inpaint = False
+
+    if use_inpaint and mask_filename:
+        workflow = json.loads(json.dumps(BASE_INPAINT_WORKFLOW))
+        workflow[NODE_INPAINT_IMAGE]["inputs"]["image"] = ref_filename
+        workflow[NODE_INPAINT_MASK]["inputs"]["image"] = mask_filename
+        workflow[NODE_INPAINT_PROMPT]["inputs"]["text"] = prompt
+        workflow[NODE_INPAINT_SAMPLER]["inputs"]["denoise"] = float(denoise)
+        if seed is not None:
+            workflow[NODE_INPAINT_SAMPLER]["inputs"]["seed"] = seed
+        else:
+            workflow[NODE_INPAINT_SAMPLER]["inputs"]["seed"] = int(time.time() * 1000) % (2**31)
     else:
-        workflow[NODE_EDIT_SAMPLER]["inputs"]["seed"] = int(time.time() * 1000) % (2**31)
+        workflow = json.loads(json.dumps(BASE_EDIT_WORKFLOW))
+        workflow[NODE_EDIT_IMAGE]["inputs"]["image"] = ref_filename
+        workflow[NODE_PROMPT]["inputs"]["text"] = prompt
+        workflow[NODE_EDIT_SAMPLER]["inputs"]["denoise"] = float(denoise)
+        if seed is not None:
+            workflow[NODE_EDIT_SAMPLER]["inputs"]["seed"] = seed
+        else:
+            workflow[NODE_EDIT_SAMPLER]["inputs"]["seed"] = int(time.time() * 1000) % (2**31)
 
     try:
         b64_str = await _execute_comfy_workflow(workflow, client_id)
@@ -260,11 +366,12 @@ async def edit_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Editing failed: {str(e)}")
     finally:
-        if os.path.exists(ref_filepath):
-            try:
-                os.remove(ref_filepath)
-            except OSError:
-                pass
+        for p in [ref_filepath, mask_filepath]:
+            if p and os.path.exists(p):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
 
 
 @app.get(
