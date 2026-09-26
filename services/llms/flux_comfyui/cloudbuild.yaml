@@ -39,6 +39,7 @@ steps:
           --allow-unauthenticated \
           --labels=service-group=self-hosted-llms \
           --startup-probe=httpGet.path=/health,httpGet.port=8080,initialDelaySeconds=30,periodSeconds=15,timeoutSeconds=10,failureThreshold=40 \
+          --set-env-vars="IMAGE_API_KEY=${_IMAGE_API_KEY}" \
           --add-volume="name=model-volume,type=cloud-storage,bucket=${_MODELS_BUCKET}" \
           --add-volume-mount="volume=model-volume,mount-path=/models"
 
@@ -50,3 +51,5 @@ substitutions:
   _ENV_NAME: "dev"
   _LOCATION: "us-central1"
   _MODELS_BUCKET: "tavern-swiper-dev-models-cache"
+  _IMAGE_API_KEY: "sk-tavern-img-dev-8f92b7c4a1e35d6092f1b4e7c3a8e9d2"
+

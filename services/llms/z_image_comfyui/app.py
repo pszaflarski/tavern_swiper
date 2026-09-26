@@ -8,11 +8,30 @@ import time
 import uuid
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Security, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import httpx
 from pydantic import BaseModel, Field
 import websockets
+
+security = HTTPBearer(auto_error=False)
+
+
+def verify_api_key(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+):
+    """Validate Bearer API key if IMAGE_API_KEY environment variable is configured."""
+    expected_key = os.environ.get("IMAGE_API_KEY")
+    if not expected_key:
+        return
+    if not credentials or credentials.credentials != expected_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key. Provide 'Authorization: Bearer <key>'",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
 app = FastAPI(
     title="Z-Image-Turbo Image Generation & Editing Service",
@@ -31,8 +50,12 @@ app.add_middleware(
 COMFY_HOST = os.environ.get("COMFY_HOST", "127.0.0.1:8188")
 COMFY_INPUT_DIR = "/tmp/comfyui_input"
 
-TURBO_WORKFLOW_PATH = "/app/z_image_turbo_workflow_api.json"
-EDIT_WORKFLOW_PATH = "/app/z_image_edit_workflow_api.json"
+TURBO_WORKFLOW_PATH = os.path.join(
+    os.path.dirname(__file__), "z_image_turbo_workflow_api.json"
+)
+EDIT_WORKFLOW_PATH = os.path.join(
+    os.path.dirname(__file__), "z_image_edit_workflow_api.json"
+)
 
 with open(TURBO_WORKFLOW_PATH, "r") as f:
     BASE_TURBO_WORKFLOW = json.load(f)
@@ -151,7 +174,11 @@ async def _execute_comfy_workflow(workflow: dict, client_id: str) -> str:
         return base64.b64encode(img_resp.content).decode("utf-8")
 
 
-@app.post("/v1/images/generations", response_model=ImageResponse)
+@app.post(
+    "/v1/images/generations",
+    response_model=ImageResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def generate_image(req: ImageGenRequest):
     """Text-to-Image Generation using Z-Image-Turbo (8 steps)."""
     client_id = str(uuid.uuid4())
@@ -183,7 +210,11 @@ async def generate_image(req: ImageGenRequest):
         )
 
 
-@app.post("/v1/images/edits", response_model=ImageResponse)
+@app.post(
+    "/v1/images/edits",
+    response_model=ImageResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def edit_image(
     image: UploadFile = File(..., description="Reference face image"),
     prompt: str = Form(..., description="Prompt describing the new scene or variation"),
@@ -236,7 +267,11 @@ async def edit_image(
                 pass
 
 
-@app.get("/v1/models", response_model=ModelListResponse)
+@app.get(
+    "/v1/models",
+    response_model=ModelListResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def list_models():
     now = int(time.time())
     return ModelListResponse(

@@ -8,8 +8,27 @@ from typing import Optional
 
 import httpx
 import websockets
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Security, UploadFile
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
+
+security = HTTPBearer(auto_error=False)
+
+
+def verify_api_key(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+):
+    """Validate Bearer API key if IMAGE_API_KEY environment variable is configured."""
+    expected_key = os.environ.get("IMAGE_API_KEY")
+    if not expected_key:
+        return
+    if not credentials or credentials.credentials != expected_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key. Provide 'Authorization: Bearer <key>'",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
 COMFY_HOST = os.getenv("COMFY_HOST", "127.0.0.1:8188")
 COMFY_INPUT_DIR = os.getenv("COMFY_INPUT_DIR", "/tmp/comfyui_input")
@@ -152,7 +171,11 @@ async def _execute_comfy_workflow(workflow: dict, client_id: str) -> str:
         return base64.b64encode(img_resp.content).decode("utf-8")
 
 
-@app.post("/v1/images/generations", response_model=ImageResponse)
+@app.post(
+    "/v1/images/generations",
+    response_model=ImageResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def generate_image(req: ImageGenRequest):
     """Text-to-Image Generation using FLUX.1 Realism."""
     client_id = str(uuid.uuid4())
@@ -185,7 +208,11 @@ async def generate_image(req: ImageGenRequest):
         )
 
 
-@app.post("/v1/images/edits", response_model=ImageResponse)
+@app.post(
+    "/v1/images/edits",
+    response_model=ImageResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def edit_image(
     image: UploadFile = File(..., description="Reference face image"),
     prompt: str = Form(..., description="Prompt describing the new scene or variation"),
@@ -258,7 +285,11 @@ async def edit_image(
                 pass
 
 
-@app.get("/v1/models", response_model=ModelListResponse)
+@app.get(
+    "/v1/models",
+    response_model=ModelListResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def list_models():
     now = int(time.time())
     return ModelListResponse(

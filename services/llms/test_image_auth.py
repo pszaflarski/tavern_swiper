@@ -1,0 +1,57 @@
+import os
+import pytest
+from fastapi.testclient import TestClient
+
+def test_auth_z_image():
+    # Import app
+    os.environ["IMAGE_API_KEY"] = "test-secret-key-123"
+    from services.llms.z_image_comfyui.app import app
+    client = TestClient(app)
+
+    # 1. Unauthenticated request to /v1/models should fail 401
+    r_no_auth = client.get("/v1/models")
+    assert r_no_auth.status_code == 401
+    assert "Invalid or missing API key" in r_no_auth.json()["detail"]
+
+    # 2. Invalid key should fail 401
+    r_wrong_auth = client.get("/v1/models", headers={"Authorization": "Bearer wrong-key"})
+    assert r_wrong_auth.status_code == 401
+
+    # 3. Valid key should succeed 200
+    r_valid = client.get("/v1/models", headers={"Authorization": "Bearer test-secret-key-123"})
+    assert r_valid.status_code == 200
+    assert len(r_valid.json()["data"]) == 2
+
+    # 4. Clean up
+    del os.environ["IMAGE_API_KEY"]
+
+    # 5. When IMAGE_API_KEY is not set, requests pass through without error
+    r_open = client.get("/v1/models")
+    assert r_open.status_code == 200
+
+
+def test_auth_flux():
+    os.environ["IMAGE_API_KEY"] = "test-secret-key-456"
+    from services.llms.flux_comfyui.app import app
+    client = TestClient(app)
+
+    # 1. Unauthenticated request to /v1/models should fail 401
+    r_no_auth = client.get("/v1/models")
+    assert r_no_auth.status_code == 401
+
+    # 2. Invalid key should fail 401
+    r_wrong_auth = client.get("/v1/models", headers={"Authorization": "Bearer wrong-key"})
+    assert r_wrong_auth.status_code == 401
+
+    # 3. Valid key should succeed 200
+    r_valid = client.get("/v1/models", headers={"Authorization": "Bearer test-secret-key-456"})
+    assert r_valid.status_code == 200
+    assert len(r_valid.json()["data"]) == 2
+
+    # 4. Clean up
+    del os.environ["IMAGE_API_KEY"]
+
+    # 5. When IMAGE_API_KEY is not set, requests pass through without error
+    r_open = client.get("/v1/models")
+    assert r_open.status_code == 200
+
