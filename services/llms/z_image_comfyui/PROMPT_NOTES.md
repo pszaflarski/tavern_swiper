@@ -53,3 +53,64 @@ golden hour afternoon lighting, warm golden sun casting gentle soft shadows acro
 
 modern smartphone camera aesthetic, nostalgic summer beach selfie, slightly soft focus, subtle natural digital grain, realistic skin texture, light natural freckles across the nose and cheeks, natural facial imperfections, sun-warmed skin, unedited personal vacation photo feeling, authentic late-afternoon snapshot, photorealistic, highly realistic, natural anatomy, realistic hands and fingers
 ```
+
+---
+
+# High-Realism Edit Reference: Cross-Scene Pose & Environment Transfer (Beach to Bedroom)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/blonde_bedroom_d82.png` on `z-image-comfyui-dev`.
+> **Input Image:** `blonde_beach_selfie.png` (outdoor sunny beach, upright sitting pose).
+> **Workflow Settings:** Endpoint `POST /v1/images/edits`, Denoise `0.82`, Seed `100`, Steps `8` Euler, CFG `1.0`. Sampling time: 19.59 seconds.
+> **Key Achievement:** Completely eliminated phantom/extra limbs from the beach pose, flawlessly transplanting the blonde woman's facial identity, freckles, eye color, and hair into the late-night indoor bedroom scene with two grounded, anatomically correct arms.
+
+```text
+1girl, solo, young adult woman, blonde caucasian woman, same facial features and identity as reference image, hazel-blue eyes, natural freckles across nose and cheeks,
+
+candid smartphone bedroom selfie, lying down in bed, upper body propped up on one elbow, resting her cheek comfortably against her hand, her other hand and arm tucked under the white duvet blanket, exactly one hand visible supporting her cheek, no other hands visible, clean anatomy, natural shoulders,
+
+head tilted slightly toward her hand, looking directly into camera, soft tired late-night gaze, gentle relaxed smile, natural facial expression,
+
+long golden blonde hair falling loosely around shoulders and framing the face, messy unstyled late-night hair texture,
+
+wearing a simple fitted black sleeveless tank top, thin straps, bare shoulders,
+
+cozy dim bedroom at night, white and pale gray rumpled bedding, dark wooden headboard, open bedroom doorway in background with warm soft hallway light, quiet intimate atmosphere,
+
+close-up smartphone selfie perspective, slightly high angle looking down at face and upper body, authentic low-light phone camera aesthetic, warm dim ambient lighting, soft shadows, realistic skin texture, unedited personal photo
+```
+
+---
+
+# High-Realism Edit Reference: In-Place Wardrobe & Atmosphere Change (Bedroom to Rainy Cafe)
+
+> **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/z_image_edited_cafe.png` on `z-image-comfyui-dev`.
+> **Input Image:** `z_image_selfie.png` (Asian young woman bedroom selfie).
+> **Workflow Settings:** Endpoint `POST /v1/images/edits`, Denoise `0.60`, Steps `8` Euler, CFG `1.0`. Sampling time: 18.8 seconds.
+> **Key Achievement:** Kept the exact head-tilt pose and facial likeness 100% locked, replaced the black tank top with a burgundy ribbed knit turtleneck, placed a hot ceramic latte mug in her hands, and transformed the background into a rainy window with city streetlights.
+
+```text
+1girl, solo, young adult woman, same facial features and identity, same face shape, same eyes, same nose, same lips,
+sitting at a wooden table in a cozy dim cafe at night, holding a warm ceramic coffee mug with both hands near her chin, leaning forward,
+wearing an oversized soft knit turtleneck sweater in deep burgundy,
+rainy window with blurred city streetlights and golden bokeh in the background,
+warm amber interior cafe lighting, soft highlights on cheeks and hair,
+candid smartphone photo, photorealistic, natural skin texture, realistic hands
+```
+
+---
+
+# Z-Image Prompting & Denoise Guide
+
+### Why Z-Image Requires Explicit Prompting
+1. **Qwen 3.4B LLM Text Encoder:**
+   Unlike standard CLIP (which acts as a loose bag-of-keywords associator), Qwen is a true causal Large Language Model. It interprets literal counts ("two arms only", "single hand supporting cheek"), spatial relationships, and cause-and-effect literally. Vague descriptions or competing actions create literal visual artifacts.
+2. **Latent Img2Img Conditioning:**
+   In Z-Image, editing passes the reference pixels directly through `VAEEncode` into latent space. The model inherits the spatial geometry of the input photo. If you change poses significantly, you must supply enough noise (`denoise >= 0.80`) to dissolve the previous pose's latent artifacts, while explicitly guiding the new limb positions.
+
+### Calibration Table
+
+| Edit Intent | Recommended `denoise` | Prompting Strategy |
+| :--- | :---: | :--- |
+| **In-Place Wardrobe & Props** *(e.g., change tank top to sweater, add latte)* | `0.55` – `0.62` | Keep the prompt focused strictly on the new items; let the original pose anchor all anatomy. |
+| **New Background, Similar Posture** *(e.g., bedroom to cafe, outdoor to indoor)* | `0.65` – `0.72` | Describe the background and lighting; maintain the subject's physical orientation. |
+| **Radical Cross-Scene & Pose Transfer** *(e.g., beach sitting $\to$ bed lying)* | `0.80` – `0.85` | **Be strictly explicit:** State arm grounding, limb counts, and contrasting clothing to prevent fabric/bedding confusion. |
