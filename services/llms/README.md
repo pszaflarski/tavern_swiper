@@ -52,6 +52,9 @@ For full API usage, cURL/Python examples, and prompt engineering instructions, s
 | [`sdxl_comfyui`](./sdxl_comfyui) | SDXL Lightning (8-step) + IP-Adapter-Plus-Face | ComfyUI / PyTorch cu128 | Identity-preserving multi-pose/scene generation |
 | [`z_image_comfyui`](./z_image_comfyui) | Z-Image-Turbo (6B S3-DiT + Qwen 3.4B) | ComfyUI / PyTorch cu128 | Hyper-realistic candid smartphone selfies |
 | [`flux_comfyui`](./flux_comfyui) | FLUX.1-dev (FP8) + PuLID | ComfyUI / PyTorch cu128 | Complex scene composition & text-heavy prompts |
+| [`krea2_comfyui`](./krea2_comfyui) | Krea 2 Turbo (MMDiT + Qwen3-VL 4B) | ComfyUI / PyTorch cu128 | High-fidelity 8-step photorealism & prompt adherence |
+| [`kolors_comfyui`](./kolors_comfyui) | Kwai-Kolors FP8 + OpenCLIP-ViT-bigG IP-Adapter | ComfyUI / PyTorch cu128 | Commercially compliant, zero-InsightFace character editing |
+
 
 ---
 

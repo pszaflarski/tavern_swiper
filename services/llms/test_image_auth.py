@@ -108,4 +108,27 @@ def test_auth_krea2():
     assert r_open.status_code == 200
 
 
+def test_auth_kolors():
+    os.environ["IMAGE_API_KEY"] = "test-secret-key-kolors"
+    from services.llms.kolors_comfyui.app import app
+    client = TestClient(app)
 
+    # 1. Unauthenticated request to /v1/models should fail 401
+    r_no_auth = client.get("/v1/models")
+    assert r_no_auth.status_code == 401
+
+    # 2. Invalid key should fail 401
+    r_wrong_auth = client.get("/v1/models", headers={"Authorization": "Bearer wrong-key"})
+    assert r_wrong_auth.status_code == 401
+
+    # 3. Valid key should succeed 200
+    r_valid = client.get("/v1/models", headers={"Authorization": "Bearer test-secret-key-kolors"})
+    assert r_valid.status_code == 200
+    assert len(r_valid.json()["data"]) == 2
+
+    # 4. Clean up
+    del os.environ["IMAGE_API_KEY"]
+
+    # 5. When IMAGE_API_KEY is not set, requests pass through without error
+    r_open = client.get("/v1/models")
+    assert r_open.status_code == 200

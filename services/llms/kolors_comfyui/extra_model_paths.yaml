@@ -1,0 +1,18 @@
+local_models:
+    base_path: /tmp/
+    unet: kolors_unet/
+    LLM: kolors_llm/
+
+kolors:
+    base_path: /models/kolors/
+    checkpoints: checkpoints/
+    clip_vision: clip_vision/
+    ipadapter: ipadapter/
+    vae: vae/
+
+shared_models:
+    base_path: /models/
+    checkpoints: models/checkpoints/
+    clip_vision: models/clip_vision/
+    ipadapter: models/ipadapter/
+    vae: models/vae/

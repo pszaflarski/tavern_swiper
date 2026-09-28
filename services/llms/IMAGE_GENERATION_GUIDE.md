@@ -15,7 +15,9 @@ Tavern Swiper runs dedicated, self-hosted image generation microservices on **Go
 |---|---|---|---|---|
 | **`sdxl_comfyui`** | `RealVisXL_V4.0_Lightning` (8-step) + `IP-Adapter-Plus-Face` | **Identity-preserving character photo suites** (canonical face → multiple poses, outfits, and 3D angles). | **~8–10s** | `POST /v1/images/generations`<br>`POST /v1/images/edits` |
 | **`z_image_comfyui`** | `Z-Image-Turbo` (6B S3-DiT + Qwen 3.4B text encoder) | **Hyper-realistic candid selfies** with natural skin texture, zero plastic sheen, and soft mobile phone lighting. | **~14s** | `POST /v1/images/generations`<br>`POST /v1/images/edits` |
-| **`flux_comfyui`** | `FLUX.1-dev` (FP8 quantized) + PuLID | High-complexity multi-element composition and text-accurate rendering. | **~25–35s** | `POST /v1/images/generations` |
+| **`flux_comfyui`** | `FLUX.1-dev` (FP8 quantized) + PuLID | High-complexity multi-element composition and text-accurate rendering. | **~25–35s** | `POST /v1/images/generations`<br>`POST /v1/images/edits` |
+| **`krea2_comfyui`** | `Krea 2 Turbo` (MMDiT + Qwen3-VL 4B) | Ultra-crisp photorealism, authentic micro-pores, and 8-step warm inference. | **~19–22s** | `POST /v1/images/generations`<br>`POST /v1/images/edits` |
+| **`kolors_comfyui`** | `Kolors UNet FP8` + `ChatGLM3-6B` + OpenCLIP-ViT-bigG | **Commercially compliant** identity-preserving editing with **zero InsightFace** dependencies. | **~8–12s** | `POST /v1/images/generations`<br>`POST /v1/images/edits` |
 
 ### Environment Service URLs
 
@@ -24,6 +26,9 @@ Tavern Swiper runs dedicated, self-hosted image generation microservices on **Go
 | `sdxl-comfyui-dev` | `dev` | `https://sdxl-comfyui-dev-hhqol7siba-uc.a.run.app` |
 | `z-image-comfyui-dev` | `dev` | `https://z-image-comfyui-dev-hhqol7siba-uc.a.run.app` |
 | `flux-comfyui-dev` | `dev` | `https://flux-comfyui-dev-hhqol7siba-uc.a.run.app` |
+| `krea2-comfyui-dev` | `dev` | `https://krea2-comfyui-dev-hhqol7siba-uc.a.run.app` |
+| `kolors-comfyui-dev` | `dev` | `https://kolors-comfyui-dev-hhqol7siba-uc.a.run.app` |
+
 
 ---
 
@@ -233,6 +238,45 @@ When generating full-body or swimwear/beach shots, standard settings can cause t
    `"airbrushed skin, plastic skin, waxy skin, porcelain, rubber skin, white dots, speckles, flakes, glitter, beauty filter, airbrushed abs, poreless skin, fake tan, CGI sheen, digital smoothing, cropped feet, cropped legs, missing feet, cut off at knees, cut off at shins, close up, medium shot"`
 5. **Apparel Material Specification:**  
    Specify solid, opaque fabrics (e.g., `"solid opaque terracotta-orange ribbed halter bikini top and matching tie-side bottoms"`) to prevent accidental sheer or topless rendering under low CFG (1.2–1.3).
+
+### D. Kolors (`kolors_comfyui`) Prompt Engineering & Identity Calibration
+
+`kolors_comfyui` uses **ChatGLM3-6B** as its text encoder and **Kolors-IP-Adapter-Plus** with **OpenCLIP-ViT-bigG** for identity-conditioned editing. Because of this unique architecture, it operates under very different rules than SDXL:
+
+1. **Natural Language Syntax (No Tag Soup):**  
+   ChatGLM3-6B is a 6-billion parameter bilingual LLM. It largely ignores SDXL-style comma-separated keyword soup (e.g. `masterpiece, 8k, best quality`) and instead responds to **grammatical English sentence structure, subject-verb-object relationships, and physical lighting cues**.
+
+2. **The CFG 2.5 Rule:**  
+   Kolors' UNet has a wide dynamic range and is extraordinarily sensitive to guidance scale.
+   * **Recommended CFG: `2.5` (range: `2.0`–`2.8`).** This produces soft, authentic 35mm analog film tones, lifted shadows, and unburned skin pores.
+   * **Avoid CFG > 3.5:** Setting CFG to `4.5`–`5.5` introduces hard specular edges, oversaturated skin halos, and digital contrast burn. It also *fails* to break IP-Adapter framing locks.
+
+3. **The Verbatim "Identity Anchor Block":**  
+   To prevent identity drift and eye color mutations across a 4-photo suite, define a dedicated anchor block describing the character's facial geometry and keep it **word-for-word identical** in every prompt:
+   ```text
+   A 31-year-old Caucasian man with a structured square jawline, relaxed straight eyebrows, deep-set hazel eyes, and a straight nose bridge. Untamed, short textured brown hair with subtle natural waves and light five-o'clock stubble shadow across his jaw. Natural, dry matte skin texture with visible pores and faint blemishes, completely non-glossy complexion.
+   ```
+   ChatGLM3-6B prioritizes this identical linguistic description, perfectly aligning text cross-attention with the OpenCLIP vision tokens.
+
+4. **Anti-Plastic / Realism Lighting Suffix:**  
+   Always terminate Kolors prompts with explicit camera and tone curve tokens to counter digital gloss:
+   ```text
+   Captured on 35mm color negative film, authentic film grain, lifted shadows, low-contrast tone curve, soft directional light, candid unposed photography, no airbrushing, no plastic skin reflections.
+   ```
+
+5. **Calibrating IP-Adapter Weights (Avoiding the Framing Trap):**  
+   OpenCLIP-ViT-bigG carries 256 high-capacity vision tokens that encode not just facial identity, but the source image's framing and clothing.
+   * **Bust & Medium Shots (Brewery, Cafe, Hiking):** Use weight **`0.48`–`0.52`**. Transfers 100% facial identity while allowing complete wardrobe, pose, and background changes.
+   * **Full-Length Standing Shots:** Use weight **`0.32`–`0.40`** (or use a spatially scaled reference with the head occupying ~150px at the top of a 768x1280 canvas) to prevent the vision encoder from forcing a tight bust shot.
+   * **Avoid weights > 0.65** on full-body prompts, as OpenCLIP will completely overwrite the prompt's wardrobe and camera distance.
+
+6. **Active Hand Grounding & Master Anatomical Negatives:**  
+   To prevent dangling arms from distorting into foot-like appendages or extra fingers:
+   * **Active Limb Grounding (Positive Prompt):** Always give hands a purpose (`"both hands resting on the rustic wooden table holding a glass of beer"`, `"one hand relaxed in his jacket pocket"`, `"holding backpack strap across shoulder"`).
+   * **Master Negative Prompt:**
+     ```text
+     plastic skin, 3d render, cgi, airbrushed, oversaturated, shiny skin, high contrast, glossy highlights, deformed, bad anatomy, blur, bad hands, deformed hands, mutated hands, extra fingers, missing fingers, fused fingers, distorted fingers, malformed limbs, deformed wrists, deformed arms, extra arms, missing arms, floating limbs, disconnected limbs, foot hands, deformed feet, bad feet, extra feet
+     ```
 
 ---
 

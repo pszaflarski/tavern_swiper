@@ -1,0 +1,73 @@
+{
+  "9": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1080,
+      "height": 1350,
+      "batch_size": 1
+    }
+  },
+  "59": {
+    "class_type": "MZ_KolorsUNETLoader",
+    "inputs": {
+      "unet_name": "diffusion_pytorch_model.fp16.safetensors"
+    }
+  },
+  "66": {
+    "class_type": "MZ_ChatGLM3Loader",
+    "inputs": {
+      "chatglm3_checkpoint": "chatglm3-8bit.safetensors"
+    }
+  },
+  "67": {
+    "class_type": "MZ_ChatGLM3",
+    "inputs": {
+      "text": "masterpiece, raw candid photo",
+      "chatglm3_model": ["66", 0],
+      "hid_proj": ["59", 1]
+    }
+  },
+  "62": {
+    "class_type": "MZ_ChatGLM3",
+    "inputs": {
+      "text": "blurry, low quality, deformed, distorted, cartoon, anime",
+      "chatglm3_model": ["66", 0],
+      "hid_proj": ["59", 1]
+    }
+  },
+  "70": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors"
+    }
+  },
+  "79": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["59", 0],
+      "positive": ["67", 0],
+      "negative": ["62", 0],
+      "latent_image": ["9", 0],
+      "seed": 0,
+      "steps": 25,
+      "cfg": 5.0,
+      "sampler_name": "dpmpp_2m_sde_gpu",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "80": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": ["79", 0],
+      "vae": ["70", 0]
+    }
+  },
+  "81": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "Kolors_T2I",
+      "images": ["80", 0]
+    }
+  }
+}

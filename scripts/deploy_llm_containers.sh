@@ -164,6 +164,15 @@ deploy_krea2_comfyui() {
   echo "✅ ${service_name} deployed successfully!"
 }
 
+deploy_kolors_comfyui() {
+  local service_name="kolors-comfyui-${ENV}"
+  echo "🚀 Deploying ${service_name} via Cloud Build to project ${PROJECT_ID}..."
+  gcloud builds submit services/llms/kolors_comfyui \
+    --project="${PROJECT_ID}" \
+    --config=services/llms/kolors_comfyui/cloudbuild.yaml
+  echo "✅ ${service_name} deployed successfully!"
+}
+
 case "$TARGET" in
   qwen-32b)
     deploy_qwen_32b
@@ -186,6 +195,9 @@ case "$TARGET" in
   krea2-comfyui)
     deploy_krea2_comfyui
     ;;
+  kolors-comfyui)
+    deploy_kolors_comfyui
+    ;;
   all)
     echo "📦 Deploying all self-hosted GPU services sequentially..."
     deploy_qwen_32b
@@ -195,10 +207,12 @@ case "$TARGET" in
     deploy_z_image_comfyui
     deploy_sdxl_comfyui
     deploy_krea2_comfyui
+    deploy_kolors_comfyui
     echo "🎉 All self-hosted GPU services deployed successfully!"
     ;;
   *)
-    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|flux-comfyui|z-image-comfyui|sdxl-comfyui|krea2-comfyui|all]"
+    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|flux-comfyui|z-image-comfyui|sdxl-comfyui|krea2-comfyui|kolors-comfyui|all]"
     exit 1
     ;;
 esac
+
