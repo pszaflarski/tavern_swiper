@@ -1,0 +1,37 @@
+steps:
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        pip install --no-cache-dir huggingface_hub
+        python3 -c "
+        import os
+        from huggingface_hub import snapshot_download
+
+        os.makedirs('/workspace/OmniGen-v1', exist_ok=True)
+        print('=== Downloading OmniGen-v1 from Hugging Face ===')
+        snapshot_download(
+            repo_id='Shitao/OmniGen-v1',
+            local_dir='/workspace/OmniGen-v1',
+            allow_patterns=['*.json', '*.safetensors', '*.txt', 'vae/*']
+        )
+        print('=== Download complete ===')
+        "
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "=== Uploading OmniGen to GCS ==="
+        gcloud storage rsync -r /workspace/OmniGen-v1 gs://tavern-swiper-dev-models-cache/models/LLM/OmniGen-v1/
+        gcloud storage ls -l gs://tavern-swiper-dev-models-cache/models/LLM/OmniGen-v1/**
+
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 200

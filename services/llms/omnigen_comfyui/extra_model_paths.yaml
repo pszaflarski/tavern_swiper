@@ -1,0 +1,11 @@
+comfyui:
+    base_path: /models/
+    LLM: models/LLM/
+    diffusion_models: models/diffusion_models/
+    vae: models/vae/
+
+shared_models:
+    base_path: /models/
+    LLM: LLM/
+    diffusion_models: diffusion_models/
+    vae: vae/

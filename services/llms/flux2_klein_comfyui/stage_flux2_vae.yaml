@@ -1,0 +1,16 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "Downloading flux2-vae.safetensors..."
+        curl -L -f "https://huggingface.co/Comfy-Org/vae-text-encorder-for-flux-klein-4b/resolve/main/split_files/vae/flux2-vae.safetensors" -o /workspace/flux2-vae.safetensors
+        echo "Uploading to GCS..."
+        gcloud storage cp /workspace/flux2-vae.safetensors gs://tavern-swiper-dev-models-cache/comfyui/vae/flux2-vae.safetensors
+        gcloud storage cp /workspace/flux2-vae.safetensors gs://tavern-swiper-dev-models-cache/models/vae/flux2-vae.safetensors
+        echo "Done!"
+options:
+  machineType: 'E2_HIGHCPU_8'
+timeout: 300s

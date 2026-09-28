@@ -1,0 +1,15 @@
+z_image:
+    base_path: /models/z_image/
+    diffusion_models: diffusion_models/
+    text_encoders: text_encoders/
+    clip: text_encoders/
+
+shared_models:
+    base_path: /models/
+    vae: models/vae/
+    diffusion_models: models/diffusion_models/
+
+models_direct:
+    base_path: /models/models/
+    vae: vae/
+    diffusion_models: diffusion_models/

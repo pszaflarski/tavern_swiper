@@ -41,6 +41,11 @@
 | `sdxl_comfyui` | llms | 8080 | GCS models cache | `services/llms/sdxl_comfyui/` |
 | `krea2_comfyui` | llms | 8080 | GCS models cache | `services/llms/krea2_comfyui/` |
 | `kolors_comfyui` | llms | 8080 | GCS models cache | `services/llms/kolors_comfyui/` |
+| `flux2_klein_comfyui` | llms | 8080 | GCS models cache | `services/llms/flux2_klein_comfyui/` |
+| `omnigen_comfyui` | llms | 8080 | GCS models cache | `services/llms/omnigen_comfyui/` |
+| `z_image_omni_comfyui` | llms | 8080 | GCS models cache | `services/llms/z_image_omni_comfyui/` |
+
+
 
 > **Note:** `agent_router_python` is Python/FastAPI (not Go/Gin), uses MongoDB (not Firestore), and is a git submodule from `https://github.com/pszaflarski/agent_router`. `agent_router_worker` is Python/FastAPI for async memory worker events. Self-hosted LLMs under `services/llms/` run vLLM on Cloud Run with Nvidia L4 GPUs and mount weights from GCS. ComfyUI image services run on Cloud Run with Nvidia L4 GPUs mounting weights from GCS models cache.
 

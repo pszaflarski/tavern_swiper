@@ -1,0 +1,37 @@
+steps:
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        pip install --no-cache-dir huggingface_hub
+        python3 -c "
+        import os, shutil
+        from huggingface_hub import hf_hub_download
+
+        os.makedirs('/workspace/models/diffusion_models', exist_ok=True)
+        print('=== Downloading FLUX.2 Klein 4B FP8 from Hugging Face ===')
+        path = hf_hub_download(
+            repo_id='black-forest-labs/FLUX.2-klein-4b-fp8',
+            filename='flux-2-klein-4b-fp8.safetensors',
+            local_dir='/workspace/tmp'
+        )
+        shutil.move(path, '/workspace/models/diffusion_models/flux-2-klein-4b-fp8.safetensors')
+        print('=== Download complete ===')
+        "
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "=== Uploading to GCS ==="
+        gcloud storage cp /workspace/models/diffusion_models/flux-2-klein-4b-fp8.safetensors gs://tavern-swiper-dev-models-cache/models/diffusion_models/
+        gcloud storage ls -lh gs://tavern-swiper-dev-models-cache/models/diffusion_models/flux-2-klein-4b-fp8.safetensors
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 200

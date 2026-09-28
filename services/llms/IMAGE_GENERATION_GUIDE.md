@@ -278,6 +278,59 @@ When generating full-body or swimwear/beach shots, standard settings can cause t
      plastic skin, 3d render, cgi, airbrushed, oversaturated, shiny skin, high contrast, glossy highlights, deformed, bad anatomy, blur, bad hands, deformed hands, mutated hands, extra fingers, missing fingers, fused fingers, distorted fingers, malformed limbs, deformed wrists, deformed arms, extra arms, missing arms, floating limbs, disconnected limbs, foot hands, deformed feet, bad feet, extra feet
      ```
 
+### E. Krea 2 Turbo (MMDiT + Qwen3-VL 4B) 8-Photo Strategic Suite Guide
+
+`krea2_comfyui` pairs an 8-step distilled **MMDiT** with **Qwen3-VL 4B** as its text encoder. Because Krea 2 operates without an external adapter network (like IP-Adapter or PuLID), identity consistency across photo suites is achieved natively through the **8-Photo Strategic Suite Methodology**:
+
+1. **The Verbatim Linguistic Anchor Block:**
+   Define a precise 50–70 word block describing immutable bone structure, eye shape and color, nasal bridge contour, ear shape, hair texture, and natural skin blemishes. Keep this block **100% word-for-word identical** across all prompts in the character's photo suite:
+   ```text
+   A 22-year-old Scandinavian young woman with natural facial features and identity: clear almond-shaped blue-green eyes with gentle crinkles, soft natural bridge freckles across her nose and cheeks, structured delicate jawline, straight refined nasal bridge, subtle relaxed friendly smile, shoulder-length wavy honey-blonde hair falling naturally across her shoulders, healthy athletic build with natural feminine curves, authentic unretouched skin texture with visible micro-pores and faint natural blemishes, completely non-glossy complexion.
+   ```
+2. **Text-to-Image over Img2Img for Varied Poses:**
+   Unlike latent img2img (which locks head angle and crops), Krea 2 Turbo's Qwen3-VL text encoder parses full-body requests, camera distances, and room environments cleanly when driven by Text-to-Image (`POST /v1/images/generations`).
+3. **Anti-Plastic Analog Suffix:**
+   Counter digital over-sharpening and glossy plastic skin with an analog film suffix:
+   ```text
+   Captured on 35mm color negative film, authentic fine film grain, lifted soft shadows, low-contrast natural tone curve, soft directional light, candid unposed photography, no airbrushing, no plastic skin reflections, photorealistic, natural anatomy.
+   ```
+4. **Sampler & Scheduling:**
+   - **Steps:** `8` (distilled model; exceeding 10 steps introduces over-baking and edge artifacts).
+   - **CFG Scale:** `1.0` (optimal for MMDiT turbo distillations).
+   - **Sampler/Scheduler:** `euler` / `simple`.
+   - **Warm Generation Speed:** **~23–25 seconds** on NVIDIA L4 GPU.
+5. **The 8-Photo Strategic Obscuration Suite:**
+   Instead of repeating front-facing portraits, construct an 8-photo suite that naturally masks micro-variations using real-world dating app tropes:
+   - **1. Canonical Face Portrait:** 35mm close-up window daylight portrait.
+   - **2. Canonical Body Photo:** Head-to-toe athletic swimwear studio shot.
+   - **3. Cozy Dinner / Cafe:** Candlelit evening table view; face clearly visible.
+   - **4. Mirror Outfit Selfie:** Phone held at eye level **blocking half the face**.
+   - **5. Spontaneous Laugh:** Head cocked back laughing upward (**extreme upward angle foreshortens face**).
+   - **6. Beach Bikini:** Oversized dark sunglasses (**completely conceals eye shape & pupils**).
+   - **7. Scenic Overlook / Hike:** Medium-distance 3/4 rear profile looking at panoramic view.
+   - **8. Bookstore / Record Store:** Downward profile browsing (**highlights jawline/nose silhouette, avoids direct gaze scrutiny**).
+6. **Detailed Implementation Reference:**
+   See [`services/llms/krea2_comfyui/README.md`](./krea2_comfyui/README.md) for full verified prompt texts and seeds for both Scandinavian and East Asian character suites.
+
+---
+
+### F. Z-Image Turbo (S3-DiT + Qwen 3.4B) 8-Photo Strategic Suite & Mobile Snapshots
+
+`z_image_comfyui` wraps **Z-Image-Turbo** (6B S3-DiT bf16 + Qwen 3.4B causal LLM). Key rules for generating dating profile suites:
+
+1. **Native Aspect Ratio (`896x1152`):**
+   Always use `896x1152` (or `1152x896` for landscapes). Z-Image was trained on mobile phone camera proportions. `1024x1024` often forces unnatural crops.
+2. **Qwen 3.4B Prompt Structure (3-Layered):**
+   - **Layer 1 (Identity Prefix):** `1girl, solo, young adult woman, 22 years old, blonde caucasian woman, natural facial features and identity: [verbatim anchor block]...`
+   - **Layer 2 (Scene & Action):** Conversational, natural English describing lighting, posture, and clothing.
+   - **Layer 3 (Explicit Limb Grounding & Snapshot Suffix):**
+     `"candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural skin texture with visible pores, soft natural shadows, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, realistic hands and fingers, unedited personal photo feeling, highly realistic, natural anatomy"`
+3. **Warm Performance:**
+   - **Per Image:** **~18–20 seconds** on NVIDIA L4 GPU.
+   - **Complete 8-Photo Suite:** **~2 minutes 17 seconds** warm.
+4. **Detailed Implementation Reference:**
+   See [`services/llms/z_image_comfyui/README.md`](./z_image_comfyui/README.md) for full verified prompt texts and seeds (`501`–`1250`).
+
 ---
 
 ## 7. Infrastructure & Cost Rules

@@ -1,3 +1,9 @@
+# Z-Image Turbo Prompt Notes & Verified Implementation Index
+
+> 📌 **Comprehensive 8-Photo Suite Guide:** See [`services/llms/z_image_comfyui/README.md`](./README.md) for the complete 8-photo identity anchoring methodology, verified prompt catalog (seeds `501`–`1250`), and mobile aspect ratio (`896x1152`) best practices.
+
+---
+
 # High-Realism Prompt Reference: Candid Bedroom Selfie (Late-Night Snapshot)
 
 > **Saved from successful run:** Produced `/home/peter/.gemini/antigravity/brain/de83fcc2-4078-40b5-9fe3-bab008936052/z_image_selfie.png` on `z-image-comfyui-dev`.

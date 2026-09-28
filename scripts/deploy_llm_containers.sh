@@ -173,6 +173,33 @@ deploy_kolors_comfyui() {
   echo "✅ ${service_name} deployed successfully!"
 }
 
+deploy_flux2_klein_comfyui() {
+  local service_name="flux2-klein-comfyui-${ENV}"
+  echo "🚀 Deploying ${service_name} via Cloud Build to project ${PROJECT_ID}..."
+  gcloud builds submit services/llms/flux2_klein_comfyui \
+    --project="${PROJECT_ID}" \
+    --config=services/llms/flux2_klein_comfyui/cloudbuild.yaml
+  echo "✅ ${service_name} deployed successfully!"
+}
+
+deploy_omnigen_comfyui() {
+  local service_name="omnigen-comfyui-${ENV}"
+  echo "🚀 Deploying ${service_name} via Cloud Build to project ${PROJECT_ID}..."
+  gcloud builds submit services/llms/omnigen_comfyui \
+    --project="${PROJECT_ID}" \
+    --config=services/llms/omnigen_comfyui/cloudbuild.yaml
+  echo "✅ ${service_name} deployed successfully!"
+}
+
+deploy_z_image_omni_comfyui() {
+  local service_name="z-image-omni-comfyui-${ENV}"
+  echo "🚀 Deploying ${service_name} via Cloud Build to project ${PROJECT_ID}..."
+  gcloud builds submit services/llms/z_image_omni_comfyui \
+    --project="${PROJECT_ID}" \
+    --config=services/llms/z_image_omni_comfyui/cloudbuild.yaml
+  echo "✅ ${service_name} deployed successfully!"
+}
+
 case "$TARGET" in
   qwen-32b)
     deploy_qwen_32b
@@ -185,6 +212,15 @@ case "$TARGET" in
     ;;
   flux-comfyui)
     deploy_flux_comfyui
+    ;;
+  flux2-klein-comfyui)
+    deploy_flux2_klein_comfyui
+    ;;
+  omnigen-comfyui)
+    deploy_omnigen_comfyui
+    ;;
+  z-image-omni-comfyui)
+    deploy_z_image_omni_comfyui
     ;;
   z-image-comfyui)
     deploy_z_image_comfyui
@@ -204,6 +240,9 @@ case "$TARGET" in
     deploy_qwen_14b
     deploy_dolphin_24b
     deploy_flux_comfyui
+    deploy_flux2_klein_comfyui
+    deploy_omnigen_comfyui
+    deploy_z_image_omni_comfyui
     deploy_z_image_comfyui
     deploy_sdxl_comfyui
     deploy_krea2_comfyui
@@ -211,8 +250,10 @@ case "$TARGET" in
     echo "🎉 All self-hosted GPU services deployed successfully!"
     ;;
   *)
-    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|flux-comfyui|z-image-comfyui|sdxl-comfyui|krea2-comfyui|kolors-comfyui|all]"
+    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|flux-comfyui|flux2-klein-comfyui|omnigen-comfyui|z-image-omni-comfyui|z-image-comfyui|sdxl-comfyui|krea2-comfyui|kolors-comfyui|all]"
     exit 1
     ;;
 esac
+
+
 

@@ -240,6 +240,7 @@ async def edit_image(
         description="Negative prompt",
     ),
     weight: float = Form(0.52, description="IP-Adapter face injection weight"),
+    start_at: float = Form(0.0, description="IP-Adapter start step (0.15-0.20 enables head rotation / averted gaze)"),
     end_at: float = Form(0.68, description="IP-Adapter cutoff point (0.68 = step 5/8)"),
     size: str = Form("1024x1024", description="Output dimensions WxH"),
     seed: Optional[int] = Form(None, description="Random seed"),
@@ -275,6 +276,7 @@ async def edit_image(
         workflow["8"]["inputs"]["text"] = negative_prompt
 
     workflow["5"]["inputs"]["weight"] = weight
+    workflow["5"]["inputs"]["start_at"] = start_at
     workflow["5"]["inputs"]["end_at"] = end_at
 
     if seed is not None:

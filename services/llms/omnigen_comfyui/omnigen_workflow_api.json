@@ -1,0 +1,70 @@
+{
+  "omnigen_loader": {
+    "class_type": "OmniGenLoader",
+    "inputs": {
+      "model_name": "OmniGen-v1",
+      "weight_dtype": "fp8_e4m3fn",
+      "store_in_vram": true,
+      "separate_cfg_infer": true,
+      "offload_model": false
+    }
+  },
+  "empty_latent": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "load_ref1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "placeholder_ref1.png"
+    }
+  },
+  "load_ref2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "placeholder_ref2.png"
+    }
+  },
+  "omnigen_node": {
+    "class_type": "OmniGenNode",
+    "inputs": {
+      "model": [
+        "omnigen_loader",
+        0
+      ],
+      "prompt_text": "A photograph of the person in image_1",
+      "latent": [
+        "empty_latent",
+        0
+      ],
+      "image_1": [
+        "load_ref1",
+        0
+      ],
+      "image_2": [
+        "load_ref2",
+        0
+      ],
+      "num_inference_steps": 25,
+      "guidance_scale": 2.5,
+      "img_guidance_scale": 1.6,
+      "max_input_image_size": 1024,
+      "use_input_image_size_as_output": false,
+      "seed": 42
+    }
+  },
+  "save_image": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "omnigen_node",
+        0
+      ],
+      "filename_prefix": "omnigen_output"
+    }
+  }
+}
