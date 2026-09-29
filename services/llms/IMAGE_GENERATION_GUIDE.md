@@ -333,6 +333,30 @@ When generating full-body or swimwear/beach shots, standard settings can cause t
 
 ---
 
+### G. The "Facial Prefix Attention Trap" & Decoupled Prompt Architecture
+
+When generating suites using pure Text-to-Image models with causal language encoders (e.g., Qwen 3.4B in Z-Image, Qwen3-VL 4B in Krea 2):
+1. **The Trap:** Reusing a front-loaded facial anchor containing detailed eye/nose/mouth tokens (`"clear piercing blue-green eyes, magnetic flirtatious gaze, straight nasal bridge, full pink lips"`) forces the model's cross-attention into generating front-facing, head-on portraits looking directly down the lens.
+2. **The Override:** Downstream tokens such as `"camera 40 feet away"`, `"phone covering face"`, or `"turned away"` are overruled because early tokens receive dominant spatial attention.
+3. **The Solution (Decoupled Architecture):**
+   - **Canonical Face Anchor:** Retain 100% of facial descriptors to define canonical bone structure and eye color.
+   - **Obscured & Distant Photos:** Strip all intrusive facial close-up tokens. Lead immediately with **camera framing, angle, and the physical obscuration mechanic** (`"mirror selfie, holding smartphone in front of face completely covering eyes nose mouth"`, `"from behind, three-quarter rear profile view, looking away toward skyline"`), retaining only macroscopic body/hair anchors.
+
+---
+
+### H. The 100 Instagram & Dating Photo Archetypes Taxonomy
+
+To programmatic construct realistic 8-to-12 photo dating suites without visual repetition, Tavern Swiper maintains a complete, field-tested taxonomy of **100 distinct photo archetypes** (50 for Women, 50 for Men) segmented across three core demographics:
+1. **Gen Z / College (Ages 18–24):** Anti-curation, 0.5x ultra-wide angles, flash photography, vintage streetwear, raw authenticity.
+2. **Young Professionals / Millennials (Ages 25–34):** Aspirational travel, luxury fabrics (silk satin, ribbed knit, breezy linen), wellness/Pilates sets, cocktail glamour, athletic competence.
+3. **Established / Mature (Ages 35+):** "Quiet luxury," architectural scale, equestrian/nautical command, tailored power suits, refined confidence.
+
+For full prompt templates, camera angles, lighting instructions, and obscuration mechanics for all 100 archetypes, consult:
+[**`instagram_archetypes_taxonomy.md`**](../../instagram_archetypes_taxonomy.md)
+
+---
+
+
 ## 7. Infrastructure & Cost Rules
 
 1. **Scale-to-Zero (`--min-instances=0`):**  

@@ -140,3 +140,105 @@ candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natu
 | **Krea 2 Turbo** (NVIDIA L4) | ~8–9 minutes (GCS FUSE weights stream) | **23–25 seconds** | **~2 minutes 51 seconds** |
 
 > **Client Timeout Guidance:** Always set `timeout=1200.0` in API clients to safely handle initial model cold boot loads from Cloud Storage FUSE. Subsequent warm calls respond in under 25 seconds.
+
+---
+
+## 6. The "Facial Prefix Attention Trap" & Decoupled Prompt Architecture
+
+### A. Diagnosing the Frontal Head-On Bias
+In diffusion transformers featuring causal/autoregressive text encoders (like Qwen 3.4B in Z-Image and Qwen3-VL 4B in Krea 2), tokens positioned at the very front of the prompt receive dominant spatial cross-attention weights.
+
+If an identity prefix begins with detailed facial close-up tokens:
+```python
+# ❌ THE TRAP: Front-loading facial close-up tokens on every prompt
+PREFIX = (
+    "1girl, solo, young adult woman, 22 years old, blonde caucasian woman, "
+    "clear piercing almond-shaped blue-green eyes with gentle crinkles, magnetic flirtatious gaze, "
+    "high defined cheekbones, straight refined nasal bridge, full soft pink lips..."
+)
+```
+1. **Camera Framing Lock:** Emphasizing `"piercing eyes, magnetic gaze, cheekbones, lips"` compels the transformer to allocate the central canvas to a front-facing headshot or medium portrait looking directly down the lens.
+2. **Instruction Override:** Even if downstream text specifies `"standing 40 feet away"`, `"phone covering face"`, or `"head turned away"`, the early facial close-up tokens overrule the spatial framing.
+3. **The Consequence:** The mirror selfie holds the phone off to the side so the face remains visible, rooftop pool shots become close-up portraits, and distant beach walks place the subject right in the foreground.
+
+### B. The Decoupled Prompt Solution
+To achieve genuine face obscuration, gaze diversion, and distant scale, prompts must be decoupled:
+- **Photo 1 (Face Anchor):** Retain 100% of facial descriptors to establish canonical facial beauty, eye geometry, and skin texture.
+- **Photos 3–8 (Lifestyle, Obscured & Distant):** Strip all intrusive eye/nose/mouth close-up tokens. Lead immediately with **camera framing, angle, and the physical obscuration mechanic**, retaining only macroscopic anchors (hair color/texture, age, ethnicity, and athletic hourglass silhouette).
+
+---
+
+## 7. Golden Reference: Z-Image True Obscuration Suite (Verified)
+
+This exact 6-photo obscuration suite was generated and verified live on `z-image-comfyui-dev` in native `896x1152` mobile aspect ratio (18–20s warm per image):
+
+### Character Macro-Anchor (No Facial Gaze Bias)
+```text
+22 years old, stunning Scandinavian blonde woman, long voluminous wavy honey-blonde hair, hourglass athletic feminine silhouette with a defined slender waist and toned curves, natural sun-kissed skin texture with visible micro-pores
+```
+
+### Realism Suffix
+```text
+candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural lighting, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, unedited personal photo feeling
+```
+
+### The 6 True Obscuration Prompts (Verbatim)
+
+#### 1. Physical Masking: Phone Directly Covering Face (Mirror Selfie)
+```text
+1girl, solo, mirror selfie, holding smartphone in front of face, the smartphone is held directly over her nose and mouth and eyes, face completely hidden and obscured behind the black smartphone held in both hands, only wavy honey-blonde hair tumbling over shoulders, 22 years old, stunning Scandinavian blonde woman, long voluminous wavy honey-blonde hair, hourglass athletic feminine silhouette with a defined slender waist and toned curves, natural sun-kissed skin texture with visible micro-pores, wearing high-waisted denim jeans and a fitted white crop top showing her athletic toned waist and curves, standing in a cozy bedroom in front of a mirror, candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural lighting, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, unedited personal photo feeling
+```
+*Settings:* Seed `2001`, Size `896x1152`. Output: `z_image_obscured_1_phone_covering_face.png` (19.7s).
+
+#### 2. 3/4 Rear Profile Silhouette (Balcony Skyline)
+```text
+1girl, solo, from behind, three-quarter rear profile view, looking away toward the glowing city skyline, face turned completely away from the camera, head turned toward the horizon, side profile showing only her jawline and ear, 22 years old, stunning Scandinavian blonde woman, long voluminous wavy honey-blonde hair, hourglass athletic feminine silhouette with a defined slender waist and toned curves, natural sun-kissed skin texture with visible micro-pores, long wavy honey-blonde hair cascading down her back, wearing an alluring backless black silk satin slip dress, standing on a luxury penthouse balcony at twilight, ambient city lights bokeh in the background, candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural lighting, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, unedited personal photo feeling
+```
+*Settings:* Seed `2002`, Size `896x1152`. Output: `z_image_obscured_2_rear_profile_balcony.png` (18.4s).
+
+#### 3. Downward Gaze: Wine / Cocktail Bar
+```text
+1girl, solo, profile view, looking down, head tilted downward looking at a cocktail glass on the rustic wooden table, eyes cast down, downward gaze, side profile angle, wavy honey-blonde hair falling forward over one cheek partially obscuring her face, 22 years old, stunning Scandinavian blonde woman, long voluminous wavy honey-blonde hair, hourglass athletic feminine silhouette with a defined slender waist and toned curves, natural sun-kissed skin texture with visible micro-pores, wearing a fitted emerald green ribbed top, soft warm candlelight illumination, intimate atmospheric wine bar, candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural lighting, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, unedited personal photo feeling
+```
+*Settings:* Seed `2003`, Size `896x1152`. Output: `z_image_obscured_3_downward_gaze_bar.png` (18.0s).
+
+#### 4. Walking Away: Beach Shoreline into Waves
+```text
+1girl, solo, from behind, full body view, walking away on the wet sand along the ocean shore, back to camera, walking toward the waves, head turned slightly in profile, face largely obscured, 22 years old, stunning Scandinavian blonde woman, long voluminous wavy honey-blonde hair, hourglass athletic feminine silhouette with a defined slender waist and toned curves, natural sun-kissed skin texture with visible micro-pores, long honey-blonde hair blowing in the sea breeze, wearing a stylish terracotta bikini and breezy open linen shirt, golden hour sunset beach, pastel reflections on the water, candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural lighting, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, unedited personal photo feeling
+```
+*Settings:* Seed `2004`, Size `896x1152`. Output: `z_image_obscured_4_walking_away_beach.png` (18.3s).
+
+#### 5. True Distant Environmental: Rooftop Infinity Pool (40ft Distance)
+```text
+wide shot, wide-angle environmental photograph, extreme long shot, distant shot, a small full-length female figure standing 40 feet away at the far edge of a massive rooftop infinity pool at twilight, the vast twilight sky and glowing illuminated city skyscrapers fill the entire frame, subject occupies only 20 percent of the frame height, 22 years old, stunning Scandinavian blonde woman, long voluminous wavy honey-blonde hair, hourglass athletic feminine silhouette with a defined slender waist and toned curves, natural sun-kissed skin texture with visible micro-pores, slender athletic silhouette in a dark resort dress outlined against the glowing city skyline, facial features naturally tiny and softened by distance and atmospheric depth, deep depth of field, panoramic composition, candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural lighting, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, unedited personal photo feeling
+```
+*Settings:* Seed `2005`, Size `896x1152`. Output: `z_image_obscured_5_true_distant_rooftop.png` (19.8s).
+
+#### 6. True Distant Environmental: Vast Low-Tide Beach (45ft Distance)
+```text
+wide shot, extreme long shot, wide-angle landscape photograph, 24mm lens, vast open low-tide sandy beach, a small full-length female figure walking barefoot 45 feet away in the middle distance, occupying only 20 percent of frame height, walking away across mirror-like wet sand reflecting the pastel sunset sky, 22 years old, stunning Scandinavian blonde woman, long voluminous wavy honey-blonde hair, hourglass athletic feminine silhouette with a defined slender waist and toned curves, natural sun-kissed skin texture with visible micro-pores, wearing a light white summer dress billowing in the breeze, honey-blonde hair, facial features naturally generalized and tiny due to distance and atmospheric haze, sweeping vast coastal landscape, candid smartphone photo, authentic 35mm snapshot aesthetic, photorealistic, natural lighting, clear clean anatomy, exactly two arms only, no extra hands, no phantom limbs, unedited personal photo feeling
+```
+*Settings:* Seed `2006`, Size `896x1152`. Output: `z_image_obscured_6_true_distant_beach.png` (18.3s).
+
+---
+
+## 8. The "Alluring Dating Sim" Aesthetic Calibration
+
+When transitioning from generic lifestyle portraits to elevated dating-sim character assets:
+
+1. **Facial Magnetism Tokens:**
+   Replace passive smiles with active attraction cues:
+   - `"intensely attractive and captivating with striking facial beauty"`
+   - `"clear piercing almond-shaped eyes with a magnetic flirtatious gaze"`
+   - `"full soft natural pink lips with a subtle knowing smile and slightly parted lips"`
+2. **Physique & Proportion Tokens:**
+   Replace neutral descriptions with refined athletic curves:
+   - `"stunning hourglass athletic feminine silhouette with a defined slender waist and graceful toned curves"`
+3. **High-Tactile Luxury Fabrics:**
+   Synthetic flat textures break immersion. Ground wardrobe in tactile materials:
+   - *Formal / Evening:* Champagne silk satin cowl camisole, backless black slip dress.
+   - *Casual / Lounge:* Emerald green ribbed knit top, fitted white crop top and high-waisted denim.
+   - *Beach / Resort:* Ribbed terracotta-orange bikini with open breezy linen shirt.
+4. **Cross-Reference:**
+   For the full 100-photo taxonomy across demographics, see [**`instagram_archetypes_taxonomy.md`**](../../../instagram_archetypes_taxonomy.md).
+
