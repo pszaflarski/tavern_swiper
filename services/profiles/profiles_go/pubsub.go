@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -19,11 +20,17 @@ type Publisher interface {
 }
 
 type RealPublisher struct {
-	client  *pubsub.Client
-	topicID string
+	client    *pubsub.Client
+	topicID   string
+	projectID string
+	once      sync.Once
+	initErr   error
 }
 
-func NewPublisher(ctx context.Context) (Publisher, error) {
+// NewPublisher creates a lazy Pub/Sub publisher for profile events.
+// It does NOT open a gRPC connection at construction time — the
+// connection is established on the first call to publishEvent.
+func NewPublisher() *RealPublisher {
 	projectID := getEnv("PUBSUB_PROJECT_ID", "tavern-swiper-dev")
 	tID := os.Getenv("PUBSUB_TOPIC_ID")
 	if tID == "" {
@@ -31,23 +38,36 @@ func NewPublisher(ctx context.Context) (Publisher, error) {
 		tID = "profile-updates"
 	}
 
-	// Check for emulator
-	if host := os.Getenv("PUBSUB_EMULATOR_HOST"); host != "" {
-		log.Printf("[INFO] Using Pub/Sub Emulator at %s", host)
-	}
-
-	client, err := pubsub.NewClient(ctx, projectID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create pubsub client: %v", err)
-	}
-
 	return &RealPublisher{
-		client:  client,
-		topicID: tID,
-	}, nil
+		projectID: projectID,
+		topicID:   tID,
+	}
+}
+
+// ensureClient initialises the Pub/Sub gRPC client exactly once.
+func (r *RealPublisher) ensureClient(ctx context.Context) error {
+	r.once.Do(func() {
+		if host := os.Getenv("PUBSUB_EMULATOR_HOST"); host != "" {
+			log.Printf("[INFO] Using Pub/Sub Emulator at %s", host)
+		}
+
+		client, err := pubsub.NewClient(ctx, r.projectID)
+		if err != nil {
+			r.initErr = fmt.Errorf("failed to create pubsub client: %v", err)
+			log.Printf("[ERROR] Lazy Pub/Sub init failed for profiles: %v", r.initErr)
+			return
+		}
+
+		r.client = client
+		log.Printf("[INFO] Profiles publisher initialized lazily (topic: %s, project: %s)", r.topicID, r.projectID)
+	})
+	return r.initErr
 }
 
 func (r *RealPublisher) publishEvent(ctx context.Context, event *pb.ProfileEvent) error {
+	if err := r.ensureClient(ctx); err != nil {
+		return fmt.Errorf("pubsub client unavailable: %w", err)
+	}
 	topic := r.client.Topic(r.topicID)
 
 	payload, err := proto.Marshal(event)

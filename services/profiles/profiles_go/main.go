@@ -8,7 +8,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 	"strings"
@@ -42,12 +41,9 @@ func main() {
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
 
-	// Initialize Pub/Sub
-	ctx := context.Background()
-	publisher, err := NewPublisher(ctx)
-	if err != nil {
-		log.Printf("[WARN] Pub/Sub publisher initialization failed: %v", err)
-	}
+	// Initialize Pub/Sub publisher lazily — the gRPC connection is deferred
+	// to first publish so it doesn't block cold start.
+	publisher := NewPublisher()
 
 	// Swagger UI (before auth middleware)
 	r.GET("/profiles/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

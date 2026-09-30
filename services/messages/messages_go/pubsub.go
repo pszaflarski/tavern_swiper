@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -18,31 +19,43 @@ type MessagePublisher interface {
 }
 
 // RealMessagePublisher publishes events to Pub/Sub.
+// The underlying client is initialized lazily on first publish.
 type RealMessagePublisher struct {
-	client  *pubsub.Client
-	topicID string
+	client    *pubsub.Client
+	topicID   string
+	projectID string
+	once      sync.Once
+	initErr   error
 }
 
-// NewMessagePublisher creates a new Pub/Sub publisher for message events.
-func NewMessagePublisher(ctx context.Context) (MessagePublisher, error) {
-	projectID := getEnv("PUBSUB_PROJECT_ID", "tavern-swiper-dev")
-	tID := getEnv("PUBSUB_TOPIC_ID", "dev-messages-message-events-v1")
-
-	if host := os.Getenv("PUBSUB_EMULATOR_HOST"); host != "" {
-		log.Printf("[INFO] Using Pub/Sub Emulator at %s", host)
-	}
-
-	client, err := pubsub.NewClient(ctx, projectID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create pubsub client: %v", err)
-	}
-
-	log.Printf("[INFO] Message publisher initialized (topic: %s, project: %s)", tID, projectID)
-
+// NewMessagePublisher creates a lazy Pub/Sub publisher.
+// It does NOT open a gRPC connection at construction time — the
+// connection is established on the first call to PublishMessageSent.
+func NewMessagePublisher() *RealMessagePublisher {
 	return &RealMessagePublisher{
-		client:  client,
-		topicID: tID,
-	}, nil
+		projectID: getEnv("PUBSUB_PROJECT_ID", "tavern-swiper-dev"),
+		topicID:   getEnv("PUBSUB_TOPIC_ID", "dev-messages-message-events-v1"),
+	}
+}
+
+// ensureClient initialises the Pub/Sub gRPC client exactly once.
+func (r *RealMessagePublisher) ensureClient(ctx context.Context) error {
+	r.once.Do(func() {
+		if host := os.Getenv("PUBSUB_EMULATOR_HOST"); host != "" {
+			log.Printf("[INFO] Using Pub/Sub Emulator at %s", host)
+		}
+
+		client, err := pubsub.NewClient(ctx, r.projectID)
+		if err != nil {
+			r.initErr = fmt.Errorf("failed to create pubsub client: %v", err)
+			log.Printf("[ERROR] Lazy Pub/Sub init failed: %v", r.initErr)
+			return
+		}
+
+		r.client = client
+		log.Printf("[INFO] Message publisher initialized lazily (topic: %s, project: %s)", r.topicID, r.projectID)
+	})
+	return r.initErr
 }
 
 // truncatePreview truncates content to maxLen characters for the event preview.
@@ -55,6 +68,10 @@ func truncatePreview(content string, maxLen int) string {
 
 // PublishMessageSent publishes a MESSAGE_SENT event to Pub/Sub.
 func (r *RealMessagePublisher) PublishMessageSent(ctx context.Context, conversationID, messageID, senderProfileID, content, msgType, metadataJson string) error {
+	if err := r.ensureClient(ctx); err != nil {
+		return fmt.Errorf("pubsub client unavailable: %w", err)
+	}
+
 	event := &pb.MessageEvent{
 		Type: pb.MessageEvent_SENT,
 		Event: &pb.MessageEvent_Sent{

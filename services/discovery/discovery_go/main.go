@@ -24,10 +24,9 @@ func main() {
 		port = "8003"
 	}
 
-	publisher, err := NewPublisher()
-	if err != nil {
-		log.Printf("[WARN] Pub/Sub publisher initialization failed: %v", err)
-	}
+	// Initialize Pub/Sub publisher lazily — the gRPC connection is deferred
+	// to first publish so it doesn't block cold start.
+	publisher := NewPublisher()
 
 	r := gin.Default()
 

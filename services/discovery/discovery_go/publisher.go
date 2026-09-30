@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -17,29 +18,63 @@ type Publisher interface {
 }
 
 type realPublisher struct {
-	client *pubsub.Client
-	topic  *pubsub.Topic
+	client    *pubsub.Client
+	topic     *pubsub.Topic
+	projectID string
+	topicID   string
+	once      sync.Once
+	initErr   error
 }
 
-func NewPublisher() (Publisher, error) {
+// NewPublisher creates a lazy Pub/Sub publisher for discovery events.
+// It does NOT open a gRPC connection at construction time — the
+// connection is established on the first call to PublishMatchCreated.
+func NewPublisher() Publisher {
 	projectID := os.Getenv("PUBSUB_PROJECT_ID")
+	if projectID == "" {
+		projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
+	}
+	if projectID == "" {
+		projectID = getEnv("PROJECT_ID", "tavern-swiper-dev")
+	}
 	topicID := os.Getenv("PUBSUB_TOPIC_ID")
 	if topicID == "" {
-		log.Println("[WARN] PUBSUB_TOPIC_ID not set, defaulting to 'match-events'. Set to '{env}-discovery-match-events-v1' for correctness.")
 		topicID = "match-events"
 	}
 
-	ctx := context.Background()
-	client, err := pubsub.NewClient(ctx, projectID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create pubsub client: %v", err)
+	return &realPublisher{
+		projectID: projectID,
+		topicID:   topicID,
 	}
+}
 
-	topic := client.Topic(topicID)
-	return &realPublisher{client: client, topic: topic}, nil
+// ensureClient initialises the Pub/Sub gRPC client exactly once.
+func (p *realPublisher) ensureClient(ctx context.Context) error {
+	p.once.Do(func() {
+		if host := os.Getenv("PUBSUB_EMULATOR_HOST"); host != "" {
+			log.Printf("[INFO] Discovery Publisher using Pub/Sub Emulator at %s", host)
+		}
+
+		client, err := pubsub.NewClient(ctx, p.projectID)
+		if err != nil {
+			p.initErr = fmt.Errorf("failed to create pubsub client: %v", err)
+			log.Printf("[ERROR] Lazy Pub/Sub init failed for discovery: %v", p.initErr)
+			return
+		}
+
+		p.client = client
+		p.topic = client.Topic(p.topicID)
+		log.Printf("[INFO] Discovery publisher initialized lazily (topic: %s, project: %s)", p.topicID, p.projectID)
+	})
+	return p.initErr
 }
 
 func (p *realPublisher) PublishMatchCreated(matchID string, profileIDs []string, createdAt time.Time) error {
+	ctx := context.Background()
+	if err := p.ensureClient(ctx); err != nil {
+		return fmt.Errorf("pubsub client unavailable: %w", err)
+	}
+
 	event := &discoveryproto.MatchEvent{
 		Type: discoveryproto.MatchEvent_CREATED,
 		Event: &discoveryproto.MatchEvent_Created{
@@ -56,7 +91,6 @@ func (p *realPublisher) PublishMatchCreated(matchID string, profileIDs []string,
 		return fmt.Errorf("failed to marshal match event: %v", err)
 	}
 
-	ctx := context.Background()
 	res := p.topic.Publish(ctx, &pubsub.Message{
 		Data: data,
 	})
