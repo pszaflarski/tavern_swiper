@@ -37,6 +37,7 @@
 | `dolphin_24b` | llms | 8080 | GCS models cache | `services/llms/dolphin_24b/` |
 | `qwen_14b` | llms | 8080 | GCS models cache | `services/llms/qwen_14b/` |
 | `qwen_32b` | llms | 8080 | GCS models cache | `services/llms/qwen_32b/` |
+| `nemo_12b` | llms | 8080 | GCS models cache | `services/llms/nemo_12b/` |
 | `flux_comfyui` | llms | 8080 | GCS models cache | `services/llms/flux_comfyui/` |
 | `sdxl_comfyui` | llms | 8080 | GCS models cache | `services/llms/sdxl_comfyui/` |
 | `krea2_comfyui` | llms | 8080 | GCS models cache | `services/llms/krea2_comfyui/` |

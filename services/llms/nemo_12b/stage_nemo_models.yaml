@@ -1,0 +1,38 @@
+steps:
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        pip install --no-cache-dir huggingface_hub
+        python3 -c "
+        import os
+        from huggingface_hub import snapshot_download
+
+        print('=== Downloading Mistral Nemo FP8 from Hugging Face ===')
+        snapshot_download(
+            repo_id='RedHatAI/Mistral-Nemo-Instruct-2407-FP8',
+            local_dir='/workspace/nemo_weights'
+        )
+        print('=== Download complete ===')
+        "
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "=== Uploading to GCS ==="
+        gcloud storage rsync -r /workspace/nemo_weights gs://${_MODELS_BUCKET}/neuralmagic/Mistral-Nemo-Instruct-2407-FP8/
+        echo "=== Verifying GCS objects ==="
+        gcloud storage ls --long gs://${_MODELS_BUCKET}/neuralmagic/Mistral-Nemo-Instruct-2407-FP8/
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 200
+
+substitutions:
+  _MODELS_BUCKET: "tavern-swiper-dev-models-cache"

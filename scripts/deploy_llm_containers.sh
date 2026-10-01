@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
-# deploy_llm_containers.sh — Script to deploy self-hosted LLM GPU services (Qwen 32B, Qwen 14B, Dolphin 24B)
+# deploy_llm_containers.sh — Script to deploy self-hosted LLM GPU services (Qwen 32B, Qwen 14B, Dolphin 24B, Nemo 12B)
 # Service definitions, Dockerfiles, and Cloud Build manifests live in services/llms/
-# Usage: bash scripts/deploy_llm_containers.sh [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|all]
+# Usage: bash scripts/deploy_llm_containers.sh [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|nemo-12b|all]
 
 ENV="${1:-dev}"
 TARGET="${2:-all}"
 
 if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
-  echo "Error: Invalid environment '$ENV'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|all]"
+  echo "Error: Invalid environment '$ENV'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|nemo-12b|all]"
   exit 1
 fi
 
@@ -128,6 +128,36 @@ deploy_dolphin_24b() {
   echo "✅ ${service_name} deployed successfully!"
 }
 
+deploy_nemo_12b() {
+  local service_name="nemo-12b-${ENV}"
+  echo "🚀 Deploying ${service_name} to project ${PROJECT_ID} in region ${LOCATION}..."
+  gcloud run deploy "${service_name}" \
+    --project="${PROJECT_ID}" \
+    --region="${LOCATION}" \
+    --image="${IMAGE_URI}" \
+    --execution-environment=gen2 \
+    --cpu=8 \
+    --memory=32Gi \
+    --gpu=1 \
+    --gpu-type=nvidia-l4 \
+    --no-gpu-zonal-redundancy \
+    --min-instances=0 \
+    --max-instances=1 \
+    --concurrency=1 \
+    --timeout=600 \
+    --no-cpu-throttling \
+    --cpu-boost \
+    --ingress=all \
+    --allow-unauthenticated \
+    --labels=service-group=self-hosted-llms \
+    --startup-probe=httpGet.path=/health,httpGet.port=8080,initialDelaySeconds=30,periodSeconds=10,timeoutSeconds=10,failureThreshold=60 \
+    --set-env-vars="VLLM_API_KEY=${VLLM_API_KEY},VLLM_ENABLE_CUDA_COMPATIBILITY=0,LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/lib/x86_64-linux-gnu" \
+    --add-volume="name=model-volume,type=cloud-storage,bucket=${MODELS_BUCKET}" \
+    --add-volume-mount="volume=model-volume,mount-path=/models" \
+    --args="/models/neuralmagic/Mistral-Nemo-Instruct-2407-FP8,--port,8080,--max-model-len,32768,--gpu-memory-utilization,0.90,--kv-cache-dtype,fp8,--enable-prefix-caching,--tool-call-parser,mistral,--enable-auto-tool-choice,--enforce-eager"
+  echo "✅ ${service_name} deployed successfully!"
+}
+
 deploy_flux_comfyui() {
   local service_name="flux-comfyui-${ENV}"
   echo "🚀 Deploying ${service_name} via Cloud Build to project ${PROJECT_ID}..."
@@ -210,6 +240,9 @@ case "$TARGET" in
   dolphin-24b)
     deploy_dolphin_24b
     ;;
+  nemo-12b)
+    deploy_nemo_12b
+    ;;
   flux-comfyui)
     deploy_flux_comfyui
     ;;
@@ -250,7 +283,7 @@ case "$TARGET" in
     echo "🎉 All self-hosted GPU services deployed successfully!"
     ;;
   *)
-    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|flux-comfyui|flux2-klein-comfyui|omnigen-comfyui|z-image-omni-comfyui|z-image-comfyui|sdxl-comfyui|krea2-comfyui|kolors-comfyui|all]"
+    echo "Error: Unknown target '$TARGET'. Usage: $0 [dev|test|prod] [qwen-32b|qwen-14b|dolphin-24b|nemo-12b|flux-comfyui|flux2-klein-comfyui|omnigen-comfyui|z-image-omni-comfyui|z-image-comfyui|sdxl-comfyui|krea2-comfyui|kolors-comfyui|all]"
     exit 1
     ;;
 esac

@@ -42,6 +42,7 @@ Model weights are decoupled from container images and mounted dynamically via **
 | [`dolphin_24b`](./dolphin_24b) | `Valdemardi/Dolphin3.0-Mistral-24B-AWQ` | AWQ Marlin | 32,768 | `mistral` | `dolphin-24b-${ENV}` |
 | [`qwen_14b`](./qwen_14b) | `Qwen/Qwen2.5-14B-Instruct-AWQ` | AWQ | 32,768 | `hermes` | `qwen-14b-${ENV}` |
 | [`qwen_32b`](./qwen_32b) | `Qwen/Qwen2.5-32B-Instruct-AWQ` | AWQ (FP8 KV) | 16,384 | `hermes` | `qwen-32b-${ENV}` |
+| [`nemo_12b`](./nemo_12b) | `neuralmagic/Mistral-Nemo-Instruct-2407-FP8` | FP8 (W8A8 + FP8 KV) | 32,768 | `mistral` | `nemo-12b-${ENV}` |
 
 ### Image Generation Services
 
